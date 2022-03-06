@@ -24,10 +24,4 @@ public class Authorization {
                 userAccess.equals(Access.SUPERADMIN.getName()) ||
                 userAccess.equals(Access.STUDENT.getName());
     }
-
-    public static boolean isAccountant(String userAccess) {
-        return userAccess.equals(Access.ADMIN.getName()) ||
-                userAccess.equals(Access.SUPERADMIN.getName()) ||
-                userAccess.equals(Access.ACCOUNTANT.getName());
-    }
 }

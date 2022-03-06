@@ -87,30 +87,6 @@ public class Router {
         throw new UnAuthException("Token is not valid");
     }
 
-    protected void getAccountantPrivilegeUserVoid(HttpServletRequest request)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
-
-        if (new JwtTokenFilter().isAuth(request)) {
-
-            Document u = userService.whoAmI(request);
-
-            if(u != null) {
-                if (!u.getString("status").equals("active")) {
-                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
-                    throw new NotActivateAccountException("Account not activated");
-                }
-
-                if (!Authorization.isAccountant(u.getString("access")))
-                    throw new NotAccessException("Access denied");
-
-                return;
-            }
-
-        }
-
-        throw new UnAuthException("Token is not valid");
-    }
-
     private boolean isAdmin(HttpServletRequest request, Document u) throws NotActivateAccountException, NotAccessException {
 
         if (u != null) {
