@@ -224,6 +224,16 @@ public class Utility {
         return sb.toString();
     }
 
+    public static String randomPhone(int len) {
+
+        StringBuilder sb = new StringBuilder(len);
+
+        for (int i = 0; i < len; i++)
+            sb.append(ABC.charAt(rnd.nextInt(ABC.length())));
+
+        return sb.toString();
+    }
+
     public static boolean sendSMS(int code, String phoneNum) {
 
         try {

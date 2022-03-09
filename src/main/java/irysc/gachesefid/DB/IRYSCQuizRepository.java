@@ -1,14 +1,14 @@
 package irysc.gachesefid.DB;
 
 import irysc.gachesefid.Main.GachesefidApplication;
-import irysc.gachesefid.models.Quiz;
+import irysc.gachesefid.Models.Quiz;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 
-public class RegularQuizRepository extends Common {
+public class IRYSCQuizRepository extends Common {
 
 
     // todo : after all transfer from mysql to mongo it should be delete
@@ -141,9 +141,13 @@ public class RegularQuizRepository extends Common {
         return allDocs;
     }
 
+    public IRYSCQuizRepository() {
+        init();
+    }
+
     @Override
     void init() {
-        table = "regular_quiz";
+        table = "irysc_quiz";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 }

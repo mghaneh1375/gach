@@ -62,7 +62,7 @@ public class AdminCertificateAPIRoutes extends Router {
             throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         getAdminPrivilegeUserVoid(request);
-
+        return "as";
     }
 
     @PostMapping(path = "/addStudents/{certificateId}")
@@ -76,7 +76,7 @@ public class AdminCertificateAPIRoutes extends Router {
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
-
+        return "as";
     }
 
     @DeleteMapping(path = "/removeStudents/{certificateId}")
@@ -89,6 +89,6 @@ public class AdminCertificateAPIRoutes extends Router {
             throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         getAdminPrivilegeUserVoid(request);
-
+        return "as";
     }
 }

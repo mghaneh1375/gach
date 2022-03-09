@@ -6,7 +6,7 @@ import java.util.Date;
 import javax.servlet.http.HttpServletRequest;
 
 import irysc.gachesefid.Exception.CustomException;
-import irysc.gachesefid.models.Role;
+import irysc.gachesefid.Models.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -19,7 +19,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
 import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION_MSEC;
 
 @Component

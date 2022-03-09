@@ -10,7 +10,7 @@ import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import irysc.gachesefid.models.Access;
+import irysc.gachesefid.Models.Access;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;

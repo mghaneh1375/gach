@@ -5,7 +5,7 @@ import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.DB.RegularQuizRepository;
 import irysc.gachesefid.Main.GachesefidApplication;
-import irysc.gachesefid.models.Quiz;
+import irysc.gachesefid.Models.Quiz;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;

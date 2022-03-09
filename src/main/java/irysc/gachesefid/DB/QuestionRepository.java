@@ -6,7 +6,6 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Main.GachesefidApplication;
-import irysc.gachesefid.models.User;
 import org.bson.Document;
 
 import java.sql.PreparedStatement;

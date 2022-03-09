@@ -3,8 +3,7 @@ package irysc.gachesefid.Controllers;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.models.Access;
-import irysc.gachesefid.models.RequestType;
+import irysc.gachesefid.Models.Access;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -17,7 +16,6 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.requestRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 

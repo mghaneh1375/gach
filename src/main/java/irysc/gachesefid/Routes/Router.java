@@ -7,7 +7,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.models.Access;
+import irysc.gachesefid.Models.Access;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 

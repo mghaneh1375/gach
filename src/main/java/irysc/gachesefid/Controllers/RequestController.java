@@ -1,7 +1,7 @@
 package irysc.gachesefid.Controllers;
 
-import irysc.gachesefid.models.Access;
-import irysc.gachesefid.models.RequestType;
+import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Models.RequestType;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 

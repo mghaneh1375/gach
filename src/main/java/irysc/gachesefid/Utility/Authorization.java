@@ -1,6 +1,6 @@
 package irysc.gachesefid.Utility;
 
-import irysc.gachesefid.models.Access;
+import irysc.gachesefid.Models.Access;
 
 public class Authorization {
 

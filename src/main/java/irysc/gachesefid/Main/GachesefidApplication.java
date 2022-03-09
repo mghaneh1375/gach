@@ -52,11 +52,13 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static ActivationRepository activationRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
+    public static AlertsRepository alertsRepository;
     public static AvatarRepository avatarRepository;
     public static CertificateRepository certificateRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigRepository configRepository;
-    public static RegularQuizRepository regularQuizRepository;
+    public static OffcodeRepository offcodeRepository;
+    public static IRYSCQuizRepository iryscQuizRepository;
     public static RequestRepository requestRepository;
     public static UserRepository userRepository;
     public static TransactionRepository transactionRepository;
@@ -79,12 +81,14 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
             activationRepository = new ActivationRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
+            alertsRepository = new AlertsRepository();
             avatarRepository = new AvatarRepository();
             certificateRepository = new CertificateRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
             mailRepository = new MailRepository();
-            regularQuizRepository = new RegularQuizRepository();
+            offcodeRepository = new OffcodeRepository();
+            iryscQuizRepository = new IRYSCQuizRepository();
             requestRepository = new RequestRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();

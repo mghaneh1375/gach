@@ -6,7 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Security.JwtTokenProvider;
 import irysc.gachesefid.Utility.Cache;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.models.Role;
+import irysc.gachesefid.Models.Role;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;

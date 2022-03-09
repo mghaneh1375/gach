@@ -1,7 +1,6 @@
 package irysc.gachesefid.Security;
 
-import irysc.gachesefid.DB.UserRepository;
-import irysc.gachesefid.models.Role;
+import irysc.gachesefid.Models.Role;
 import org.bson.Document;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

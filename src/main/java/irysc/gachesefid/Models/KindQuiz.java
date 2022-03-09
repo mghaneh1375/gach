@@ -1,8 +1,8 @@
-package irysc.gachesefid.models;
+package irysc.gachesefid.Models;
 
 public enum KindQuiz {
 
-    OPEN, REGULAR, ONLINE;
+    OPEN, REGULAR, ONLINE, TASHRIHI;
 
     public String getName() {
         return name().toLowerCase();

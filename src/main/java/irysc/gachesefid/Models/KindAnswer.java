@@ -1,4 +1,4 @@
-package irysc.gachesefid.models;
+package irysc.gachesefid.Models;
 
 public enum KindAnswer {
 

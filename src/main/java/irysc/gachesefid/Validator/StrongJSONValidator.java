@@ -1,5 +1,6 @@
 package irysc.gachesefid.Validator;
 
+import irysc.gachesefid.Utility.Positive;
 import org.json.JSONObject;
 
 import javax.validation.ConstraintValidator;
@@ -39,7 +40,7 @@ public class StrongJSONValidator implements
             int i = 0;
 
             for (String itr : valueList) {
-                if (!jsonObject.has(itr) || !checkClasses(valueListType[i], jsonObject.get(itr).getClass()))
+                if (!jsonObject.has(itr) || !checkClasses(valueListType[i], jsonObject.get(itr)))
                     return false;
 
                 i++;
@@ -60,7 +61,7 @@ public class StrongJSONValidator implements
 
                 idx = l2.indexOf(key);
 
-                if (idx == -1 || !checkClasses(optionalValueListType[idx], jsonObject.get(key).getClass()))
+                if (idx == -1 || !checkClasses(optionalValueListType[idx], jsonObject.get(key)))
                     return false;
             }
 
@@ -70,14 +71,42 @@ public class StrongJSONValidator implements
         }
     }
 
-    private boolean checkClasses(Class a, Class b) {
+    private boolean checkClasses(Class a, Object value) {
 
         if(a.equals(Object.class))
             return true;
 
-        if(a.equals(Number.class) && (b.equals(Integer.class) || b.equals(Double.class) || b.equals(Float.class)))
+        Class b = value.getClass();
+
+        if(a.equals(Number.class) && (b.equals(Integer.class) || b.equals(Double.class) || b.equals(Float.class))) {
+
+            if(value instanceof Integer && (int)value < 0)
+                return false;
+
+            if(value instanceof Double && (double)value < 0)
+                return false;
+
+            if(value instanceof Float && (float)value < 0)
+                return false;
+
             return true;
+        }
+
+        if(a.equals(Positive.class) && b.equals(Integer.class) && (int)value >= 0)
+            return true;
+
+        if(a.equals(Positive.class) && b.equals(String.class)) {
+
+            try {
+                value = Integer.parseInt(value.toString());
+                return (int)value >= 0;
+            }
+            catch (Exception x) {
+                return false;
+            }
+        }
 
         return a.equals(b);
     }
+
 }

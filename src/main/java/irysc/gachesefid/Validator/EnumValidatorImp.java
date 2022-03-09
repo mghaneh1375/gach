@@ -27,5 +27,15 @@ public class EnumValidatorImp implements ConstraintValidator<EnumValidator, Stri
         }
     }
 
+    public static boolean isValid(String value, Class<? extends Enum<?>> enumClass) {
+
+        ArrayList<String> valueList = new ArrayList<>();
+        Enum[] enumValArr = enumClass.getEnumConstants();
+
+        for (@SuppressWarnings("rawtypes") Enum enumVal : enumValArr)
+            valueList.add(enumVal.toString().toUpperCase());
+
+        return valueList.contains(value.toUpperCase());
+    }
 }
 
