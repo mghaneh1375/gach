@@ -11,7 +11,7 @@ public class StaticValues {
     public final static String STATICS_SERVER = "http://185.239.106.26:8083/";
 
     public final static String mailUserName = "no-reply@mail.okft.org";
-    public final static String mailPassword = "okftorg1400!@#$%^OKF";
+    public final static String mailPassword = "ASDFG12345!@#$%^assa";
 
     public static final String KEY = "okfbogendesignmohammadghane1375!";
 

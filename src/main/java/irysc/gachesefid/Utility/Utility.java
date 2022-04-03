@@ -7,6 +7,7 @@ import irysc.gachesefid.Kavenegar.excepctions.ApiException;
 import irysc.gachesefid.Kavenegar.excepctions.HttpException;
 import irysc.gachesefid.Kavenegar.models.SendResult;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Validator.DateValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -753,11 +754,17 @@ public class Utility {
                 .toString();
     }
 
-    public static String generateSuccessMsg(String key, Object val) {
-        return new JSONObject()
+    public static String generateSuccessMsg(String key, Object val, PairValue ... pairValues) {
+
+        JSONObject jsonObject = new JSONObject()
                 .put("status", "ok")
-                .put(key, val)
-                .toString();
+                .put(key, val);
+
+        for(PairValue p : pairValues)
+            jsonObject.put(p.getKey().toString(), p.getValue());
+
+        return jsonObject.toString();
+
     }
 
     public static Document getConfig() {

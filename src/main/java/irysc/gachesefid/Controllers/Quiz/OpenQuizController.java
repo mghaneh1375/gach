@@ -6,42 +6,35 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
-import static irysc.gachesefid.Controllers.Quiz.Utility.filterFields;
+import static irysc.gachesefid.Controllers.Quiz.Utility.checkFields;
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 public class OpenQuizController {
 
-    final static String[] mandatoryFields = {
+    private final static String[] mandatoryFields = {
             "price"
     };
 
-    final static String[] forbiddenFields = {
+    private final static String[] forbiddenFields = {
             "startRegistry", "start",
             "end", "isOnline", "showResultsAfterCorrect",
             "topStudentsGiftCoin", "topStudentsGiftMoney",
-            "topStudentsCount", "paperSize", "database",
+            "topStudentsCount", "paperTheme", "database",
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject) {
 
         try {
-            filterFields(mandatoryFields, forbiddenFields, jsonObject);
+
+            checkFields(mandatoryFields, forbiddenFields, jsonObject);
+            jsonObject.put("mode", KindQuiz.OPEN.getName());
+            Document newDoc = QuizController.store(userId, jsonObject);
+
+            return iryscQuizRepository.insertOneWithReturn(newDoc);
+
         } catch (InvalidFieldsException e) {
             return irysc.gachesefid.Utility.Utility.generateErr(e.getMessage());
         }
-
-        jsonObject.put("mode", KindQuiz.OPEN.getName());
-        Document newDoc;
-
-        try {
-            newDoc = QuizController.store(userId, jsonObject);
-        }
-        catch (Exception x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(x.getMessage());
-        }
-
-        return iryscQuizRepository.insertOneWithReturn(newDoc);
     }
 
 

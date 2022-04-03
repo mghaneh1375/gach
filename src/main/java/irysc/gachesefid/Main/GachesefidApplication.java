@@ -60,8 +60,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static OffcodeRepository offcodeRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static RequestRepository requestRepository;
-    public static UserRepository userRepository;
+    public static SchoolQuizRepository schoolQuizRepository;
     public static TransactionRepository transactionRepository;
+    public static UserRepository userRepository;
     public static MailRepository mailRepository;
 
     private static void setupDB() {
@@ -90,6 +91,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             offcodeRepository = new OffcodeRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             requestRepository = new RequestRepository();
+            schoolQuizRepository = new SchoolQuizRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();
 

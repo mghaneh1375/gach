@@ -115,6 +115,10 @@ public abstract class Common extends Repository {
         return documentMongoCollection.findOneAndUpdate(filter, update);
     }
 
+    public Document findOneAndUpdate(ObjectId id, Bson update) {
+        return documentMongoCollection.findOneAndUpdate(eq("_id", id), update);
+    }
+
     public synchronized Document findById(ObjectId id) {
 
         Document cached = isInCache(table, id);
