@@ -5,7 +5,9 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -33,39 +35,41 @@ public class ConfigAPIRoutes extends Router {
     public String update(HttpServletRequest request,
                          @RequestBody @StrongJSONConstraint(
                                  paramsType = {}, params = {},
-                                 optionals = {"init_coin", "init_money",
-                                         "invitation_money", "invitation_coin",
-                                         "min_request_money", "advisor_percent",
-                                         "namayande_off_percent",
-                                         "school_off_percent",
-                                         "advisor_off_percent",
-                                         "beck_dep", "beck_anx",
-                                         "CDI", "MBTI", "standard_raven",
-                                         "pro_raven", "child_raven",
+                                 optionals = {"initCoin", "initMoney",
+                                         "invitationMoney", "invitationCoin",
+                                         "minRequestMoney", "advisorPercent",
+                                         "namayandeOffPercent",
+                                         "schoolOffPercent",
+                                         "advisorOffPercent",
+                                         "beckDep", "beckAnx",
+                                         "CDI", "MBTI", "standardRaven",
+                                         "proRaven", "childRaven",
                                          "cattell", "hermans", "LASSI",
                                          "gardner", "izenk", "haland",
                                          "neo", "cannor", "GHQ", "RCMAS",
-                                         "top_in_quiz_for_cert",
-                                         "top_in_quiz_for_gift",
-                                         "top_in_quiz_gift_coin",
-                                         "top_in_quiz_gift_money",
+                                         "topInQuizForCert",
+                                         "topInQuizForGift",
+                                         "topInQuizGiftCoin",
+                                         "topInQuizGiftMoney",
+                                         "schoolQuizAttachesMax",
+                                         "schoolQuizAttachesJustLink",
                                  },
-                                 optionalsType = {Number.class,
-                                         Integer.class, Integer.class,
-                                         Number.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Integer.class, Integer.class,
-                                         Integer.class, Number.class, Integer.class
-
+                                 optionalsType = {
+                                         Number.class, Positive.class, Positive.class,
+                                         Number.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Number.class, Positive.class,
+                                         Positive.class, Boolean.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return ConfigController.get();
+        return ConfigController.update(new JSONObject(jsonStr));
     }
 }

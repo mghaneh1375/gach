@@ -1,8 +1,8 @@
 package irysc.gachesefid.Models;
 
-public enum KindAnswer {
+public enum GeneralKindQuiz {
 
-    TEXT, CHOICE, FILE, MULTI_SELECT, TEXTAREA;
+    IRYSC, SCHOOL;
 
     public String getName() {
         return name().toLowerCase();

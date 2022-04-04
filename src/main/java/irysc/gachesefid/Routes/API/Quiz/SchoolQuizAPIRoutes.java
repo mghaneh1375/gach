@@ -1,13 +1,17 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
-import irysc.gachesefid.Controllers.Quiz.QuizController;
+import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 
 @Controller
@@ -25,50 +30,87 @@ import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 @Validated
 public class SchoolQuizAPIRoutes extends Router {
 
-
-    @PostMapping(value = "/toggleVisibility/{quizId}")
+    @PutMapping(path = "setCorrectors/{mode}/{quizId}")
     @ResponseBody
-    public String toggleVisibility(HttpServletRequest request,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.toggleVisibility(schoolQuizRepository,
-                getPrivilegeUser(request).getObjectId("_id"), quizId);
-    }
-
-    @PutMapping(value = "/forceRegistry/{quizId}")
-    @ResponseBody
-    public String forceRegistry(HttpServletRequest request,
+    public String setCorrectors(HttpServletRequest request,
+                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"students"},
-                                        paramsType = JSONArray.class
+                                        params = {"correctors"},
+                                        paramsType = {JSONArray.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.forceRegistry(schoolQuizRepository,
-                getPrivilegeUser(request).getObjectId("_id"), quizId,
-                new JSONObject(jsonStr).getJSONArray("students"));
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
+            return TashrihiQuizController.setCorrectors(iryscQuizRepository, null, quizId,
+                    new JSONObject(jsonStr).getJSONArray("correctors")
+            );
+
+        return TashrihiQuizController.setCorrectors(schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId,
+                new JSONObject(jsonStr).getJSONArray("correctors")
+        );
     }
 
-    @DeleteMapping(value = "/forceDeportation/{quizId}")
+    @GetMapping(path = "getMyMarkList/{mode}/{quizId}")
     @ResponseBody
-    public String forceDeportation(HttpServletRequest request,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                   @RequestBody @StrongJSONConstraint(
-                                           params = {"students"},
-                                           paramsType = JSONArray.class
-                                   ) @NotBlank String jsonStr
+    public String getMyMarkList(HttpServletRequest request,
+                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                @RequestParam(required = false, value = "justMarked") Boolean justMarked,
+                                @RequestParam(required = false, value = "justNotMarked") Boolean justNotMarked
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.forceDeportation(schoolQuizRepository,
-                getPrivilegeUser(request).getObjectId("_id"), quizId,
-                new JSONObject(jsonStr).getJSONArray("students"));
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        return TashrihiQuizController.getMyMarkList(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, justMarked, justNotMarked
+        );
     }
 
-    @DeleteMapping(value = "/remove/{quizId}")
+    @GetMapping(path = "getMyMarkListForSpecificStudent/{mode}/{quizId}/{studentId}")
     @ResponseBody
-    public String remove(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId quizId
+    public String getMyMarkListForSpecificStudent(HttpServletRequest request,
+                                                  @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                                  @PathVariable @ObjectIdConstraint ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.remove(schoolQuizRepository,
-                getPrivilegeUser(request).getObjectId("_id"), quizId);
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        return TashrihiQuizController.getMyMarkListForSpecificStudent(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, studentId
+        );
     }
+
+    @GetMapping(path = "getMyTasks")
+    @ResponseBody
+    public String getMyTasks(HttpServletRequest request,
+                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                             @PathVariable @ObjectIdConstraint ObjectId quizId,
+                             @PathVariable @ObjectIdConstraint ObjectId studentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        return TashrihiQuizController.getMyMarkListForSpecificStudent(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, studentId
+        );
+    }
+
 }

@@ -341,7 +341,9 @@ public class UserController {
         }
 
         user.put("avatar_id", avatarId);
+        // if admin update avatar, user avatar will not change !!!
         user.put("pic", avatar.getString("file"));
+
         userRepository.replaceOne(user.getObjectId("_id"), user);
 
         avatar.put("used", avatar.getInteger("used") + 1);

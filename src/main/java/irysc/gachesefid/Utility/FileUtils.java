@@ -110,7 +110,7 @@ public class FileUtils {
     }
 
     @Nullable
-    public static String uploadImageOrPdfOrVoiceFile(MultipartFile file) {
+    public static String uploadPdfOrMultimediaFile(MultipartFile file) {
 
         try {
 
@@ -140,7 +140,10 @@ public class FileUtils {
             case "gif":
                 return new PairValue("image", ext);
             case "mp4":
+            case "m4v":
             case "mov":
+            case "mpeg":
+            case "mkv":
             case "avi":
             case "flv":
                 return new PairValue("video", ext);

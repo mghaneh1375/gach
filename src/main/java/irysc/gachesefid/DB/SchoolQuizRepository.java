@@ -10,6 +10,8 @@ import java.util.ArrayList;
 
 public class SchoolQuizRepository extends Common {
 
+    public final static String FOLDER = "school_quizzes";
+
     public SchoolQuizRepository() {
         init();
     }

@@ -20,6 +20,8 @@ public class StaticValues {
     public final static long TOKEN_EXPIRATION_MSEC = 60 * 60 * 24 * 7 * 1000;
     public final static int TOKEN_EXPIRATION = 60 * 60 * 24 * 7;
 
+    public final static int MAX_QUIZ_ATTACH_SIZE = 5; // MB
+
     public final static int SMS_RESEND_SEC = 60 * 5;
     public final static int SMS_RESEND_MSEC = 1000 * 60 * 5;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * 60 * 10;

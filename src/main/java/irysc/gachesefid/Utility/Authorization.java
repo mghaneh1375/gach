@@ -30,4 +30,9 @@ public class Authorization {
     public static boolean hasAccessToThisStudent(ObjectId studentId, ObjectId applicatorId) {
         return true;
     }
+
+    // todo : complete this section
+    public static boolean hasAccessToThisTeacher(ObjectId teacherId, ObjectId applicatorId) {
+        return true;
+    }
 }

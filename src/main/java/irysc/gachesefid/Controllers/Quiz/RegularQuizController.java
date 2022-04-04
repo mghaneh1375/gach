@@ -27,8 +27,6 @@ public class RegularQuizController extends QuizAbstract {
     // topStudentsGiftCoin or topStudentsGiftMoney or topStudentsCount
     // are optional and can inherit from config
 
-    private final static RegularQuizController self = new RegularQuizController();
-
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price",
             "end", "isOnline", "showResultsAfterCorrect",
@@ -220,7 +218,7 @@ public class RegularQuizController extends QuizAbstract {
                 .append("start_at", null)
                 .append("answers", new ArrayList<>());
 
-        if (quiz.getBoolean("permute"))
+        if ((boolean) quiz.getOrDefault("permute", false))
             stdDoc.put("question_indices", new ArrayList<>());
 
         students.add(stdDoc);

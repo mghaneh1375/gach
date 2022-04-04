@@ -2,26 +2,35 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.FileUtils;
+import irysc.gachesefid.Utility.StaticValues;
+import irysc.gachesefid.Validator.LinkValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 
 public class QuizController {
 
-    private static Document hasAccess(Common db, ObjectId userId, ObjectId quizId
+    static Document hasAccess(Common db, ObjectId userId, ObjectId quizId
     ) throws InvalidFieldsException {
 
         Document quiz = db.findById(quizId);
@@ -32,6 +41,28 @@ public class QuizController {
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
         return quiz;
+    }
+
+    static PairValue hasCorrectorAccess(Common db, ObjectId userId, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null || !quiz.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        int idx = -1;
+
+        if (userId != null && !quiz.getObjectId("created_by").equals(userId)) {
+
+            List<Document> correctors = quiz.getList("correctors", Document.class);
+            idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    correctors, "_id", userId);
+
+            if(idx == -1)
+                throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+        }
+
+        return new PairValue(quiz, idx);
     }
 
     public static Document store(ObjectId userId, JSONObject data
@@ -53,6 +84,10 @@ public class QuizController {
         )
             newDoc.put("desc_after_mode", DescMode.NONE.getName());
 
+        if (!newDoc.containsKey("desc_mode") ||
+                newDoc.getString("desc_mode").equals(DescMode.FILE.getName())
+        )
+            newDoc.put("desc_mode", DescMode.NONE.getName());
 
         newDoc.put("visibility", true);
         newDoc.put("students", new ArrayList<>());
@@ -67,6 +102,9 @@ public class QuizController {
                 newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
         )
             newDoc.put("questions", new ArrayList<>());
+
+        if (newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+            newDoc.put("correctors", new ArrayList<>());
 
         return newDoc;
     }
@@ -108,6 +146,14 @@ public class QuizController {
             for (int i = 0; i < jsonArray.length(); i++) {
 
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                if(!jsonObject.has("id") ||
+                        !jsonObject.has("paid")
+                ) {
+                    skipped.put(i);
+                    continue;
+                }
+
                 ObjectId studentId = new ObjectId(jsonObject.getString("id"));
 
                 Document student = userRepository.findById(studentId);
@@ -280,15 +326,15 @@ public class QuizController {
                         .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
                         .put("studentId", user.getObjectId("_id").toString())
                         .put("startAt", student.containsKey("start_at") ?
-                                Utility.getSolarDate(student.getLong("start_at")) :
+                                irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
                                 ""
                         )
                         .put("finishAt", student.containsKey("finish_at") ?
-                                Utility.getSolarDate(student.getLong("finish_at")) :
+                                irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
                                 ""
                         );
 
-                if(student.containsKey("all_marked"))
+                if (student.containsKey("all_marked"))
                     jsonObject.put("allMarked", student.getBoolean("all_marked"));
 
                 if (isResultsNeeded != null && isResultsNeeded)
@@ -301,10 +347,10 @@ public class QuizController {
 
                     else {
                         jsonObject.put("answers", Utility.getQuestions(
-                                true,
-                                false,
-                                task.getList("questions", Document.class),
-                                student.getList("answers", Document.class)
+                                true, false,
+                                quiz.getList("questions", Document.class),
+                                student.getList("answers", Document.class),
+                                db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
                         ));
                     }
                 }
@@ -313,12 +359,125 @@ public class QuizController {
                 jsonArray.put(jsonObject);
             }
 
-            return Utility.generateSuccessMsg("students", jsonArray);
-        }
-        catch (InvalidFieldsException x) {
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
+        } catch (InvalidFieldsException x) {
             return irysc.gachesefid.Utility.Utility.generateErr(
                     x.getMessage()
             );
+        }
+    }
+
+    public static String addAttach(Common db,
+                                   ObjectId userId,
+                                   ObjectId quizId,
+                                   MultipartFile file,
+                                   String title,
+                                   String link) {
+
+        try {
+
+            if (file == null && link == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            List<Document> attaches = quiz.getList("attaches", Document.class);
+
+            if (db instanceof SchoolQuizRepository) {
+
+                Document config = irysc.gachesefid.Utility.Utility.getConfig();
+                if (config.getBoolean("school_quiz_attaches_just_link") && file != null)
+                    return JSON_NOT_ACCESS;
+
+                if (attaches.size() >= config.getInteger("schoolQuizAttachesMax"))
+                    return irysc.gachesefid.Utility.Utility.generateErr(
+                            "شما می توانید حداکثر " + config.getInteger("schoolQuizAttachesMax") + " پیوست داشته باشید."
+                    );
+            }
+
+            if (link != null && !LinkValidator.isValid(link))
+                return irysc.gachesefid.Utility.Utility.generateErr(
+                        "لینک موردنظر نامعتبر است."
+                );
+
+            ObjectId id = new ObjectId();
+
+            Document doc = new Document("title", title)
+                    .append("is_external_link", link != null)
+                    .append("_id", id);
+
+            if (link != null)
+                doc.put("link", link);
+            else {
+
+                String base = db instanceof SchoolQuizRepository ?
+                        SchoolQuizRepository.FOLDER :
+                        IRYSCQuizRepository.FOLDER;
+
+                if (db instanceof SchoolQuizRepository &&
+                        file.getSize() > MAX_QUIZ_ATTACH_SIZE)
+                    return irysc.gachesefid.Utility.Utility.generateErr(
+                            "حداکثر حجم مجاز، " + MAX_QUIZ_ATTACH_SIZE + " مگ است."
+                    );
+
+                String fileType = uploadPdfOrMultimediaFile(file);
+                if (fileType == null)
+                    return irysc.gachesefid.Utility.Utility.generateErr(
+                            "فرمت فایل موردنظر معتبر نمی باشد."
+                    );
+
+                String filename = FileUtils.uploadFile(file, base + "/attaches");
+                if (filename == null)
+                    return JSON_UNKNOWN_UPLOAD_FILE;
+
+                doc.put("link", filename);
+            }
+
+            attaches.add(doc);
+            db.replaceOne(quizId, quiz);
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "id", id.toString()
+            );
+
+        } catch (Exception x) {
+            return irysc.gachesefid.Utility.Utility.generateErr(x.getMessage());
+        }
+    }
+
+    public static String removeAttach(Common db,
+                                      ObjectId userId,
+                                      ObjectId quizId,
+                                      ObjectId attachId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            List<Document> attaches = quiz.getList("attaches", Document.class);
+            Document doc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    attaches, "_id", attachId
+            );
+
+            if(doc == null)
+                return JSON_NOT_VALID_ID;
+
+            if(!doc.getBoolean("is_external_link")) {
+
+                String base = db instanceof SchoolQuizRepository ?
+                        SchoolQuizRepository.FOLDER :
+                        IRYSCQuizRepository.FOLDER;
+
+                FileUtils.removeFile(doc.getString("link"), base + "/attaches");
+
+            }
+
+            attaches.remove(doc);
+            db.replaceOne(quizId, quiz);
+
+            return JSON_OK;
+        } catch (Exception x) {
+            return irysc.gachesefid.Utility.Utility.generateErr(x.getMessage());
         }
     }
 }

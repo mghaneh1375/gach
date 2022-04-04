@@ -10,6 +10,7 @@ import java.util.ArrayList;
 
 public class IRYSCQuizRepository extends Common {
 
+    public final static String FOLDER = "irysc_quizzes";
 
     // todo : after all transfer from mysql to mongo it should be delete
     public static ArrayList<Quiz> findAllMysql() {
