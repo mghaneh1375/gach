@@ -8,11 +8,11 @@ import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
@@ -25,28 +25,28 @@ public class Utility {
         Set<String> keys = jsonObject.keySet();
         boolean error = false;
 
-        for(String mandatoryFiled : mandatoryFields) {
+        for (String mandatoryFiled : mandatoryFields) {
 
-            if(!keys.contains(mandatoryFiled)) {
+            if (!keys.contains(mandatoryFiled)) {
                 error = true;
                 break;
             }
 
         }
 
-        if(error)
+        if (error)
             throw new InvalidFieldsException(JSON_NOT_VALID_PARAMS);
 
-        for(String forbiddenField : forbiddenFields) {
+        for (String forbiddenField : forbiddenFields) {
 
-            if(keys.contains(forbiddenField)) {
+            if (keys.contains(forbiddenField)) {
                 error = true;
                 break;
             }
 
         }
 
-        if(error)
+        if (error)
             throw new InvalidFieldsException(JSON_NOT_VALID_PARAMS);
     }
 
@@ -91,6 +91,19 @@ public class Utility {
 
 
         jsonObject.put("studentsCount", quiz.getList("students", Document.class).size());
+        jsonObject.put("id", quiz.getObjectId("_id").toString());
+
+        return jsonObject;
+    }
+
+    static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz) {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("start", irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("start")));
+        jsonObject.put("end", irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("end")));
+
+        jsonObject.put("title", quiz.getString("title"));
         jsonObject.put("id", quiz.getObjectId("_id").toString());
 
         return jsonObject;
@@ -185,7 +198,7 @@ public class Utility {
                 else
                     studentAnswerObj.put("answer",
                             !studentAnswer.containsKey("answer") || studentAnswer.get("answer") == null ?
-                            "" : studentAnswer.get("answer")
+                                    "" : studentAnswer.get("answer")
                     );
 
 
@@ -204,23 +217,5 @@ public class Utility {
             return String.format("%.2f", mark);
 
         return mark.toString();
-    }
-
-    static class Question implements Comparable<Question> {
-
-        public int idx;
-        public JSONObject jsonObject;
-
-        public Question(JSONObject jsonObject) {
-            this.idx = jsonObject.getInt("groupIdx");
-            this.jsonObject = jsonObject;
-            this.jsonObject.remove("groupIdx");
-            this.jsonObject.remove("groupId");
-        }
-
-        @Override
-        public int compareTo(@NotNull Question question) {
-            return idx - question.idx;
-        }
     }
 }

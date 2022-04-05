@@ -12,7 +12,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 public class OpenQuizController {
 
     private final static String[] mandatoryFields = {
-            "price"
+            "price", "duration"
     };
 
     private final static String[] forbiddenFields = {

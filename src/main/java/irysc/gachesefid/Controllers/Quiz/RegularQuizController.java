@@ -28,7 +28,7 @@ public class RegularQuizController extends QuizAbstract {
     // are optional and can inherit from config
 
     private final static String[] mandatoryFields = {
-            "startRegistry", "start", "price",
+            "startRegistry", "start", "price", "duration",
             "end", "isOnline", "showResultsAfterCorrect",
     };
 

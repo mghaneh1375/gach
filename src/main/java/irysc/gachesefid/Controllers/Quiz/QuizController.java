@@ -13,6 +13,7 @@ import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Validator.LinkValidator;
+import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -22,10 +23,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 
 public class QuizController {
@@ -119,7 +123,7 @@ public class QuizController {
 
             return JSON_OK;
         } catch (InvalidFieldsException x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(
+            return generateErr(
                     x.getMessage()
             );
         }
@@ -182,7 +186,7 @@ public class QuizController {
                     .put("skipped", skipped)
                     .toString();
         } catch (InvalidFieldsException x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(
+            return generateErr(
                     x.getMessage()
             );
         }
@@ -233,7 +237,7 @@ public class QuizController {
                     .toString();
 
         } catch (InvalidFieldsException x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(
+            return generateErr(
                     x.getMessage()
             );
         }
@@ -250,7 +254,7 @@ public class QuizController {
 
             return JSON_OK;
         } catch (InvalidFieldsException x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(
+            return generateErr(
                     x.getMessage()
             );
         }
@@ -361,7 +365,7 @@ public class QuizController {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
         } catch (InvalidFieldsException x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(
+            return generateErr(
                     x.getMessage()
             );
         }
@@ -390,13 +394,13 @@ public class QuizController {
                     return JSON_NOT_ACCESS;
 
                 if (attaches.size() >= config.getInteger("schoolQuizAttachesMax"))
-                    return irysc.gachesefid.Utility.Utility.generateErr(
+                    return generateErr(
                             "شما می توانید حداکثر " + config.getInteger("schoolQuizAttachesMax") + " پیوست داشته باشید."
                     );
             }
 
             if (link != null && !LinkValidator.isValid(link))
-                return irysc.gachesefid.Utility.Utility.generateErr(
+                return generateErr(
                         "لینک موردنظر نامعتبر است."
                 );
 
@@ -416,13 +420,13 @@ public class QuizController {
 
                 if (db instanceof SchoolQuizRepository &&
                         file.getSize() > MAX_QUIZ_ATTACH_SIZE)
-                    return irysc.gachesefid.Utility.Utility.generateErr(
+                    return generateErr(
                             "حداکثر حجم مجاز، " + MAX_QUIZ_ATTACH_SIZE + " مگ است."
                     );
 
                 String fileType = uploadPdfOrMultimediaFile(file);
                 if (fileType == null)
-                    return irysc.gachesefid.Utility.Utility.generateErr(
+                    return generateErr(
                             "فرمت فایل موردنظر معتبر نمی باشد."
                     );
 
@@ -441,7 +445,7 @@ public class QuizController {
             );
 
         } catch (Exception x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(x.getMessage());
+            return generateErr(x.getMessage());
         }
     }
 
@@ -455,7 +459,7 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
 
             List<Document> attaches = quiz.getList("attaches", Document.class);
-            Document doc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+            Document doc = searchInDocumentsKeyVal(
                     attaches, "_id", attachId
             );
 
@@ -477,7 +481,120 @@ public class QuizController {
 
             return JSON_OK;
         } catch (Exception x) {
-            return irysc.gachesefid.Utility.Utility.generateErr(x.getMessage());
+            return generateErr(x.getMessage());
+        }
+    }
+
+    public static String extend(Common db, ObjectId userId,
+                                ObjectId quizId,
+                                Long start, Long end) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (start != null && end != null && start >= end)
+                return JSON_NOT_VALID_PARAMS;
+
+            long curr = System.currentTimeMillis();
+
+            if (!DEV_MODE && (
+                    (start != null && start < curr) ||
+                            (end != null && end < curr)
+            ))
+                return generateErr(
+                        "زمان ها باید از اکنون بزرگ تر باشند."
+                );
+
+            long endAt = quiz.getLong("end");
+
+            if (!DEV_MODE && endAt < curr)
+                return generateErr("زمان آزمون/تمرین موردنظر به پایان رسیده است.");
+
+            long startAt = quiz.getLong("start");
+
+            if (!DEV_MODE && startAt < curr && start != null)
+                return generateErr("به دلیل شروع شدن آزمون/تمرین، شما نمی توانید زمان شروع را تغییر دهید.");
+
+            startAt = start != null ? start : startAt;
+            endAt = end != null ? end : endAt;
+
+            if (quiz.containsKey("duration")) {
+
+                long diff = (endAt - startAt) / 1000;
+                int duration = quiz.getInteger("duration") * 60;
+
+                if (duration > diff)
+                    return generateErr("فاصله بین زمان شروع آزمون/تمرین و پایان آن باید حداقل " + (int) Math.ceil(duration / 60.0) + " دقیقه باشد.");
+            }
+
+            if (end != null)
+                quiz.put("end", end);
+
+            if (start != null)
+                quiz.put("start", start);
+
+            db.replaceOne(quizId, quiz);
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(
+                    e.getMessage()
+            );
+        }
+    }
+
+    public static String arrangeQuestions(Common db, ObjectId userId,
+                                          ObjectId quizId, JSONObject jsonObject
+                                          ) {
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+
+            if (doc.containsKey("permute") &&
+                    doc.getBoolean("permute")) {
+                return generateErr("آزمون/تمرین موردنظر دارای ویژگی بر زدن است و این ویژگی برای این آزمون/تمرین بکار نمی رود.");
+            }
+
+            long current = System.currentTimeMillis();
+
+            if (doc.getLong("start") < current)
+                return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
+
+            JSONArray questionIds = jsonObject.getJSONArray("questionIds");
+            List<Document> questions = doc.getList("questions", Document.class);
+            int totalQuestions = questions.size();
+
+            if (totalQuestions != questionIds.length())
+                return JSON_NOT_VALID_PARAMS;
+
+            ArrayList<Document> newArrange = new ArrayList<>();
+
+            for (int i = 0; i < questionIds.length(); i++) {
+
+                for (int j = i + 1; j < questionIds.length(); j++) {
+                    if (questionIds.getString(j).equals(questionIds.getString(i)))
+                        return JSON_NOT_VALID_PARAMS;
+                }
+
+                if (!ObjectIdValidator.isValid(questionIds.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+
+                Document question = searchInDocumentsKeyVal(questions, "_id",
+                        new ObjectId(questionIds.getString(i)));
+
+                if (question == null)
+                    return JSON_NOT_VALID_PARAMS;
+
+                newArrange.add(question);
+            }
+
+            doc.put("questions", newArrange);
+
+            db.replaceOne(quizId, doc);
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
         }
     }
 }

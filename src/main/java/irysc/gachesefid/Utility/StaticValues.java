@@ -53,24 +53,9 @@ public class StaticValues {
     public final static int MAX_OBJECT_ID_SIZE = 100;
     public final static int MIN_OBJECT_ID_SIZE = 20;
 
-    public final static BasicDBObject CLASS_DIGEST = new BasicDBObject("room", 1)
-            .append("name", 1).append("start", 1).append("end", 1)
-            .append("teacher", 1).append("roomObj", 1).append("term", 1)
-            .append("tags", 1).append("start_registry", 1).append("end_registry", 1)
-            .append("schedule", 1).append("_id", 1).append("capacity", 1)
-            .append("description", 1).append("dates", 1).append("book", 1)
-            .append("price", 1).append("price_for_new", 1)
-            .append("is_online", 1).append("days", 1).append("visibility", 1)
-            .append("registry_queue", 1).append("min_mark", 1).append("class_count", 1)
-            .append("is_queue_needed", 1).append("queue_mode", 1).append("file_desc", 1)
-            .append("students", 1).append("tag", 1).append("registry_times", 1);
-
-    public final static BasicDBObject CLASS_MINI_DIGEST = new BasicDBObject("name", 1)
-            .append("teacher", 1).append("term", 1)
-            .append("_id", 1).append("capacity", 1)
-            .append("price", 1).append("price_for_new", 1)
-            .append("is_online", 1);
-
+    public final static BasicDBObject TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS =
+            new BasicDBObject("title", 1).append("_id", 1)
+            .append("start", 1).append("end", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
             .append("username", 1)

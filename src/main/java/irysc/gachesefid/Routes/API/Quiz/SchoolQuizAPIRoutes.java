@@ -97,19 +97,40 @@ public class SchoolQuizAPIRoutes extends Router {
     @GetMapping(path = "getMyTasks")
     @ResponseBody
     public String getMyTasks(HttpServletRequest request,
-                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                             @PathVariable @ObjectIdConstraint ObjectId quizId,
-                             @PathVariable @ObjectIdConstraint ObjectId studentId
+                             @RequestParam(required = false, value = "mode") @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                             @RequestParam(required = false, value = "pass") Boolean pass,
+                             @RequestParam(required = false, value = "curr") Boolean curr,
+                             @RequestParam(required = false, value = "future") Boolean future
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TashrihiQuizController.getMyTasks(
+                getPrivilegeUser(request).getObjectId("_id"), mode,
+                pass == null ? false : pass, curr == null ? true : curr,
+                future == null ? true : future
+        );
+    }
+
+    @PutMapping(value = "/setMark/{mode}/{taskId}/{studentId}/{answerId}")
+    @ResponseBody
+    public String setMark(HttpServletRequest request,
+                          @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                          @PathVariable @ObjectIdConstraint ObjectId taskId,
+                          @PathVariable @ObjectIdConstraint ObjectId answerId,
+                          @PathVariable @ObjectIdConstraint ObjectId studentId,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"mark"},
+                                  paramsType = {Number.class},
+                                  optionals = {"description"},
+                                  optionalsType = {String.class}
+                          ) @NotBlank String jsonStr
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getString("access"));
 
-        return TashrihiQuizController.getMyMarkListForSpecificStudent(
-                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository : schoolQuizRepository,
+        return TashrihiQuizController.setMark(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
-                quizId, studentId
+                taskId, answerId, studentId, new JSONObject(jsonStr)
         );
     }
 

@@ -6,11 +6,12 @@ import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
-import jdk.jfr.consumer.RecordedThread;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,12 +19,16 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Controllers.Quiz.Utility.convertTashrihiQuizToJSONDigestForTeachers;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
 
 public class TashrihiQuizController extends QuizAbstract {
 
+    //duration is optional field and if exist entity will be a tashrihi quiz
+    // and else will be a HW
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price",
             "end", "isOnline", "showResultsAfterCorrect",
@@ -50,42 +55,6 @@ public class TashrihiQuizController extends QuizAbstract {
             );
         }
 
-    }
-
-    @Override
-    void registry(Document student, Document quiz, int paid) {
-
-        List<Document> students = quiz.getList("students", Document.class);
-
-        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                students, "_id", student.getObjectId("_id")
-        ) != -1)
-            return;
-
-        Document stdDoc = new Document("_id", student.getObjectId("_id"))
-                .append("paid", paid)
-                .append("register_at", System.currentTimeMillis())
-                .append("finish_at", null)
-                .append("start_at", null)
-                .append("answers", new ArrayList<>())
-                .append("all_marked", false);
-
-        if ((boolean) quiz.getOrDefault("permute", false))
-            stdDoc.put("question_indices", new ArrayList<>());
-
-        students.add(stdDoc);
-
-
-    }
-
-    @Override
-    void quit(Document student, Document quiz) {
-
-    }
-
-    @Override
-    String buy(Document student, Document quiz) {
-        return null;
     }
 
     // rebuild list on each call
@@ -128,7 +97,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     for (int j = 0; j < jsonArray1.length(); j++) {
 
                         ObjectId questionId = new ObjectId(jsonArray1.getString(j));
-                        if (Utility.searchInDocumentsKeyValIdx(
+                        if (searchInDocumentsKeyValIdx(
                                 questions, "_id", questionId
                         ) == -1)
                             continue;
@@ -148,7 +117,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     for (int j = 0; j < jsonArray1.length(); j++) {
 
                         ObjectId studentId = new ObjectId(jsonArray1.getString(j));
-                        if (Utility.searchInDocumentsKeyValIdx(
+                        if (searchInDocumentsKeyValIdx(
                                 students, "_id", studentId
                         ) == -1)
                             continue;
@@ -281,13 +250,13 @@ public class TashrihiQuizController extends QuizAbstract {
 
             }
 
-            if(studentIds != null && !studentIds.contains(studentId))
+            if (studentIds != null && !studentIds.contains(studentId))
                 return JSON_NOT_ACCESS;
 
             List<Document> students = quiz.getList("students", Document.class);
             Document student = Utility.searchInDocumentsKeyVal(students, "user_id", studentId);
 
-            if(student == null)
+            if (student == null)
                 return JSON_NOT_VALID_PARAMS;
 
             boolean allMarked = questionIds == null && student.getBoolean("all_marked");
@@ -336,11 +305,197 @@ public class TashrihiQuizController extends QuizAbstract {
 
     }
 
-    public static String getMyTasks(Common db, ObjectId userId,
-                                    boolean curr, boolean future,
-                                    boolean pass) {
+    // defaults: curr: true, future: true, pass: false
+    public static String getMyTasks(ObjectId userId,
+                                    String mode, boolean pass,
+                                    boolean curr, boolean future) {
 
-        return JSON_OK;
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        filters.add(eq("mode", KindQuiz.TASHRIHI));
+        filters.add(eq("correctors._id", userId));
+
+        int today = Utility.getToday();
+
+        if (!pass)
+            filters.add(gt("end", today));
+
+        if (!curr)
+            filters.add(or(
+                    lt("end", today),
+                    gt("start", today)
+            ));
+
+        if (!future)
+            filters.add(lt("start", today));
+
+        JSONArray iryscTasks = new JSONArray();
+        JSONArray schoolTasks = new JSONArray();
+
+        if (mode == null || mode.equals(GeneralKindQuiz.IRYSC.getName())) {
+
+            ArrayList<Document> docs = iryscQuizRepository.find(and(filters),
+                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS
+            );
+
+            for (Document doc : docs) {
+                iryscTasks.put(
+                        convertTashrihiQuizToJSONDigestForTeachers(doc)
+                );
+            }
+        }
+
+        if (mode == null || mode.equals(GeneralKindQuiz.SCHOOL.getName())) {
+
+            ArrayList<Document> docs = schoolQuizRepository.find(and(filters),
+                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS
+            );
+
+            for (Document doc : docs) {
+                schoolTasks.put(
+                        convertTashrihiQuizToJSONDigestForTeachers(doc)
+                );
+            }
+
+        }
+
+        return Utility.generateSuccessMsg("iryscTasks", iryscTasks,
+                new PairValue("schoolTasks", schoolTasks)
+        );
+
+    }
+
+    public static String setMark(Common db, ObjectId userId,
+                                 ObjectId quizId, ObjectId answerId,
+                                 ObjectId studentId, JSONObject markData) {
+        try {
+
+            PairValue p = QuizController.hasCorrectorAccess(db, userId, quizId);
+
+            Document quiz = (Document) p.getKey();
+            int correctorIdx = (int) p.getValue();
+
+            if (!DEV_MODE && quiz.getLong("end") > System.currentTimeMillis())
+                return Utility.generateErr("آزمون موردنظر هنوز به اتمام نرسیده است.");
+
+            List<Document> students = quiz.getList("students", Document.class);
+
+            int stdIdx = searchInDocumentsKeyValIdx(students, "_id", studentId);
+
+            if (stdIdx == -1)
+                return JSON_NOT_VALID_ID;
+
+            if (!students.get(stdIdx).containsKey("answers"))
+                return Utility.generateErr("دانش آموز موردنظر در این آزمون غایب بوده است.");
+
+            List<Document> studentAnswers = students.get(stdIdx).getList("answers", Document.class);
+
+            int answerIdx = searchInDocumentsKeyValIdx(studentAnswers, "_id", answerId);
+            if (answerIdx == -1)
+                return JSON_NOT_VALID_ID;
+
+            double mark = markData.getNumber("mark").doubleValue();
+
+            ObjectId questionId = studentAnswers.get(answerIdx).getObjectId("question_id");
+
+            if(correctorIdx != -1) {
+
+                Document correctorAccess = quiz.getList("correctors", Document.class).get(correctorIdx);
+
+                if(correctorAccess.get("students") != null &&
+                        !correctorAccess.getList("students", ObjectId.class).contains(studentId)
+                )
+                    return JSON_NOT_ACCESS;
+
+                if(correctorAccess.get("questions") != null &&
+                        !correctorAccess.getList("questions", ObjectId.class).contains(questionId)
+                )
+                    return JSON_NOT_ACCESS;
+
+            }
+
+            List<Document> questions = quiz.getList("questions", Document.class);
+            int questionIdx = searchInDocumentsKeyValIdx(questions, "_id", questionId);
+
+            if (questions.get(questionIdx).getInteger("mark") < mark)
+                return Utility.generateErr("حداکثر نمره مجاز برای این سوال " + questions.get(questionIdx).getInteger("mark") + " می باشد.");
+
+            double finalMark;
+
+            if (!students.get(stdIdx).containsKey("total_mark")) {
+                students.get(stdIdx).put("total_mark", mark);
+            } else if (studentAnswers.get(answerIdx).containsKey("mark")) {
+                finalMark = students.get(stdIdx).getDouble("total_mark") - studentAnswers.get(answerIdx).getDouble("mark") + mark;
+                students.get(stdIdx).put("total_mark", finalMark);
+            } else {
+                finalMark = students.get(stdIdx).getDouble("total_mark") + mark;
+                students.get(stdIdx).put("total_mark", finalMark);
+            }
+
+            studentAnswers.get(answerIdx).put("mark", mark);
+            studentAnswers.get(answerIdx).put("mark_desc",
+                    markData.has("description") ?
+                            markData.getString("description") : ""
+            );
+
+            boolean allMarked = true;
+
+            if (!students.get(stdIdx).containsKey("all_marked")) {
+
+                for (Document studentAnswer : studentAnswers) {
+                    if (!studentAnswer.containsKey("mark")) {
+                        allMarked = false;
+                        break;
+                    }
+                }
+            }
+
+
+            if (allMarked)
+                students.get(stdIdx).put("all_marked", true);
+
+            new Thread(() -> db.replaceOne(quizId, quiz)).start();
+            return JSON_OK;
+        }
+        catch (Exception x) {
+            return Utility.generateErr(x.getMessage());
+        }
+    }
+
+    @Override
+    void registry(Document student, Document quiz, int paid) {
+
+        List<Document> students = quiz.getList("students", Document.class);
+
+        if (searchInDocumentsKeyValIdx(
+                students, "_id", student.getObjectId("_id")
+        ) != -1)
+            return;
+
+        Document stdDoc = new Document("_id", student.getObjectId("_id"))
+                .append("paid", paid)
+                .append("register_at", System.currentTimeMillis())
+                .append("finish_at", null)
+                .append("start_at", null)
+                .append("answers", new ArrayList<>())
+                .append("all_marked", false);
+
+        if ((boolean) quiz.getOrDefault("permute", false))
+            stdDoc.put("question_indices", new ArrayList<>());
+
+        students.add(stdDoc);
+
+
+    }
+
+    @Override
+    void quit(Document student, Document quiz) {
+
+    }
+
+    @Override
+    String buy(Document student, Document quiz) {
+        return null;
     }
 
 }

@@ -42,10 +42,10 @@ public class QuizAPIRoutes extends Router {
                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class) @NotBlank String mode,
                         @RequestBody @StrongJSONConstraint(
                                 params = {
-                                        "title", "duration"
+                                        "title"
                                 },
                                 paramsType = {
-                                        String.class, Positive.class
+                                        String.class
                                 },
                                 optionals = {
                                         "price", "permute",
@@ -59,7 +59,7 @@ public class QuizAPIRoutes extends Router {
                                         "topStudentsCount",
                                         "paperTheme", "database",
                                         "descAfter", "descAfterMode",
-                                        "desc", "descMode"
+                                        "desc", "descMode", "duration" // duration is in min format
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -72,7 +72,8 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Positive.class,
                                         String.class, Boolean.class,
                                         String.class, String.class,
-                                        String.class, String.class
+                                        String.class, String.class,
+                                        Positive.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -253,4 +254,40 @@ public class QuizAPIRoutes extends Router {
         return QuizController.removeAttach(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, attachId);
     }
+
+    @PutMapping(value = "/extend/{mode}/{quizId}")
+    @ResponseBody
+    public String extend(HttpServletRequest request,
+                         @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                         @PathVariable @ObjectIdConstraint ObjectId quizId,
+                         @RequestParam(value = "start", required = false) Long start,
+                         @RequestParam(value = "end", required = false) Long end
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        return QuizController.extend(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, start, end);
+    }
+
+    @PostMapping(value = "/arrangeQuestions/{mode}/{quizId}")
+    @ResponseBody
+    public String arrangeQuestions(HttpServletRequest request,
+                                   @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                   @RequestBody @StrongJSONConstraint(params = {"questionIds"},
+                                           paramsType = JSONArray.class) @NotBlank String jsonStr)
+            throws UnAuthException, NotActivateAccountException, NotAccessException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+
+        return QuizController.arrangeQuestions(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
+        );
+    }
 }
+
