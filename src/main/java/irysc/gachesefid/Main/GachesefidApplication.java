@@ -12,14 +12,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import springfox.documentation.builders.PathSelectors;
-import springfox.documentation.builders.RequestHandlerSelectors;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spring.web.plugins.Docket;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -57,9 +52,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static CertificateRepository certificateRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigRepository configRepository;
+    public static GradeRepository gradeRepository;
     public static OffcodeRepository offcodeRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static RequestRepository requestRepository;
+    public static SubjectRepository subjectRepository;
     public static SchoolQuizRepository schoolQuizRepository;
     public static TransactionRepository transactionRepository;
     public static UserRepository userRepository;
@@ -87,10 +84,12 @@ public class GachesefidApplication implements WebMvcConfigurer {
             certificateRepository = new CertificateRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
+            gradeRepository = new GradeRepository();
             mailRepository = new MailRepository();
             offcodeRepository = new OffcodeRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             requestRepository = new RequestRepository();
+            subjectRepository = new SubjectRepository();
             schoolQuizRepository = new SchoolQuizRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();
@@ -145,12 +144,12 @@ public class GachesefidApplication implements WebMvcConfigurer {
                 .run(args);
     }
 
-    @Bean
-    public Docket api() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .select()
-                .apis(RequestHandlerSelectors.any())
-                .paths(PathSelectors.any())
-                .build();
-    }
+//    @Bean
+//    public Docket api() {
+//        return new Docket(DocumentationType.SWAGGER_2)
+//                .select()
+//                .apis(RequestHandlerSelectors.any())
+//                .paths(PathSelectors.any())
+//                .build();
+//    }
 }

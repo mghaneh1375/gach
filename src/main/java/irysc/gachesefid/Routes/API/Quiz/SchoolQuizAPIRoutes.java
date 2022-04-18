@@ -42,7 +42,7 @@ public class SchoolQuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return TashrihiQuizController.setCorrectors(iryscQuizRepository, null, quizId,
@@ -65,7 +65,7 @@ public class SchoolQuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return TashrihiQuizController.getMyMarkList(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
@@ -84,7 +84,7 @@ public class SchoolQuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return TashrihiQuizController.getMyMarkListForSpecificStudent(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
@@ -125,7 +125,7 @@ public class SchoolQuizAPIRoutes extends Router {
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return TashrihiQuizController.setMark(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,

@@ -106,7 +106,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.toggleVisibility(iryscQuizRepository, null, quizId);
@@ -128,7 +128,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceRegistry(iryscQuizRepository, null, quizId,
@@ -152,7 +152,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceDeportation(iryscQuizRepository, null, quizId,
@@ -172,7 +172,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.remove(iryscQuizRepository, null, quizId);
@@ -197,7 +197,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.getParticipants(iryscQuizRepository, null,
@@ -225,7 +225,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addAttach(iryscQuizRepository, null, quizId,
@@ -245,7 +245,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.removeAttach(iryscQuizRepository, null,
@@ -265,7 +265,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.extend(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
@@ -282,7 +282,7 @@ public class QuizAPIRoutes extends Router {
             throws UnAuthException, NotActivateAccountException, NotAccessException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getString("access"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.arrangeQuestions(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,

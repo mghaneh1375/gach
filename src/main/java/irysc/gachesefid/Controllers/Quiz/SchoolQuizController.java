@@ -1,10 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import irysc.gachesefid.Exception.InvalidFieldsException;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
-
-import static irysc.gachesefid.Controllers.Quiz.Utility.filterFields;
 
 public class SchoolQuizController {
 
@@ -21,13 +18,13 @@ public class SchoolQuizController {
 
     public static String create(ObjectId userId, JSONObject jsonObject) {
 
-        try {
-            filterFields(mandatoryFields, forbiddenFields, jsonObject);
-        } catch (InvalidFieldsException e) {
-            return irysc.gachesefid.Utility.Utility.generateErr(e.getMessage());
-        }
-
-        if(jsonObject.)
+//        try {
+//            filterFields(mandatoryFields, forbiddenFields, jsonObject);
+//        } catch (InvalidFieldsException e) {
+//            return irysc.gachesefid.Utility.Utility.generateErr(e.getMessage());
+//        }
+//
+//        if(jsonObject.)
 
         return "as";
     }

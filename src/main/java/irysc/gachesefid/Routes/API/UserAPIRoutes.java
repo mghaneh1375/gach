@@ -11,6 +11,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -28,10 +29,13 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import java.util.ArrayList;
+
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 @Controller
@@ -41,6 +45,27 @@ public class UserAPIRoutes extends Router {
 
     @Autowired
     UserService userService;
+
+    @GetMapping(path = "createExam")
+    @ResponseBody
+    public String createExam(HttpServletRequest request)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+        ArrayList<String> files = new ArrayList<>();
+        files.add(uploadDir_dev + "questions/1.jpg");
+        files.add(uploadDir_dev + "questions/2.png");
+        files.add(uploadDir_dev + "questions/3.png");
+        files.add(uploadDir_dev + "questions/4.png");
+        files.add(uploadDir_dev + "questions/5.png");
+        files.add(uploadDir_dev + "questions/6.png");
+        files.add(uploadDir_dev + "questions/7.png");
+        files.add(uploadDir_dev + "questions/8.png");
+        files.add(uploadDir_dev + "questions/9.png");
+        files.add(uploadDir_dev + "questions/10.png");
+        files.add(uploadDir_dev + "questions/11.png");
+        files.add(uploadDir_dev + "questions/12.png");
+        PDFUtils.createExam(files);
+        return JSON_OK;
+    }
 
     @PostMapping(value = "clearCache/{table}")
     @ResponseBody
@@ -63,7 +88,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String getInfo(HttpServletRequest request)
             throws NotCompleteAccountException, NotActivateAccountException, UnAuthException {
-        return ManageUserController.fetchUser(getUser(request), null, "student");
+        return ManageUserController.fetchUser(getUser(request), null, false);
     }
 
     @PostMapping(value = "/signIn")
@@ -78,7 +103,7 @@ public class UserAPIRoutes extends Router {
             Utility.convertPersian(jsonObject);
             String token = userService.signIn(
                     jsonObject.getString("username").toLowerCase(),
-                    jsonObject.getString("password")
+                    jsonObject.getString("password"), true
             );
 
             return Utility.generateSuccessMsg("token", token);

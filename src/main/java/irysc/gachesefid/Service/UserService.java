@@ -79,7 +79,7 @@ public class UserService {
         );
     }
 
-    public String signIn(String username, String password) throws NotActivateAccountException {
+    public String signIn(String username, String password, boolean checkPass) throws NotActivateAccountException {
 
         try {
 
@@ -97,7 +97,7 @@ public class UserService {
 
             Document user = userRepository.findByUnique(username, false);
 
-            if (DEV_MODE) {
+            if (DEV_MODE || !checkPass) {
                 if (user == null)
                     throw new CustomException("Invalid username/password supplied", HttpStatus.UNPROCESSABLE_ENTITY);
             } else {

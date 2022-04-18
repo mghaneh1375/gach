@@ -42,7 +42,7 @@ public class ReportAPIRoutes extends Router {
         if(user == null)
             return JSON_NOT_VALID_TOKEN;
 
-        return AdminReportController.generalQuizReport(user.getString("access"), reportNo, user.getObjectId("_id"), quizId, quizMode);
+        return AdminReportController.generalQuizReport(user.getList("accesses", String.class), reportNo, user.getObjectId("_id"), quizId, quizMode);
     }
 
     @GetMapping(value = "{quizMode}/karname/{mode}/{quizId}")

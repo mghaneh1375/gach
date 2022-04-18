@@ -4,13 +4,14 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import irysc.gachesefid.Models.Access;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -27,6 +28,7 @@ import javax.validation.constraints.NotBlank;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 
 @Controller
 @RequestMapping(path = "/api/admin/user")
@@ -82,7 +84,9 @@ public class ManageUserAPIRoutes extends Router {
     public String fetchUser(HttpServletRequest request,
                             @PathVariable @NotBlank String unique)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return ManageUserController.fetchUser(null, unique, getTeacherPrivilegeUser(request).getString("access"));
+        return ManageUserController.fetchUser(null, unique,
+                Authorization.isAdmin(getPrivilegeUser(request).getList("accesses", String.class))
+        );
     }
 
     @GetMapping(value = "/fetchUserLike")
@@ -117,10 +121,10 @@ public class ManageUserAPIRoutes extends Router {
         Utility.convertPersian(jsonObject);
 
         if (!jsonObject.getString("newPass").equals(jsonObject.getString("rNewPass")))
-            return Utility.generateErr("رمزجدید و تکرار آن یکسان نیستند.");
+            return generateErr("رمزجدید و تکرار آن یکسان نیستند.");
 
         if (!Utility.isValidPassword(jsonObject.getString("newPass")))
-            return Utility.generateErr("رمزجدید انتخاب شده قوی نیست.");
+            return generateErr("رمزجدید انتخاب شده قوی نیست.");
 
         Document user = userRepository.findById(userId);
         if (user == null)
@@ -143,5 +147,31 @@ public class ManageUserAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return ManageUserController.setAdvisorPercent(userId, percent);
+    }
+
+    @PostMapping(value = "/signIn/{userId}")
+    @ResponseBody
+    public String signIn(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+
+        try {
+
+            Document user = userRepository.findById(userId);
+
+            if (user == null || Authorization.isAdmin(user.getList("accesses", String.class)))
+                return JSON_NOT_VALID_ID;
+
+            return Utility.generateSuccessMsg(
+                    "token", userService.signIn(user.getString("username"), "1", false)
+            );
+
+        } catch (NotActivateAccountException x) {
+            return generateErr("not active account");
+        } catch (Exception x) {
+            return JSON_NOT_VALID_PARAMS;
+        }
     }
 }

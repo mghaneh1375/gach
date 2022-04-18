@@ -1,6 +1,5 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import irysc.gachesefid.DB.RegularQuizRepository;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -8,7 +7,6 @@ import org.json.JSONObject;
 
 import java.util.List;
 
-import static irysc.gachesefid.Main.GachesefidApplication.regularQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
@@ -17,30 +15,30 @@ public class StudentReportController {
 
     public static String generalQuizReport(String mode, ObjectId userId, ObjectId quizId, String quizMode) {
 
-        Document quiz = regularQuizRepository.findById(quizId);
-        if(quiz == null)
-            return JSON_NOT_VALID_ID;
-
-        List<Document> students = quiz.getList("students", Document.class);
-        String result = null;
-
-        for(Document student : students) {
-            if(student.getObjectId("_id").equals(userId)) {
-                result = student.getString("result");
-                break;
-            }
-        }
-
-        if(result == null)
-            return JSON_NOT_ACCESS;
-
-        switch (mode) {
-            case "question":
-                return questionReport(quiz, result);
-            case "general":
-                break;
-        }
-
+//        Document quiz = regularQuizRepository.findById(quizId);
+//        if(quiz == null)
+//            return JSON_NOT_VALID_ID;
+//
+//        List<Document> students = quiz.getList("students", Document.class);
+//        String result = null;
+//
+//        for(Document student : students) {
+//            if(student.getObjectId("_id").equals(userId)) {
+//                result = student.getString("result");
+//                break;
+//            }
+//        }
+//
+//        if(result == null)
+//            return JSON_NOT_ACCESS;
+//
+//        switch (mode) {
+//            case "question":
+//                return questionReport(quiz, result);
+//            case "general":
+//                break;
+//        }
+//
         return JSON_NOT_VALID_PARAMS;
     }
 

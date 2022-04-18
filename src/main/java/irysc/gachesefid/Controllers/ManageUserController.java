@@ -21,7 +21,8 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class ManageUserController {
 
-    public static String fetchUser(Document user, String unique, String access) {
+    // todo: review teacher scenario access
+    public static String fetchUser(Document user, String unique, boolean isAdmin) {
 
         if (user == null) {
             user = userRepository.findByUnique(unique, true);
@@ -29,8 +30,7 @@ public class ManageUserController {
                 return Utility.generateSuccessMsg("user", "");
         }
 
-        boolean isAdmin = Authorization.isAdmin(access);
-        if (!isAdmin && !Authorization.isPureStudent(user.getString("access")))
+        if (!isAdmin && !Authorization.isPureStudent(user.getList("accesses", String.class)))
             return JSON_NOT_ACCESS;
 
         JSONObject userJson = new JSONObject()
@@ -44,7 +44,7 @@ public class ManageUserController {
                 .put("preTel", user.containsKey("pre_tel") && isAdmin ? user.getString("pre_tel") : "")
                 .put("tel", user.containsKey("tel") && isAdmin ? user.getString("tel") : "")
                 .put("passportFile", user.containsKey("passport_file") ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("passport_file") : "")
-                .put("access", user.getString("access"))
+                .put("access", user.getList("accesses", String.class))
                 .put("city", user.containsKey("city") && isAdmin ? user.getString("city") : "")
                 .put("NIDOrPassport", (user.containsKey("NID")) ?
                         user.getString("NID") : (user.containsKey("passport_no")) ?

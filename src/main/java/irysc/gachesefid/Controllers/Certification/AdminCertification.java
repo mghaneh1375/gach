@@ -47,7 +47,6 @@ public class AdminCertification {
         return Utility.generateSuccessMsg("data", jsonArray);
     }
 
-
     public static String get(ObjectId certificateId) {
 
         Document certificate = certificateRepository.findOne(eq("_id", certificateId), null);
@@ -57,9 +56,9 @@ public class AdminCertification {
                 .put("createdAt", Utility.getSolarDate(certificate.getLong("created_at")))
                 .put("studentsCount", students.size());
 
-        JSONArray studentsJSON = new JSONArray();
-        for(Document student : students)
-            studentsJSON.put();
+//        JSONArray studentsJSON = new JSONArray();
+//        for(Document student : students)
+//            studentsJSON.put();
 
         for(String key : certificate.keySet()) {
 

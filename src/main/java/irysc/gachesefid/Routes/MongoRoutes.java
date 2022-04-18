@@ -3,7 +3,6 @@ package irysc.gachesefid.Routes;
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.DB.QuestionRepository;
-import irysc.gachesefid.DB.RegularQuizRepository;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.Quiz;
 import org.bson.Document;
@@ -71,47 +70,47 @@ public class MongoRoutes extends Router {
         MongoCollection<Document> documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection("regular_quiz");
         MongoCollection<Document> documentMongoCollection2 = GachesefidApplication.mongoDatabase.getCollection("regular_quiz_result");
 
-        ArrayList<Quiz> quizzes = RegularQuizRepository.findAllMysql();
+//        ArrayList<Quiz> quizzes = RegularQuizRepository.findAllMysql();
 
-        for (Quiz quiz : quizzes) {
-
-            Document document = new Document();
-            for (String key : quiz.cols.keySet()) {
-                String secKey = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key);
-                document.append(secKey, quiz.cols.get(key));
-            }
-
-            if (!document.containsKey("user_id"))
-                continue;
-
-//            Document user = UserRepository.findByMysqlId(document.getInteger("user_id"));
-//            if(user == null)
+//        for (Quiz quiz : quizzes) {
+//
+//            Document document = new Document();
+//            for (String key : quiz.cols.keySet()) {
+//                String secKey = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key);
+//                document.append(secKey, quiz.cols.get(key));
+//            }
+//
+//            if (!document.containsKey("user_id"))
 //                continue;
-
-            document.put("start_date", Integer.parseInt(document.getString("start_date")));
-            document.put("start_time", Integer.parseInt(document.getString("start_time")));
-            document.put("end_date", Integer.parseInt(document.getString("end_date")));
-            document.put("end_time", Integer.parseInt(document.getString("end_time")));
-
-//            document.put("user_id", user.getObjectId("_id"));
-            ArrayList<ArrayList<Object>> all = RegularQuizRepository.findAllQuizRegistryMysql(document.getInteger("id"));
-
-            document.put("students", all.get(0));
-            document.put("ranking", new ArrayList<>());
-            document.put("questions", RegularQuizRepository.findQuizQuestions(document.getInteger("id")));
-            document.remove("id");
-            documentMongoCollection.insertOne(document);
-
-            ObjectId quizId = document.getObjectId("_id");
-
-            for (Object student : all.get(1)) {
-
-                ((Document) student).append("lessons", new ArrayList<>())
-                        .append("quiz_id", quizId);
-
-                documentMongoCollection2.insertOne((Document) student);
-            }
-        }
+//
+////            Document user = UserRepository.findByMysqlId(document.getInteger("user_id"));
+////            if(user == null)
+////                continue;
+//
+//            document.put("start_date", Integer.parseInt(document.getString("start_date")));
+//            document.put("start_time", Integer.parseInt(document.getString("start_time")));
+//            document.put("end_date", Integer.parseInt(document.getString("end_date")));
+//            document.put("end_time", Integer.parseInt(document.getString("end_time")));
+//
+////            document.put("user_id", user.getObjectId("_id"));
+//            ArrayList<ArrayList<Object>> all = RegularQuizRepository.findAllQuizRegistryMysql(document.getInteger("id"));
+//
+//            document.put("students", all.get(0));
+//            document.put("ranking", new ArrayList<>());
+//            document.put("questions", RegularQuizRepository.findQuizQuestions(document.getInteger("id")));
+//            document.remove("id");
+//            documentMongoCollection.insertOne(document);
+//
+//            ObjectId quizId = document.getObjectId("_id");
+//
+//            for (Object student : all.get(1)) {
+//
+//                ((Document) student).append("lessons", new ArrayList<>())
+//                        .append("quiz_id", quizId);
+//
+//                documentMongoCollection2.insertOne((Document) student);
+//            }
+//        }
 
         return "Sam";
     }

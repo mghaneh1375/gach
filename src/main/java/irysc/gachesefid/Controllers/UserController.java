@@ -193,7 +193,7 @@ public class UserController {
 
         jsonObject.put("user", UserRepository.convertUser(user));
         if (user.containsKey("access"))
-            return jsonObject.put("access", user.getString("access"))
+            return jsonObject.put("access", user.getList("accesses", String.class))
                     .toString();
 
         return jsonObject.put("access", "student").toString();

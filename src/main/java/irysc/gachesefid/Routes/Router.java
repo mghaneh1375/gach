@@ -18,6 +18,8 @@ public class Router {
     @Autowired
     private UserService userService;
 
+    private final static JwtTokenFilter JWT_TOKEN_FILTER = new JwtTokenFilter();
+
     protected Document getUser(HttpServletRequest request)
             throws NotActivateAccountException, NotCompleteAccountException, UnAuthException {
 
@@ -61,7 +63,7 @@ public class Router {
                     throw new NotActivateAccountException("Account not activated");
                 }
 
-                if(!Authorization.isStudent(u.getString("access")))
+                if(!Authorization.isStudent(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
                 if (
@@ -79,108 +81,27 @@ public class Router {
 
     protected void getAdminPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        boolean auth = new JwtTokenFilter().isAuth(request);
-        if(auth) {
-            Document u = userService.whoAmI(request);
-            if (isAdmin(request, u)) return;
-        }
-        throw new UnAuthException("Token is not valid");
-    }
-
-    private boolean isAdmin(HttpServletRequest request, Document u) throws NotActivateAccountException, NotAccessException {
-
-        if (u != null) {
-
-            if(!u.getString("status").equals("active")) {
-                JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
-                throw new NotActivateAccountException("Account not activated");
-            }
-
-            if(!Authorization.isAdmin(u.getString("access")))
-                throw new NotAccessException("Access denied");
-
-            return true;
-        }
-
-        return false;
+        isWantedAccess(request, Access.ADMIN.getName());
     }
 
     protected Document getAdminPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        boolean auth = new JwtTokenFilter().isAuth(request);
-        if(auth) {
-            Document u = userService.whoAmI(request);
-            if (isAdmin(request, u)) return u;
-        }
-
-        throw new UnAuthException("Token is not valid");
+        return isWantedAccess(request, Access.ADMIN.getName());
     }
 
     protected Document getTeacherPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        if(new JwtTokenFilter().isAuth(request)) {
-            Document u = userService.whoAmI(request);
-            if (u != null) {
-
-                if(!u.getString("status").equals("active")) {
-                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
-                    throw new NotActivateAccountException("Account not activated");
-                }
-
-                if(!Authorization.isTeacher(u.getString("access")))
-                    throw new NotAccessException("Access denied");
-
-                return u;
-            }
-        }
-
-        throw new UnAuthException("Token is not valid");
+        return isWantedAccess(request, Access.TEACHER.getName());
     }
 
     protected void getPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        if(new JwtTokenFilter().isAuth(request)) {
-            Document u = userService.whoAmI(request);
-            if (u != null) {
-
-                if(!u.getString("status").equals("active")) {
-                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
-                    throw new NotActivateAccountException("Account not activated");
-                }
-
-                if(Authorization.isPureStudent(u.getString("access")))
-                    throw new NotAccessException("Access denied");
-
-                return;
-            }
-        }
-
-        throw new UnAuthException("Token is not valid");
+        isPrivilegeUser(request);
     }
 
     protected Document getPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        if(new JwtTokenFilter().isAuth(request)) {
-            Document u = userService.whoAmI(request);
-            if (u != null) {
-
-                if(!u.getString("status").equals("active")) {
-                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
-                    throw new NotActivateAccountException("Account not activated");
-                }
-
-                if(!u.getBoolean("level"))
-                    throw new NotAccessException("Access denied");
-
-                return u;
-            }
-        }
-
-        throw new UnAuthException("Token is not valid");
+        return isPrivilegeUser(request);
     }
 
     protected Document getUserWithOutCheckCompleteness(HttpServletRequest request)
@@ -244,5 +165,56 @@ public class Router {
         }
 
         return null;
+    }
+
+    private Document isWantedAccess(HttpServletRequest request, String wantedAccess
+    ) throws NotActivateAccountException, NotAccessException, UnAuthException {
+
+        if (JWT_TOKEN_FILTER.isAuth(request)) {
+
+            Document u = userService.whoAmI(request);
+
+            if (u != null) {
+
+                if (!u.getString("status").equals("active")) {
+                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
+                    throw new NotActivateAccountException("Account not activated");
+                }
+
+                if(wantedAccess.equals(Access.TEACHER.getName()) &&
+                        !Authorization.isTeacher(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                if(wantedAccess.equals(Access.ADMIN.getName()) &&
+                        !Authorization.isAdmin(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                return u;
+            }
+        }
+
+        throw new UnAuthException("Token is not valid");
+    }
+
+    private Document isPrivilegeUser(HttpServletRequest request
+    ) throws NotActivateAccountException, NotAccessException, UnAuthException {
+
+        if (new JwtTokenFilter().isAuth(request)) {
+            Document u = userService.whoAmI(request);
+            if (u != null) {
+
+                if (!u.getString("status").equals("active")) {
+                    JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
+                    throw new NotActivateAccountException("Account not activated");
+                }
+
+                if (Authorization.isPureStudent(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                return u;
+            }
+        }
+
+        throw new UnAuthException("Token is not valid");
     }
 }
