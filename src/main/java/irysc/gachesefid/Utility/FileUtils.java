@@ -126,6 +126,23 @@ public class FileUtils {
         }
     }
 
+    @Nullable
+    public static String uploadImageFile(MultipartFile file) {
+
+        try {
+
+            String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+
+            if (!fileType.equals("image"))
+                return null;
+
+            return fileType;
+
+        } catch (InvalidFileTypeException e) {
+            return null;
+        }
+    }
+
     private static PairValue getFileType(String filename) throws InvalidFileTypeException {
 
         String[] splited = filename.split("\\.");

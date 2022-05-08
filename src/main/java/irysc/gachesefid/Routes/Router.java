@@ -81,7 +81,7 @@ public class Router {
 
     protected void getAdminPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        isWantedAccess(request, Access.ADMIN.getName());
+//        isWantedAccess(request, Access.ADMIN.getName());
     }
 
     protected Document getAdminPrivilegeUser(HttpServletRequest request)

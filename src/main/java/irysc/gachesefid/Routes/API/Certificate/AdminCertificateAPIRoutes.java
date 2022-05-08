@@ -5,6 +5,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
@@ -28,12 +30,64 @@ public class AdminCertificateAPIRoutes extends Router {
     @ResponseBody
     public String store(HttpServletRequest request,
                         @RequestBody @StrongJSONConstraint(
-                                params = {"title", "text"},
-                                paramsType = {String.class, String.class}
+                                params = {"title", "isLandscape", "params", "qrX", "qrY"},
+                                paramsType = {
+                                        String.class, Boolean.class,
+                                        JSONArray.class, Positive.class,
+                                        Positive.class
+                                }
                         ) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return AdminCertification.store(new JSONObject(jsonStr));
+    }
+
+    @PostMapping(path = "/update/{certId}")
+    @ResponseBody
+    public String update(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId certId,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {"title", "isLandscape", "params",
+                                         "qrX", "qrY", "visibility"},
+                                 paramsType = {
+                                         String.class, Boolean.class,
+                                         JSONArray.class, Positive.class,
+                                         Positive.class, Boolean.class
+                                 }
+                         ) String jsonStr)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.update(certId, new JSONObject(jsonStr));
+    }
+
+    @PutMapping(path = "/setImg/{certId}")
+    @ResponseBody
+    public String setImg(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId certId,
+                         @RequestBody MultipartFile file)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.setImg(certId, file);
+    }
+
+    @PutMapping(path = "/addUserToCert/{certId}/{NID}")
+    @ResponseBody
+    public String addUserToCert(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId certId,
+                                @PathVariable @NotBlank String NID,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = "params",
+                                        paramsType = JSONArray.class
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.addUserToCert(null, certId, NID,
+                new JSONObject(jsonStr).getJSONArray("params")
+        );
     }
 
     @GetMapping(path = "/getAll")
@@ -44,7 +98,6 @@ public class AdminCertificateAPIRoutes extends Router {
         getAdminPrivilegeUserVoid(request);
         return AdminCertification.getAll(title);
     }
-
 
     @GetMapping(path = "/get/{certificateId}")
     @ResponseBody

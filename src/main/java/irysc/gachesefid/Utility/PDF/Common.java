@@ -75,18 +75,10 @@ public class Common {
 
     static void drawQR(PDDocument document,
                        PDPageContentStream contentStream,
-                       PDRectangle mediaBox,
                        int sx, int sy, int w, int w2,
                        String validateUrl) {
 
         try {
-
-            if (sx != -1 && sy != -1) {
-                float marginTop = mediaBox.getHeight() - sx;
-                myShowText("Der QR-Code dient zur Überprüfung dieses Dokuments.", contentStream, mediaBox, 8, marginTop, mediaBox.getWidth() - 85, false);
-                marginTop = mediaBox.getHeight() - sy;
-                myShowText("Es ist zu beachten, dass die Verifizierungsdomain mit ,,okft.org\" ist.", contentStream, mediaBox, 8, marginTop, mediaBox.getWidth() - 85, false);
-            }
 
             ByteArrayOutputStream stream = QRCode
                     .from(validateUrl)
@@ -101,53 +93,12 @@ public class Common {
             PDImageXObject image3
                     = PDImageXObject.createFromFile(outputFile.getAbsolutePath(), document);
 
-            contentStream.drawImage(image3, 25, sy == -1 ? 25 : 15, w2, w2);
+            contentStream.drawImage(image3, sx, sy, w2, w2);
             outputFile.delete();
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    static float drawLevelTable(PDPageContentStream contentStream,
-                                PDRectangle mediaBox,
-                                float marginTop) {
-
-        myShowText("Elementar", contentStream, mediaBox, 12, marginTop, -4, true);
-        myShowText("Selbstständige", contentStream, mediaBox, 12, marginTop, -5, true);
-        myShowText("Kompetente", contentStream, mediaBox, 12, marginTop, -6, true);
-
-        marginTop += 20;
-        myShowText("Sprachverwendung", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("Sprachverwendung", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("Sprachverwendung", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        marginTop += 20;
-        myShowText("A 1", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("B 1/1", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("C 1/1", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        marginTop += 20;
-        myShowText("A 2/1", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("B 1/2", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("C 1/2", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        marginTop += 20;
-        myShowText("A 2/2", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("B 2/1", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("C 1/3", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        marginTop += 20;
-        myShowText(" ", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("B 2/2", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("C 1/4", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        marginTop += 20;
-        myShowText(" ", contentStream, mediaBox, 12, marginTop, -4, false);
-        myShowText("B 2/3", contentStream, mediaBox, 12, marginTop, -5, false);
-        myShowText("C 2", contentStream, mediaBox, 12, marginTop, -6, false);
-
-        return marginTop;
     }
 
     static String convertEnToPrNum(String num) {
@@ -186,72 +137,29 @@ public class Common {
         }
     }
 
-    static void myShowTextInHalf(String text, PDPageContentStream contentStream,
-                                 PDRectangle mediaBox, int fontSize, float marginTop,
-                                 float marginLeftOrRight, boolean isLeft,
-                                 PDFont font) {
+    static void myShowTextCenterWithOffsetFarsi(String text, PDPageContentStream contentStream,
+                           PDRectangle mediaBox, int fontSize, float marginTop,
+                           boolean isBold, float offsetRight) {
         try {
-
-            float titleWidth = font.getStringWidth(text) / 1000 * fontSize;
-
-            if (isLeft)
-                marginLeftOrRight = marginLeftOrRight == -1 ?
-                        ((mediaBox.getWidth() - 40) / 2 - titleWidth) / 2 :
-                        (mediaBox.getWidth() - 40) / 2 - titleWidth + marginLeftOrRight;
-            else
-                marginLeftOrRight = marginLeftOrRight == -1 ?
-                        (mediaBox.getWidth() - 40) / 2 + 20 + ((mediaBox.getWidth() - 40) / 2 - titleWidth) / 2 :
-                        mediaBox.getWidth() - titleWidth - marginLeftOrRight - 30;
-
             contentStream.beginText();
-            contentStream.setFont(font, fontSize);
-
-            contentStream.newLineAtOffset(marginLeftOrRight, mediaBox.getHeight() - marginTop);
-
-            contentStream.showText(text);
-            contentStream.endText();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    static void myShowTextInline(String text, PDPageContentStream contentStream,
-                                 int fontSize, boolean isBold) {
-        try {
-            contentStream.setFont((isBold) ? fontBold : font, fontSize);
-            contentStream.showText(text);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    static void myShowTextInlineFarsi(String text, PDPageContentStream contentStream,
-                                      int fontSize, boolean isBold) {
-        try {
             contentStream.setFont((isBold) ? farsiFontBold : farsiFont, fontSize);
+
+            float titleWidth = isBold ?
+                    farsiFontBold.getStringWidth(text) / 1000 * fontSize :
+                    farsiFont.getStringWidth(text) / 1000 * fontSize;
+
+            contentStream.newLineAtOffset((mediaBox.getWidth() - offsetRight - titleWidth) / 2, mediaBox.getHeight() - marginTop);
             contentStream.showText(text);
+
         } catch (Exception ex) {
+            System.out.println("HEY ERR");
             ex.printStackTrace();
         }
-    }
-
-    static void myShowTextInline2(String text, PDPageContentStream contentStream,
-                                  int fontSize, boolean isBold, float sx, float sy) {
-        try {
-            contentStream.setFont((isBold) ? fontBold : font, fontSize);
-            float stringWidth = fontSize * font.getStringWidth(text) / 1000;
-            float lineEndPoint = sx + stringWidth;
-
-            contentStream.setStrokingColor(Color.BLACK);
-
-            //begin to draw our line
-            contentStream.setLineWidth(1);
-            contentStream.moveTo(sx, sy - 2);
-            contentStream.lineTo(lineEndPoint, sy - 2);
-            contentStream.stroke();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        finally {
+            try {
+                contentStream.endText();
+            }
+            catch (Exception e) {}
         }
     }
 
@@ -304,70 +212,15 @@ public class Common {
         }
     }
 
-    static void drawHalfBorder(PDPageContentStream contentStream, PDRectangle mediaBox, boolean isLeft) {
-
-        try {
-            contentStream.setStrokingColor(Color.RED);
-            contentStream.setLineWidth((float) 1.3);
-            if (isLeft)
-                contentStream.addRect(10, 10, (mediaBox.getWidth() - 40) / 2, mediaBox.getHeight() - 20);
-            else
-                contentStream.addRect((mediaBox.getWidth() - 40) / 2 + 20, 10, (mediaBox.getWidth() - 40) / 2, mediaBox.getHeight() - 20);
-
-            contentStream.stroke();
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
-    }
-
-    static String capitalize(String str) {
-
-        if (str == null || str.isEmpty())
-            return str;
-
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
     static String bidiReorder(String text) {
         try {
             text = Tools.fa(text);
-            Bidi bidi = new Bidi((new ArabicShaping(ArabicShaping.LETTERS_SHAPE)).shape(text), 127);
+//            (new ArabicShaping(ArabicShaping.LETTERS_SHAPE)).shape(text)
+            Bidi bidi = new Bidi(text, 127);
             bidi.setReorderingMode(0);
             return bidi.writeReordered(2);
-
-        } catch (ArabicShapingException ase3) {
+        } catch (Exception ase3) {
             return text;
         }
-    }
-
-    static void drawCheckBox(PDPageContentStream contentStream, PDRectangle mediaBox, float marginTop,
-                             String latin, String farsi, String answer,
-                             Boolean isFill, boolean bold, int tx) throws Exception {
-
-        if(isFill != null) {
-            contentStream.setStrokingColor(Color.BLACK);
-            contentStream.setLineWidth((float) 0.6);
-            contentStream.addRect(tx, mediaBox.getHeight() - marginTop - 3, 14, 14);
-
-            if (isFill) {
-                contentStream.setNonStrokingColor(Color.BLACK);
-                contentStream.fill();
-            } else
-                contentStream.stroke();
-        }
-
-        contentStream.beginText();
-        contentStream.newLineAtOffset(isFill == null ? tx : tx + 20, mediaBox.getHeight() - marginTop);
-
-        if(latin != null)
-            myShowTextInline(latin, contentStream, 12, bold);
-
-        if(farsi != null)
-            myShowTextInlineFarsi(bidiReorder(farsi), contentStream, 11, false);
-
-        if(answer != null)
-            myShowTextInlineFarsi(bidiReorder(answer), contentStream, 11, false);
-
-        contentStream.endText();
     }
 }

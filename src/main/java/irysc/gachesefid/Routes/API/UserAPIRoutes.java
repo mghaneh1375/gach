@@ -28,7 +28,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
-
 import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.*;
@@ -64,6 +63,45 @@ public class UserAPIRoutes extends Router {
         files.add(uploadDir_dev + "questions/11.png");
         files.add(uploadDir_dev + "questions/12.png");
         PDFUtils.createExam(files);
+        return JSON_OK;
+    }
+
+    @GetMapping(path = "getCertificate")
+    @ResponseBody
+    public String getCertificate(HttpServletRequest request,
+                                 @RequestBody(required = false) @JSONConstraint(params = {}, optionals = {
+                                         "name", "competition", "date"
+                                 }) String jsonStr)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject = (jsonStr != null) ? new JSONObject(jsonStr) : new JSONObject();
+//        PDFUtils.getCertificate(jsonObject.getString("name"),
+//                jsonObject.getString("competition"),
+//                jsonObject.getString("date")
+//        );
+//        PDFUtils.getCertificate("محمد قانع",
+//                "المپیاد آزمایشی زیست",
+//                "1399/04/12"
+//        );
+        return JSON_OK;
+    }
+
+
+    @GetMapping(path = "getCertificate2")
+    @ResponseBody
+    public String getCertificate2(HttpServletRequest request,
+                                  @RequestBody(required = false) @JSONConstraint(params = {}, optionals = {
+                                          "course", "hours", "date"
+                                  }) String jsonStr)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject = (jsonStr != null) ? new JSONObject(jsonStr) : new JSONObject();
+//        PDFUtils.getCertificate(jsonObject.getString("name"),
+//                jsonObject.getString("competition"),
+//                jsonObject.getString("date")
+//        );
+        PDFUtils.getCertificate2("آمادگی مرحله اول المپیاد شیمی",
+                60,
+                "1399/04/12"
+        );
         return JSON_OK;
     }
 
