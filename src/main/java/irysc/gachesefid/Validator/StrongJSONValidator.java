@@ -40,8 +40,9 @@ public class StrongJSONValidator implements
             int i = 0;
 
             for (String itr : valueList) {
-                if (!jsonObject.has(itr) || !checkClasses(valueListType[i], jsonObject.get(itr)))
+                if (!jsonObject.has(itr) || !checkClasses(valueListType[i], jsonObject.get(itr))) {
                     return false;
+                }
 
                 i++;
             }

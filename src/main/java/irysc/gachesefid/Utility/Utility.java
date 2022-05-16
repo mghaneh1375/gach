@@ -42,18 +42,6 @@ public class Utility {
     private static Random random = new Random();
     private static SecureRandom rnd = new SecureRandom();
 
-    public static boolean isNewPerson(List<Document> passed) {
-
-        if (passed != null) {
-            for (Document itr : passed) {
-                if (itr.containsKey("class_id"))
-                    return false;
-            }
-        }
-
-        return true;
-    }
-
     public static ArrayList<Document> searchInDocumentsKeyValMulti(List<Document> arr, String key, Object val) {
 
         if (arr == null)
@@ -769,5 +757,12 @@ public class Utility {
 
     public static Document getConfig() {
         return configRepository.findBySecKey(true);
+    }
+
+    public static String getPastAsString(int days) {
+        Locale loc = new Locale("en_US");
+        SolarCalendar sc = new SolarCalendar(-ONE_DAY_MIL_SEC * days);
+        return String.valueOf(sc.year) + "/" + String.format(loc, "%02d",
+                sc.month) + "/" + String.format(loc, "%02d", sc.date);
     }
 }

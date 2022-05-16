@@ -6,6 +6,7 @@ import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UnwindOptions;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Variable;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -142,6 +143,10 @@ public abstract class Common extends Repository {
         return null;
     }
 
+    public synchronized void clearFromCache(Object o) {
+        removeFromCache(table, o);
+    }
+
     public synchronized Document findBySecKey(Object val) {
 
         Document cached = isInCache(table, val);
@@ -185,6 +190,10 @@ public abstract class Common extends Repository {
 
     public void updateOne(Bson filter, Bson update) {
         documentMongoCollection.updateOne(filter, update);
+    }
+
+    public void updateOne(Bson filter, Bson update, UpdateOptions options) {
+        documentMongoCollection.updateOne(filter, update, options);
     }
 
     public void updateMany(Bson filter, Bson update) {

@@ -14,5 +14,4 @@ public class GradeRepository extends Common {
         table = "grade";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
-
 }

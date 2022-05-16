@@ -55,6 +55,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static GradeRepository gradeRepository;
     public static OffcodeRepository offcodeRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
+    public static QuestionRepository questionRepository;
     public static RequestRepository requestRepository;
     public static SubjectRepository subjectRepository;
     public static SchoolQuizRepository schoolQuizRepository;
@@ -64,11 +65,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     private static void setupDB() {
         try {
-            Class.forName("com.mysql.jdbc.Driver");
-            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
-            Statement st = con.createStatement();
-            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
-            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
+//            Class.forName("com.mysql.jdbc.Driver");
+//            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
+//            Statement st = con.createStatement();
+//            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
+//            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
 
             MongoClientSettings settings = MongoClientSettings.builder()
                     .applyConnectionString(connString)
@@ -88,6 +89,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             mailRepository = new MailRepository();
             offcodeRepository = new OffcodeRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
+            questionRepository = new QuestionRepository();
             requestRepository = new RequestRepository();
             subjectRepository = new SubjectRepository();
             schoolQuizRepository = new SchoolQuizRepository();

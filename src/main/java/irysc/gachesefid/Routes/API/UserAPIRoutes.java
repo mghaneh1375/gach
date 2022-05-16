@@ -131,9 +131,9 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/signIn")
     @ResponseBody
-    public String signIn(@RequestParam @JSONConstraint(
+    public String signIn(@RequestBody @JSONConstraint(
             params = {"username", "password"}
-    ) String jsonStr) {
+    ) @NotBlank String jsonStr) {
         try {
 
             JSONObject jsonObject = new JSONObject(jsonStr);

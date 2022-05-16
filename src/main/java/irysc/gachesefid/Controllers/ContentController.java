@@ -2,420 +2,532 @@ package irysc.gachesefid.Controllers;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.UpdateOptions;
+import irysc.gachesefid.Utility.Excel;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.ObjectIdValidator;
+import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.gradeRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class ContentController {
 
-//    public static String addCourse(JSONObject jsonObject, ObjectId lessonId) {
-//
-//        Document lesson = gradeRepository.findById(lessonId);
-//        if (lesson == null)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        List<Document> courses = lesson.getList("courses", Document.class);
-//        if (Utility.searchInDocumentsKeyVal(courses, "name", jsonObject.getString("name")) != null)
-//            return new JSONObject().put("status", "nok").put("msg", "This course already exist").toString();
-//
-//        ObjectId newCourseId = ObjectId.get();
-//        Document newDoc = new Document("_id", newCourseId);
-//
-//        for (String key : jsonObject.keySet())
-//            newDoc.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), jsonObject.get(key));
-//
-//        if(!newDoc.containsKey("min_age"))
-//            newDoc.append("min_age", -1);
-//
-//        if(!newDoc.containsKey("max_age"))
-//            newDoc.append("max_age", -1);
-//
-//        if(!newDoc.containsKey("certificate_en"))
-//            newDoc.append("certificate_en", true);
-//
-//        if(!newDoc.containsKey("exam_en"))
-//            newDoc.append("exam_en", true);
-//
-//        courses.add(newDoc);
-//
-//        new Thread(() ->
-//                gradeRepository.updateOne(eq("_id", lessonId), set("courses", courses))
-//        ).start();
-//
-//        return new JSONObject().put("status", "ok").put("id", newCourseId).toString();
-//    }
-//
-//    public static String updateCourse(ObjectId lessonId, ObjectId courseId, JSONObject jsonObject) {
-//
-//        Document lesson = gradeRepository.findById(lessonId);
-//        if (lesson == null)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        List<Document> courses = lesson.getList("courses", Document.class);
-//        int idx = Utility.searchInDocumentsKeyValIdx(courses, "_id", courseId);
-//
-//        if (idx == -1)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        boolean nameChange = false;
-//        Document course = courses.get(idx);
-//
-//        if (jsonObject.has("name") &&
-//                !course.getString("name").equals(jsonObject.getString("name"))) {
-//
-//            nameChange = true;
-//
-//            if (Utility.searchInDocumentsKeyValIdx(courses, "name", jsonObject.getString("name")) != -1)
-//                return new JSONObject().put("status", "nok").put("msg", "Course already exists").toString();
-//
-//            course.put("name", jsonObject.getString("name"));
-//        }
-//
-//        for (String key : jsonObject.keySet())
-//            course.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), jsonObject.get(key));
-//
-//        lesson.put("courses", courses);
-//
-//        boolean finalNameChange = nameChange;
-//
-//        new Thread(() -> {
-//
-//            gradeRepository.updateOne(eq("_id", lessonId), set("courses", courses));
-//
-//            if (finalNameChange) {
-//                termRepository.updateMany(and(
-//                        eq("course._id", courseId),
-//                        eq("lesson._id", lessonId)
-//                ), set("course.name", jsonObject.getString("name")));
-//
-//                termRepository.updateCacheByCourse(courseId, jsonObject.getString("name"));
-//            }
-//        }).start();
-//
-//        return JSON_OK;
-//    }
-//
-//    public static String addTerm(ObjectId lessonId, ObjectId courseId, JSONObject term) {
-//
-//        if (!term.getString("pre").equals("-1") &&
-//                !ObjectIdValidator.isValid(term.getString("pre")))
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        Document lesson = gradeRepository.findById(lessonId);
-//        if (lesson == null)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        List<Document> courses = lesson.getList("courses", Document.class);
-//        Document course = Utility.searchInDocumentsKeyVal(courses, "_id", courseId);
-//        if (course == null)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        if (termRepository.exist(and(
-//                eq("lesson.name", lesson.getString("name")),
-//                eq("course.name", course.getString("name")),
-//                eq("name", term.getString("name"))
-//                )
-//        )
-//        )
-//            return new JSONObject().put("status", "nok").put("msg", "This term already exist").toString();
-//
-//        if (!markRepository.exist(eq("mark", term.getString("minMark"))))
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        ObjectId preId = (term.getString("pre").equals("-1")) ? null : new ObjectId(term.getString("pre"));
-//
-//        if (preId != null) {
-//            Document preTerm = termRepository.findById(preId);
-//            if (preTerm == null)
-//                return JSON_NOT_VALID_PARAMS;
-//        }
-//
-//        return termRepository.insertOneWithReturn(new Document("name", term.getString("name"))
-//                .append("lesson", new Document("_id", lesson.getObjectId("_id")).append("name", lesson.getString("name")))
-//                .append("course", new Document("_id", course.getObjectId("_id")).append("name", course.getString("name")))
-//                .append("book", term.getString("book"))
-//                .append("min_mark", term.getString("minMark"))
-//                .append("pre", preId)
-//        );
-//    }
-//
-//    public static String editTerm(ObjectId termId, JSONObject jsonObject) {
-//
-//        if (jsonObject.has("pre") &&
-//                !jsonObject.getString("pre").equals("-1") &&
-//                !ObjectIdValidator.isValid(jsonObject.getString("pre")))
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        if (jsonObject.has("courseId") != jsonObject.has("lessonId"))
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        Document term = termRepository.findById(termId);
-//        if (term == null)
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        Document newLesson, newCourse;
-//
-//        if (jsonObject.has("courseId") &&
-//                !jsonObject.getString("courseId").equals(((Document) term.get("course")).getObjectId("_id").toString())) {
-//
-//            Document lesson = gradeRepository.findById(new ObjectId(jsonObject.getString("lessonId")));
-//
-//            if (lesson == null)
-//                return JSON_NOT_VALID_PARAMS;
-//
-//            List<Document> courses = lesson.getList("courses", Document.class);
-//            Document course = Utility.searchInDocumentsKeyVal(courses, "_id", new ObjectId(jsonObject.getString("courseId")));
-//
-//            if (course == null)
-//                return JSON_NOT_VALID_PARAMS;
-//
-//            newLesson = new Document("_id", lesson.getObjectId("_id"))
-//                    .append("name", lesson.getString("name"));
-//
-//            newCourse = new Document("_id", course.getObjectId("_id"))
-//                    .append("name", course.getString("name"));
-//        } else {
-//            newLesson = (Document) term.get("lesson");
-//            newCourse = (Document) term.get("course");
-//        }
-//
-//        if (jsonObject.has("name") &&
-//                !term.getString("name").equals(jsonObject.getString("name"))) {
-//
-//            if (termRepository.exist(and(
-//                    eq("lesson.name", newLesson.getString("name")),
-//                    eq("course.name", newCourse.getString("name")),
-//                    eq("name", jsonObject.getString("name"))
-//                    )
-//            )
-//            )
-//                return new JSONObject().put("status", "nok").put("msg", "This term already exist").toString();
-//        }
-//
-//        if (jsonObject.has("minMark") &&
-//                !jsonObject.getString("minMark").equals(term.getString("minMark")) &&
-//                !markRepository.exist(eq("mark", jsonObject.getString("minMark"))))
-//            return JSON_NOT_VALID_PARAMS;
-//
-//        ObjectId preId = term.getObjectId("pre");
-//
-//        if (jsonObject.has("pre")) {
-//
-//            preId = (jsonObject.getString("pre").equals("-1")) ? null : new ObjectId(jsonObject.getString("pre"));
-//
-//            if (preId != null) {
-//                Document preTerm = termRepository.findById(preId);
-//                if (preTerm == null)
-//                    return JSON_NOT_VALID_PARAMS;
-//            }
-//        }
-//
-//
-//        if (jsonObject.has("name"))
-//            term.put("name", jsonObject.getString("name"));
-//        if (jsonObject.has("minMark"))
-//            term.put("minMark", jsonObject.getString("minMark"));
-//        if (jsonObject.has("book"))
-//            term.put("book", jsonObject.getString("book"));
-//
-//        term.put("lesson", newLesson);
-//        term.put("course", newCourse);
-//        term.put("pre", preId);
-//
-//        new Thread(() -> termRepository.replaceOne(eq("_id", termId), term)).start();
-//
-//        return JSON_OK;
-//    }
-//
-//    public static String deleteTerm(ObjectId termId) {
-//
-//        if (classRepository.exist(eq("term_id", termId)))
-//            return new JSONObject().put("status", "nok")
-//                    .put("msg", "ترم مورد نظر در یک/چند کلاس به کار رفته است که باید ابتدا آن ها را حذف نمایید.")
-//                    .toString();
-//
-//        if (userRepository.exist(eq("passed.term_id", termId)))
-//            return new JSONObject().put("status", "nok")
-//                    .put("msg", "ترم مورد نظر را نمی توان حذف نمایید.")
-//                    .toString();
-//
-//
-//        new Thread(() -> termRepository.deleteOne(eq("_id", termId))).start();
-//
-//        return JSON_OK;
-//    }
-//
-//    public static String all() {
-//
-//        JSONArray jsonArray = new JSONArray();
-//        ArrayList<Document> docs = gradeRepository.find(null, null);
-//
-//        for (Document doc : docs) {
-//
-//            List<Document> courses = doc.getList("courses", Document.class);
-//            JSONObject jsonObject = new JSONObject()
-//                    .put("name", doc.getString("name"))
-//                    .put("id", doc.getObjectId("_id").toString());
-//
-//            JSONArray coursesJSON = new JSONArray();
-//
-//            for (Document course : courses) {
-//
-//                JSONObject courseJSON = new JSONObject()
-//                        .put("name", course.getString("name"))
-//                        .put("id", course.getObjectId("_id").toString())
-//                        .put("price", course.getInteger("price"))
-//                        .put("priceForNew", course.getInteger("price_for_new"))
-//                        .put("minAge", course.getInteger("min_age"))
-//                        .put("maxAge", course.getInteger("max_age"))
-//                        .put("certificateEn", course.getBoolean("certificate_en"))
-//                        .put("examEn", course.getBoolean("exam_en"))
-//                        .put("isEnable", !course.containsKey("is_enable") || course.getBoolean("is_enable"))
-//                        .put("description", course.getString("description"));
-//
-//                if(!courseJSON.getBoolean("isEnable"))
-//                    courseJSON.put("disableDescription", course.getString("disable_description"));
-//
-//                courseJSON.put("certificateDisDesc", course.getOrDefault("certificate_dis_desc", ""));
-//                courseJSON.put("examDisDesc", course.getOrDefault("exam_dis_desc", ""));
-//
-//                JSONObject term = new JSONObject(getTerms(
-//                        doc.getObjectId("_id"),
-//                        course.getObjectId("_id"))
-//                );
-//
-//                courseJSON.put("terms", term.getJSONArray("terms"));
-//                coursesJSON.put(courseJSON);
-//            }
-//
-//            jsonObject.put("courses", coursesJSON);
-//            jsonArray.put(jsonObject);
-//
-//        }
-//
-//        return new JSONObject().put("status", "ok").put("lessons", jsonArray).toString();
-//    }
-//
-//    public static String getTerms(ObjectId lessonId, ObjectId courseId) {
-//
-//        ArrayList<Document> terms = termRepository.find(
-//                and(
-//                        eq("lesson._id", lessonId),
-//                        eq("course._id", courseId)
-//                ),
-//                new BasicDBObject("name", 1).append("_id", 1)
-//                        .append("min_mark", 1).append("pre", 1)
-//                        .append("book", 1)
-//        );
-//
-//        JSONArray jsonArray = new JSONArray();
-//        for (Document term : terms) {
-//            if (term.get("pre") == null) {
-//                jsonArray.put(new JSONObject().put("id", term.getObjectId("_id").toString())
-//                        .put("name", term.getString("name"))
-//                        .put("book", term.getString("book"))
-//                        .put("minMark", term.getString("min_mark"))
-//                        .put("preId", -1)
-//                        .put("pre", -1)
-//                );
-//            } else {
-//
-//                Document pre = termRepository.findById(term.getObjectId("pre"));
-//                if (pre == null)
-//                    continue;
-//
-//                jsonArray.put(new JSONObject().put("id", term.getObjectId("_id").toString())
-//                        .put("name", term.getString("name"))
-//                        .put("book", term.getString("book"))
-//                        .put("minMark", term.getString("min_mark"))
-//                        .put("preId", term.getObjectId("pre").toString())
-//                        .put("pre", pre.getString("name"))
-//                );
-//            }
-//
-//        }
-//
-//        return new JSONObject().put("status", "ok").put("terms", jsonArray).toString();
-//    }
-//
-//    public static String allTerms() {
-//
-//        ArrayList<Document> terms = termRepository.find(null, null);
-//        JSONArray jsonArray = new JSONArray();
-//
-//        for (Document term : terms) {
-//
-//            Document lesson = (Document) term.get("lesson");
-//            Document course = (Document) term.get("course");
-//
-//            if (term.get("pre") == null) {
-//
-//                jsonArray.put(new JSONObject()
-//                        .put("lesson", new JSONObject()
-//                                .put("name", lesson.getString("name"))
-//                                .put("id", lesson.getObjectId("_id").toString())
-//                        )
-//                        .put("course", new JSONObject()
-//                                .put("name", course.getString("name"))
-//                                .put("id", course.getObjectId("_id").toString())
-//                                .put("description", course.getString("description"))
-//                                .put("price", course.getInteger("price"))
-//                        )
-//                        .put("minMark", term.getString("min_mark"))
-//                        .put("name", term.getString("name"))
-//                        .put("book", term.getString("book"))
-//                        .put("id", term.getObjectId("_id").toString())
-//                        .put("pre", -1)
-//                        .put("preId", -1)
-//                );
-//            } else {
-//
-//                String preTermName = "";
-//
-//                for (Document term2 : terms) {
-//                    if (term2.getObjectId("_id").equals(term.getObjectId("pre"))) {
-//                        preTermName = term2.getString("name");
-//                        break;
-//                    }
-//                }
-//
-//                jsonArray.put(new JSONObject()
-//                        .put("lesson", new JSONObject()
-//                                .put("name", lesson.getString("name"))
-//                                .put("id", lesson.getObjectId("_id").toString())
-//                        )
-//                        .put("course", new JSONObject()
-//                                .put("name", course.getString("name"))
-//                                .put("id", course.getObjectId("_id").toString())
-//                                .put("description", course.getString("description"))
-//                                .put("price", course.getInteger("price"))
-//                        )
-//                        .put("minMark", term.getString("min_mark"))
-//                        .put("name", term.getString("name"))
-//                        .put("book", term.getString("book"))
-//                        .put("id", term.getObjectId("_id").toString())
-//                        .put("pre", preTermName)
-//                        .put("preId", term.getObjectId("pre").toString())
-//                );
-//
-//            }
-//        }
-//
-//        return new JSONObject().put("status", "ok").put("terms", jsonArray).toString();
-//    }
+    public static String addBatch(MultipartFile file) {
+
+        String filename = FileUtils.uploadTempFile(file);
+        ArrayList<Row> rows = Excel.read(filename);
+        FileUtils.removeTempFile(filename);
+
+        if(rows == null)
+            return generateErr("File is not valid");
+
+        HashMap<String, Document> grades = new HashMap<>();
+        HashMap<String, Boolean> isNew = new HashMap<>();
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+
+        long curr = System.currentTimeMillis();
+
+        for(Document doc : docs) {
+            grades.put(doc.getString("name"), doc);
+            isNew.put(doc.getString("name"), false);
+        }
+
+        rows.remove(0);
+        boolean needUpdate = false;
+
+        for(Row row : rows) {
+
+            try {
+
+                if (row.getLastCellNum() < 4)
+                    continue;
+
+                String grade = row.getCell(1).getStringCellValue();
+                ObjectId gradeId;
+                List<Document> lessons;
+
+                if(!grades.containsKey(grade)) {
+                    lessons = new ArrayList<>();
+                    ObjectId newId = new ObjectId();
+
+                    Document newDoc = new Document("name", grade)
+                            .append("_id", newId)
+                            .append("lessons", lessons)
+                            .append("created_at", curr);
+
+                    isNew.put(grade, true);
+                    grades.put(grade, newDoc);
+                    gradeId = newId;
+                    needUpdate = true;
+                }
+                else {
+                    gradeId = grades.get(grade).getObjectId("_id");
+                    lessons = grades.get(grade).getList("lessons", Document.class);
+                }
+
+                String lesson = row.getCell(2).getStringCellValue();
+                Document lessonDoc = searchInDocumentsKeyVal(lessons, "name", lesson);
+
+                if(lessonDoc == null) {
+
+                    ObjectId newLessonId = new ObjectId();
+                    lessonDoc = new Document("name", lesson)
+                            .append("_id", newLessonId)
+                            .append("description",
+                                    row.getCell(4) != null &&
+                                            row.getCell(4).getStringCellValue() != null &&
+                                            !row.getCell(4).getStringCellValue().isEmpty() ?
+                                            row.getCell(4).getStringCellValue() : ""
+                            );
+
+                    lessons.add(lessonDoc);
+                    needUpdate = true;
+                }
+
+                String subject = row.getCell(3).getStringCellValue();
+                Document newSubject = new Document("name", subject)
+                        .append("created_at", curr)
+                        .append("lesson", new Document("_id", lessonDoc.getObjectId("_id"))
+                                .append("name", lesson)
+                        )
+                        .append("grade", new Document("_id", gradeId)
+                                .append("name", grade)
+                        )
+                        .append("description", row.getCell(5) != null &&
+                                row.getCell(5).getStringCellValue() != null &&
+                                !row.getCell(5).getStringCellValue().isEmpty() ?
+                                row.getCell(5).getStringCellValue() : "")
+                        .append("easy_price", row.getCell(6) != null &&
+                                row.getCell(6).getStringCellValue() != null &&
+                                !row.getCell(6).getStringCellValue().isEmpty() &&
+                                isValidNum(row.getCell(6).getStringCellValue()) ?
+                                Integer.parseInt(row.getCell(6).getStringCellValue()) : 0)
+                        .append("mid_price", row.getCell(7) != null &&
+                                row.getCell(7).getStringCellValue() != null &&
+                                !row.getCell(7).getStringCellValue().isEmpty() &&
+                                isValidNum(row.getCell(7).getStringCellValue()) ?
+                                Integer.parseInt(row.getCell(7).getStringCellValue()) : 0)
+                        .append("hard_price", row.getCell(8) != null &&
+                                row.getCell(8).getStringCellValue() != null &&
+                                !row.getCell(8).getStringCellValue().isEmpty() &&
+                                isValidNum(row.getCell(8).getStringCellValue()) ?
+                                Integer.parseInt(row.getCell(8).getStringCellValue()) : 0);
+
+                subjectRepository.updateOne(
+                        and(
+                                eq("lesson._id", lessonDoc.getObjectId("_id")),
+                                eq("grade._id", gradeId),
+                                eq("name", subject)
+                        ),
+                        new BasicDBObject("$set", newSubject),
+                        new UpdateOptions().upsert(true)
+                );
+
+            } catch (Exception ignore) {}
+        }
+
+        if(!needUpdate)
+            return JSON_OK;
+
+        for(String key : isNew.keySet()) {
+            if(isNew.get(key))
+                gradeRepository.insertOne(grades.get(key));
+            else
+                gradeRepository.replaceOne(grades.get(key).getObjectId("_id"), grades.get(key));
+        }
+
+        return JSON_OK;
+    }
+
+    public static String addGrade(String name) {
+
+        if (gradeRepository.find(eq("name", name), new BasicDBObject("_id", 1)).size() > 0)
+            return generateErr("مقطعی با این نام در سیستم موجود است.");
+
+        return gradeRepository.insertOneWithReturn(new Document("name", name)
+                .append("lessons", new ArrayList<>())
+                .append("created_at", System.currentTimeMillis())
+        );
+    }
+
+    public static String updateGrade(ObjectId gradeId, String name) {
+
+        Document grade = gradeRepository.findById(gradeId);
+        if (grade == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if(grade.getString("name").equals(name))
+            return JSON_OK;
+
+        if (gradeRepository.exist(eq("name", name)))
+            return generateErr("مقطعی با این نام در سیستم موجود است.");
+
+        grade.put("name", name);
+
+        new Thread(() -> {
+
+            gradeRepository.updateOne(gradeId, set("name", name));
+
+            subjectRepository.updateMany(
+                    eq("grade._id", gradeId),
+                    set("grade.name", name)
+            );
+
+            subjectRepository.clearFormCacheByGradeId(gradeId);
+
+        }).start();
+
+        return JSON_OK;
+    }
+
+    public static String delete(ObjectId gradeId) {
+
+        if (subjectRepository.exist(eq("grade._id", gradeId)))
+            return generateErr("مقطع مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+
+        gradeRepository.deleteOne(eq("_id", gradeId));
+        gradeRepository.clearFromCache(gradeId);
+
+        return JSON_OK;
+    }
+
+    public static String addLesson(JSONObject jsonObject, ObjectId gradeId) {
+
+        Document grade = gradeRepository.findById(gradeId);
+        if (grade == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Document> lessons = grade.getList("lessons", Document.class);
+
+        if (Utility.searchInDocumentsKeyVal(lessons,
+                "name", jsonObject.getString("name")) != null
+        )
+            return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
+
+        ObjectId newLessonId = ObjectId.get();
+
+        lessons.add(new Document("_id", newLessonId)
+                .append("name", jsonObject.getString("name"))
+                .append("description", jsonObject.has("description") ?
+                        jsonObject.getString("description") : ""
+                )
+        );
+
+        gradeRepository.updateOne(gradeId, set("lessons", lessons));
+
+        return generateSuccessMsg("id", newLessonId);
+    }
+
+    public static String updateLesson(ObjectId gradeId, ObjectId lessonId, JSONObject jsonObject) {
+
+        Document grade = gradeRepository.findById(gradeId);
+        if (grade == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> lessons = grade.getList("lessons", Document.class);
+        Document lesson = Utility.searchInDocumentsKeyVal(lessons, "_id", lessonId);
+
+        if (lesson == null)
+            return JSON_NOT_VALID_ID;
+
+        boolean nameChange = false;
+
+        if (jsonObject.has("name") &&
+                !lesson.getString("name").equals(jsonObject.getString("name"))) {
+
+            nameChange = true;
+
+            if (Utility.searchInDocumentsKeyValIdx(lessons, "name", jsonObject.getString("name")) != -1)
+                return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
+
+            lesson.put("name", jsonObject.getString("name"));
+        }
+
+        if(jsonObject.has("description"))
+            lesson.put("description", jsonObject.getString("description"));
+
+        grade.put("lessons", lessons);
+
+        boolean finalNameChange = nameChange;
+
+        new Thread(() -> {
+
+            gradeRepository.updateOne(gradeId, set("lessons", lessons));
+
+            if (finalNameChange) {
+                subjectRepository.updateMany(and(
+                        eq("grade._id", gradeId),
+                        eq("lesson._id", lessonId)
+                ), set("lesson.name", jsonObject.getString("name")));
+
+                subjectRepository.clearFormCacheByLessonId(lessonId);
+            }
+        }).start();
+
+        return JSON_OK;
+    }
+
+    public static String deleteLesson(ObjectId gradeId, ObjectId lessonId) {
+
+        if (subjectRepository.exist(eq("lesson._id", lessonId)))
+            return generateErr("درس مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+
+        Document grade = gradeRepository.findById(gradeId);
+        if (grade == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> lessons = grade.getList("lessons", Document.class);
+        int idx = Utility.searchInDocumentsKeyValIdx(lessons, "_id", lessonId);
+
+        if (idx == -1)
+            return JSON_NOT_VALID_ID;
+
+        lessons.remove(idx);
+
+        gradeRepository.updateOne(
+                gradeId,
+                set("lessons", lessons)
+        );
+
+        return JSON_OK;
+    }
+
+    public static String addSubject(ObjectId gradeId, ObjectId lessonId, JSONObject subject) {
+
+        Document grade = gradeRepository.findById(gradeId);
+        if (grade == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> lessons = grade.getList("lessons", Document.class);
+        Document lesson = Utility.searchInDocumentsKeyVal(lessons, "_id", lessonId);
+        if (lesson == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if (subjectRepository.exist(
+                and(
+                    eq("grade._id", gradeId),
+                    eq("lesson._id", lessonId),
+                    eq("name", subject.getString("name"))
+                )
+        ))
+            return generateErr("مبحث موردنظر در درس موردنظر موجود است.");
+
+        return subjectRepository.insertOneWithReturn(
+                new Document("name", subject.getString("name"))
+                .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
+                .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
+                .append("easy_price", subject.getInt("easyPrice"))
+                .append("mid_price", subject.getInt("midPrice"))
+                .append("hard_price", subject.getInt("hardPrice"))
+                .append("description", subject.has("description") ? subject.getString("description") : "")
+                .append("created_at", System.currentTimeMillis())
+        );
+    }
+
+    public static String editSubject(ObjectId subjectId, JSONObject jsonObject) {
+
+        if (jsonObject.has("lessonId") != jsonObject.has("gradeId"))
+            return JSON_NOT_VALID_PARAMS;
+
+        Document subject = subjectRepository.findById(subjectId);
+        if (subject == null)
+            return JSON_NOT_VALID_ID;
+
+        Document newLesson, newGrade;
+
+        if (jsonObject.has("lessonId") &&
+                !jsonObject.getString("lessonId").equals(
+                        ((Document) subject.get("lesson")).getObjectId("_id").toString()
+                )
+        ) {
+
+            Document grade = gradeRepository.findById(new ObjectId(jsonObject.getString("gradeId")));
+
+            if (grade == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            Document lesson = Utility.searchInDocumentsKeyVal(
+                    grade.getList("lessons", Document.class),
+                    "_id", new ObjectId(jsonObject.getString("lessonId")));
+
+            if (lesson == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            newGrade = new Document("_id", grade.getObjectId("_id"))
+                    .append("name", grade.getString("name"));
+
+            newLesson = new Document("_id", lesson.getObjectId("_id"))
+                    .append("name", lesson.getString("name"));
+
+        } else {
+            newGrade = (Document) subject.get("grade");
+            newLesson = (Document) subject.get("lesson");
+        }
+
+        if (jsonObject.has("name") &&
+                !subject.getString("name").equals(jsonObject.getString("name"))) {
+
+            if (subjectRepository.exist(and(
+                    eq("lesson._id", newLesson.getObjectId("_id")),
+                    eq("grade._id", newGrade.getObjectId("_id")),
+                    eq("name", jsonObject.getString("name"))
+                    )
+            )
+            )
+                return generateErr("مبحث موردنظر در درس موردنظر وجود دارد.");
+        }
+
+        if (jsonObject.has("name"))
+            subject.put("name", jsonObject.getString("name"));
+
+        if (jsonObject.has("description"))
+            subject.put("description", jsonObject.getString("description"));
+
+        if (jsonObject.has("easyPrice"))
+            subject.put("easy_price", jsonObject.getInt("easyPrice"));
+
+        if (jsonObject.has("midPrice"))
+            subject.put("mid_price", jsonObject.getInt("midPrice"));
+
+        if (jsonObject.has("hardPrice"))
+            subject.put("hard_price", jsonObject.getInt("hardPrice"));
+
+        subject.put("lesson", newLesson);
+        subject.put("grade", newGrade);
+
+        subjectRepository.replaceOne(subjectId, subject);
+        return JSON_OK;
+    }
+
+    public static String deleteSubject(ObjectId subjectId) {
+
+        if (questionRepository.exist(eq("subject_id", subjectId)))
+            return generateErr("مبحث مورد نظر در یک/چند سوال به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+
+        subjectRepository.deleteOne(subjectId);
+        subjectRepository.clearFromCache(subjectId);
+
+        return JSON_OK;
+    }
+
+    public static String all() {
+
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            JSONArray lessonsJSON = new JSONArray();
+
+            for (Document lesson : lessons) {
+
+                JSONObject lessonJSON = new JSONObject()
+                        .put("name", lesson.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                        .put("description", lesson.getString("description"));
+
+                JSONObject subjects = new JSONObject(getSubjects(
+                        doc.getObjectId("_id"),
+                        lesson.getObjectId("_id"))
+                );
+
+                lessonJSON.put("subjects", subjects.getJSONArray("subjects"));
+                lessonsJSON.put(lessonJSON);
+            }
+
+            jsonObject.put("lessons", lessonsJSON);
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("grades", jsonArray);
+    }
+
+    public static String getSubjects(ObjectId gradeId, ObjectId lessonId) {
+
+        ArrayList<Document> subjects = subjectRepository.find(
+                and(
+                        eq("lesson._id", lessonId),
+                        eq("grade._id", gradeId)
+                ), null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        for (Document subject : subjects) {
+            jsonArray.put(new JSONObject().put("id", subject.getObjectId("_id").toString())
+                    .put("name", subject.getString("name"))
+                    .put("midPrice", subject.getInteger("mid_price"))
+                    .put("easyPrice", subject.getInteger("easy_price"))
+                    .put("hardPrice", subject.getInteger("hard_price"))
+                    .put("description", subject.getString("description"))
+            );
+        }
+
+        return generateSuccessMsg("subjects", jsonArray);
+    }
+
+    public static String allSubjects(ObjectId gradeId, ObjectId lessonId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if(gradeId != null)
+            filters.add(eq("grade._id", gradeId));
+
+        if(lessonId != null)
+            filters.add(eq("lesson._id", lessonId));
+
+        ArrayList<Document> subjects = subjectRepository.find(
+                filters.size() == 0 ? null : and(filters), null);
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document subject : subjects) {
+
+            Document grade = (Document) subject.get("grade");
+            Document lesson = (Document) subject.get("lesson");
+
+            jsonArray.put(new JSONObject()
+                    .put("grade", new JSONObject()
+                            .put("name", grade.getString("name"))
+                            .put("id", grade.getObjectId("_id").toString())
+                    )
+                    .put("lesson", new JSONObject()
+                            .put("name", lesson.getString("name"))
+                            .put("id", lesson.getObjectId("_id").toString())
+                            .put("description", lesson.getString("description"))
+                    )
+                    .put("id", subject.getObjectId("_id").toString())
+                    .put("midPrice", subject.getInteger("mid_price"))
+                    .put("easyPrice", subject.getInteger("easy_price"))
+                    .put("hardPrice", subject.getInteger("hard_price"))
+                    .put("description", subject.getString("description"))
+                    .put("name", subject.getString("name"))
+            );
+        }
+
+        return generateSuccessMsg("subjects", jsonArray);
+    }
 //
 //    public static JSONArray coursesWithNotInFilter(Set<ObjectId> objectIds, ObjectId userId, int age, boolean justVisibles) {
 //
@@ -489,130 +601,72 @@ public class ContentController {
 //        return jsonArray;
 //    }
 //
-//    public static String getLessons() {
-//
-//        JSONArray jsonArray = new JSONArray();
-//
-//        ArrayList<Document> docs = gradeRepository.find(null, new BasicDBObject("name", 1).append("_id", 1));
-//        for (Document doc : docs) {
-//            jsonArray.put(new JSONObject().put("id", doc.getObjectId("_id").toString())
-//                    .put("name", doc.getString("name")));
-//        }
-//
-//        return new JSONObject().put("status", "ok").put("lessons", jsonArray).toString();
-//    }
+    public static String getGrades() {
 
-    public static String addGrade(String name) {
+        JSONArray jsonArray = new JSONArray();
 
-        if (gradeRepository.find(eq("name", name), new BasicDBObject("_id", 1)).size() > 0)
-            return Utility.generateErr("مقطعی با این نام در سیستم موجود است.");
-
-        new Thread(() ->
-                gradeRepository.insertOne(new Document("name", name).append("lessons", new ArrayList<>()))
-        ).start();
-
-        return JSON_OK;
-    }
-
-    public static String updateGrade(ObjectId gradeId, String name) {
-
-        Document grade = gradeRepository.findById(gradeId);
-        if (grade == null || grade.getString("name").equals(name))
-            return JSON_NOT_VALID_PARAMS;
-
-        if (gradeRepository.exist(eq("name", name)))
-            return Utility.generateErr("مقطعی با این نام در سیستم موجود است.");
-
-        grade.put("name", name);
-
-        new Thread(() -> {
-
-            gradeRepository.updateOne(gradeId, set("name", name));
-
-            subjectRepository.updateMany(
-                    eq("grade._id", gradeId),
-                    set("grade.name", name)
+        ArrayList<Document> docs = gradeRepository.find(null, new BasicDBObject("_id", 1).append("name", 1));
+        for (Document doc : docs) {
+            jsonArray.put(
+                    new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("name", doc.getString("name"))
             );
+        }
 
-//            subjectRepository.updateCacheByGrade(gradeId, name);
-
-        }).start();
-
-        return JSON_OK;
+        return generateSuccessMsg("grades", jsonArray);
     }
 
-//    public static String delete(ObjectId lessonId) {
+    public static String search(String key) {
+
+        ArrayList<Bson> constraints = new ArrayList<>();
+
+        constraints.add(regex("name", Pattern.compile(Pattern.quote(key), Pattern.CASE_INSENSITIVE)));
+        constraints.add(regex("lessons.name", Pattern.compile(Pattern.quote(key), Pattern.CASE_INSENSITIVE)));
+
+        ArrayList<Document> docs = gradeRepository.find(or(constraints), null);
+        JSONArray output = new JSONArray();
+
+        for(Document doc : docs) {
+
+            if(doc.getString("name").contains(key))
+                output.put(new JSONObject()
+                        .put("section", "grade")
+                        .put("name", doc.getString("name"))
+                        .put("id", doc.getObjectId("_id").toString())
+                );
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            for(Document lesson : lessons) {
+
+                if(lesson.getString("name").contains(key))
+                    output.put(new JSONObject()
+                            .put("section", "lesson")
+                            .put("name", lesson.getString("name"))
+                            .put("id", lesson.getObjectId("_id").toString())
+                    );
+
+            }
+        }
+
+        ArrayList<Document> subjects = subjectRepository.find(
+                regex("name", Pattern.compile(Pattern.quote(key), Pattern.CASE_INSENSITIVE)),
+                null
+        );
+
+        for (Document subject : subjects) {
+            output.put(new JSONObject()
+                    .put("id", subject.getObjectId("_id").toString())
+                    .put("name", subject.getString("name"))
+                    .put("section", "subject")
+            );
+        }
+
+        return generateSuccessMsg("data", output);
+    }
+
 //
-//        if (termRepository.exist(eq("lesson._id", lessonId)))
-//            return new JSONObject().put("status", "nok")
-//                    .put("msg", "رشته مورد نظر در یک/چند مقطع به کار رفته است که باید ابتدا آن ها را حذف نمایید.")
-//                    .toString();
-//
-//        new Thread(() -> gradeRepository.deleteOne(eq("_id", lessonId))).start();
-//        return JSON_OK;
-//    }
-//
-//    public static String deleteCourse(ObjectId lessonId, ObjectId courseId) {
-//
-//        if (termRepository.exist(eq("course._id", courseId)))
-//            return new JSONObject().put("status", "nok")
-//                    .put("msg", "رشته مورد نظر در یک/چند مقطع به کار رفته است که باید ابتدا آن ها را حذف نمایید.")
-//                    .toString();
-//
-//        if (userRepository.exist(eq("passed.course_id", courseId)))
-//            return new JSONObject().put("status", "nok")
-//                    .put("msg", "رشته مورد نظر را نمی توان حذف نمایید.")
-//                    .toString();
-//
-//        Document lesson = gradeRepository.findById(lessonId);
-//        if (lesson == null)
-//            return JSON_NOT_VALID_ID;
-//
-//        List<Document> courses = lesson.getList("courses", Document.class);
-//        int idx = Utility.searchInDocumentsKeyValIdx(courses, "_id", courseId);
-//
-//        if (idx == -1)
-//            return JSON_NOT_VALID_ID;
-//
-//        courses.remove(idx);
-//        new Thread(() -> gradeRepository.updateOne(
-//                eq("_id", lessonId),
-//                set("courses", courses)
-//        )).start();
-//
-//        return JSON_OK;
-//    }
-//
-//    public static String toggleVisibilityCourse(ObjectId lessonId, ObjectId courseId, JSONObject jsonObject) {
-//
-//        Document lesson = gradeRepository.findById(lessonId);
-//        if (lesson == null)
-//            return JSON_NOT_VALID_ID;
-//
-//        List<Document> courses = lesson.getList("courses", Document.class);
-//        int idx = Utility.searchInDocumentsKeyValIdx(courses, "_id", courseId);
-//
-//        if (idx == -1)
-//            return JSON_NOT_VALID_ID;
-//
-//        if (!courses.get(idx).containsKey("is_enable") ||
-//                courses.get(idx).getBoolean("is_enable")
-//        ) {
-//            if (!jsonObject.has("description") ||
-//                    jsonObject.getString("description").isEmpty())
-//                return JSON_NOT_VALID_PARAMS;
-//
-//            courses.get(idx).put("is_enable", false);
-//            courses.get(idx).put("disable_description", jsonObject.getString("description"));
-//        } else {
-//            courses.get(idx).put("is_enable", true);
-//            courses.get(idx).remove("disable_description");
-//        }
-//
-//        new Thread(() -> gradeRepository.replaceOne(eq("_id", lessonId), lesson)).start();
-//
-//        return JSON_OK;
-//    }
 //
 //    public static String allCourses() {
 //        return gradeRepository.allCourses();

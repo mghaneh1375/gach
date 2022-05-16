@@ -46,6 +46,10 @@ public class StaticValues {
     public final static boolean LOCAL = false;
     public final static boolean DEV_MODE = true;
 
+
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+
     public final static String SERVER = (StaticValues.DEV_MODE) ?
             (StaticValues.LOCAL) ? "http://localhost:8080/api/" :
                     "http://185.239.106.26:8080/" : "https://okft.org/";

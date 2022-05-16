@@ -16,11 +16,13 @@ import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.in;
 
-public class QuestionRepository {
+public class QuestionRepository extends Common {
 
-    static MongoCollection<Document> documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection("question");
+    public QuestionRepository() {
+        init();
+    }
 
-    public static HashMap<Integer, Question> getAnswers(int[] ids) {
+    public HashMap<Integer, Question> getAnswers(int[] ids) {
 
         FindIterable<Document> docs = documentMongoCollection.find(in("id", ids)).projection(new BasicDBObject("ans", 1).
                 append("id", 1).append("lesson_id", 1).append("lesson_name", 1));
@@ -96,5 +98,11 @@ public class QuestionRepository {
         }
 
         return output;
+    }
+
+    @Override
+    void init() {
+        table = "question";
+        documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 }

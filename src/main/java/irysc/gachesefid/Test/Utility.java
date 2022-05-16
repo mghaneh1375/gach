@@ -4,8 +4,10 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -20,8 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
-import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class Utility {
 
@@ -31,20 +36,32 @@ public class Utility {
     public static ObjectId studentId = new ObjectId("612c7ae6af377d3b48bf59fe");
     static String baseUrl = "http://localhost:8080/api/";
 
-    public static String signIn(String username, String password)
+    public static String signIn(String username)
             throws InvalidFieldsException {
 
-        JSONObject res = sendPostReq("user/signIn", new JSONObject()
-                .put("username", username)
-                .put("password", password)
-        );
+        try {
 
-        String token = "Bearer " + res.getString("token");
+            JSONObject res = sendPostReq("user/signIn", new JSONObject()
+                    .put("username", username)
+                    .put("password", "1")
+            );
 
-        if (username.equals(adminUsername))
-            adminToken = token;
+            if (res.has("status") && res.getString("status").equals("ok")) {
 
-        return token;
+                String token = "Bearer " + res.getString("token");
+
+                if (username.equals(adminUsername))
+                    adminToken = token;
+
+                return token;
+
+            }
+
+        } catch (Exception x) {
+            throw new InvalidFieldsException(x.getMessage());
+        }
+
+        return null;
     }
 
     static ObjectId findMyObjectId(String token) {
@@ -152,6 +169,23 @@ public class Utility {
         }
     }
 
+    public static JSONObject sendDeleteReq(String addr, String token, JSONObject jsonObject)
+            throws InvalidFieldsException {
+
+        try {
+            return send(
+                    Unirest.delete(baseUrl + addr)
+                            .header("accept", "application/json")
+                            .header("content-type", "application/json")
+                            .header("Authorization", token)
+                            .body(jsonObject)
+                            .asJson()
+            );
+        } catch (UnirestException x) {
+            throw new InvalidFieldsException("unirest");
+        }
+    }
+
     public static JSONObject sendPostReq(String addr, JSONObject jsonObject)
             throws InvalidFieldsException {
 
@@ -230,7 +264,7 @@ public class Utility {
         Path currentRelativePath = Paths.get("");
         String s = currentRelativePath.toAbsolutePath().toString();
 
-        File f = new File(s + "/src/main/java/bogen/austria/Test/" + folder + "/stories/");
+        File f = new File(s + "/src/main/java/irysc/gachesefid/Test/" + folder + "/stories/");
         ArrayList<JSONObject> jsonObjects = new ArrayList<>();
 
         for (File itr : Objects.requireNonNull(f.listFiles())) {
@@ -253,31 +287,101 @@ public class Utility {
                 switch (jsonObject.getString(key)) {
 
                     case "$randMail":
-                        jsonObject.put(key, irysc.gachesefid.Utility.Utility.randomString(20) + "@gmail.com");
+                        jsonObject.put(key, randomString(20) + "@gmail.com");
                         break;
 
                     case "$randStr":
-                        jsonObject.put(key, irysc.gachesefid.Utility.Utility.randomString(20));
+                        jsonObject.put(key, randomString(20));
                         break;
 
                     case "$randNum":
-                        jsonObject.put(key, irysc.gachesefid.Utility.Utility.randomPhone(10));
+                        jsonObject.put(key, randomPhone(10));
                         break;
 
                     case "$objectId":
                         jsonObject.put(key, new ObjectId());
                         break;
 
+                    case "$studentId":
+                        jsonObject.put(key, studentId);
+                        break;
+
+                    case "$teacherId":
+                    case "$teacherId2":
+                    case "$teacherId3":
+
+                        if (jsonObject.getString(key).equals("$teacherId"))
+                            jsonObject.put(key, userRepository.findOne(
+                                    eq("access", "teacher"),
+                                    new BasicDBObject("_id", 1)
+                            ).getObjectId("_id"));
+                        else if (jsonObject.getString(key).equals("$teacherId2"))
+                            jsonObject.put(key, userRepository.find(
+                                    eq("access", "teacher"),
+                                    new BasicDBObject("_id", 1)
+                            ).get(1).getObjectId("_id"));
+                        else if (jsonObject.getString(key).equals("$teacherId3"))
+                            jsonObject.put(key, userRepository.find(
+                                    eq("access", "teacher"),
+                                    new BasicDBObject("_id", 1)
+                            ).get(2).getObjectId("_id"));
+                        break;
+
+                    case "$studentUsername":
+                        jsonObject.put(key, studentUsername);
+                        break;
+
                     case "$termId":
                         jsonObject.put(key, "612b3932c590d07e793e238e");
                         break;
 
+                    case "$nearTS":
+                    case "$nearSolar":
+
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-5));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 5);
+                        break;
+
                     case "$futureTS":
-                        jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 15);
+                    case "$futureSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-15));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 15);
+                        break;
+
+                    case "$mid1FutureTS":
+                    case "$mid1FutureSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-18));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 18);
+                        break;
+
+                    case "$mid2FutureTS":
+                    case "$mid2FutureSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-20));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 20);
+                        break;
+
+                    case "$mid3FutureTS":
+                    case "$mid3FutureSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-22));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 22);
                         break;
 
                     case "$veryFutureTS":
-                        jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 30);
+                    case "$veryFutureSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(-30));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() + ONE_DAY_MIL_SEC * 30);
                         break;
 
                     case "$currentTS":
@@ -285,24 +389,32 @@ public class Utility {
                         break;
 
                     case "$oldTS":
-                        jsonObject.put(key, System.currentTimeMillis() - ONE_DAY_MIL_SEC * 10);
+                    case "$oldSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(10));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() - ONE_DAY_MIL_SEC * 10);
                         break;
 
                     case "$veryOldTS":
-                        jsonObject.put(key, System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30);
+                    case "$veryOldSolar":
+                        if (jsonObject.getString(key).contains("Solar"))
+                            jsonObject.put(key, getPastAsString(20));
+                        else
+                            jsonObject.put(key, System.currentTimeMillis() - ONE_DAY_MIL_SEC * 20);
                         break;
 
                     case "$randPassedDate":
 
                         String date = "1370/";
 
-                        int month = Integer.parseInt(irysc.gachesefid.Utility.Utility.randomPhone(2));
+                        int month = Integer.parseInt(randomPhone(2));
                         while (month > 12 || month == 0)
-                            month = Integer.parseInt(irysc.gachesefid.Utility.Utility.randomPhone(2));
+                            month = Integer.parseInt(randomPhone(2));
 
-                        int day = Integer.parseInt(irysc.gachesefid.Utility.Utility.randomPhone(2));
+                        int day = Integer.parseInt(randomPhone(2));
                         while (day > 29 || day == 0)
-                            day = Integer.parseInt(irysc.gachesefid.Utility.Utility.randomPhone(2));
+                            day = Integer.parseInt(randomPhone(2));
 
                         date += (month < 10) ? "0" + month : month;
                         date += "/";
@@ -313,17 +425,23 @@ public class Utility {
 
                     case "$randPhone":
 
-                        String phone = "0912" + irysc.gachesefid.Utility.Utility.randomPhone(7);
+                        String phone = "0912" + randomPhone(7);
                         while (userRepository.findByUsername(phone) != null)
-                            phone = "0912" + irysc.gachesefid.Utility.Utility.randomPhone(7);
+                            phone = "0912" + randomPhone(7);
 
-                        jsonObject.put(key, "0912" + irysc.gachesefid.Utility.Utility.randomPhone(7));
+                        jsonObject.put(key, "0912" + randomPhone(7));
                         break;
 
                 }
 
             } else if (jsonObject.get(key) instanceof JSONObject)
                 jsonObject.put(key, checkInputFileVars(jsonObject.getJSONObject(key)));
+            else if (jsonObject.get(key) instanceof JSONArray) {
+                for (int j = 0; j < jsonObject.getJSONArray(key).length(); j++) {
+                    if (jsonObject.getJSONArray(key).get(j) instanceof JSONObject)
+                        checkInputFileVars(jsonObject.getJSONArray(key).getJSONObject(j));
+                }
+            }
 
         }
 
@@ -379,6 +497,51 @@ public class Utility {
         }
 
         return false;
+    }
+
+    public static void showSuccess(String msg) {
+        System.out.println(ANSI_GREEN + "\u2713 " + msg + ANSI_RESET);
+    }
+
+    public static JSONObject getNotifs() throws InvalidFieldsException {
+        return Utility.sendGetReq("newAlerts", adminToken).getJSONObject("data");
+    }
+
+    public static HashMap<String, Integer> initAlerts(ArrayList<String> wantedKeys) throws InvalidFieldsException {
+
+        JSONObject alerts = getNotifs();
+
+        HashMap<String, Integer> wantedKeysWithValues = new HashMap<>();
+
+        for (String key : alerts.keySet()) {
+
+            if (!wantedKeys.contains(key))
+                continue;
+
+            wantedKeysWithValues.put(key, alerts.getInt(key));
+        }
+
+        return wantedKeysWithValues;
+    }
+
+    static class ParameterStringBuilder {
+        static String getParamsString(Map<String, String> params)
+                throws UnsupportedEncodingException {
+            StringBuilder result = new StringBuilder();
+
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
+                result.append("=");
+                result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+                result.append("&");
+            }
+
+            String resultString = result.toString();
+            return resultString.length() > 0
+                    ? resultString.substring(0, resultString.length() - 1)
+                    : resultString;
+        }
+
     }
 
 }
