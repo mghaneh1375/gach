@@ -1,12 +1,10 @@
 package irysc.gachesefid.Controllers;
 
-import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -18,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
@@ -115,21 +112,12 @@ public class ContentController {
                                 row.getCell(5).getStringCellValue() != null &&
                                 !row.getCell(5).getStringCellValue().isEmpty() ?
                                 row.getCell(5).getStringCellValue() : "")
-                        .append("easy_price", row.getCell(6) != null &&
-                                row.getCell(6).getStringCellValue() != null &&
-                                !row.getCell(6).getStringCellValue().isEmpty() &&
-                                isValidNum(row.getCell(6).getStringCellValue()) ?
-                                Integer.parseInt(row.getCell(6).getStringCellValue()) : 0)
-                        .append("mid_price", row.getCell(7) != null &&
-                                row.getCell(7).getStringCellValue() != null &&
-                                !row.getCell(7).getStringCellValue().isEmpty() &&
-                                isValidNum(row.getCell(7).getStringCellValue()) ?
-                                Integer.parseInt(row.getCell(7).getStringCellValue()) : 0)
-                        .append("hard_price", row.getCell(8) != null &&
-                                row.getCell(8).getStringCellValue() != null &&
-                                !row.getCell(8).getStringCellValue().isEmpty() &&
-                                isValidNum(row.getCell(8).getStringCellValue()) ?
-                                Integer.parseInt(row.getCell(8).getStringCellValue()) : 0);
+                        .append("easy_price", row.getCell(6) != null ?
+                                (int)(row.getCell(6).getNumericCellValue()) : 0)
+                        .append("mid_price", row.getCell(7) != null ?
+                                (int)(row.getCell(7).getNumericCellValue()) : 0)
+                        .append("hard_price", row.getCell(8) != null ?
+                                (int)(row.getCell(8).getNumericCellValue()) : 0);
 
                 subjectRepository.updateOne(
                         and(
@@ -141,7 +129,10 @@ public class ContentController {
                         new UpdateOptions().upsert(true)
                 );
 
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+                System.out.println(ignore.getMessage());
+                ignore.printStackTrace();
+            }
         }
 
         if(!needUpdate)
