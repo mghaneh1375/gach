@@ -1,6 +1,7 @@
 package irysc.gachesefid.Validator;
 
 import irysc.gachesefid.Utility.Positive;
+import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
 import javax.validation.ConstraintValidator;
@@ -41,6 +42,7 @@ public class StrongJSONValidator implements
 
             for (String itr : valueList) {
                 if (!jsonObject.has(itr) || !checkClasses(valueListType[i], jsonObject.get(itr))) {
+                    System.out.println(itr);
                     return false;
                 }
 
@@ -76,6 +78,12 @@ public class StrongJSONValidator implements
 
         if(a.equals(Object.class))
             return true;
+
+        if(a.equals(ObjectId.class))
+            return ObjectIdValidator.isValid(value.toString());
+
+        if(a.isEnum())
+            return EnumValidatorImp.isValid(value.toString(), a);
 
         Class b = value.getClass();
 
