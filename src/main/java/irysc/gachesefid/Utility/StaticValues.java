@@ -29,17 +29,11 @@ public class StaticValues {
     public final static int USER_LIMIT_CACHE_SIZE = 3000;
     public final static int USER_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
-    public final static int QUIZ_LIMIT_CACHE_SIZE = 100;
-    public final static int QUIZ_EXPIRATION_SEC = 60 * 60 * 24 * 7;
-
-    public final static int HW_LIMIT_CACHE_SIZE = 100;
-    public final static int HW_EXPIRATION_SEC = 60 * 60 * 24 * 7;
-
     public final static int CLASS_LIMIT_CACHE_SIZE = 100;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
-    public final static int MAX_CERTIFICATE_FILE_SIZE = 1024 * 1024 * 6;
     public final static int ONE_MB = 1024 * 1024;
+    public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
     public final static int ITEMS_PER_PAGE = 20;
 

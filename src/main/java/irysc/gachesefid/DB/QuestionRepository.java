@@ -14,9 +14,12 @@ import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.in;
 
 public class QuestionRepository extends Common {
+
+    public static final String FOLDER = "questions";
 
     public QuestionRepository() {
         init();
@@ -104,5 +107,10 @@ public class QuestionRepository extends Common {
     void init() {
         table = "question";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
+    }
+
+    @Override
+    public void cleanReject(Document doc) {
+
     }
 }

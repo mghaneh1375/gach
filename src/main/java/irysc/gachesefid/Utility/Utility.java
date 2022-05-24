@@ -599,28 +599,28 @@ public class Utility {
         if (sendDateSolar != null) {
             String[] splited = sendDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (answerDateSolar != null) {
             String[] splited = answerDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (sendDateSolarEndLimit != null) {
             String[] splited = sendDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (answerDateSolarEndLimit != null) {
             String[] splited = answerDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
@@ -742,13 +742,25 @@ public class Utility {
                 .toString();
     }
 
-    public static String generateSuccessMsg(String key, Object val, PairValue ... pairValues) {
+    public static String generateErr(String msg, PairValue... pairValues) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("status", "nok")
+                .put("msg", msg);
+
+        for(PairValue p : pairValues)
+            jsonObject.put(p.getKey().toString(), p.getValue());
+
+        return jsonObject.toString();
+    }
+
+    public static String generateSuccessMsg(String key, Object val, PairValue... pairValues) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("status", "ok")
                 .put(key, val);
 
-        for(PairValue p : pairValues)
+        for (PairValue p : pairValues)
             jsonObject.put(p.getKey().toString(), p.getValue());
 
         return jsonObject.toString();

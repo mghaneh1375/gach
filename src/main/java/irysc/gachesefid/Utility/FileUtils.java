@@ -17,12 +17,12 @@ import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 public class FileUtils {
 
     public final static String uploadDir = "/var/www/statics/";
-//    public final static String uploadDir_dev = "/var/www/statics/";
-    public final static String uploadDir_dev = "./src/main/resources/assets/";
+    public final static String uploadDir_dev = "/var/www/statics/";
+//    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
 
@@ -77,6 +77,20 @@ public class FileUtils {
             Files.delete(location);
         } catch (Exception x) {
         }
+    }
+
+    public static boolean checkExist(String filename, String folder) {
+
+        Path location = Paths.get(DEV_MODE ?
+                uploadDir_dev + folder + File.separator + filename :
+                uploadDir + folder + File.separator + filename
+        );
+
+        return Files.exists(location);
+    }
+
+    public static String renameFile(String oldName, String newName) {
+
     }
 
     public static void removeTempFile(String filename) {

@@ -1,6 +1,6 @@
 package irysc.gachesefid.Routes.API.Admin;
 
-import irysc.gachesefid.Controllers.QuestionController;
+import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -16,7 +16,6 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
@@ -58,21 +57,28 @@ public class QuestionAPIRoutes extends Router {
                       @PathVariable @ObjectIdConstraint ObjectId subjectId,
                       @RequestBody @StrongJSONConstraint(
                               params = {
-                                      "level", "authorId", "neededTime",
-                                      "telorance", "choicesCount", "answer",
+                                      "level", "authorId",
+                                      "neededTime", "answer",
                                       "organizationId", "kindQuestion"
                               },
                               paramsType = {
-                                      QuestionLevel.class, ObjectId.class, Positive.class,
-                                      Number.class, Positive.class, String.class,
+                                      QuestionLevel.class, ObjectId.class,
+                                      Positive.class, Object.class,
                                       String.class, QuestionType.class
+                              },
+                              optionals = {
+                                      "sentencesCount", "telorance",
+                                      "choicesCount", "neededLines"
+                              },
+                              optionalsType = {
+                                      Positive.class, Number.class,
+                                      Positive.class, Positive.class
                               }
-                      ) @NotBlank String jsonStr,
-                      @RequestBody MultipartFile file)
+                      ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
 //        getAdminPrivilegeUserVoid(request);
-        QuestionController.addQuestion(subjectId, file, new JSONObject(jsonStr));
-        return "SAlam";
+        return QuestionController.addQuestion(subjectId, new JSONObject(jsonStr));
     }
+
 
 }
