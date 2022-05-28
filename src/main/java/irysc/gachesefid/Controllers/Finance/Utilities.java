@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class Utilities {
 
@@ -109,7 +110,7 @@ public class Utilities {
             }
 
         } catch (UnirestException e) {
-            e.printStackTrace();
+            printException(e);
         }
 
         return JSON_NOT_VALID;

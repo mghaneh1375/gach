@@ -18,6 +18,7 @@ import java.io.*;
 import java.net.URL;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class Common {
 
@@ -97,7 +98,7 @@ public class Common {
             outputFile.delete();
 
         } catch (IOException e) {
-            e.printStackTrace();
+            printException(e);
         }
     }
 
@@ -127,7 +128,7 @@ public class Common {
             contentStream.showText(text);
         } catch (Exception ex) {
             System.out.println("HEY ERR");
-            ex.printStackTrace();
+            printException(ex);
         }
         finally {
             try {
@@ -153,7 +154,7 @@ public class Common {
 
         } catch (Exception ex) {
             System.out.println("HEY ERR");
-            ex.printStackTrace();
+            printException(ex);
         }
         finally {
             try {
@@ -189,7 +190,7 @@ public class Common {
             } else
                 stream.newLineAtOffset(mediaBox.getWidth() - marginRight, mediaBox.getHeight() - marginTop);
         } catch (IOException e) {
-            e.printStackTrace();
+            printException(e);
         }
     }
 
@@ -208,7 +209,7 @@ public class Common {
             contentStream.addRect(14, 14, mediaBox.getWidth() - 28, mediaBox.getHeight() - 28);
             contentStream.stroke();
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
     }
 

@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static irysc.gachesefid.Utility.PDF.Common.*;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 
 public class PDFUtils {
@@ -122,7 +123,7 @@ public class PDFUtils {
 
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
             return null;
         }
 
@@ -194,7 +195,7 @@ public class PDFUtils {
 
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
             return null;
         }
 
@@ -241,7 +242,7 @@ public class PDFUtils {
 
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
             return null;
         }
 

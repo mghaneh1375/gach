@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 
+import static irysc.gachesefid.Utility.Utility.printException;
+
 public class IRYSCQuizRepository extends Common {
 
     public final static String FOLDER = "irysc_quizzes";
@@ -66,7 +68,7 @@ public class IRYSCQuizRepository extends Common {
             }
         } catch (Exception x) {
             System.out.println(x.getMessage());
-            x.printStackTrace();
+            printException(x);
         }
 
         return new String[]{student_answers.toString(), question_ids.toString()};
@@ -96,7 +98,7 @@ public class IRYSCQuizRepository extends Common {
             }
         } catch (Exception x) {
             System.out.println(x.getMessage());
-            x.printStackTrace();
+            printException(x);
         }
 
         return ids.toString();
@@ -133,7 +135,7 @@ public class IRYSCQuizRepository extends Common {
             }
         } catch (Exception x) {
             System.out.println(x.getMessage());
-            x.printStackTrace();
+            printException(x);
         }
 
         ArrayList<ArrayList<Object>> allDocs = new ArrayList<>();

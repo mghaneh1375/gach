@@ -17,12 +17,12 @@ import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 public class FileUtils {
 
     public final static String uploadDir = "/var/www/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
 
@@ -89,8 +89,28 @@ public class FileUtils {
         return Files.exists(location);
     }
 
-    public static String renameFile(String oldName, String newName) {
+    public static String renameFile(String folder, String oldName, String newName) {
 
+        Path location = Paths.get(DEV_MODE ?
+                uploadDir_dev + folder :
+                uploadDir + folder
+        );
+
+        if(newName == null) {
+            newName = Utility.randInt() + "_" + System.currentTimeMillis() + ".";
+            String[] splited = oldName.split("\\.");
+            String ext = splited[splited.length - 1];
+            newName += ext;
+        }
+
+        boolean success = new File(location.toString() + "/" + oldName).renameTo(
+                new File(location.toString() + "/" + newName)
+        );
+
+        if(!success)
+            return null;
+
+        return newName;
     }
 
     public static void removeTempFile(String filename) {

@@ -89,7 +89,7 @@ public class Utility {
             if (res.has("status") && res.getString("status").equals("ok"))
                 return new ObjectId(res.getJSONObject("user").getString("_id"));
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return null;

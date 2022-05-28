@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import static irysc.gachesefid.Utility.Utility.printException;
 import static java.util.Map.entry;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
@@ -97,7 +98,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             userRepository = new UserRepository();
 
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
     }
 

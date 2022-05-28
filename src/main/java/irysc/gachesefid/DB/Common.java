@@ -57,6 +57,23 @@ public abstract class Common extends Repository {
         return result;
     }
 
+    public ArrayList<ObjectId> findJustIds(Bson filter) {
+
+        FindIterable<Document> cursor;
+
+        if (filter == null)
+            cursor = documentMongoCollection.find().projection(new BasicDBObject("_id", 1));
+        else
+            cursor = documentMongoCollection.find(filter).projection(new BasicDBObject("_id", 1));
+
+        ArrayList<ObjectId> result = new ArrayList<>();
+
+        for (Document doc : cursor)
+            result.add(doc.getObjectId("_id"));
+
+        return result;
+    }
+
     public int count(Bson filter) {
         if (filter == null)
             return (int) documentMongoCollection.countDocuments();

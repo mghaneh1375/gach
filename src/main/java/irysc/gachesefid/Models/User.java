@@ -4,6 +4,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.HashMap;
 
+import static irysc.gachesefid.Utility.Utility.printException;
+
 public class User {
 
     public long id;
@@ -37,7 +39,7 @@ public class User {
             role = cols.get("level").equals(0) ? Role.ROLE_CLIENT : Role.ROLE_ADMIN;
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
     }

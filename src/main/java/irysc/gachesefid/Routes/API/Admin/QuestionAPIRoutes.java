@@ -16,11 +16,13 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
 @RequestMapping(path = "/api/admin/question")
@@ -44,7 +46,7 @@ public class QuestionAPIRoutes extends Router {
             msg = "success";
         } catch (Exception x) {
             msg = x.getMessage();
-            x.printStackTrace();
+            printException(x);
         }
 
         return msg;
@@ -81,4 +83,12 @@ public class QuestionAPIRoutes extends Router {
     }
 
 
+    @PostMapping(value = "/addBatch")
+    @ResponseBody
+    public String addBatch(HttpServletRequest request,
+                           @RequestBody MultipartFile file)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+//        getAdminPrivilegeUserVoid(request);
+        return QuestionController.addBatch(file);
+    }
 }

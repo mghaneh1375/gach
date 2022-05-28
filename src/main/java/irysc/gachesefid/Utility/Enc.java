@@ -9,6 +9,7 @@ import java.io.*;
 import java.util.Base64;
 
 import static irysc.gachesefid.Utility.StaticValues.KEY;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class Enc {
 
@@ -37,7 +38,7 @@ public class Enc {
 
 
         } catch (Exception e) {
-            e.printStackTrace();
+            printException(e);
         }
     }
 

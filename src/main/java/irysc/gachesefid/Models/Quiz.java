@@ -4,6 +4,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.HashMap;
 
+import static irysc.gachesefid.Utility.Utility.printException;
+
 public class Quiz {
 
     public HashMap<String, Object> cols = new HashMap<>();
@@ -16,7 +18,7 @@ public class Quiz {
             }
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
     }

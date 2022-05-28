@@ -17,6 +17,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import static irysc.gachesefid.Utility.Utility.printException;
+
 
 @ControllerAdvice
 public class ErrorHandler extends ResponseEntityExceptionHandler {
@@ -143,7 +145,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 
 //            if(ex.getMessage() != null &&
 //                    !ex.getMessage().contains("Invalid json"))
-            ex.printStackTrace();
+            printException(ex);
 
             return new ResponseEntity<>(
                     new JSONObject().put("status", "nok").put("msg", ex.getLocalizedMessage()).toString(),

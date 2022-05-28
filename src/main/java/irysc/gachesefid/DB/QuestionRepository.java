@@ -16,6 +16,7 @@ import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.in;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class QuestionRepository extends Common {
 
@@ -70,7 +71,7 @@ public class QuestionRepository extends Common {
             }
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return output;
@@ -97,7 +98,7 @@ public class QuestionRepository extends Common {
             }
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return output;

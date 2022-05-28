@@ -36,6 +36,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -189,7 +190,7 @@ public class UserAPIRoutes extends Router {
             jsonObject.put("password", userService.getEncPass(jsonObject.getString("password")));
             return UserController.signUp(jsonObject);
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return JSON_NOT_VALID;
@@ -368,7 +369,7 @@ public class UserAPIRoutes extends Router {
             return JSON_OK;
 
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return JSON_NOT_VALID_PARAMS;

@@ -307,7 +307,7 @@ public class Utility {
             return (int) Math.floor((difference_In_Time / (1000 * 60.0 * 60 * 24)) / 365.0);
 
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return -1;
@@ -433,7 +433,7 @@ public class Utility {
 
             new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", to).append("subject", subject))).start();
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
             return false;
         }
 
@@ -541,7 +541,7 @@ public class Utility {
 
             Transport.send(message);
         } catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
             return false;
         }
 
@@ -566,7 +566,7 @@ public class Utility {
         try {
             return formatter.parse(date).getTime();
         } catch (ParseException e) {
-            e.printStackTrace();
+            printException(e);
         }
 
         return -1;
@@ -578,7 +578,7 @@ public class Utility {
         try {
             return formatter.parse(date + " " + time).getTime();
         } catch (ParseException e) {
-            e.printStackTrace();
+            printException(e);
         }
 
         return -1;
@@ -776,5 +776,14 @@ public class Utility {
         SolarCalendar sc = new SolarCalendar(-ONE_DAY_MIL_SEC * days);
         return String.valueOf(sc.year) + "/" + String.format(loc, "%02d",
                 sc.month) + "/" + String.format(loc, "%02d", sc.date);
+    }
+
+    public static void printException(Exception x) {
+
+        System.out.println(x.getMessage());
+        int limit = x.getStackTrace().length > 5 ? 5 : x.getStackTrace().length;
+        for(int i = 0; i < limit; i++)
+            System.out.println(x.getStackTrace()[i]);
+
     }
 }

@@ -20,10 +20,10 @@ public class ObjectIdValidator implements
 
     @Override
     public boolean isValid(ObjectId o, ConstraintValidatorContext constraintValidatorContext) {
-        return o.toString().length() >= MIN_OBJECT_ID_SIZE && o.toString().length() <= MAX_OBJECT_ID_SIZE;
+        return ObjectId.isValid(o.toString());
     }
 
     public static boolean isValid(String str) {
-        return str.length() >= MIN_OBJECT_ID_SIZE && str.length() <= MAX_OBJECT_ID_SIZE;
+        return ObjectId.isValid(str);
     }
 }

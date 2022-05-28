@@ -21,6 +21,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
 @RequestMapping(path = "/api/admin/content")
@@ -43,7 +44,7 @@ public class ContentAPIRoutes extends Router {
             msg = "success";
         } catch (Exception x) {
             msg = x.getMessage();
-            x.printStackTrace();
+            printException(x);
         }
 
         return msg;

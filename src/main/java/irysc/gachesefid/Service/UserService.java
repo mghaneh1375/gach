@@ -23,6 +23,7 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 @Service
 public class UserService {
@@ -114,7 +115,6 @@ public class UserService {
             return token;
 
         } catch (AuthenticationException x) {
-            x.printStackTrace();
             throw new CustomException("Invalid username/password supplied", HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }

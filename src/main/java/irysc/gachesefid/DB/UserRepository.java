@@ -20,6 +20,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class UserRepository extends Common {
 
@@ -203,7 +204,7 @@ public class UserRepository extends Common {
                     constraints.add(eq("_id", new ObjectId(unique)));
 
             } catch (Exception x) {
-                x.printStackTrace();
+                printException(x);
             }
         }
 

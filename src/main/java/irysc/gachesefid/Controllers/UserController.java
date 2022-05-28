@@ -19,6 +19,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 public class UserController {
 
@@ -254,7 +255,7 @@ public class UserController {
 
             return JSON_OK;
         } catch (Exception e) {
-            e.printStackTrace();
+            printException(e);
         }
 
         return JSON_NOT_UNKNOWN;
@@ -288,7 +289,7 @@ public class UserController {
             }).start();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            printException(e);
         }
 
         return JSON_OK;

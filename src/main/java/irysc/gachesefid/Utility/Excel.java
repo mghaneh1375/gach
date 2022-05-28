@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import static irysc.gachesefid.Utility.FileUtils.limboDir;
 import static irysc.gachesefid.Utility.FileUtils.limboDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.Utility.printException;
 
 
 public class Excel {
@@ -115,7 +116,7 @@ public class Excel {
 //            cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 //            sheet.getRow(0).setRowStyle(cellStyle);
 //        } catch (DecoderException e) {
-//            e.printStackTrace();
+//            printException(e);
 //        }
 
         for(int i = 0; i < jsonArray.length(); i++) {
@@ -135,7 +136,7 @@ public class Excel {
             return new ByteArrayInputStream(out.toByteArray());
         }
         catch (Exception x) {
-            x.printStackTrace();
+            printException(x);
         }
 
         return null;
