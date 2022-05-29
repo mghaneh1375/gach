@@ -389,13 +389,13 @@ public class QuestionController extends Utilities {
         )
             filters.add(eq("level", level));
 
-        if(questionId != null)
+        if(questionId != null && ObjectId.isValid(questionId.toString()))
             filters.add(eq("_id", questionId));
 
-        if(authorId != null)
+        if(authorId != null && ObjectId.isValid(authorId.toString()))
             filters.add(eq("authorId", authorId));
 
-        if(subjectId != null)
+        if(subjectId != null && ObjectId.isValid(subjectId.toString()))
             filters.add(eq("subject_id", subjectId));
 
         if(organizationId != null)
@@ -404,7 +404,7 @@ public class QuestionController extends Utilities {
         if(organizationLike != null)
             filters.add(regex("organization_id", Pattern.compile(Pattern.quote(organizationLike), Pattern.CASE_INSENSITIVE)));
 
-        if(lessonId != null) {
+        if(lessonId != null && ObjectId.isValid(lessonId.toString())) {
             ArrayList<ObjectId> subjectIds = subjectRepository.findJustIds(eq("lesson._id", lessonId));
             filters.add(in("subject_id", subjectIds));
         }

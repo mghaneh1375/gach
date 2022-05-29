@@ -89,6 +89,11 @@ public class Router {
         return isWantedAccess(request, Access.ADMIN.getName());
     }
 
+    protected Document getSuperAdminPrivilegeUser(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return isWantedAccess(request, Access.SUPERADMIN.getName());
+    }
+
     protected Document getTeacherPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         return isWantedAccess(request, Access.TEACHER.getName());

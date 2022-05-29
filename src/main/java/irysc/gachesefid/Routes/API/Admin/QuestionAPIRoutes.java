@@ -91,4 +91,33 @@ public class QuestionAPIRoutes extends Router {
 //        getAdminPrivilegeUserVoid(request);
         return QuestionController.addBatch(file);
     }
+
+    @GetMapping
+    @ResponseBody
+    public String search(HttpServletRequest request,
+                         @RequestParam(required = false, value = "isSubjectsNeeded") Boolean isSubjectsNeeded,
+                         @RequestParam(required = false, value = "isAuthorsNeeded") Boolean isAuthorsNeeded,
+                         @RequestParam(required = false, value = "justUnVisible") Boolean justUnVisible,
+                         @RequestParam(required = false, value = "organizationId") String organizationId,
+                         @RequestParam(required = false, value = "organizationLike") String organizationLike,
+                         @RequestParam(required = false, value = "level") String level,
+                         @RequestParam(required = false, value = "kindQuestion") String kindQuestion,
+                         @RequestParam(required = false, value = "kindQuestion") String sortBy,
+                         @RequestParam(required = false, value = "subjectId") ObjectId subjectId,
+                         @RequestParam(required = false, value = "lessonId") ObjectId lessonId,
+                         @RequestParam(required = false, value = "questionId") ObjectId questionId,
+                         @RequestParam(required = false, value = "quizId") ObjectId quizId,
+                         @RequestParam(required = false, value = "authorId") ObjectId authorId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+        return QuestionController.search(true,
+                isSubjectsNeeded == null ? true : isSubjectsNeeded,
+                isAuthorsNeeded == null ? true : isAuthorsNeeded,
+                justUnVisible, organizationId, organizationLike,
+                subjectId, lessonId, questionId, quizId, authorId,
+                level, kindQuestion, sortBy
+        );
+    }
+
 }
