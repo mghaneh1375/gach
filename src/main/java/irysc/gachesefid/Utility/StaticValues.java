@@ -32,6 +32,8 @@ public class StaticValues {
     public final static int CLASS_LIMIT_CACHE_SIZE = 100;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
+    public final static int MAX_TICKET_FILE_SIZE = 1024 * 1024 * 6;
+
     public final static int ONE_MB = 1024 * 1024;
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 

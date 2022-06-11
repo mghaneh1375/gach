@@ -7,6 +7,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
+import irysc.gachesefid.Models.NewAlert;
 import irysc.gachesefid.Utility.Enc;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -23,6 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Utility.Utility.printException;
 import static java.util.Map.entry;
 
@@ -60,9 +64,12 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static RequestRepository requestRepository;
     public static SubjectRepository subjectRepository;
     public static SchoolQuizRepository schoolQuizRepository;
+    public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
     public static UserRepository userRepository;
     public static MailRepository mailRepository;
+
+    public static HashMap<String, Integer> newThingsCache = new HashMap<>();
 
     private static void setupDB() {
         try {
@@ -94,6 +101,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             requestRepository = new RequestRepository();
             subjectRepository = new SubjectRepository();
             schoolQuizRepository = new SchoolQuizRepository();
+            ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();
 
@@ -135,6 +143,20 @@ public class GachesefidApplication implements WebMvcConfigurer {
     }
 
     private static void setupNewThingsCache() {
+
+        newThingsCache.put(NewAlert.NEW_TICKETS.getName(), ticketRepository.count(
+                and(
+                        eq("status", "pending"),
+                        exists("chats.2", false)
+                )
+        ));
+
+        newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(), ticketRepository.count(
+                and(
+                        eq("status", "pending"),
+                        exists("chats.1", true)
+                )
+        ));
 
     }
 

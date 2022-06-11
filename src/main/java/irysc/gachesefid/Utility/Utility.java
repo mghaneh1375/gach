@@ -2,6 +2,7 @@ package irysc.gachesefid.Utility;
 
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Kavenegar.KavenegarApi;
 import irysc.gachesefid.Kavenegar.excepctions.ApiException;
 import irysc.gachesefid.Kavenegar.excepctions.HttpException;
@@ -786,4 +787,19 @@ public class Utility {
             System.out.println(x.getStackTrace()[i]);
 
     }
+
+    public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
+
+        //todo: customize with common user info
+        jsonObject.put("student", new JSONObject()
+                .put("name", user.getString("name_fa"))
+                .put("id", user.getObjectId("_id").toString())
+                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                .put("last_name", user.getString("last_name_fa"))
+                .put("username", user.getString("username"))
+                .put("NID", user.getString("NID"))
+        );
+
+    }
+
 }
