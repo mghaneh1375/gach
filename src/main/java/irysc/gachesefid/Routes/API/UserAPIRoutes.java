@@ -140,9 +140,10 @@ public class UserAPIRoutes extends Router {
             JSONObject jsonObject = new JSONObject(jsonStr);
 
             Utility.convertPersian(jsonObject);
+
             String token = userService.signIn(
                     jsonObject.getString("username").toLowerCase(),
-                    jsonObject.getString("password"), true
+                    jsonObject.getString("password"), !DEV_MODE
             );
 
             return Utility.generateSuccessMsg("token", token);
