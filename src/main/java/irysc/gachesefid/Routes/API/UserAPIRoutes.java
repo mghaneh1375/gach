@@ -15,7 +15,6 @@ import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
-import irysc.gachesefid.Validator.PhoneValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -36,6 +35,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
@@ -175,19 +175,21 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/signUp")
     @ResponseBody
-    public String signUp(@RequestBody @JSONConstraint(params = {"password", "phone"}, optionals = {"introduced"}) String json) {
+    public String signUp(@RequestBody @JSONConstraint(params = {
+            "password", "username",
+            "firstName", "lastName",
+            "NID", "authVia"
+    }) String json) {
 
         try {
             JSONObject jsonObject = new JSONObject(json);
             Utility.convertPersian(jsonObject);
 
             if (!Utility.isValidPassword(jsonObject.getString("password")))
-                return new JSONObject().put("status", "nok").put("msg", "password security is low").toString();
-
-            if (!PhoneValidator.isValid(jsonObject.getString("phone")))
-                return new JSONObject().put("status", "nok").put("msg", "phone is invalid").toString();
+                return generateErr("رمزعبور وارد شده ملاحظات امنیتی لازم را ندارد.");
 
             jsonObject.put("password", userService.getEncPass(jsonObject.getString("password")));
+
             return UserController.signUp(jsonObject);
         } catch (Exception x) {
             printException(x);
@@ -205,7 +207,7 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/activate")
     @ResponseBody
     public String activate(@RequestBody @StrongJSONConstraint(
-            params = {"token", "phone", "code"},
+            params = {"token", "username", "code"},
             paramsType = {String.class, String.class, Integer.class}
     ) String json) {
 
@@ -217,7 +219,37 @@ public class UserAPIRoutes extends Router {
         if (code < 10000 || code > 99999)
             return JSON_NOT_VALID_PARAMS;
 
-        return UserController.activate(code, jsonObject.getString("token"), jsonObject.getString("phone"));
+        return UserController.activate(code, jsonObject.getString("token"),
+                jsonObject.getString("username")
+        );
+    }
+
+    @PutMapping(value = "/setRole")
+    @ResponseBody
+    public String setRole(HttpServletRequest request,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"role", "a", "b", "c"},
+                                  paramsType = {String.class, String.class, String.class, String.class}
+                          ) String json
+    ) throws UnAuthException, NotActivateAccountException {
+        return UserController.setRole(
+                getUserWithOutCheckCompleteness(request),
+                new JSONObject(json)
+        );
+    }
+
+    @PutMapping(value = "/setIntroducer")
+    @ResponseBody
+    public String setIntroducer(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"invitationCode"},
+                                        paramsType = {String.class}
+                                ) String json
+    ) throws UnAuthException, NotActivateAccountException {
+        return UserController.setIntroducer(
+                getUserWithOutCheckCompleteness(request),
+                new JSONObject(json).getString("invitationCode")
+        );
     }
 
     @PostMapping(value = "/forgetPassword")

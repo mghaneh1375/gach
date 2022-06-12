@@ -2,12 +2,12 @@ package irysc.gachesefid.Utility;
 
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Kavenegar.KavenegarApi;
 import irysc.gachesefid.Kavenegar.excepctions.ApiException;
 import irysc.gachesefid.Kavenegar.excepctions.HttpException;
 import irysc.gachesefid.Kavenegar.models.SendResult;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Validator.DateValidator;
 import org.bson.Document;
@@ -27,9 +27,7 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.mailRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class Utility {
@@ -600,28 +598,28 @@ public class Utility {
         if (sendDateSolar != null) {
             String[] splited = sendDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (answerDateSolar != null) {
             String[] splited = answerDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (sendDateSolarEndLimit != null) {
             String[] splited = sendDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
         if (answerDateSolarEndLimit != null) {
             String[] splited = answerDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
 
@@ -749,7 +747,7 @@ public class Utility {
                 .put("status", "nok")
                 .put("msg", msg);
 
-        for(PairValue p : pairValues)
+        for (PairValue p : pairValues)
             jsonObject.put(p.getKey().toString(), p.getValue());
 
         return jsonObject.toString();
@@ -783,7 +781,7 @@ public class Utility {
 
         System.out.println(x.getMessage());
         int limit = x.getStackTrace().length > 5 ? 5 : x.getStackTrace().length;
-        for(int i = 0; i < limit; i++)
+        for (int i = 0; i < limit; i++)
             System.out.println(x.getStackTrace()[i]);
 
     }
@@ -800,6 +798,31 @@ public class Utility {
                 .put("NID", user.getString("NID"))
         );
 
+    }
+
+    public static boolean validationNationalCode(String code) {
+
+        if (code.length() != 10)
+            return false;
+
+        long nationalCode = Long.parseLong(code);
+        byte[] arrayNationalCode = new byte[10];
+
+        //extract digits from number
+        for (int i = 0; i < 10; i++) {
+            arrayNationalCode[i] = (byte) (nationalCode % 10);
+            nationalCode = nationalCode / 10;
+        }
+
+        //Checking the control digit
+        int sum = 0;
+        for (int i = 9; i > 0; i--)
+            sum += arrayNationalCode[i] * (i + 1);
+        int temp = sum % 11;
+        if (temp < 2)
+            return arrayNationalCode[0] == temp;
+        else
+            return arrayNationalCode[0] == 11 - temp;
     }
 
 }

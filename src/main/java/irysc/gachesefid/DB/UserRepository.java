@@ -5,6 +5,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
+import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
@@ -34,11 +35,11 @@ public class UserRepository extends Common {
         activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));
     }
 
-    public static PairValue existSMS(String phone) {
+    public static PairValue existSMS(String username) {
 
         Document doc = activationRepository.findOne(
                 and(
-                        eq("phone", phone),
+                        eq("username", username),
                         gt("created_at", System.currentTimeMillis() - SMS_RESEND_MSEC)
                 )
                 , new BasicDBObject("token", 1).append("created_at", 1)
@@ -50,7 +51,9 @@ public class UserRepository extends Common {
         return null;
     }
 
-    public static String sendNewSMSSignUp(String phone, String password, String introduced) {
+    public static String sendNewSMSSignUp(String username, String password,
+                                          String firstName, String lastName,
+                                          String NID, String authVia) {
 
         int code = Utility.randInt();
         String token = Utility.randomString(20);
@@ -58,7 +61,7 @@ public class UserRepository extends Common {
 
         new Thread(() -> activationRepository.deleteMany(
                 and(
-                        eq("phone", phone),
+                        eq("username", username),
                         lt("created_at", now)
                 )
         )).start();
@@ -66,12 +69,22 @@ public class UserRepository extends Common {
         activationRepository.insertOne(new Document("code", code)
                 .append("created_at", now)
                 .append("token", token)
-                .append("phone", phone)
-                .append("introduced", introduced)
+                .append("username", username)
+                .append("firstName", firstName)
+                .append("lastName", lastName)
+                .append("NID", NID)
                 .append("password", password)
+                .append("authVia", authVia)
         );
 
-        Utility.sendSMS(code, phone);
+        if(authVia.equals(AuthVia.SMS.getName()))
+            Utility.sendSMS(code, username);
+        else
+            Utility.sendMail(
+                    username, code + "", "کد اعتبارسنجی",
+                    "signUp", firstName + " " + lastName
+            );
+
         return token;
     }
 
