@@ -1,9 +1,8 @@
 package irysc.gachesefid.Models;
 
-public enum NewAlert {
+public enum AuthVia {
 
-    NEW_TICKETS,
-    OPEN_TICKETS_WAIT_FOR_ADMIN, NEW_CERTIFICATE_REQUESTS;
+    SMS, MAIL;
 
     public String getName() {
         return name().toLowerCase();

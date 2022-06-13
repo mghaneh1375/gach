@@ -260,8 +260,8 @@ public abstract class Common extends Repository {
     }
 
     public AggregateIterable<Document> findWithJoinUser(String userKey, String finalUserKey,
-                                                        Bson match, Bson project, Bson skip, Bson limit,
-                                                        Bson sortFilter, Bson... additionalFilters) {
+                                                        Bson match, Bson project,
+                                                        Bson sortFilter) {
 
         List<Bson> filters = new ArrayList<>();
 
@@ -282,11 +282,6 @@ public abstract class Common extends Repository {
 
         if (project != null)
             filters.add(project);
-
-        if (skip != null && limit != null) {
-            filters.add(skip);
-            filters.add(limit);
-        }
 
         if (sortFilter != null)
             filters.add(sort(sortFilter));

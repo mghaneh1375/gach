@@ -5,55 +5,85 @@ import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Utility.Enc;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.EnumValidatorImp;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.printException;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class UserController {
 
+    private static String[] fieldsNeededForSchool = new String[]{
+            "a", "b", "c"
+    };
+    private static String[] fieldsNeededForAdvisor = new String[]{
+            "a", "b"
+    };
+    private static String[] fieldsNeededForAgent = new String[]{
+            "a", "b"
+    };
+
     public static String signUp(JSONObject jsonObject) {
 
-        Utility.convertPersian(jsonObject);
+        if (!EnumValidatorImp.isValid(jsonObject.getString("authVia"), AuthVia.class))
+            return JSON_NOT_VALID_PARAMS;
 
-        if(jsonObject.has("introduced") && !userRepository.exist(
-                eq("invitation_code", jsonObject.getString("introduced")))
+        String authVia = jsonObject.getString("authVia");
+
+        if (authVia.equals(AuthVia.SMS.getName()) &&
+                !PhoneValidator.isValid(jsonObject.getString("username"))
         )
-            return Utility.generateErr("کد معرف وارد شده معتبر نمی باشد.");
+            return generateErr("شماره همراه وارد شده نامعتبر است.");
+
+        if (authVia.equals(AuthVia.MAIL.getName()) &&
+                !PhoneValidator.isValid(jsonObject.getString("username"))
+        )
+            return generateErr("ایمیل وارد شده نامعتبر است.");
+
+        if (!Utility.validationNationalCode(jsonObject.getString("NID")))
+            return generateErr("کد ملی وارد شده نامعتبر است.");
 
         if (userRepository.exist(
-                eq("username", jsonObject.getString("phone"))
+                or(
+                        eq("mail", jsonObject.getString("username")),
+                        eq("phone", jsonObject.getString("username"))
+                )
         ))
-            return Utility.generateErr("شماره همراه وارد شده در سامانه موجود است.");
+            return Utility.generateErr("شماره همراه/ایمیل وارد شده در سامانه موجود است.");
 
-        PairValue existTokenP = UserRepository.existSMS(jsonObject.getString("phone"));
+        PairValue existTokenP = UserRepository.existSMS(jsonObject.getString("username"));
 
         if (existTokenP != null)
-            return new JSONObject().put("status", "ok").put("token", existTokenP.getKey())
-                    .put("reminder", existTokenP.getValue()).toString();
+            return generateSuccessMsg("token", existTokenP.getKey(),
+                    new PairValue("reminder", existTokenP.getValue())
+            );
 
         String existToken = UserRepository.sendNewSMSSignUp(
-                jsonObject.getString("phone"),
+                jsonObject.getString("username"),
                 jsonObject.getString("password"),
-                jsonObject.has("introduced") ? jsonObject.getString("introduced") : ""
+                jsonObject.getString("firstName"),
+                jsonObject.getString("lastName"),
+                jsonObject.getString("NID"), authVia
         );
 
-        return new JSONObject()
-                .put("status", "ok")
-                .put("token", existToken)
-                .put("reminder", 300)
-                .toString();
+        return generateSuccessMsg("token", existToken,
+                new PairValue("reminder", 300)
+        );
     }
 
     public static String setInfo(JSONObject jsonObject, Document user) {
@@ -146,11 +176,63 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String activate(int code, String token, String phone) {
+    public static String setIntroducer(Document user, String invitationCode) {
+
+        if (
+                !userRepository.exist(eq("invitation_code", invitationCode))
+        )
+            return Utility.generateErr("کد معرف وارد شده معتبر نمی باشد.");
+
+        Document config = Utility.getConfig();
+
+        user.put("introduced", invitationCode);
+        user.put("money", user.getInteger("money") + config.getInteger("invitation_money"));
+        user.put("coin", user.getInteger("coin") + config.getInteger("invitation_coin"));
+
+        return JSON_OK;
+    }
+
+    public static String setRole(Document user, JSONObject jsonObject) {
+
+        String role = jsonObject.getString("role");
+
+        if (!EnumValidatorImp.isValid(role, Access.class) ||
+                role.equals(Access.ADMIN.getName()) ||
+                role.equals(Access.SUPERADMIN.getName())
+        )
+            return generateErr("سطح دسترسی انتخاب شده معتبر نمی باشد.");
+
+        Set<String> keys = jsonObject.keySet();
+        String[] wantedList;
+        if (role.equals(Access.ADVISOR.getName()))
+            wantedList = fieldsNeededForAdvisor;
+        else if (role.equals(Access.SCHOOL.getName()))
+            wantedList = fieldsNeededForSchool;
+        else
+            wantedList = fieldsNeededForAgent;
+
+        for (String key : wantedList) {
+            if (!keys.contains(key))
+                generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
+        }
+
+        for (String key : keys)
+            user.put(key, jsonObject.get(key));
+
+        userRepository.replaceOne(
+                user.getObjectId("_id"),
+                user
+        );
+
+        return JSON_OK;
+    }
+
+    public static String activate(int code, String token,
+                                  String username) {
 
         Document doc = activationRepository.findOneAndDelete(and(
                 eq("token", token),
-                eq("phone", phone),
+                eq("username", username),
                 eq("code", code))
         );
 
@@ -158,14 +240,13 @@ public class UserController {
             return JSON_NOT_ACCESS;
 
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
-            return new JSONObject().put("status", "nok").put("msg", "زمان توکن شما منقضی شده است.").toString();
+            return generateErr("زمان توکن شما منقضی شده است.");
 
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
 
         Document newDoc = new Document("status", "active")
                 .append("level", false)
-                .append("username", doc.getString("phone"))
                 .append("money", config.getInteger("init_money"))
                 .append("coin", config.getInteger("init_coin"))
                 .append("studentId", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
@@ -176,11 +257,10 @@ public class UserController {
                 .append("created_at", System.currentTimeMillis())
                 .append("password", doc.getString("password"));
 
-        if(doc.containsKey("introduced") && !doc.getString("introduced").isEmpty()) {
-            newDoc.put("introduced", doc.getString("introduced"));
-            newDoc.put("money", newDoc.getInteger("money") + config.getInteger("invitation_money"));
-            newDoc.put("coin", newDoc.getInteger("coin") + config.getInteger("invitation_coin"));
-        }
+        if (doc.getString("authVia").equals(AuthVia.SMS.getName()))
+            newDoc.append("phone", username);
+        else
+            newDoc.append("mail", username);
 
         userRepository.insertOne(newDoc);
         return JSON_OK;
