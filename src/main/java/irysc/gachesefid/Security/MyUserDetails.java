@@ -8,7 +8,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.Objects;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
@@ -31,24 +30,10 @@ public class MyUserDetails implements UserDetailsService {
                 cached.put(username, user);
         }
 
-        boolean level = Objects.requireNonNull(userRepository.findByUsername(username)).getBoolean("level");
-
-        if (level) {
-            return org.springframework.security.core.userdetails.User
-                    .withUsername(username)
-                    .password(user.getString("password"))
-                    .authorities(Role.ROLE_ADMIN)
-                    .accountExpired(false)
-                    .accountLocked(false)
-                    .credentialsExpired(false)
-                    .disabled(false)
-                    .build();
-        }
-
         return org.springframework.security.core.userdetails.User
                 .withUsername(username)
-                .password(user.getString("password"))
                 .authorities(Role.ROLE_CLIENT)
+                .password(user.getString("password"))
                 .accountExpired(false)
                 .accountLocked(false)
                 .credentialsExpired(false)

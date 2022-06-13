@@ -4,6 +4,7 @@ package irysc.gachesefid.Controllers;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.AuthVia;
@@ -32,10 +33,10 @@ public class UserController {
             "a", "b", "c"
     };
     private static String[] fieldsNeededForAdvisor = new String[]{
-            "a", "b"
+            "schoolName", "schoolPhone"
     };
     private static String[] fieldsNeededForAgent = new String[]{
-            "a", "b"
+            "stateName"
     };
 
     public static String signUp(JSONObject jsonObject) {
@@ -82,7 +83,7 @@ public class UserController {
         );
 
         return generateSuccessMsg("token", existToken,
-                new PairValue("reminder", 300)
+                new PairValue("reminder", SMS_RESEND_SEC)
         );
     }
 
@@ -152,7 +153,7 @@ public class UserController {
         Document doc = activationRepository.findOne(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("phone", jsonObject.getString("phone")))
+                        eq("username", jsonObject.getString("username")))
                 , null
         );
 
@@ -164,7 +165,15 @@ public class UserController {
             return Utility.generateErr("کد قبلی هنوز منقضی نشده است.");
 
         int code = Utility.randInt();
-        Utility.sendSMS(code, doc.getString("phone"));
+
+        if(doc.getString("auth_via").equals(AuthVia.SMS.getName()))
+            Utility.sendSMS(code, doc.getString("username"));
+        else
+            Utility.sendMail(
+                    doc.getString("username"), code + "", "کد اعتبارسنجی",
+                    "signUp", doc.getString("first_name") + " " + doc.getString("last_name")
+            );
+
         doc.put("code", code);
 
         activationRepository.updateOne(
@@ -173,7 +182,7 @@ public class UserController {
                         .append("created_at", System.currentTimeMillis()))
         );
 
-        return JSON_OK;
+        return generateSuccessMsg("reminder", SMS_RESEND_SEC);
     }
 
     public static String setIntroducer(Document user, String invitationCode) {
@@ -228,7 +237,8 @@ public class UserController {
     }
 
     public static String activate(int code, String token,
-                                  String username) {
+                                  String username
+    ) throws InvalidFieldsException {
 
         Document doc = activationRepository.findOneAndDelete(and(
                 eq("token", token),
@@ -237,19 +247,21 @@ public class UserController {
         );
 
         if (doc == null)
-            return JSON_NOT_ACCESS;
+            throw new InvalidFieldsException("کد وارد شده معتبر نیست");
 
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
-            return generateErr("زمان توکن شما منقضی شده است.");
+            throw new InvalidFieldsException("زمان توکن شما منقضی شده است.");
 
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
 
         Document newDoc = new Document("status", "active")
                 .append("level", false)
+                .append("first_name", doc.getString("first_name"))
+                .append("last_name", doc.getString("last_name"))
                 .append("money", config.getInteger("init_money"))
-                .append("coin", config.getInteger("init_coin"))
-                .append("studentId", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
+                .append("coin", config.getDouble("init_coin"))
+                .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())
                 .append("avatar_id", avatar.getObjectId("_id"))
                 .append("pic", avatar.getString("file"))
@@ -257,13 +269,13 @@ public class UserController {
                 .append("created_at", System.currentTimeMillis())
                 .append("password", doc.getString("password"));
 
-        if (doc.getString("authVia").equals(AuthVia.SMS.getName()))
+        if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
             newDoc.append("phone", username);
         else
             newDoc.append("mail", username);
 
         userRepository.insertOne(newDoc);
-        return JSON_OK;
+        return doc.getString("password");
     }
 
     public static String isAuth(Document user) {

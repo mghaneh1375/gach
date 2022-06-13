@@ -70,11 +70,11 @@ public class UserRepository extends Common {
                 .append("created_at", now)
                 .append("token", token)
                 .append("username", username)
-                .append("firstName", firstName)
-                .append("lastName", lastName)
+                .append("first_name", firstName)
+                .append("last_name", lastName)
                 .append("NID", NID)
                 .append("password", password)
-                .append("authVia", authVia)
+                .append("auth_via", authVia)
         );
 
         if(authVia.equals(AuthVia.SMS.getName()))
@@ -196,13 +196,13 @@ public class UserRepository extends Common {
 
         if (Utility.isValidMail(unique))
             constraints.add(and(
-                    exists("NID"),
+                    exists("mail"),
                     eq("mail", unique)
             ));
 
         if (Utility.isValidNum(unique)) {
 
-            constraints.add(eq("username", unique));
+            constraints.add(eq("phone", unique));
 
             constraints.add(and(
                     exists("NID"),
@@ -238,7 +238,13 @@ public class UserRepository extends Common {
         if (user != null)
             return user;
 
-        FindIterable<Document> cursor = documentMongoCollection.find(eq("username", username));
+        FindIterable<Document> cursor = documentMongoCollection.find(
+                or(
+                        eq("phone", username),
+                        eq("mail", username)
+
+                )
+        );
         if (cursor.iterator().hasNext()) {
             Document doc = cursor.iterator().next();
             addToCache(table, doc, username, USER_LIMIT_CACHE_SIZE, USER_EXPIRATION_SEC);

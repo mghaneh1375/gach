@@ -80,19 +80,22 @@ public class UserService {
         );
     }
 
-    public String signIn(String username, String password, boolean checkPass) throws NotActivateAccountException {
+    public String signIn(String username, String password, boolean checkPass
+    ) throws NotActivateAccountException {
 
         try {
 
-            PairValue p = new PairValue(username, password);
+            if(checkPass) {
+                PairValue p = new PairValue(username, password);
 
-            for (int i = 0; i < cachedToken.size(); i++) {
-                if (cachedToken.get(i).equals(p)) {
-                    if (cachedToken.get(i).checkExpiration())
-                        return (String) cachedToken.get(i).getValue();
+                for (int i = 0; i < cachedToken.size(); i++) {
+                    if (cachedToken.get(i).equals(p)) {
+                        if (cachedToken.get(i).checkExpiration())
+                            return (String) cachedToken.get(i).getValue();
 
-                    cachedToken.remove(i);
-                    break;
+                        cachedToken.remove(i);
+                        break;
+                    }
                 }
             }
 
@@ -100,22 +103,28 @@ public class UserService {
 
             if (DEV_MODE || !checkPass) {
                 if (user == null)
-                    throw new CustomException("Invalid username/password supplied", HttpStatus.UNPROCESSABLE_ENTITY);
+                    throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
             } else {
                 if (user == null || !passwordEncoder.matches(password, user.getString("password")))
-                    throw new CustomException("Invalid username/password supplied", HttpStatus.UNPROCESSABLE_ENTITY);
+                    throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
             }
 
             if (!user.getString("status").equals("active"))
-                throw new NotActivateAccountException("Inactive account");
+                throw new NotActivateAccountException("اکانت شما غیرفعال شده است.");
 
-            username = user.getString("username");
+            username = user.containsKey("phone") ?
+                    user.getString("phone") :
+                    user.getString("mail");
+
             String token = jwtTokenProvider.createToken(username, (user.getBoolean("level")) ? Role.ROLE_ADMIN : Role.ROLE_CLIENT);
-            cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
+
+            if(checkPass)
+                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
+
             return token;
 
         } catch (AuthenticationException x) {
-            throw new CustomException("Invalid username/password supplied", HttpStatus.UNPROCESSABLE_ENTITY);
+            throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 

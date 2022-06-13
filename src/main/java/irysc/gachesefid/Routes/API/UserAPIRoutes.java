@@ -4,14 +4,12 @@ import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.PDF.PDFUtils;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -35,8 +33,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.printException;
+import static irysc.gachesefid.Utility.Utility.*;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -201,7 +198,7 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/resendCode")
     @ResponseBody
-    public String resendCode(@RequestBody @JSONConstraint(params = {"token", "phone"}) String json) {
+    public String resendCode(@RequestBody @JSONConstraint(params = {"token", "username"}) String json) {
         return UserController.resend(new JSONObject(json));
     }
 
@@ -209,7 +206,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String activate(@RequestBody @StrongJSONConstraint(
             params = {"token", "username", "code"},
-            paramsType = {String.class, String.class, Integer.class}
+            paramsType = {String.class, String.class, Positive.class}
     ) String json) {
 
         JSONObject jsonObject = new JSONObject(json);
@@ -217,21 +214,39 @@ public class UserAPIRoutes extends Router {
         Utility.convertPersian(jsonObject);
 
         int code = jsonObject.getInt("code");
-        if (code < 10000 || code > 99999)
+        if (code < 100000 || code > 999990)
             return JSON_NOT_VALID_PARAMS;
 
-        return UserController.activate(code, jsonObject.getString("token"),
-                jsonObject.getString("username")
-        );
+        try {
+
+            String password = UserController.activate(code,
+                    jsonObject.getString("token"),
+                    jsonObject.getString("username")
+            );
+
+            String token = userService.signIn(jsonObject.getString("username"),
+                    password, true);
+
+            return generateSuccessMsg("token", token);
+
+        } catch (Exception e) {
+            return generateErr(e.getMessage());
+        }
     }
 
-    @PutMapping(value = "/setRole")
+    @PostMapping(value = "/sendRoleForm")
     @ResponseBody
-    public String setRole(HttpServletRequest request,
-                          @RequestBody @StrongJSONConstraint(
-                                  params = {"role", "a", "b", "c"},
-                                  paramsType = {String.class, String.class, String.class, String.class}
-                          ) String json
+    public String sendRoleForm(HttpServletRequest request,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"role"},
+                                       paramsType = {String.class},
+                                       optionals = {
+                                               "schoolName", "schoolPhone", "stateName"
+                                       },
+                                       optionalsType = {
+                                               String.class, String.class, String.class
+                                       }
+                               ) String json
     ) throws UnAuthException, NotActivateAccountException {
         return UserController.setRole(
                 getUserWithOutCheckCompleteness(request),
@@ -347,9 +362,9 @@ public class UserAPIRoutes extends Router {
             return new JSONObject().put("status", "nok").put("msg", "mail is incorrect").toString();
 
         Document doc = activationRepository.findOne(and(
-                eq("token", jsonObject.getString("token")),
-                eq("mail", jsonObject.getString("mail")),
-                eq("code", jsonObject.getInt("code")))
+                        eq("token", jsonObject.getString("token")),
+                        eq("mail", jsonObject.getString("mail")),
+                        eq("code", jsonObject.getInt("code")))
                 , null);
 
         if (doc == null)

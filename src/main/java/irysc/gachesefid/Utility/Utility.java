@@ -224,6 +224,9 @@ public class Utility {
 
     public static boolean sendSMS(int code, String phoneNum) {
 
+        if(DEV_MODE)
+            return true;
+
         try {
             KavenegarApi api = new KavenegarApi("2B7376456266497A53474479625A47755345324C73413D3D");
             SendResult Result = api.send("", convertPersianDigits(phoneNum), code + "");
@@ -629,10 +632,10 @@ public class Utility {
     public static int randInt() {
 
         if (DEV_MODE)
-            return 11111;
+            return 111111;
 
         int r = 0;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             int x = random.nextInt(10);
 
             while (x == 0)

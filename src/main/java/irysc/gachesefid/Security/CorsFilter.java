@@ -9,6 +9,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -19,6 +21,13 @@ public class CorsFilter implements Filter {
 
         final HttpServletResponse response = (HttpServletResponse) res;
         HttpServletRequest request = (HttpServletRequest) req;
+
+        if (DEV_MODE) {
+            try {
+                Thread.sleep(2000);
+            } catch (Exception x) {
+            }
+        }
 
         response.setHeader("Access-Control-Allow-Origin",
                 (request.getHeader("Origin") != null) ?
