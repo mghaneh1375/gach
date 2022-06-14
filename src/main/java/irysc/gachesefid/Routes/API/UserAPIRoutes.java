@@ -5,6 +5,7 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 
@@ -268,9 +270,15 @@ public class UserAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "/whichKindOfAuthIsAvailable")
+    @ResponseBody
+    public String whichKindOfAuthIsAvailable(@RequestParam @Digits(integer = 10, fraction = 0) String NID) {
+        return UserController.whichKindOfAuthIsAvailable(NID);
+    }
+
     @PostMapping(value = "/forgetPassword")
     @ResponseBody
-    public String forgetPassword(@RequestBody @JSONConstraint(params = {"unique", "via"}) String json) {
+    public String forgetPassword(@RequestBody @JSONConstraint(params = {"unique", "authVia"}) String json) {
         return UserController.forgetPass(new JSONObject(json));
     }
 
@@ -290,7 +298,7 @@ public class UserAPIRoutes extends Router {
         if (jsonObject.getString("token").length() != 20)
             return JSON_NOT_VALID_PARAMS;
 
-        if (jsonObject.getInt("code") < 10000 || jsonObject.getInt("code") > 99999)
+        if (jsonObject.getInt("code") < 100000 || jsonObject.getInt("code") > 999999)
             return Utility.generateErr("کد وارد شده معتبر نمی باشد.");
 
         if (!jsonObject.getString("newPass").equals(jsonObject.getString("rNewPass")))
@@ -302,10 +310,7 @@ public class UserAPIRoutes extends Router {
         Document doc = activationRepository.findOneAndDelete(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        or(
-                                eq("mail", jsonObject.getString("unique")),
-                                eq("phone", jsonObject.getString("unique"))
-                        ),
+                        eq("username", jsonObject.getString("unique")),
                         eq("code", jsonObject.getInt("code"))
                 )
         );
@@ -316,9 +321,14 @@ public class UserAPIRoutes extends Router {
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             return Utility.generateErr("توکن موردنظر منقضی شده است.");
 
-        userRepository.updateOne(eq("username", doc.getString("username")),
+        userRepository.updateOne(
+                doc.getString("auth_via").equals(AuthVia.SMS.getName()) ?
+                        eq("phone", doc.getString("username")) :
+                        eq("mail", doc.getString("username"))
+                ,
                 set("password", userService.getEncPass(doc.getString("username"),
-                        jsonObject.getString("newPass"))));
+                        jsonObject.getString("newPass")))
+        );
 
         return JSON_OK;
     }

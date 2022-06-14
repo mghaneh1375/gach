@@ -39,6 +39,21 @@ public class UserController {
             "stateName"
     };
 
+    public static String whichKindOfAuthIsAvailable(String NID) {
+
+        Document user = userRepository.findBySecKey(NID);
+        if(user == null || !user.getString("status").equals("active"))
+            return generateSuccessMsg("via", "none");
+
+        if(user.containsKey("phone") && user.containsKey("mail"))
+            return generateSuccessMsg("via", "both");
+
+        if(user.containsKey("phone"))
+            return generateSuccessMsg("via", "phone");
+
+        return generateSuccessMsg("via", "mail");
+    }
+
     public static String signUp(JSONObject jsonObject) {
 
         if (!EnumValidatorImp.isValid(jsonObject.getString("authVia"), AuthVia.class))
@@ -296,31 +311,41 @@ public class UserController {
     public static String forgetPass(JSONObject jsonObject) {
 
         String unique = Utility.convertPersianDigits(jsonObject.getString("unique").toLowerCase());
-        String via = jsonObject.getString("via");
+        String via = jsonObject.getString("authVia");
 
-        if (!via.equals("sms") && !via.equals("email") && !via.equals("both"))
+        if(!EnumValidatorImp.isValid(via, AuthVia.class))
             return JSON_NOT_VALID_PARAMS;
 
         Document user = userRepository.findOne(or(
                 eq("mail", unique),
-                eq("username", unique),
+                eq("phone", unique),
                 eq("NID", unique)
-        ), new BasicDBObject("username", 1).append("mail", 1));
+        ), new BasicDBObject("phone", 1).append("mail", 1));
 
         if (user == null)
             return JSON_NOT_VALID_PARAMS;
 
-        String username = user.getString("username");
+        if(via.equals(AuthVia.SMS.getName()) && !user.containsKey("phone"))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(via.equals(AuthVia.MAIL.getName()) && !user.containsKey("mail"))
+            return JSON_NOT_VALID_PARAMS;
+
+        String username = via.equals(AuthVia.SMS.getName()) ?
+                user.getString("phone") : user.getString("mail");
+
         PairValue existTokenP = UserRepository.existSMS(username);
 
         if (existTokenP != null)
-            return new JSONObject().put("status", "ok").put("token", existTokenP.getKey())
-                    .put("reminder", existTokenP.getValue()).toString();
+            return generateSuccessMsg("token", existTokenP.getKey(),
+                    new PairValue("reminder", existTokenP.getValue())
+            );
 
-        String existToken = UserRepository.sendNewSMS(username, via, user.getString("mail"));
+        String existToken = UserRepository.sendNewSMS(username, via);
 
-        return new JSONObject().put("status", "ok").put("token", existToken)
-                .put("reminder", SMS_RESEND_SEC).toString();
+        return generateSuccessMsg("token", existToken,
+                new PairValue("reminder", SMS_RESEND_SEC)
+        );
     }
 
     public static String changeMail(Document user, String newMail) {

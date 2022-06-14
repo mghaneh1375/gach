@@ -88,7 +88,7 @@ public class UserRepository extends Common {
         return token;
     }
 
-    public static String sendNewSMS(String phone, String via, String mail) {
+    public static String sendNewSMS(String username, String via) {
 
         int code = Utility.randInt();
         String token = Utility.randomString(20);
@@ -96,24 +96,24 @@ public class UserRepository extends Common {
 
         new Thread(() -> {
 
-            activationRepository.deleteMany(
+            new Thread(() -> activationRepository.deleteMany(
                     and(
-                            eq("phone", phone),
+                            eq("username", username),
                             lt("created_at", now)
                     )
-            );
+            )).start();
 
             activationRepository.insertOne(new Document("code", code)
                     .append("created_at", now)
                     .append("token", token)
-                    .append("phone", phone)
-                    .append("mail", mail)
+                    .append("auth_via", via)
+                    .append("username", username)
             );
 
-            if (via.equals("sms") || via.equals("both"))
-                Utility.sendSMS(code, phone);
-            if (via.equals("email") || via.equals("both"))
-                Utility.sendMail(mail, code + "", "Forget password", "forget", null);
+            if (via.equals(AuthVia.SMS.getName()))
+                Utility.sendSMS(code, username);
+            else
+                Utility.sendMail(username, code + "", "Forget password", "forget", null);
 
         }).start();
 
@@ -257,6 +257,7 @@ public class UserRepository extends Common {
     @Override
     void init() {
         table = "user";
+        secKey = "NID";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 
