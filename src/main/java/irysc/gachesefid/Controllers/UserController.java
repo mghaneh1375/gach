@@ -42,13 +42,13 @@ public class UserController {
     public static String whichKindOfAuthIsAvailable(String NID) {
 
         Document user = userRepository.findBySecKey(NID);
-        if(user == null || !user.getString("status").equals("active"))
+        if (user == null || !user.getString("status").equals("active"))
             return generateSuccessMsg("via", "none");
 
-        if(user.containsKey("phone") && user.containsKey("mail"))
+        if (user.containsKey("phone") && user.containsKey("mail"))
             return generateSuccessMsg("via", "both");
 
-        if(user.containsKey("phone"))
+        if (user.containsKey("phone"))
             return generateSuccessMsg("via", "phone");
 
         return generateSuccessMsg("via", "mail");
@@ -181,7 +181,7 @@ public class UserController {
 
         int code = Utility.randInt();
 
-        if(doc.getString("auth_via").equals(AuthVia.SMS.getName()))
+        if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
             Utility.sendSMS(code, doc.getString("username"));
         else
             Utility.sendMail(
@@ -251,8 +251,7 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String activate(int code, String token,
-                                  String username
+    public static String activate(int code, String token, String username
     ) throws InvalidFieldsException {
 
         Document doc = activationRepository.findOneAndDelete(and(
@@ -274,6 +273,7 @@ public class UserController {
                 .append("level", false)
                 .append("first_name", doc.getString("first_name"))
                 .append("last_name", doc.getString("last_name"))
+                .append("NID", doc.getString("NID"))
                 .append("money", config.getInteger("init_money"))
                 .append("coin", config.getDouble("init_coin"))
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
@@ -310,38 +310,37 @@ public class UserController {
 
     public static String forgetPass(JSONObject jsonObject) {
 
-        String unique = Utility.convertPersianDigits(jsonObject.getString("unique").toLowerCase());
-        String via = jsonObject.getString("authVia");
-
-        if(!EnumValidatorImp.isValid(via, AuthVia.class))
+        String NID = Utility.convertPersianDigits(jsonObject.getString("NID"));
+        if (!Utility.validationNationalCode(NID))
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = userRepository.findOne(or(
-                eq("mail", unique),
-                eq("phone", unique),
-                eq("NID", unique)
-        ), new BasicDBObject("phone", 1).append("mail", 1));
+        String via = jsonObject.getString("authVia");
+
+        if (!EnumValidatorImp.isValid(via, AuthVia.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        Document user = userRepository.findOne(
+                eq("NID", NID),
+                new BasicDBObject("phone", 1).append("mail", 1)
+        );
 
         if (user == null)
             return JSON_NOT_VALID_PARAMS;
 
-        if(via.equals(AuthVia.SMS.getName()) && !user.containsKey("phone"))
+        if (via.equals(AuthVia.SMS.getName()) && !user.containsKey("phone"))
             return JSON_NOT_VALID_PARAMS;
 
-        if(via.equals(AuthVia.MAIL.getName()) && !user.containsKey("mail"))
+        if (via.equals(AuthVia.MAIL.getName()) && !user.containsKey("mail"))
             return JSON_NOT_VALID_PARAMS;
 
-        String username = via.equals(AuthVia.SMS.getName()) ?
-                user.getString("phone") : user.getString("mail");
-
-        PairValue existTokenP = UserRepository.existSMS(username);
+        PairValue existTokenP = UserRepository.existSMS(NID);
 
         if (existTokenP != null)
             return generateSuccessMsg("token", existTokenP.getKey(),
                     new PairValue("reminder", existTokenP.getValue())
             );
 
-        String existToken = UserRepository.sendNewSMS(username, via);
+        String existToken = UserRepository.sendNewSMS(NID, via);
 
         return generateSuccessMsg("token", existToken,
                 new PairValue("reminder", SMS_RESEND_SEC)

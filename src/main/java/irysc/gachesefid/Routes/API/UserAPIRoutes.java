@@ -278,14 +278,14 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/forgetPassword")
     @ResponseBody
-    public String forgetPassword(@RequestBody @JSONConstraint(params = {"unique", "authVia"}) String json) {
+    public String forgetPassword(@RequestBody @JSONConstraint(params = {"NID", "authVia"}) String json) {
         return UserController.forgetPass(new JSONObject(json));
     }
 
     @PostMapping(value = "/resetPassword")
     @ResponseBody
     public String resetPassword(@RequestBody @StrongJSONConstraint(
-            params = {"token", "unique", "code", "newPass", "rNewPass"},
+            params = {"token", "NID", "code", "newPass", "rNewPass"},
             paramsType = {String.class, String.class, Integer.class,
                     String.class, String.class}
     ) String json) {
@@ -293,7 +293,8 @@ public class UserAPIRoutes extends Router {
         JSONObject jsonObject = new JSONObject(json);
         Utility.convertPersian(jsonObject);
 
-        jsonObject.put("unique", jsonObject.getString("unique").toLowerCase());
+        if(!Utility.validationNationalCode(jsonObject.getString("NID")))
+            return JSON_NOT_VALID_PARAMS;
 
         if (jsonObject.getString("token").length() != 20)
             return JSON_NOT_VALID_PARAMS;
@@ -310,7 +311,7 @@ public class UserAPIRoutes extends Router {
         Document doc = activationRepository.findOneAndDelete(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("username", jsonObject.getString("unique")),
+                        eq("username", jsonObject.getString("NID")),
                         eq("code", jsonObject.getInt("code"))
                 )
         );
@@ -322,10 +323,7 @@ public class UserAPIRoutes extends Router {
             return Utility.generateErr("توکن موردنظر منقضی شده است.");
 
         userRepository.updateOne(
-                doc.getString("auth_via").equals(AuthVia.SMS.getName()) ?
-                        eq("phone", doc.getString("username")) :
-                        eq("mail", doc.getString("username"))
-                ,
+                eq("NID", jsonObject.getString("NID")),
                 set("password", userService.getEncPass(doc.getString("username"),
                         jsonObject.getString("newPass")))
         );
