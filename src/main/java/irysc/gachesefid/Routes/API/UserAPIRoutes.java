@@ -1,5 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
@@ -282,11 +283,34 @@ public class UserAPIRoutes extends Router {
         return UserController.forgetPass(new JSONObject(json));
     }
 
+    @PostMapping(value = "/checkCode")
+    @ResponseBody
+    public String checkCode(@RequestBody @StrongJSONConstraint(
+            params = {"token", "username", "code"},
+            paramsType = {String.class, String.class, Positive.class}
+    ) String json) {
+
+        JSONObject jsonObject = new JSONObject(json);
+
+        Document doc = activationRepository.findOne(
+                and(
+                        eq("token", jsonObject.getString("token")),
+                        eq("username", jsonObject.getString("username")),
+                        eq("code", jsonObject.getInt("code"))
+                ), new BasicDBObject("_id", 1)
+        );
+
+        if (doc == null)
+            return generateErr("کد وارد شده معتبر نیست و یا توکن شما منقضی شده است.");
+
+        return JSON_OK;
+    }
+
     @PostMapping(value = "/resetPassword")
     @ResponseBody
     public String resetPassword(@RequestBody @StrongJSONConstraint(
             params = {"token", "NID", "code", "newPass", "rNewPass"},
-            paramsType = {String.class, String.class, Integer.class,
+            paramsType = {String.class, String.class, Positive.class,
                     String.class, String.class}
     ) String json) {
 
@@ -317,7 +341,7 @@ public class UserAPIRoutes extends Router {
         );
 
         if (doc == null)
-            return JSON_NOT_ACCESS;
+            return generateErr("کد وارد شده معتبر نیست و یا توکن شما منقضی شده است.");
 
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             return Utility.generateErr("توکن موردنظر منقضی شده است.");
