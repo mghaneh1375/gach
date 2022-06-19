@@ -150,7 +150,7 @@ public class UserAPIRoutes extends Router {
         } catch (NotActivateAccountException x) {
             return Utility.generateErr("حساب کاربری شما هنوز فعال نشده است.");
         } catch (Exception x) {
-            return JSON_NOT_VALID_PARAMS;
+            return Utility.generateErr("نام کاربری و یا رمزعبور اشتباه است.");
         }
     }
 
