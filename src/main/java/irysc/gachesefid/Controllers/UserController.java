@@ -15,6 +15,7 @@ import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -67,7 +68,7 @@ public class UserController {
             return generateErr("شماره همراه وارد شده نامعتبر است.");
 
         if (authVia.equals(AuthVia.MAIL.getName()) &&
-                !PhoneValidator.isValid(jsonObject.getString("username"))
+                !Utility.isValidMail(jsonObject.getString("username"))
         )
             return generateErr("ایمیل وارد شده نامعتبر است.");
 
