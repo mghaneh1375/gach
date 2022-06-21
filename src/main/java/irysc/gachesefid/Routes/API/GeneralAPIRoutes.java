@@ -20,17 +20,19 @@ public class GeneralAPIRoutes {
     public String fetchStates() {
         JSONArray jsonArray = new JSONArray();
         jsonArray.put(new JSONObject()
-                .put("state", "یزد")
+                .put("name", "یزد")
+                .put("id", "213")
                 .put("cities", new JSONArray()
-                        .put("یزد")
-                        .put("اردکان")
+                        .put(new JSONObject().put("name", "یزد").put("id", "2"))
+                        .put(new JSONObject().put("name", "اردکان").put("id", "3"))
                 )
         );
         jsonArray.put(new JSONObject()
-                .put("state", "تهران")
+                .put("name", "تهران")
+                .put("id", "235")
                 .put("cities", new JSONArray()
-                        .put("تهران")
-                        .put("ری")
+                        .put(new JSONObject().put("name", "تهران").put("id", "2"))
+                        .put(new JSONObject().put("name", "ری").put("id", "3"))
                 )
         );
 

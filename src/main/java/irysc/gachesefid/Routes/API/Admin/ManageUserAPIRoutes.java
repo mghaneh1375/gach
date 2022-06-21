@@ -164,9 +164,7 @@ public class ManageUserAPIRoutes extends Router {
             if (user == null || Authorization.isAdmin(user.getList("accesses", String.class)))
                 return JSON_NOT_VALID_ID;
 
-            return Utility.generateSuccessMsg(
-                    "token", userService.signIn(user.getString("username"), "1", false)
-            );
+            return userService.signIn(user.getString("username"), "1", false);
 
         } catch (NotActivateAccountException x) {
             return generateErr("not active account");

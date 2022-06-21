@@ -152,27 +152,19 @@ public class UserRepository extends Common {
 
     public static JSONObject convertUser(Document user) {
 
-        boolean hasEducationalHistory = false;
-        boolean hasFinishedEducationalRequest = false;
-
-        if (user.containsKey("passed") && user.getList("passed", Document.class).size() > 0)
-            hasEducationalHistory = true;
-
         ObjectId userId = user.getObjectId("_id");
 
         return new JSONObject()
                 .put("id", userId.toString())
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
-                .put("nameFa", (user.containsKey("name_fa")) ? user.getString("name_fa") : "")
-                .put("nameEn", (user.containsKey("name_en")) ? user.getString("name_en") : "")
-                .put("lastNameFa", (user.containsKey("last_name_fa")) ? user.getString("last_name_fa") : "")
-                .put("lastNameEn", (user.containsKey("last_name_en")) ? user.getString("last_name_en") : "")
-                .put("mail", user.getString("mail"))
-                .put("sex", user.getString("sex"))
-                .put("hasEducationalHistory", hasEducationalHistory)
-                .put("hasFinishedEducationalRequest", hasFinishedEducationalRequest)
-                .put("username", user.getString("username"))
-                .put("country", (user.containsKey("country")) ? user.getString("country") : "");
+                .put("firstName", user.getString("first_name"))
+                .put("NID", user.getString("NID"))
+                .put("nameEn", user.getOrDefault("name_en", ""))
+                .put("lastName", user.getString("last_name"))
+                .put("lastNameEn", user.getOrDefault("last_name_en", ""))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("sex", user.getOrDefault("sex", ""))
+                .put("phone", user.getOrDefault("phone", ""));
 
     }
 

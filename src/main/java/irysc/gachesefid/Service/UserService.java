@@ -1,5 +1,6 @@
 package irysc.gachesefid.Service;
 
+import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Exception.CustomException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -9,6 +10,7 @@ import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Models.Role;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
@@ -23,7 +25,6 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
-import static irysc.gachesefid.Utility.Utility.printException;
 
 @Service
 public class UserService {
@@ -88,15 +89,15 @@ public class UserService {
             if(checkPass) {
                 PairValue p = new PairValue(username, password);
 
-                for (int i = 0; i < cachedToken.size(); i++) {
-                    if (cachedToken.get(i).equals(p)) {
-                        if (cachedToken.get(i).checkExpiration())
-                            return (String) cachedToken.get(i).getValue();
-
-                        cachedToken.remove(i);
-                        break;
-                    }
-                }
+//                for (int i = 0; i < cachedToken.size(); i++) {
+//                    if (cachedToken.get(i).equals(p)) {
+//                        if (cachedToken.get(i).checkExpiration())
+//                            return (String) cachedToken.get(i).getValue();
+//
+//                        cachedToken.remove(i);
+//                        break;
+//                    }
+//                }
             }
 
             Document user = userRepository.findByUnique(username, false);
@@ -121,7 +122,7 @@ public class UserService {
             if(checkPass)
                 cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
 
-            return token;
+            return Utility.generateSuccessMsg("token", token, new PairValue("user", UserController.isAuth(user)));
 
         } catch (AuthenticationException x) {
             throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);

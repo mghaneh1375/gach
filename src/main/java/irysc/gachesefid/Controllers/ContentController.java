@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
@@ -146,6 +147,17 @@ public class ContentController {
         }
 
         return JSON_OK;
+    }
+
+    public static String addBranch(String name) {
+
+        if (branchRepository.exist(eq("name", name)))
+            return generateErr("گروه آموزشی ای با این نام در سیستم موجود است.");
+
+        return branchRepository.insertOneWithReturn(
+                new Document("name", name)
+                .append("created_at", System.currentTimeMillis())
+        );
     }
 
     public static String addGrade(String name) {
@@ -592,11 +604,11 @@ public class ContentController {
 //        return jsonArray;
 //    }
 //
-    public static String getGrades() {
+    public static String getGradesOrBranches(Common db) {
 
         JSONArray jsonArray = new JSONArray();
 
-        ArrayList<Document> docs = gradeRepository.find(null, new BasicDBObject("_id", 1).append("name", 1));
+        ArrayList<Document> docs = db.find(null, new BasicDBObject("_id", 1).append("name", 1));
         for (Document doc : docs) {
             jsonArray.put(
                     new JSONObject()
@@ -605,7 +617,7 @@ public class ContentController {
             );
         }
 
-        return generateSuccessMsg("grades", jsonArray);
+        return generateSuccessMsg("data", jsonArray);
     }
 
     public static String search(String key) {

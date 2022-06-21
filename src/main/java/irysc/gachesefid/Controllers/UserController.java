@@ -294,19 +294,16 @@ public class UserController {
         return doc.getString("password");
     }
 
-    public static String isAuth(Document user) {
+    public static JSONObject isAuth(Document user) {
 
         boolean isComplete = user.containsKey("NID") && user.containsKey("pic");
-        JSONObject jsonObject = new JSONObject().put("status", "ok")
-                .put("isComplete", isComplete);
+        JSONObject jsonObject = new JSONObject().put("isComplete", isComplete);
 
         jsonObject.put("user", UserRepository.convertUser(user));
-        if (user.containsKey("access"))
-            return jsonObject.put("access", user.getList("accesses", String.class))
-                    .toString();
+        if (user.containsKey("accesses"))
+            return jsonObject.put("accesses", user.getList("accesses", String.class));
 
-        return jsonObject.put("access", "student").toString();
-
+        return jsonObject.put("accesses", "student");
     }
 
     public static String forgetPass(JSONObject jsonObject) {

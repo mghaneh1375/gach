@@ -20,6 +20,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
+import static irysc.gachesefid.Main.GachesefidApplication.branchRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.gradeRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.Utility.printException;
 
@@ -55,10 +57,21 @@ public class ContentAPIRoutes extends Router {
     public String addBatch(HttpServletRequest request,
                            @RequestBody @NotNull MultipartFile file)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+//        getAdminPrivilegeUserVoid(request);
         return ContentController.addBatch(file);
     }
 
+    @PostMapping(value = "/addBranch")
+    @ResponseBody
+    public String addBranch(HttpServletRequest request,
+                           @RequestBody @StrongJSONConstraint(
+                                   params = {"name"},
+                                   paramsType = {String.class}
+                           ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+//        getAdminPrivilegeUserVoid(request);
+        return ContentController.addBranch(new JSONObject(jsonStr).getString("name"));
+    }
 
     @PostMapping(value = "/addGrade")
     @ResponseBody
@@ -191,7 +204,13 @@ public class ContentAPIRoutes extends Router {
     @GetMapping(value = "/grades")
     @ResponseBody
     public String grades() {
-        return ContentController.getGrades();
+        return ContentController.getGradesOrBranches(gradeRepository);
+    }
+
+    @GetMapping(value = "/branches")
+    @ResponseBody
+    public String branches() {
+        return ContentController.getGradesOrBranches(branchRepository);
     }
 
     @GetMapping(value = "/all")

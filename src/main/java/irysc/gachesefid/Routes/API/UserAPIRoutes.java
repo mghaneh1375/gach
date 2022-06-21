@@ -120,7 +120,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String isAuth(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException {
-        return UserController.isAuth(getUserWithOutCheckCompleteness(request));
+        return generateSuccessMsg("data", UserController.isAuth(getUserWithOutCheckCompleteness(request)));
     }
 
     @GetMapping(value = "/getInfo")
@@ -141,12 +141,10 @@ public class UserAPIRoutes extends Router {
 
             Utility.convertPersian(jsonObject);
 
-            String token = userService.signIn(
+            return userService.signIn(
                     jsonObject.getString("username").toLowerCase(),
                     jsonObject.getString("password"), !DEV_MODE
             );
-
-            return Utility.generateSuccessMsg("token", token);
 
         } catch (NotActivateAccountException x) {
             return Utility.generateErr("حساب کاربری شما هنوز فعال نشده است.");
@@ -227,10 +225,8 @@ public class UserAPIRoutes extends Router {
                     jsonObject.getString("username")
             );
 
-            String token = userService.signIn(jsonObject.getString("username"),
+            return userService.signIn(jsonObject.getString("username"),
                     password, true);
-
-            return generateSuccessMsg("token", token);
 
         } catch (Exception e) {
             return generateErr(e.getMessage());
