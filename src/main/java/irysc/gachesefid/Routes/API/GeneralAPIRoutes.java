@@ -3,20 +3,12 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.UserController;
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Utility.Utility;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
-
-import javax.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping(path = "/api/general")

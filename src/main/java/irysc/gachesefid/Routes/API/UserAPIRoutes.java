@@ -117,11 +117,13 @@ public class UserAPIRoutes extends Router {
         return JSON_OK;
     }
 
-    @PostMapping(value = "/isAuth")
+    @GetMapping(value = "/fetchUser")
     @ResponseBody
-    public String isAuth(HttpServletRequest request)
+    public String fetchUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException {
-        return generateSuccessMsg("data", UserController.isAuth(getUserWithOutCheckCompleteness(request)));
+        return generateSuccessMsg("user",
+                UserController.isAuth(getUserWithOutCheckCompleteness(request))
+        );
     }
 
     @GetMapping(value = "/getInfo")

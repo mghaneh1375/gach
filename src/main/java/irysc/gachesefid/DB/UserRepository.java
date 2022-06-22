@@ -18,8 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.printException;
 
@@ -154,11 +153,38 @@ public class UserRepository extends Common {
 
         ObjectId userId = user.getObjectId("_id");
 
+        Document city = !user.containsKey("city") ? null :
+                (Document) user.get("city");
+
+        ObjectId cityId = city != null ? city.getObjectId("_id") : null;
+
+        Document state = cityId != null ? stateRepository.findById(
+                cityRepository.findById(cityId).getObjectId("state_id")
+        ) : null;
+
         return new JSONObject()
                 .put("id", userId.toString())
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
                 .put("NID", user.getString("NID"))
+                .put("grade", !user.containsKey("grade") ? ""  : new JSONObject().put("id",
+                        ((Document)user.get("grade")).getObjectId("_id").toString())
+                        .put("name",
+                                ((Document)user.get("grade")).getString("name"))
+                )
+                .put("school", !user.containsKey("school") ? "" : new JSONObject().put("id",
+                        ((Document)user.get("school")).getObjectId("_id").toString())
+                        .put("name",
+                                ((Document)user.get("school")).getString("name"))
+                )
+                .put("city", city == null ? "" : new JSONObject()
+                        .put("id", cityId.toString())
+                        .put("name", city.getString("name"))
+                )
+                .put("state", state == null ? "" : new JSONObject()
+                        .put("id", state.getObjectId("_id").toString())
+                        .put("name", state.getString("name"))
+                )
                 .put("nameEn", user.getOrDefault("name_en", ""))
                 .put("lastName", user.getString("last_name"))
                 .put("lastNameEn", user.getOrDefault("last_name_en", ""))
