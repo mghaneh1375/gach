@@ -6,8 +6,7 @@ import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.Access;
-import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Enc;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
@@ -16,10 +15,12 @@ import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import static com.mongodb.client.model.Filters.*;
@@ -467,4 +468,140 @@ public class UserController {
         return JSON_OK;
     }
 
+    public static String addSchool(JSONObject data) {
+
+        if(!EnumValidatorImp.isValid(data.getString("kind"), KindSchool.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(!EnumValidatorImp.isValid(data.getString("grade"), GradeSchool.class))
+            return JSON_NOT_VALID_PARAMS;
+
+
+        return JSON_OK;
+    }
+
+    public static String fetchSchoolsDigest() {
+
+        ArrayList<Document> docs = schoolRepository.find(null,
+                new BasicDBObject("_id", 1).append("name", 1)
+                        .append("city_name", 1).append("kind", 1)
+                        .append("grade", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            JSONObject jsonObject = new JSONObject().
+                    put("id", doc.getObjectId("_id").toString());
+
+            String name = doc.getString("name") + " " + doc.getString("city_name") + " - مقطع ";
+            String grade = doc.getString("grade");
+            String kind = doc.getString("kind");
+
+            if(grade.equals(GradeSchool.DABESTAN.getName()))
+                name += "دبستان";
+            else if(grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
+                name += "متوسطه اول";
+            else
+                name += "متوسطه دوم";
+
+            name += " - ";
+
+            if(kind.equals(KindSchool.SAMPAD.getName()))
+                name += "سمپاد";
+            else if(kind.equals(KindSchool.GHEYR.getName()))
+                name += "غیرانتفاعی";
+            else if(kind.equals(KindSchool.DOLATI.getName()))
+                name += "دولتی";
+            else if(kind.equals(KindSchool.HEYAT.getName()))
+                name += "هیت امنایی";
+            else if(kind.equals(KindSchool.SHAHED.getName()))
+                name += "شاهد";
+            else if(kind.equals(KindSchool.NEMONE.getName()))
+                name += "نمونه";
+
+            jsonObject.put("name", name);
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String updateInfo(JSONObject jsonObject, Document user) {
+
+        String NID = jsonObject.getString("NID");
+        if(!Utility.validationNationalCode(NID))
+            return generateErr("کد ملی وارد شده معتبر نمی باشد.");
+
+        String sex = jsonObject.getString("sex");
+        if(!EnumValidatorImp.isValid(sex, Sex.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(userRepository.exist(and(
+                eq("NID", NID),
+                ne("_id", user.getObjectId("_id"))
+        )))
+            return generateErr("کد ملی وارد شده در سامانه موجود است.");
+
+        JSONArray branches = jsonObject.getJSONArray("branches");
+        List<Document> branchesDoc = new ArrayList<>();
+
+        for(int i = 0; i < branches.length(); i++) {
+            if(!ObjectId.isValid(branches.getString(i)))
+                return JSON_NOT_VALID_PARAMS;
+
+            Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
+            if(branch == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            branchesDoc.add(
+                    new Document("_id", branch.getObjectId("_id"))
+                            .append("name", branch.getString("name"))
+            );
+        }
+
+        Document city = cityRepository.findById(
+                new ObjectId(jsonObject.getString("cityId"))
+        );
+
+        if(city == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document grade = gradeRepository.findById(
+                new ObjectId(jsonObject.getString("gradeId"))
+        );
+
+        if(grade == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document school = schoolRepository.findById(
+                new ObjectId(jsonObject.getString("schoolId"))
+        );
+
+        if(school == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        user.put("first_name", jsonObject.getString("firstName"));
+        user.put("last_name", jsonObject.getString("lastName"));
+        user.put("grade", new Document("_id", grade.getObjectId("_id"))
+                .append("name", grade.getString("name"))
+        );
+        user.put("city", new Document("_id", city.getObjectId("_id"))
+                .append("name", city.getString("name"))
+        );
+        user.put("school", new Document("_id", school.getObjectId("_id"))
+                .append("name", school.getString("name"))
+        );
+        user.put("NID", NID);
+        user.put("sex", sex);
+        user.put("branches", branchesDoc);
+
+        userRepository.replaceOne(
+                user.getObjectId("_id"),
+                user
+        );
+
+        return JSON_OK;
+    }
 }

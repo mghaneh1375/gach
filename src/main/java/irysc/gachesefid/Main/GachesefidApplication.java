@@ -38,9 +38,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static public int MAX_ALLOWED_THREAD = 300;
     public static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(30);
-    final static private String username = "test";
-    final static private String password = "123456";
-    final static private String dbName = "gachesefid"; // mydb
+    final static private String username = "root";
+    final static private String password = "Ghhy@110";
+    final static private String dbName = "gach"; // mydb
 
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
@@ -48,7 +48,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static Connection con = null;
     public static Map<String, Integer> commonVals = new HashMap<>();
     public static MongoDatabase mongoDatabase;
-    public static int runThreads = 0;
 
     public static ActivationRepository activationRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
@@ -56,6 +55,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static AvatarRepository avatarRepository;
     public static BranchRepository branchRepository;
     public static CertificateRepository certificateRepository;
+    public static CityRepository cityRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigRepository configRepository;
     public static GradeRepository gradeRepository;
@@ -63,8 +63,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
     public static RequestRepository requestRepository;
-    public static SubjectRepository subjectRepository;
     public static SchoolQuizRepository schoolQuizRepository;
+    public static SchoolRepository schoolRepository;
+    public static StateRepository stateRepository;
+    public static SubjectRepository subjectRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
     public static UserRepository userRepository;
@@ -74,11 +76,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     private static void setupDB() {
         try {
-//            Class.forName("com.mysql.jdbc.Driver");
-//            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
-//            Statement st = con.createStatement();
-//            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
-//            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
+            Class.forName("com.mysql.jdbc.Driver");
+            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
+            Statement st = con.createStatement();
+            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
+            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
 
             MongoClientSettings settings = MongoClientSettings.builder()
                     .applyConnectionString(connString)
@@ -93,6 +95,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             avatarRepository = new AvatarRepository();
             branchRepository = new BranchRepository();
             certificateRepository = new CertificateRepository();
+            cityRepository = new CityRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
             gradeRepository = new GradeRepository();
@@ -101,8 +104,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();
             requestRepository = new RequestRepository();
-            subjectRepository = new SubjectRepository();
             schoolQuizRepository = new SchoolQuizRepository();
+            schoolRepository = new SchoolRepository();
+            stateRepository = new StateRepository();
+            subjectRepository = new SubjectRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();

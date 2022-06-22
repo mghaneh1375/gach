@@ -2,7 +2,10 @@ package irysc.gachesefid.Routes;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.MongoCollection;
+import irysc.gachesefid.DB.CityRepository;
 import irysc.gachesefid.DB.QuestionRepository;
+import irysc.gachesefid.DB.SchoolRepository;
+import irysc.gachesefid.DB.StateRepository;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.Quiz;
 import org.bson.Document;
@@ -13,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
+
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 
 @Controller
 @RequestMapping(path = "/mongo")
@@ -113,5 +118,38 @@ public class MongoRoutes extends Router {
 //        }
 
         return "Sam";
+    }
+
+    @GetMapping(value = "/transfer_states")
+    @ResponseBody
+    public String transferStates() {
+
+        ArrayList<Document> docs = StateRepository.fetchAllFromMysql();
+        for(Document doc : docs) {
+
+            int stateMysqlId = doc.getInteger("id");
+            doc.remove("id");
+            ObjectId oId = stateRepository.insertOneWithReturnId(doc);
+
+            ArrayList<Document> cities = CityRepository.fetchAllByStateIdFromMysql(stateMysqlId);
+            for(Document city : cities) {
+                city.append("state_id", oId);
+                cityRepository.insertOne(city);
+            }
+
+        }
+
+        return "salam";
+    }
+
+    @GetMapping(value = "/transfer_schools")
+    @ResponseBody
+    public String transferSchools() {
+
+        ArrayList<Document> docs = SchoolRepository.fetchAllFromMysql();
+        for(Document doc : docs)
+            schoolRepository.insertOne(doc);
+
+        return "salam";
     }
 }

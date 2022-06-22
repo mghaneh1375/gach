@@ -18,6 +18,7 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -197,6 +198,27 @@ public class UserAPIRoutes extends Router {
         return JSON_NOT_VALID;
     }
 
+    @PostMapping(value = "/updateInfo")
+    @ResponseBody
+    public String updateInfo(HttpServletRequest request,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {
+                                             "sex", "cityId", "gradeId",
+                                             "firstName", "lastName",
+                                             "NID", "branches", "schoolId"},
+
+                                     paramsType = {
+                                             String.class, ObjectId.class, ObjectId.class,
+                                             String.class, String.class,
+                                             Positive.class, JSONArray.class, ObjectId.class}
+                             ) String json
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        JSONObject jsonObject = new JSONObject(json);
+        convertPersian(jsonObject);
+        return UserController.updateInfo(jsonObject, user);
+    }
+
     @PostMapping(value = "/resendCode")
     @ResponseBody
     public String resendCode(@RequestBody @JSONConstraint(params = {"token", "username"}) String json) {
@@ -313,7 +335,7 @@ public class UserAPIRoutes extends Router {
         JSONObject jsonObject = new JSONObject(json);
         Utility.convertPersian(jsonObject);
 
-        if(!Utility.validationNationalCode(jsonObject.getString("NID")))
+        if (!Utility.validationNationalCode(jsonObject.getString("NID")))
             return JSON_NOT_VALID_PARAMS;
 
         if (jsonObject.getString("token").length() != 20)
