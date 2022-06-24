@@ -162,6 +162,18 @@ public class UserRepository extends Common {
                 cityRepository.findById(cityId).getObjectId("state_id")
         ) : null;
 
+        List<Document> branches = user.containsKey("branches") ?
+                user.getList("branches", Document.class) :
+                new ArrayList<>();
+
+        JSONArray branchesJSON = new JSONArray();
+        for(Document branch : branches) {
+            branchesJSON.put(new JSONObject()
+                    .put("id", branch.getObjectId("_id").toString())
+                    .put("name", branch.getString("name"))
+            );
+        }
+
         return new JSONObject()
                 .put("id", userId.toString())
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
@@ -185,6 +197,7 @@ public class UserRepository extends Common {
                         .put("id", state.getObjectId("_id").toString())
                         .put("name", state.getString("name"))
                 )
+                .put("branches", branchesJSON)
                 .put("nameEn", user.getOrDefault("name_en", ""))
                 .put("lastName", user.getString("last_name"))
                 .put("lastNameEn", user.getOrDefault("last_name_en", ""))
