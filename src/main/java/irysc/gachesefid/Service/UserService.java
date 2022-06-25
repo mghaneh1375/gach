@@ -48,7 +48,7 @@ public class UserService {
         return passwordEncoder.encode(Utility.convertPersianDigits(pass));
     }
 
-    private void deleteFromCache(String username) {
+    public void deleteFromCache(String username) {
 
         for (int i = 0; i < cachedToken.size(); i++) {
             if (((PairValue) (cachedToken.get(i)).getKey()).getKey().equals(username)) {
