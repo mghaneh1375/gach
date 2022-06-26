@@ -13,6 +13,7 @@ import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.json.JSONArray;
@@ -332,48 +333,49 @@ public class UserController {
         if (via.equals(AuthVia.MAIL.getName()) && !user.containsKey("mail"))
             return JSON_NOT_VALID_PARAMS;
 
-        PairValue existTokenP = UserRepository.existSMS(NID);
+        return sendSMSOrMail(NID, via);
+    }
+
+    public static String updateUsername(JSONObject data) {
+
+        convertPersian(data);
+        String via = data.getString("mode");
+
+        if(!EnumValidatorImp.isValid(via, AuthVia.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        String username = data.getString("username").toLowerCase();
+
+        if(via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(username))
+            return generateErr("شماره همراه وارد شده معتبر نمی باشد.");
+
+        if(via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(username))
+            return generateErr("ایمیل وارد شده معتبر نمی باشد.");
+
+        Bson filter = via.equals(AuthVia.SMS.getName()) ?
+                eq("phone", username) : eq("mail", username);
+
+        if (userRepository.exist(filter))
+            return generateErr("ایمیل/شماره همراه وارد شده در سیستم موجود است.");
+
+        return sendSMSOrMail(username, via);
+    }
+
+    private static String sendSMSOrMail(String username, String via) {
+
+        PairValue existTokenP = UserRepository.existSMS(username);
 
         if (existTokenP != null)
             return generateSuccessMsg("token", existTokenP.getKey(),
                     new PairValue("reminder", existTokenP.getValue())
             );
 
-        String existToken = UserRepository.sendNewSMS(NID, via);
+        String token = UserRepository.sendNewSMS(username, via);
 
-        return generateSuccessMsg("token", existToken,
+        return generateSuccessMsg("token", token,
                 new PairValue("reminder", SMS_RESEND_SEC)
         );
-    }
 
-    public static String changeMail(Document user, String newMail) {
-
-        newMail = newMail.toLowerCase();
-        if (userRepository.exist(eq("mail", newMail)))
-            return new JSONObject()
-                    .put("status", "nok")
-                    .put("msg", "selected mail exist in system")
-                    .toString();
-
-        Enc.Ticket t = new Enc.Ticket(newMail, user.getString("username"), user.getObjectId("_id"));
-        try {
-
-            String link = Enc.encryptObject(t);
-            link = SERVER + "submit-email/" + link.replace("/", "**^^$$");
-
-            String finalNewMail = newMail;
-            String finalLink = link;
-
-            new Thread(() -> Utility.sendMail(finalNewMail, finalLink, "Change Mail",
-                    "changeMail", user.getString("name_en") + " " + user.getString("last_name_en")
-            )).start();
-
-            return JSON_OK;
-        } catch (Exception e) {
-            printException(e);
-        }
-
-        return JSON_NOT_UNKNOWN;
     }
 
     public static String doChangeMail(Document user, String link) {

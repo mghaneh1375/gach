@@ -18,6 +18,7 @@ import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -385,16 +386,68 @@ public class UserAPIRoutes extends Router {
         return JSON_OK;
     }
 
-    @PostMapping(value = "/changeMail")
+    @PostMapping(value = "/setNewUsername")
     @ResponseBody
-    public String changeMail(HttpServletRequest request,
-                             @RequestParam(value = "newMail") @NotBlank String newMail)
-            throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    public String setNewUsername(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {"token", "username", "code"},
+                                         paramsType = {String.class, String.class, Positive.class}
+                                 ) String json
+    ) throws UnAuthException, NotActivateAccountException {
 
-        if (!Utility.isValidMail(newMail))
-            return new JSONObject().put("status", "nok").put("msg", "mail is incorrect").toString();
+        Document user = getUserWithOutCheckCompleteness(request);
 
-        return UserController.changeMail(getUser(request), newMail);
+        JSONObject jsonObject = new JSONObject(json);
+        Utility.convertPersian(jsonObject);
+
+        if (jsonObject.getString("token").length() != 20)
+            return JSON_NOT_VALID_PARAMS;
+
+        if (jsonObject.getInt("code") < 100000 || jsonObject.getInt("code") > 999999)
+            return Utility.generateErr("کد وارد شده معتبر نمی باشد.");
+
+        Document doc = activationRepository.findOneAndDelete(
+                and(
+                        eq("token", jsonObject.getString("token")),
+                        eq("username", jsonObject.getString("username")),
+                        eq("code", jsonObject.getInt("code"))
+                )
+        );
+
+        if (doc == null)
+            return generateErr("کد وارد شده معتبر نیست و یا توکن شما منقضی شده است.");
+
+        if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
+            return Utility.generateErr("توکن موردنظر منقضی شده است.");
+
+        if (doc.getString("auth_via").equals(AuthVia.SMS.getName())) {
+
+            if (user.containsKey("phone"))
+                userService.deleteFromCache(user.getString("phone"));
+
+            user.put("phone", doc.getString("username"));
+        } else {
+
+            if (user.containsKey("mail"))
+                userService.deleteFromCache(user.getString("mail"));
+
+            user.put("mail", doc.getString("username"));
+        }
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+        logout(request);
+
+        return JSON_OK;
+    }
+
+    @PostMapping(value = "/updateUsername")
+    @ResponseBody
+    public String updateUsername(HttpServletRequest request,
+                                 @RequestBody @JSONConstraint(params = {"mode", "username"})
+                                 @NotBlank String json
+    ) throws UnAuthException, NotActivateAccountException {
+        getUserWithOutCheckCompleteness(request);
+        return UserController.updateUsername(new JSONObject(json));
     }
 
     @GetMapping(value = "/doChangeMail/{link}")
@@ -441,9 +494,10 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/changePassword")
     @ResponseBody
     public String changePassword(HttpServletRequest request,
-                                 @RequestBody @StrongJSONConstraint(params = {
-                                         "oldPass", "newPass", "confirmNewPass"
-                                 },
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {
+                                                 "oldPass", "newPass", "confirmNewPass"
+                                         },
                                          paramsType = {
                                                  String.class, String.class, String.class
                                          }) String jsonStr
@@ -475,7 +529,10 @@ public class UserAPIRoutes extends Router {
             user.put("password", newPass);
             userRepository.updateOne(user.getObjectId("_id"), set("password", newPass));
 
-            JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
+            userService.deleteFromCache(user.getString("phone"));
+            userService.deleteFromCache(user.getString("mail"));
+
+            logout(request);
             return JSON_OK;
 
         } catch (Exception x) {
