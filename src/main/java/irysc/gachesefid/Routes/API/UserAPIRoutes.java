@@ -5,11 +5,12 @@ import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -46,6 +47,15 @@ public class UserAPIRoutes extends Router {
 
     @Autowired
     UserService userService;
+
+    @PostMapping(value = "/sampleUpload")
+    @ResponseBody
+    public String sampleUpload(@RequestBody MultipartFile file) {
+        System.out.println(file.getOriginalFilename());
+        String filename = FileUtils.uploadFile(file, UserRepository.FOLDER);
+        return generateSuccessMsg("filename", filename);
+    }
+
 
     @GetMapping(path = "createExam")
     @ResponseBody

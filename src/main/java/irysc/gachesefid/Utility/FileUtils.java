@@ -20,12 +20,12 @@ import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 public class FileUtils {
 
     public final static String uploadDir = "/var/www/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
 
