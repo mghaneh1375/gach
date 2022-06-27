@@ -7,6 +7,7 @@ import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;

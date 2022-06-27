@@ -31,7 +31,7 @@ public class TashrihiQuizController extends QuizAbstract {
     // and else will be a HW
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price",
-            "end", "isOnline", "showResultsAfterCorrect",
+            "end", "isOnline", "showResultsAfterCorrection",
     };
 
     private final static String[] forbiddenFields = {

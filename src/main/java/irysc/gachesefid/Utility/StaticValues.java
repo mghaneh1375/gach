@@ -37,6 +37,8 @@ public class StaticValues {
     public final static int ONE_MB = 1024 * 1024;
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
+    public final static int MAX_FILE_SIZE = ONE_MB * 6;
+
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = false;

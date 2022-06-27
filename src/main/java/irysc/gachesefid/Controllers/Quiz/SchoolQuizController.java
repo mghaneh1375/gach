@@ -6,7 +6,7 @@ import org.json.JSONObject;
 public class SchoolQuizController {
 
     final static String[] mandatoryFields = {
-            "start", "end", "isOnline", "showResultsAfterCorrect",
+            "start", "end", "isOnline", "showResultsAfterCorrection",
     };
 
     final static String[] forbiddenFields = {

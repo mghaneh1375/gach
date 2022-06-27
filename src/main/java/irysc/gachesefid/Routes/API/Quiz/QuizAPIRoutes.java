@@ -53,13 +53,13 @@ public class QuizAPIRoutes extends Router {
                                         "endRegistry", "start",
                                         "end", "tags", "isOnline",
                                         "capacity", "minusMark",
-                                        "backEn", "showResultsAfterCorrect",
+                                        "backEn", "showResultsAfterCorrection",
                                         "topStudentsGiftCoin",
                                         "topStudentsGiftMoney",
                                         "topStudentsCount",
                                         "paperTheme", "database",
-                                        "descAfter", "descAfterMode",
-                                        "desc", "descMode", "duration" // duration is in min format
+                                        "descAfter", "desc",
+                                        "duration" // duration is in min format
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -71,7 +71,6 @@ public class QuizAPIRoutes extends Router {
                                         Boolean.class, Number.class,
                                         Positive.class, Positive.class,
                                         String.class, Boolean.class,
-                                        String.class, String.class,
                                         String.class, String.class,
                                         Positive.class
                                 }

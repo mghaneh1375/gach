@@ -83,15 +83,15 @@ public class QuizController {
 
         Utility.isValid(newDoc);
 
-        if (!newDoc.containsKey("desc_after_mode") ||
-                newDoc.getString("desc_after_mode").equals(DescMode.FILE.getName())
-        )
-            newDoc.put("desc_after_mode", DescMode.NONE.getName());
-
-        if (!newDoc.containsKey("desc_mode") ||
-                newDoc.getString("desc_mode").equals(DescMode.FILE.getName())
-        )
-            newDoc.put("desc_mode", DescMode.NONE.getName());
+//        if (!newDoc.containsKey("desc_after_mode") ||
+//                newDoc.getString("desc_after_mode").equals(DescMode.FILE.getName())
+//        )
+//            newDoc.put("desc_after_mode", DescMode.NONE.getName());
+//
+//        if (!newDoc.containsKey("desc_mode") ||
+//                newDoc.getString("desc_mode").equals(DescMode.FILE.getName())
+//        )
+//            newDoc.put("desc_mode", DescMode.NONE.getName());
 
         newDoc.put("visibility", true);
         newDoc.put("students", new ArrayList<>());

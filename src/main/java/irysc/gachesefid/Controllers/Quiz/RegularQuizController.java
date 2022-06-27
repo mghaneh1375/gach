@@ -26,10 +26,11 @@ public class RegularQuizController extends QuizAbstract {
 
     // topStudentsGiftCoin or topStudentsGiftMoney or topStudentsCount
     // are optional and can inherit from config
+//"duration",
 
     private final static String[] mandatoryFields = {
-            "startRegistry", "start", "price", "duration",
-            "end", "isOnline", "showResultsAfterCorrect",
+            "startRegistry", "start", "price",
+            "end", "isOnline", "showResultsAfterCorrection",
     };
 
     private final static String[] forbiddenFields = {

@@ -17,7 +17,7 @@ public class OpenQuizController {
 
     private final static String[] forbiddenFields = {
             "startRegistry", "start",
-            "end", "isOnline", "showResultsAfterCorrect",
+            "end", "isOnline", "showResultsAfterCorrection",
             "topStudentsGiftCoin", "topStudentsGiftMoney",
             "topStudentsCount", "paperTheme", "database",
     };

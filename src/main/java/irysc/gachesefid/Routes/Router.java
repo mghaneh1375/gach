@@ -91,7 +91,8 @@ public class Router {
 
     protected Document getSuperAdminPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        return isWantedAccess(request, Access.SUPERADMIN.getName());
+        return null;
+//        return isWantedAccess(request, Access.SUPERADMIN.getName());
     }
 
     protected Document getTeacherPrivilegeUser(HttpServletRequest request)

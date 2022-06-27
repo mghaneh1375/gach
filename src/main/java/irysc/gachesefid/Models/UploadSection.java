@@ -2,7 +2,7 @@ package irysc.gachesefid.Models;
 
 public enum UploadSection {
 
-    QUESTION;
+    QUESTION, CK;
 
     public String getName() {
         return name().toLowerCase();
