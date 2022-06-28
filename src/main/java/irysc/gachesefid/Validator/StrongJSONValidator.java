@@ -63,7 +63,6 @@ public class StrongJSONValidator implements
                     continue;
 
                 idx = l2.indexOf(key);
-
                 if (idx == -1 || !checkClasses(optionalValueListType[idx], jsonObject.get(key)))
                     return false;
             }

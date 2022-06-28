@@ -97,6 +97,23 @@ public class QuizAPIRoutes extends Router {
         return "sd";
     }
 
+    @GetMapping(value = "getAll/{mode}")
+    @ResponseBody
+    public String getAll(HttpServletRequest request,
+                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class
+                         ) @NotBlank String mode
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(isAdmin)
+            return QuizController.getAll(iryscQuizRepository, null, mode);
+
+        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"), mode);
+    }
+
     @PostMapping(value = "/toggleVisibility/{mode}/{quizId}")
     @ResponseBody
     public String toggleVisibility(HttpServletRequest request,

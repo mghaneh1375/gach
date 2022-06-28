@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
@@ -28,8 +29,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
+import static irysc.gachesefid.Utility.Utility.*;
 
 
 public class QuizController {
@@ -62,7 +62,7 @@ public class QuizController {
             idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                     correctors, "_id", userId);
 
-            if(idx == -1)
+            if (idx == -1)
                 throw new InvalidFieldsException(JSON_NOT_VALID_ID);
         }
 
@@ -130,6 +130,33 @@ public class QuizController {
 
     }
 
+    public static String getAll(Common db, ObjectId userId, String mode) {
+
+        ArrayList<Document> docs;
+
+        if (userId != null)
+            docs = db.find(eq("created_by", userId), null, Sorts.descending("created_at"));
+        else
+            docs = db.find(null, null, Sorts.descending("created_at"));
+
+        QuizAbstract quizAbstract;
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document quiz : docs) {
+            // todo : complete this section
+            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+                quizAbstract = new RegularQuizController();
+            else
+                quizAbstract = new TashrihiQuizController();
+
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+
+    }
+
     public static String forceRegistry(Common db, ObjectId userId,
                                        ObjectId quizId, JSONArray jsonArray) {
 
@@ -151,7 +178,7 @@ public class QuizController {
 
                 JSONObject jsonObject = jsonArray.getJSONObject(i);
 
-                if(!jsonObject.has("id") ||
+                if (!jsonObject.has("id") ||
                         !jsonObject.has("paid")
                 ) {
                     skipped.put(i);
@@ -463,10 +490,10 @@ public class QuizController {
                     attaches, "_id", attachId
             );
 
-            if(doc == null)
+            if (doc == null)
                 return JSON_NOT_VALID_ID;
 
-            if(!doc.getBoolean("is_external_link")) {
+            if (!doc.getBoolean("is_external_link")) {
 
                 String base = db instanceof SchoolQuizRepository ?
                         SchoolQuizRepository.FOLDER :
@@ -546,7 +573,7 @@ public class QuizController {
 
     public static String arrangeQuestions(Common db, ObjectId userId,
                                           ObjectId quizId, JSONObject jsonObject
-                                          ) {
+    ) {
         try {
             Document doc = hasAccess(db, userId, quizId);
 

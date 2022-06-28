@@ -203,6 +203,28 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("start", quiz.getLong("start"))
+                .put("end", quiz.getLong("end"))
+                .put("startRegistry", quiz.getLong("start_registry"))
+                .put("endRegistry", quiz.getOrDefault("end_registry", ""))
+                .put("price", quiz.getInteger("price"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("studentsCount", quiz.getList("students", Document.class).size())
+                .put("questionsCount", quiz.getList("questions", Document.class).size())
+                ;
+
+        if(!isDigest) {
+
+        }
+
+        return jsonObject;
+    }
+
+    @Override
     void registry(Document student, Document quiz, int paid) {
 
         List<Document> students = quiz.getList("students", Document.class);
