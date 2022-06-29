@@ -212,13 +212,23 @@ public class RegularQuizController extends QuizAbstract {
                 .put("startRegistry", quiz.getLong("start_registry"))
                 .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                 .put("price", quiz.getInteger("price"))
+                .put("visibility", quiz.getBoolean("visibility"))
+                .put("generalMode", "IRYSC")
                 .put("id", quiz.getObjectId("_id").toString())
                 .put("studentsCount", quiz.getList("students", Document.class).size())
                 .put("questionsCount", quiz.getList("questions", Document.class).size())
                 ;
 
         if(!isDigest) {
-
+            jsonObject
+                    .put("tags", quiz.getList("tags", String.class))
+                    .put("isOnline", quiz.getBoolean("isOnline"))
+                    .put("description", quiz.getOrDefault("description", ""))
+                    .put("capacity", quiz.getInteger("capacity"))
+                    .put("topStudentsCount", quiz.getInteger("top_students_count"))
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"))
+                    .put("mode", quiz.getString("mode"))
+            ;
         }
 
         return jsonObject;

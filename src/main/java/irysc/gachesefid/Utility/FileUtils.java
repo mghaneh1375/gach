@@ -51,6 +51,7 @@ public class FileUtils {
     public static String uploadTempFile(MultipartFile file) {
 
         try {
+            System.out.println(file.getOriginalFilename());
             String[] splited = file.getOriginalFilename().split("\\.");
             String filename = System.currentTimeMillis() + "." + splited[splited.length - 1];
 
@@ -58,6 +59,8 @@ public class FileUtils {
                     limboDir_dev + filename :
                     limboDir + filename
             );
+
+            System.out.println(copyLocation.toAbsolutePath().toString());
 
             Files.copy(file.getInputStream(), copyLocation, StandardCopyOption.REPLACE_EXISTING);
             return filename;

@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
@@ -88,7 +89,11 @@ public class QuestionAPIRoutes extends Router {
     public String addBatch(HttpServletRequest request,
                            @RequestBody MultipartFile file)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-//        getAdminPrivilegeUserVoid(request);
+
+        if(file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
         return QuestionController.addBatch(file);
     }
 

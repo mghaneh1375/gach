@@ -97,6 +97,56 @@ public class QuizAPIRoutes extends Router {
         return "sd";
     }
 
+    @PostMapping(value = "/edit/{quizId}")
+    @ResponseBody
+    public String edit(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId quizId,
+                       @RequestBody @StrongJSONConstraint(
+                               params = {},
+                               paramsType = {},
+                               optionals = {
+                                       "title", "price", "permute",
+                                       "description", "startRegistry",
+                                       "endRegistry", "start",
+                                       "end", "tags", "isOnline",
+                                       "capacity", "minusMark",
+                                       "backEn", "showResultsAfterCorrection",
+                                       "topStudentsGiftCoin",
+                                       "topStudentsGiftMoney",
+                                       "topStudentsCount",
+                                       "paperTheme", "database",
+                                       "descAfter", "desc",
+                                       "duration", // duration is in min format
+                                       "visibility"
+                               },
+                               optionalsType = {
+                                       String.class, Positive.class, Boolean.class,
+                                       String.class, Long.class,
+                                       Long.class, Long.class,
+                                       Long.class, String.class,
+                                       Boolean.class, Positive.class,
+                                       Boolean.class, Boolean.class,
+                                       Boolean.class, Number.class,
+                                       Positive.class, Positive.class,
+                                       String.class, Boolean.class,
+                                       String.class, String.class,
+                                       Positive.class, Boolean.class
+                               }
+                       ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getAdminPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.update(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId,
+                new JSONObject(jsonStr)
+        );
+    }
+
     @GetMapping(value = "getAll/{mode}")
     @ResponseBody
     public String getAll(HttpServletRequest request,
@@ -108,10 +158,28 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(isAdmin)
+        if (isAdmin)
             return QuizController.getAll(iryscQuizRepository, null, mode);
 
         return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"), mode);
+    }
+
+    @GetMapping(value = "/get/{mode}/{quizId}")
+    @ResponseBody
+    public String get(HttpServletRequest request,
+                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                      @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.get(iryscQuizRepository, null, quizId);
+
+        return QuizController.get(schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId
+        );
     }
 
     @PostMapping(value = "/toggleVisibility/{mode}/{quizId}")

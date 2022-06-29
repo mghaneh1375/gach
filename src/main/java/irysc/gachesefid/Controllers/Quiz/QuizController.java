@@ -113,6 +113,25 @@ public class QuizController {
         return newDoc;
     }
 
+    public static String update(Common db, ObjectId userId,
+                                ObjectId quizId, JSONObject data) {
+
+        try {
+            Document quiz = hasAccess(db, userId, quizId);
+
+            for(String key : data.keySet()) {
+                quiz.put(key, data.get(key));
+            }
+
+            db.replaceOne(quizId, quiz);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+        return JSON_OK;
+    }
+
     public static String toggleVisibility(Common db, ObjectId userId, ObjectId quizId) {
 
         try {
@@ -271,11 +290,39 @@ public class QuizController {
 
     }
 
+    public static String get(Common db, ObjectId userId, ObjectId quizId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+            QuizAbstract quizAbstract = null;
+
+            if(quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
+                quizAbstract = new RegularQuizController();
+
+            if(quizAbstract != null)
+                return generateSuccessMsg("data", quizAbstract.convertDocToJSON(
+                        quiz, false
+                ));
+
+            return JSON_OK;
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
+        }
+
+    }
+
     public static String remove(Common db, ObjectId userId, ObjectId quizId) {
 
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
+
+            if(quiz.getList("students", Document.class).size() > 0)
+                return generateErr("دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
+
 
             // todo: imp
 

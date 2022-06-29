@@ -349,11 +349,13 @@ public class QuestionController extends Utilities {
         }
 
         if(excepts.length() == 0)
-            return JSON_OK;
+            return generateSuccessMsg(
+                    "excepts", ""
+            );
 
-        return generateErr(
-                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند.",
-                new PairValue("excepts", excepts)
+        return generateSuccessMsg(
+                "excepts",
+                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts
         );
     }
 
