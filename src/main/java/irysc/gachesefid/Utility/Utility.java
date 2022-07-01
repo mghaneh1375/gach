@@ -793,11 +793,11 @@ public class Utility {
 
         //todo: customize with common user info
         jsonObject.put("student", new JSONObject()
-                .put("name", user.getString("name_fa"))
                 .put("id", user.getObjectId("_id").toString())
-                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-                .put("last_name", user.getString("last_name_fa"))
-                .put("username", user.getString("username"))
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("phone", user.getOrDefault("phone", ""))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
                 .put("NID", user.getString("NID"))
         );
 

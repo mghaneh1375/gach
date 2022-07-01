@@ -13,6 +13,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
@@ -29,6 +30,7 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 
 @Controller
@@ -200,27 +202,35 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "/forceRegistry/{mode}/{quizId}")
+    @PutMapping(value = "/forceRegistry/{quizId}")
     @ResponseBody
     public String forceRegistry(HttpServletRequest request,
-                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"students"},
-                                        paramsType = JSONArray.class
+                                        params = {"id", "paid", "generalMode"},
+                                        paramsType = {ObjectId.class, Positive.class, String.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        String mode = jsonObject.getString("generalMode").toLowerCase();
+
+        if(!EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
+            return JSON_NOT_VALID_PARAMS;
+
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceRegistry(iryscQuizRepository, null, quizId,
-                    new JSONObject(jsonStr).getJSONArray("students"));
+                    new ObjectId(jsonObject.getString("id")),
+                    jsonObject.getInt("paid")
+            );
 
         return QuizController.forceRegistry(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
-                new JSONObject(jsonStr).getJSONArray("students")
+                new ObjectId(jsonObject.getString("id")),
+                jsonObject.getInt("paid")
         );
     }
 
@@ -238,7 +248,7 @@ public class QuizAPIRoutes extends Router {
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceDeportation(iryscQuizRepository, null, quizId,
                     new JSONObject(jsonStr).getJSONArray("students"));
 
@@ -372,6 +382,66 @@ public class QuizAPIRoutes extends Router {
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
         );
+    }
+
+    @PostMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
+    @ResponseBody
+    public String addBatchQuestionsToQuiz(HttpServletRequest request,
+                                          @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                          @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                          @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if(file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document user = getAdminPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, file);
+
+        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, file);
+
+    }
+
+    @PutMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
+    @ResponseBody
+    public String addBatchQuestionsToQuiz(HttpServletRequest request,
+                                          @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                          @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                          @RequestBody @StrongJSONConstraint(
+                                                  params = {"questions"}, paramsType = {JSONArray.class}
+                                          ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getAdminPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("questions");
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, jsonArray);
+
+        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, jsonArray);
+    }
+
+    @GetMapping(value = "/fetchQuestions/{mode}/{quizId}")
+    @ResponseBody
+    public String fetchQuestions(HttpServletRequest request,
+                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getAdminPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.fetchQuestions(iryscQuizRepository, null, quizId);
+
+        return QuizController.fetchQuestions(schoolQuizRepository, user.getObjectId("_id"), quizId);
     }
 }
 

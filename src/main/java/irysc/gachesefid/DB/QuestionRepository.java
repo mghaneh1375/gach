@@ -107,6 +107,7 @@ public class QuestionRepository extends Common {
     @Override
     void init() {
         table = "question";
+        secKey = "organization_id";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 

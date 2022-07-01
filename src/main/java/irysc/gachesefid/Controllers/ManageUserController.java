@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers;
 
+import com.mongodb.client.FindIterable;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
@@ -68,6 +69,38 @@ public class ManageUserController {
                         user.getString("birth_city") : "");
 
         return Utility.generateSuccessMsg("user", userJson);
+    }
+
+    public static String fetchTinyUser(String name, String lastname,
+                                       String phone, String mail,
+                                       String NID
+    ) {
+
+        FindIterable<Document> cursor = userRepository.findByUniques(
+                name, lastname, phone, mail, NID
+        );
+
+        try {
+            if (cursor == null || !cursor.iterator().hasNext())
+                return Utility.generateSuccessMsg("user", "");
+
+            JSONArray jsonArray = new JSONArray();
+
+            for (Document user : cursor) {
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", user.getObjectId("_id").toString())
+                        .put("nameFa", user.getString("first_name"))
+                        .put("lastNameFa", user.getString("last_name"));
+
+                jsonArray.put(jsonObject);
+            }
+
+            return Utility.generateSuccessMsg("users", jsonArray);
+        }
+        catch (Exception x) {
+            return Utility.generateSuccessMsg("user", "");
+        }
     }
 
     public static String setCoins(ObjectId userId, int newCoins) {

@@ -2,19 +2,19 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
-import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Validator.LinkValidator;
 import irysc.gachesefid.Validator.ObjectIdValidator;
+import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -25,8 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -119,7 +118,7 @@ public class QuizController {
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
-            for(String key : data.keySet()) {
+            for (String key : data.keySet()) {
                 quiz.put(key, data.get(key));
             }
 
@@ -177,13 +176,12 @@ public class QuizController {
     }
 
     public static String forceRegistry(Common db, ObjectId userId,
-                                       ObjectId quizId, JSONArray jsonArray) {
+                                       ObjectId quizId, ObjectId studentId, int paid) {
 
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
             List<Document> students = quiz.getList("students", Document.class);
-            JSONArray skipped = new JSONArray();
 
             QuizAbstract quizAbstract;
 
@@ -193,44 +191,21 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            for (int i = 0; i < jsonArray.length(); i++) {
+            Document student = userRepository.findById(studentId);
 
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
+            if (student == null)
+                return JSON_NOT_VALID_ID;
 
-                if (!jsonObject.has("id") ||
-                        !jsonObject.has("paid")
-                ) {
-                    skipped.put(i);
-                    continue;
-                }
+            if (userId != null && !Authorization.hasAccessToThisStudent(studentId, userId))
+                return JSON_NOT_ACCESS;
 
-                ObjectId studentId = new ObjectId(jsonObject.getString("id"));
-
-                Document student = userRepository.findById(studentId);
-
-                if (student == null) {
-                    skipped.put(i);
-                    continue;
-                }
-
-                if (userId != null && !Authorization.hasAccessToThisStudent(studentId, userId)) {
-                    skipped.put(i);
-                    continue;
-                }
-
-                quizAbstract.registry(student, quiz, jsonObject.getInt("paid"));
-            }
+            quizAbstract.registry(student, quiz, paid);
 
             quiz.put("students", students);
             db.replaceOne(quizId, quiz);
 
-            if (skipped.length() == 0)
-                return JSON_OK;
+            return JSON_OK;
 
-            return new JSONObject()
-                    .put("status", "nok")
-                    .put("skipped", skipped)
-                    .toString();
         } catch (InvalidFieldsException x) {
             return generateErr(
                     x.getMessage()
@@ -297,10 +272,10 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             QuizAbstract quizAbstract = null;
 
-            if(quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
+            if (quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
                 quizAbstract = new RegularQuizController();
 
-            if(quizAbstract != null)
+            if (quizAbstract != null)
                 return generateSuccessMsg("data", quizAbstract.convertDocToJSON(
                         quiz, false
                 ));
@@ -314,13 +289,42 @@ public class QuizController {
 
     }
 
+    public static String fetchQuestions(Common db, ObjectId userId, ObjectId quizId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+            List<Document> questions = quiz.getList("questions", Document.class);
+
+            JSONArray jsonArray = new JSONArray();
+
+            for (Document itr : questions) {
+
+                Document question = questionRepository.findById(itr.getObjectId("_id"));
+
+                if (question == null)
+                    continue;
+
+                jsonArray.put(QuestionController.convertDocToJSON(question)
+                        .put("mark", itr.getDouble("mark"))
+                );
+            }
+
+            return generateSuccessMsg("data", jsonArray);
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
+        }
+    }
+
     public static String remove(Common db, ObjectId userId, ObjectId quizId) {
 
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            if(quiz.getList("students", Document.class).size() > 0)
+            if (quiz.getList("students", Document.class).size() > 0)
                 return generateErr("دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
 
 
@@ -399,18 +403,20 @@ public class QuizController {
                     continue;
 
                 JSONObject jsonObject = new JSONObject()
-                        .put("name", user.getString("name_fa") + " " + user.getString("last_name_fa"))
-                        .put("username", user.getString("username"))
-                        .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-                        .put("studentId", user.getObjectId("_id").toString())
-                        .put("startAt", student.containsKey("start_at") ?
-                                irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
-                                ""
-                        )
-                        .put("finishAt", student.containsKey("finish_at") ?
-                                irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
-                                ""
-                        );
+                        .put("paid", student.get("paid"))
+                        .put("registerAt", getSolarDate(student.getLong("register_at")));
+
+                irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+
+                if (jsonObject.has("start_at")) {
+                    jsonObject.put("startAt", student.containsKey("start_at") ?
+                            irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
+                            ""
+                    ).put("finishAt", student.containsKey("finish_at") ?
+                            irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
+                            ""
+                    );
+                }
 
                 if (student.containsKey("all_marked"))
                     jsonObject.put("allMarked", student.getBoolean("all_marked"));
@@ -669,6 +675,140 @@ public class QuizController {
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
+        }
+    }
+
+    public static String addBatchQuestionsToQuiz(Common db, ObjectId userId,
+                                                 ObjectId quizId, MultipartFile file) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            //todo: check edit access
+            //todo: check school access to questions
+
+            List<Document> questions = quiz.getList("questions", Document.class);
+
+            String filename = FileUtils.uploadTempFile(file);
+            ArrayList<Row> rows = Excel.read(filename);
+            FileUtils.removeTempFile(filename);
+
+            if (rows == null)
+                return generateErr("File is not valid");
+
+            rows.remove(0);
+
+            JSONArray excepts = new JSONArray();
+            int rowIdx = 0;
+
+            for (Row row : rows) {
+
+                rowIdx++;
+
+                try {
+
+                    if (row.getLastCellNum() < 2) {
+                        excepts.put(rowIdx);
+                        continue;
+                    }
+
+                    String organizationId = row.getCell(1).getStringCellValue();
+                    double mark = row.getCell(2).getNumericCellValue();
+
+                    Document question = questionRepository.findBySecKey(organizationId);
+
+                    if (question == null) {
+                        excepts.put(rowIdx);
+                        continue;
+                    }
+
+                    questions.add(new Document("mark", mark)
+                            .append("_id", question.getObjectId("_id"))
+                    );
+                } catch (Exception x) {
+                    excepts.put(rowIdx);
+                }
+            }
+
+            db.replaceOne(quizId, quiz);
+
+            if (excepts.length() == 0)
+                return generateSuccessMsg(
+                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
+                );
+
+            return generateSuccessMsg(
+                    "excepts",
+                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts
+            );
+
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
+        }
+    }
+
+    public static String addBatchQuestionsToQuiz(Common db, ObjectId userId,
+                                                 ObjectId quizId, JSONArray jsonArray) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            //todo: check edit access
+            //todo: check school access to questions
+
+            List<Document> questions = quiz.getList("questions", Document.class);
+            JSONArray excepts = new JSONArray();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+
+                try {
+
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+
+                    if(!jsonObject.has("organizationId")) {
+                        excepts.put(i + 1);
+                        continue;
+                    }
+
+                    String organizationId = jsonObject.getString("organizationId");
+                    double mark = jsonObject.has("mark") ?
+                            jsonObject.getDouble("mark") : 3;
+
+                    Document question = questionRepository.findBySecKey(organizationId);
+
+                    if (question == null) {
+                        excepts.put(i + 1);
+                        continue;
+                    }
+
+                    questions.add(new Document("mark", mark)
+                            .append("_id", question.getObjectId("_id"))
+                    );
+                } catch (Exception x) {
+                    excepts.put(i + 1);
+                }
+            }
+
+            db.replaceOne(quizId, quiz);
+            
+            if (excepts.length() == 0)
+                return generateSuccessMsg(
+                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
+                );
+
+            return generateSuccessMsg(
+                    "excepts",
+                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts
+            );
+
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
         }
     }
 }

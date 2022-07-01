@@ -221,6 +221,30 @@ public class UserRepository extends Common {
                 .put("username", user.getString("username"));
     }
 
+    public synchronized FindIterable<Document> findByUniques(String name, String lastname,
+                                                             String phone, String mail, String NID
+    ) {
+
+        ArrayList<Bson> constraints = new ArrayList<>();
+
+        if (mail != null && Utility.isValidMail(mail))
+            constraints.add(and(
+                    exists("mail"),
+                    eq("mail", mail)
+            ));
+
+        if (phone != null && Utility.isValidNum(phone))
+            constraints.add(eq("phone", phone));
+
+        if (NID != null && Utility.validationNationalCode(NID))
+            constraints.add(eq("NID", NID));
+
+        if (constraints.size() == 0)
+            return null;
+
+        return documentMongoCollection.find(or(constraints));
+    }
+
     public synchronized Document findByUnique(String unique, boolean searchInAll) {
 
         ArrayList<Bson> constraints = new ArrayList<>();

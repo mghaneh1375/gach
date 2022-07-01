@@ -55,6 +55,14 @@ public class QuestionController extends Utilities {
         return questionRepository.insertOneWithReturn(newDoc);
     }
 
+    public static JSONObject convertDocToJSON(Document doc) {
+        JSONObject jsonObject = new JSONObject()
+                .put("id", doc.getObjectId("_id").toString())
+                .put("organizationId", doc.getString("organization_id"));
+
+        return jsonObject;
+    }
+
     public static String setQuestionFiles(ObjectId questionId,
                                           MultipartFile questionFile,
                                           MultipartFile answerFile) {
@@ -350,7 +358,7 @@ public class QuestionController extends Utilities {
 
         if(excepts.length() == 0)
             return generateSuccessMsg(
-                    "excepts", ""
+                    "excepts", "تمامی سوالات به درستی به سامانه اضافه شدند"
             );
 
         return generateSuccessMsg(
