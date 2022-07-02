@@ -1,6 +1,7 @@
 package irysc.gachesefid.DB;
 
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.UnwindOptions;
 import com.mongodb.client.model.Variable;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
@@ -33,6 +34,8 @@ public class OffcodeRepository extends Common {
                         match(expr(new Document("$eq", Arrays.asList("$_id", "$$myId")))),
                         project(USER_DIGEST)
                 ), "user"));
+
+        filters.add(unwind("$user", new UnwindOptions().preserveNullAndEmptyArrays(true)));
 
         return documentMongoCollection.aggregate(filters);
     }

@@ -25,6 +25,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Statics.Alerts.createOffCode;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class OffCodeController {
 
@@ -88,6 +89,103 @@ public class OffCodeController {
         }
 
         return JSON_OK;
+    }
+
+    public static String store(JSONArray jsonArray) {
+
+        JSONArray excepts = new JSONArray();
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            if(!jsonObject.has("expireAt") ||
+                    !jsonObject.has("type") ||
+                    !jsonObject.has("amount") ||
+                    !jsonObject.has("NID")
+            ) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            if (!DateValidator.isValid(jsonObject.getString("expireAt"))) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            String type = jsonObject.getString("type");
+            if(!EnumValidatorImp.isValid(type, OffCodeTypes.class)) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            int amount = jsonObject.getInt("amount");
+            if (type.equals("percent") && amount > 100) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            String section = OffCodeSections.ALL.getName();
+
+            if(jsonObject.has("section")) {
+                section = jsonObject.getString("section");
+
+                if (!EnumValidatorImp.isValid(section, OffCodeSections.class)) {
+                    excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                    continue;
+                }
+            }
+
+            int d = Utility.convertStringToDate(jsonObject.getString("expireAt"));
+            if (Utility.getToday() > d) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            String NID = jsonObject.getString("NID");
+
+            if(!Utility.validationNationalCode(NID)) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            Document user = userRepository.findBySecKey(NID);
+
+            if (user == null) {
+                excepts.put(jsonObject.has("NID") ? jsonObject.get("NID") : "ردیف " + (i + 1));
+                continue;
+            }
+
+            Document newDoc = new Document("type", type)
+                    .append("amount", amount)
+                    .append("expire_at", d)
+                    .append("section", section)
+                    .append("user_id", user.getObjectId("_id"))
+                    .append("used", false)
+                    .append("created_at", System.currentTimeMillis());
+
+            offcodeRepository.insertOne(newDoc);
+            String finalSection = section;
+
+            new Thread(() -> AlertController.store(
+                    newDoc.getObjectId("user_id"),
+                    createOffCode(amount, type, finalSection,
+                            jsonObject.getString("expireAt")), false,
+                    new PairValue("createOffCode", user.getString("mail")),
+                    Utility.formatPrice(amount) + "__" + jsonObject.getString("expireAt"),
+                    user.getString("name_fa") + " " + user.getString("last_name_fa"),
+                    "کد تخفیف"
+            )).start();
+        }
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی کدهای تخفیف به درستی اضافه شدند"
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی اضافه گردیدند. " + excepts
+        );
     }
 
     public static String offs(ObjectId userId,
@@ -159,18 +257,17 @@ public class OffCodeController {
 
         for (Document off : offs) {
 
-            List<Document> users = off.getList("user", Document.class);
-            if (users.size() != 1)
+            if(!off.containsKey("user") || off.get("user") == null)
                 continue;
 
-            Document user = users.get(0);
+            Document user = (Document) off.get("user");
 
             JSONObject jsonObject = new JSONObject()
                     .put("amount", off.getInteger("amount"))
                     .put("type", off.getString("type"))
                     .put("section", off.getString("section"))
                     .put("used", off.getBoolean("used"))
-                    .put("user", UserRepository.convertUserDigestDocumentToJSON(user))
+                    .put("user", user.getString("first_name") + " " + user.getString("last_name"))
                     .put("id", off.getObjectId("_id").toString())
                     .put("expireAt", Utility.convertStringToDate(off.getInteger("expire_at") + "", "/"))
                     .put("createdAt", Utility.getSolarDate(off.getLong("created_at")));
@@ -184,7 +281,7 @@ public class OffCodeController {
             jsonArray.put(jsonObject);
         }
 
-        return Utility.generateSuccessMsg("offs", jsonArray);
+        return Utility.generateSuccessMsg("data", jsonArray);
     }
 
     public static void delete(ObjectId offCodeId) {
