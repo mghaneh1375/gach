@@ -1,6 +1,7 @@
 package irysc.gachesefid.DB;
 
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UnwindOptions;
 import com.mongodb.client.model.Variable;
 import irysc.gachesefid.Main.GachesefidApplication;
@@ -28,6 +29,8 @@ public class OffcodeRepository extends Common {
 
         if(match != null)
             filters.add(match);
+
+        filters.add(sort(Sorts.descending("created_at")));
 
         filters.add(lookup("user",
                 Collections.singletonList(new Variable<>("myId", "$user_id")), Arrays.asList(

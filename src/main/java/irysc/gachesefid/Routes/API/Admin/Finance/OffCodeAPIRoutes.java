@@ -1,9 +1,11 @@
 package irysc.gachesefid.Routes.API.Admin.Finance;
 
-import irysc.gachesefid.Controllers.Finance.OffCodeController;
+import irysc.gachesefid.Controllers.CommonController;
+import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Positive;
@@ -11,13 +13,19 @@ import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 
+import static com.mongodb.client.model.Filters.ne;
+import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
 @RestController
@@ -43,6 +51,74 @@ public class OffCodeAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return OffCodeController.store(new JSONObject(json));
+    }
+
+    @PostMapping(value = "/storeWithExcel")
+    @ResponseBody
+    public String store(HttpServletRequest request,
+                        @RequestPart MultipartFile file,
+                        @RequestPart @StrongJSONConstraint(
+                                params = {"expireAt", "type", "amount"
+                                },
+                                paramsType = {Long.class, String.class,
+                                        Positive.class
+                                },
+                                optionals = {
+                                        "section"
+                                },
+                                optionalsType = {
+                                        String.class
+                                }
+
+                        ) @NotBlank String json
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        JSONObject jsonObject = new JSONObject(json);
+
+        getAdminPrivilegeUserVoid(request);
+        return OffCodeController.store(file,
+                jsonObject.getString("type"),
+                jsonObject.getInt("amount"),
+                jsonObject.getLong("expireAt"),
+                jsonObject.has("section") ?
+                        jsonObject.getString("section") :
+                        OffCodeSections.ALL.getName());
+    }
+
+    @PutMapping(value = "/store")
+    @ResponseBody
+    public String storeJSONArr(HttpServletRequest request,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"items", "expireAt",
+                                               "type", "amount"
+                                       },
+                                       paramsType = {JSONArray.class, Long.class,
+                                               String.class, Positive.class
+                                       },
+                                       optionals = {
+                                               "section"
+                                       },
+                                       optionalsType = {
+                                               String.class
+                                       }
+
+                               ) @NotBlank String json
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        JSONObject jsonObject = new JSONObject(json);
+
+        return OffCodeController.store(
+                jsonObject.getJSONArray("items"),
+                jsonObject.getString("type"),
+                jsonObject.getInt("amount"),
+                jsonObject.getLong("expireAt"),
+                jsonObject.has("section") ?
+                        jsonObject.getString("section") :
+                        OffCodeSections.ALL.getName()
+        );
     }
 
     @GetMapping(value = "/offs")
@@ -97,14 +173,19 @@ public class OffCodeAPIRoutes extends Router {
     }
 
 
-    @DeleteMapping(value = "/delete/{offCodeId}")
+    @DeleteMapping(value = "/remove")
     @ResponseBody
     public String deleteOffCode(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId offCodeId)
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"ids"},
+                                        paramsType = {JSONArray.class}
+                                ) @NotBlank String jsonStr)
             throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        OffCodeController.delete(offCodeId);
-        return JSON_OK;
+        return CommonController.removeAll(offcodeRepository,
+                new JSONObject(jsonStr).getJSONArray("ids"),
+                ne("used", true)
+        );
     }
 
     @DeleteMapping(value = "/deleteByUserId/{userId}")
