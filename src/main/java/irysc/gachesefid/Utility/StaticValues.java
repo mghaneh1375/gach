@@ -60,13 +60,9 @@ public class StaticValues {
             .append("start", 1).append("end", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
-            .append("username", 1)
-            .append("name_fa", 1)
-            .append("last_name_fa", 1)
-            .append("name_en", 1)
-            .append("last_name_en", 1)
+            .append("first_name", 1)
+            .append("last_name", 1)
             .append("NID", 1)
-            .append("passport_no", 1)
             .append("pic", 1);
 
     public final static BasicDBObject USER_MANAGEMENT_INFO_DIGEST = new BasicDBObject("_id", 1)

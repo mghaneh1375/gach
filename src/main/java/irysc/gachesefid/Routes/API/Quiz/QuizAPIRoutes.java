@@ -412,19 +412,23 @@ public class QuizAPIRoutes extends Router {
                                           @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                           @PathVariable @ObjectIdConstraint ObjectId quizId,
                                           @RequestBody @StrongJSONConstraint(
-                                                  params = {"questions"}, paramsType = {JSONArray.class}
+                                                  params = {"items"}, paramsType = {JSONArray.class},
+                                                  optionals = {"mark"}, optionalsType = {Positive.class}
                                           ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getAdminPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("questions");
+        JSONObject jsonObject = new JSONObject(jsonStr);
+
+        JSONArray jsonArray = jsonObject.getJSONArray("items");
+        double mark = jsonObject.has("mark") ? jsonObject.getNumber("mark").doubleValue() : 3;
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, jsonArray);
+            return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, jsonArray, mark);
 
-        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, jsonArray);
+        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, jsonArray, mark);
     }
 
     @GetMapping(value = "/fetchQuestions/{mode}/{quizId}")

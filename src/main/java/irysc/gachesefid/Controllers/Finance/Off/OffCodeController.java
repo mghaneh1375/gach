@@ -1,30 +1,33 @@
-package irysc.gachesefid.Controllers.Finance;
+package irysc.gachesefid.Controllers.Finance.Off;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.AlertController;
-import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Utility.Excel;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
+import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Controllers.Finance.Off.Utility.*;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Statics.Alerts.createOffCode;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class OffCodeController {
 
@@ -34,7 +37,7 @@ public class OffCodeController {
             return JSON_NOT_VALID_PARAMS;
 
         String type = jsonObject.getString("type");
-        if(!EnumValidatorImp.isValid(type, OffCodeTypes.class))
+        if (!EnumValidatorImp.isValid(type, OffCodeTypes.class))
             return JSON_NOT_VALID_PARAMS;
 
         int amount = jsonObject.getInt("amount");
@@ -43,7 +46,7 @@ public class OffCodeController {
 
         String section = jsonObject.getString("section");
 
-        if(!EnumValidatorImp.isValid(section, OffCodeSections.class))
+        if (!EnumValidatorImp.isValid(section, OffCodeSections.class))
             return JSON_NOT_VALID_PARAMS;
 
         int d = Utility.convertStringToDate(jsonObject.getString("expireAt"));
@@ -59,9 +62,9 @@ public class OffCodeController {
 
         Document user = null;
 
-        if(jsonObject.has("userId")) {
+        if (jsonObject.has("userId")) {
 
-            if(!ObjectIdValidator.isValid(jsonObject.getString("userId")))
+            if (!ObjectIdValidator.isValid(jsonObject.getString("userId")))
                 return JSON_NOT_VALID_PARAMS;
 
             ObjectId userId = new ObjectId(jsonObject.getString("userId"));
@@ -75,7 +78,7 @@ public class OffCodeController {
 
         offcodeRepository.insertOne(newDoc);
 
-        if(user != null) {
+        if (user != null) {
             AlertController.store(
                     newDoc.getObjectId("user_id"),
                     createOffCode(amount, type, section,
@@ -88,6 +91,61 @@ public class OffCodeController {
         }
 
         return JSON_OK;
+    }
+
+
+    public static String store(MultipartFile file,
+                               String type, int amount,
+                               long expireAt, String section) {
+
+        String err = preStoreCheck(type, amount, expireAt, section);
+        if(err != null)
+            return err;
+
+        String filename = FileUtils.uploadTempFile(file);
+        ArrayList<Row> rows = Excel.read(filename);
+        FileUtils.removeTempFile(filename);
+
+        if (rows == null)
+            return generateErr("File is not valid");
+
+        rows.remove(0);
+        int rowIdx = 0;
+
+        JSONArray excepts = new JSONArray();
+        JSONArray jsonArray = new JSONArray();
+
+        for (Row row : rows) {
+
+            rowIdx++;
+
+            try {
+
+                if (row.getLastCellNum() < 1) {
+                    excepts.put(rowIdx);
+                    continue;
+                }
+
+                jsonArray.put(row.getCell(1).getStringCellValue());
+
+            } catch (Exception x) {
+                printException(x);
+                excepts.put(rowIdx);
+            }
+        }
+
+        return addAll(jsonArray, type, amount, expireAt, section, excepts);
+    }
+
+    public static String store(JSONArray jsonArray,
+                               String type, int amount,
+                               long expireAt, String section) {
+
+        String err = preStoreCheck(type, amount, expireAt, section);
+        if(err != null)
+            return err;
+
+        return addAll(jsonArray, type, amount, expireAt, section, new JSONArray());
     }
 
     public static String offs(ObjectId userId,
@@ -159,39 +217,13 @@ public class OffCodeController {
 
         for (Document off : offs) {
 
-            List<Document> users = off.getList("user", Document.class);
-            if (users.size() != 1)
+            if (!off.containsKey("user") || off.get("user") == null)
                 continue;
 
-            Document user = users.get(0);
-
-            JSONObject jsonObject = new JSONObject()
-                    .put("amount", off.getInteger("amount"))
-                    .put("type", off.getString("type"))
-                    .put("section", off.getString("section"))
-                    .put("used", off.getBoolean("used"))
-                    .put("user", UserRepository.convertUserDigestDocumentToJSON(user))
-                    .put("id", off.getObjectId("_id").toString())
-                    .put("expireAt", Utility.convertStringToDate(off.getInteger("expire_at") + "", "/"))
-                    .put("createdAt", Utility.getSolarDate(off.getLong("created_at")));
-
-            if (off.getBoolean("used")) {
-                jsonObject.put("description", off.getString("description"));
-                jsonObject.put("usedSection", off.getString("used_section"));
-                jsonObject.put("usedAt", Utility.getSolarDate(off.getLong("used_at")));
-            }
-
-            jsonArray.put(jsonObject);
+            jsonArray.put(convertDocToJSON(off));
         }
 
-        return Utility.generateSuccessMsg("offs", jsonArray);
-    }
-
-    public static void delete(ObjectId offCodeId) {
-        offcodeRepository.deleteOne(and(
-                eq("_id", offCodeId),
-                ne("used", true)
-        ));
+        return Utility.generateSuccessMsg("data", jsonArray);
     }
 
     public static void deleteByUserId(ObjectId userId) {

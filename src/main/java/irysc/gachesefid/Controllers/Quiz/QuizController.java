@@ -751,7 +751,8 @@ public class QuizController {
     }
 
     public static String addBatchQuestionsToQuiz(Common db, ObjectId userId,
-                                                 ObjectId quizId, JSONArray jsonArray) {
+                                                 ObjectId quizId, JSONArray jsonArray,
+                                                 double mark) {
 
         try {
 
@@ -762,21 +763,13 @@ public class QuizController {
 
             List<Document> questions = quiz.getList("questions", Document.class);
             JSONArray excepts = new JSONArray();
+            JSONArray addedItems = new JSONArray();
 
             for (int i = 0; i < jsonArray.length(); i++) {
 
                 try {
 
-                    JSONObject jsonObject = jsonArray.getJSONObject(i);
-
-                    if(!jsonObject.has("organizationId")) {
-                        excepts.put(i + 1);
-                        continue;
-                    }
-
-                    String organizationId = jsonObject.getString("organizationId");
-                    double mark = jsonObject.has("mark") ?
-                            jsonObject.getDouble("mark") : 3;
+                    String organizationId = jsonArray.getString(i);
 
                     Document question = questionRepository.findBySecKey(organizationId);
 
@@ -788,6 +781,12 @@ public class QuizController {
                     questions.add(new Document("mark", mark)
                             .append("_id", question.getObjectId("_id"))
                     );
+
+                    addedItems.put(
+                            QuestionController.convertDocToJSON(question)
+                            .put("mark", mark)
+                    );
+
                 } catch (Exception x) {
                     excepts.put(i + 1);
                 }
@@ -797,12 +796,14 @@ public class QuizController {
 
             if (excepts.length() == 0)
                 return generateSuccessMsg(
-                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
+                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند",
+                        new PairValue("addedItems", addedItems)
                 );
 
             return generateSuccessMsg(
                     "excepts",
-                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts
+                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts,
+                    new PairValue("addedItems", addedItems)
             );
 
         } catch (InvalidFieldsException x) {

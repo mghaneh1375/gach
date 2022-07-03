@@ -38,10 +38,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static public int MAX_ALLOWED_THREAD = 300;
     public static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(30);
-//    final static private String username = "root";
-//    final static private String password = "Ghhy@110";
-    final static private String username = "test";
-    final static private String password = "123456";
+    final static private String username = "root";
+    final static private String password = "Ghhy@110";
+//    final static private String username = "test";
+//    final static private String password = "123456";
 
     final static private String dbName = "gach"; // mydb
 
