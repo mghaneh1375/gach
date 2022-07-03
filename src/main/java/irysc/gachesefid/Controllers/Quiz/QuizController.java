@@ -794,7 +794,7 @@ public class QuizController {
             }
 
             db.replaceOne(quizId, quiz);
-            
+
             if (excepts.length() == 0)
                 return generateSuccessMsg(
                         "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
