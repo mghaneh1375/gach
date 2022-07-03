@@ -150,15 +150,15 @@ public class UserAPIRoutes extends Router {
     public String signIn(@RequestBody @JSONConstraint(
             params = {"username", "password"}
     ) @NotBlank String jsonStr) {
-        try {
 
+        try {
             JSONObject jsonObject = new JSONObject(jsonStr);
 
             Utility.convertPersian(jsonObject);
 
             return userService.signIn(
-                    jsonObject.getString("username").toLowerCase(),
-                    jsonObject.getString("password"), !DEV_MODE
+                    jsonObject.get("username").toString().toLowerCase(),
+                    jsonObject.get("password").toString(), !DEV_MODE
             );
 
         } catch (NotActivateAccountException x) {

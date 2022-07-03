@@ -1,5 +1,6 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
+import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
@@ -218,7 +220,7 @@ public class QuizAPIRoutes extends Router {
         JSONObject jsonObject = new JSONObject(jsonStr);
         String mode = jsonObject.getString("generalMode").toLowerCase();
 
-        if(!EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
+        if (!EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
             return JSON_NOT_VALID_PARAMS;
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
@@ -384,6 +386,36 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+    @DeleteMapping(value = "/removeQuestionFromQuiz/{mode}/{quizId}")
+    @ResponseBody
+    public String removeQuestionFromQuiz(HttpServletRequest request,
+                                         @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                         @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                         @RequestBody @StrongJSONConstraint(
+                                                 params = {"items"}, paramsType = {JSONArray.class}
+                                         ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getAdminPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return CommonController.removeAllFormDocList(iryscQuizRepository, jsonArray, quizId,
+                    "questions", gt("start", System.currentTimeMillis())
+            );
+
+        return CommonController.removeAllFormDocList(schoolQuizRepository,
+                jsonArray, quizId, "questions",
+                and(
+                        gt("start", System.currentTimeMillis()),
+                        eq("created_by", user.getObjectId("_id"))
+                )
+        );
+
+    }
+
     @PostMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
     @ResponseBody
     public String addBatchQuestionsToQuiz(HttpServletRequest request,
@@ -392,7 +424,7 @@ public class QuizAPIRoutes extends Router {
                                           @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document user = getAdminPrivilegeUser(request);
