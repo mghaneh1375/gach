@@ -204,13 +204,14 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "/forceRegistry/{quizId}")
+    @PutMapping(value = "/forceRegistry/{mode}/{quizId}")
     @ResponseBody
     public String forceRegistry(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"id", "paid", "generalMode"},
-                                        paramsType = {ObjectId.class, Positive.class, String.class}
+                                        params = {"items", "paid"},
+                                        paramsType = {JSONArray.class, Positive.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
@@ -218,21 +219,17 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         JSONObject jsonObject = new JSONObject(jsonStr);
-        String mode = jsonObject.getString("generalMode").toLowerCase();
+        JSONArray jsonArray = jsonObject.getJSONArray("items");
+        int paid = jsonObject.getInt("paid");
 
-        if (!EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
-            return JSON_NOT_VALID_PARAMS;
-
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceRegistry(iryscQuizRepository, null, quizId,
-                    new ObjectId(jsonObject.getString("id")),
-                    jsonObject.getInt("paid")
+                    jsonArray, paid
             );
 
         return QuizController.forceRegistry(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
-                new ObjectId(jsonObject.getString("id")),
-                jsonObject.getInt("paid")
+                jsonArray, paid
         );
     }
 
@@ -242,39 +239,45 @@ public class QuizAPIRoutes extends Router {
                                    @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
                                    @RequestBody @StrongJSONConstraint(
-                                           params = {"students"},
+                                           params = {"items"},
                                            paramsType = JSONArray.class
                                    ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceDeportation(iryscQuizRepository, null, quizId,
-                    new JSONObject(jsonStr).getJSONArray("students"));
+                    jsonArray);
 
         return QuizController.forceDeportation(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
-                new JSONObject(jsonStr).getJSONArray("students")
+                jsonArray
         );
     }
 
-    @DeleteMapping(value = "/remove/{mode}/{quizId}")
+    @DeleteMapping(value = "/remove/{mode}")
     @ResponseBody
     public String remove(HttpServletRequest request,
                          @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                         @PathVariable @ObjectIdConstraint ObjectId quizId
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {"items"},
+                                 paramsType = {JSONArray.class}
+                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
+
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.remove(iryscQuizRepository, null, quizId);
+            return QuizController.remove(iryscQuizRepository, null, jsonArray);
 
         return QuizController.remove(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId
+                isAdmin ? null : user.getObjectId("_id"), jsonArray
         );
     }
 

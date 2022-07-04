@@ -12,6 +12,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Validator.DateValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.mail.*;
@@ -828,4 +829,35 @@ public class Utility {
             return arrayNationalCode[0] == 11 - temp;
     }
 
+    public static String returnAddResponse(JSONArray excepts,
+                                           JSONArray added) {
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی موارد به درستی اضافه شدند",
+                    new PairValue("addedItems", added)
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی اضافه گردیدند. " + excepts,
+                new PairValue("addedItems", added)
+        );
+    }
+
+    public static String returnRemoveResponse(JSONArray excepts,
+                                              JSONArray removeIds) {
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی موارد به درستی حذف گردیدند",
+                    new PairValue("removedIds", removeIds)
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts,
+                new PairValue("removedIds", removeIds)
+        );
+    }
 }

@@ -463,14 +463,14 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     @Override
-    void registry(Document student, Document quiz, int paid) {
+    Document registry(Document student, Document quiz, int paid) {
 
         List<Document> students = quiz.getList("students", Document.class);
 
         if (searchInDocumentsKeyValIdx(
                 students, "_id", student.getObjectId("_id")
         ) != -1)
-            return;
+            return null;
 
         Document stdDoc = new Document("_id", student.getObjectId("_id"))
                 .append("paid", paid)
@@ -485,7 +485,7 @@ public class TashrihiQuizController extends QuizAbstract {
 
         students.add(stdDoc);
 
-
+        return stdDoc;
     }
 
     @Override

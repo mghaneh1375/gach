@@ -80,17 +80,7 @@ public class Utility {
             )).start();
         }
 
-        if (excepts.length() == 0)
-            return generateSuccessMsg(
-                    "excepts", "تمامی کدهای تخفیف به درستی اضافه شدند",
-                    new PairValue("addedItems", added)
-            );
-
-        return generateSuccessMsg(
-                "excepts",
-                "بجز موارد زیر سایرین به درستی اضافه گردیدند. " + excepts,
-                new PairValue("addedItems", added)
-        );
+        return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, added);
     }
 
     static JSONObject convertDocToJSON(Document off) {

@@ -176,12 +176,11 @@ public class QuizController {
     }
 
     public static String forceRegistry(Common db, ObjectId userId,
-                                       ObjectId quizId, ObjectId studentId, int paid) {
+                                       ObjectId quizId, JSONArray jsonArray,
+                                       int paid) {
 
         try {
             Document quiz = hasAccess(db, userId, quizId);
-
-            List<Document> students = quiz.getList("students", Document.class);
 
             QuizAbstract quizAbstract;
 
@@ -191,20 +190,41 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            Document student = userRepository.findById(studentId);
+            JSONArray excepts = new JSONArray();
+            JSONArray addedItems = new JSONArray();
 
-            if (student == null)
-                return JSON_NOT_VALID_ID;
+            for(int i = 0; i < jsonArray.length(); i++) {
 
-            if (userId != null && !Authorization.hasAccessToThisStudent(studentId, userId))
-                return JSON_NOT_ACCESS;
+                String NID = jsonArray.getString(i);
 
-            quizAbstract.registry(student, quiz, paid);
+                if(!irysc.gachesefid.Utility.Utility.validationNationalCode(NID)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
 
-            quiz.put("students", students);
+                Document student = userRepository.findBySecKey(NID);
+
+                if (student == null) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                ObjectId studentId = student.getObjectId("_id");
+
+                if (userId != null && !Authorization.hasAccessToThisStudent(studentId, userId)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                Document stdDoc = quizAbstract.registry(student, quiz, paid);
+                if(stdDoc != null)
+                    addedItems.put(convertStudentDocToJSON(stdDoc, student,
+                            null, null, null, null)
+                    );
+            }
+
             db.replaceOne(quizId, quiz);
-
-            return JSON_OK;
+            return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, addedItems);
 
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -221,8 +241,8 @@ public class QuizController {
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
-            List<Document> students = quiz.getList("students", Document.class);
-            JSONArray skipped = new JSONArray();
+            JSONArray excepts = new JSONArray();
+            JSONArray removedIds = new JSONArray();
 
             QuizAbstract quizAbstract;
 
@@ -234,28 +254,26 @@ public class QuizController {
 
             for (int i = 0; i < jsonArray.length(); i++) {
 
-                ObjectId studentId = new ObjectId(jsonArray.getString(i));
+                String id = jsonArray.getString(i);
+                if(!ObjectId.isValid(id)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
 
+                ObjectId studentId = new ObjectId(id);
                 Document student = userRepository.findById(studentId);
 
                 if (student == null) {
-                    skipped.put(i);
+                    excepts.put(i + 1);
                     continue;
                 }
 
                 quizAbstract.quit(student, quiz);
+                removedIds.put(studentId.toString());
             }
 
-            quiz.put("students", students);
             db.replaceOne(quizId, quiz);
-
-            if (skipped.length() == 0)
-                return JSON_OK;
-
-            return new JSONObject()
-                    .put("status", "nok")
-                    .put("skipped", skipped)
-                    .toString();
+            return irysc.gachesefid.Utility.Utility.returnRemoveResponse(excepts, removedIds);
 
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -318,24 +336,59 @@ public class QuizController {
         }
     }
 
-    public static String remove(Common db, ObjectId userId, ObjectId quizId) {
+    public static String remove(Common db, ObjectId userId, JSONArray jsonArray) {
 
-        try {
+        JSONArray excepts = new JSONArray();
+        JSONArray removedIds = new JSONArray();
 
-            Document quiz = hasAccess(db, userId, quizId);
+        for(int i = 0; i < jsonArray.length(); i++) {
 
-            if (quiz.getList("students", Document.class).size() > 0)
-                return generateErr("دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
+            String id = jsonArray.getString(i);
+
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId quizId = new ObjectId(id);
+
+            try {
+
+                Document quiz = hasAccess(db, userId, quizId);
+
+                if (quiz.getList("students", Document.class).size() > 0) {
+                    excepts.put("مورد " + (i + 1) + " " + "دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
+                    continue;
+                }
 
 
-            // todo: imp
+                if (quiz.getLong("start") >= System.currentTimeMillis()) {
+                    excepts.put("مورد " + (i + 1) + " " + "زمان آزمون فرارسیده و امکان حذف آن وجود ندارد.");
+                    continue;
+                }
 
-            return JSON_OK;
-        } catch (InvalidFieldsException x) {
-            return generateErr(
-                    x.getMessage()
-            );
+                db.deleteOne(quizId);
+                db.cleanRemove(quiz);
+                removedIds.put(quizId);
+
+            } catch (InvalidFieldsException x) {
+                return generateErr(
+                        x.getMessage()
+                );
+            }
         }
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی آزمون ها به درستی حذف شدند",
+                    new PairValue("removedIds", removedIds)
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts,
+                new PairValue("removedIds", removedIds)
+        );
 
     }
 
@@ -402,45 +455,11 @@ public class QuizController {
                 if (user == null)
                     continue;
 
-                JSONObject jsonObject = new JSONObject()
-                        .put("paid", student.get("paid"))
-                        .put("registerAt", getSolarDate(student.getLong("register_at")));
-
-                irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
-
-                if (jsonObject.has("start_at")) {
-                    jsonObject.put("startAt", student.containsKey("start_at") ?
-                            irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
-                            ""
-                    ).put("finishAt", student.containsKey("finish_at") ?
-                            irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
-                            ""
-                    );
-                }
-
-                if (student.containsKey("all_marked"))
-                    jsonObject.put("allMarked", student.getBoolean("all_marked"));
-
-                if (isResultsNeeded != null && isResultsNeeded)
-                    jsonObject.put("totalMark", student.getOrDefault("total_mark", ""));
-
-                if (isStudentAnswersNeeded != null && isStudentAnswersNeeded) {
-
-                    if (!student.containsKey("answers"))
-                        jsonObject.put("answers", new JSONArray());
-
-                    else {
-                        jsonObject.put("answers", Utility.getQuestions(
-                                true, false,
+                jsonArray.put(convertStudentDocToJSON(student, user,
+                                isResultsNeeded, isStudentAnswersNeeded,
                                 quiz.getList("questions", Document.class),
-                                student.getList("answers", Document.class),
-                                db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
-                        ));
-                    }
-                }
-
-
-                jsonArray.put(jsonObject);
+                        db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
+                ));
             }
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
@@ -449,6 +468,52 @@ public class QuizController {
                     x.getMessage()
             );
         }
+    }
+
+    private static JSONObject convertStudentDocToJSON(
+            Document student, Document user,
+            Boolean isResultsNeeded, Boolean isStudentAnswersNeeded,
+            List<Document> questions, String folder
+    ) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("paid", student.get("paid"))
+                .put("id", user.getObjectId("_id").toString())
+                .put("registerAt", getSolarDate(student.getLong("register_at")));
+
+        irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+
+        if (jsonObject.has("start_at")) {
+            jsonObject.put("startAt", student.containsKey("start_at") ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
+                    ""
+            ).put("finishAt", student.containsKey("finish_at") ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
+                    ""
+            );
+        }
+
+        if (student.containsKey("all_marked"))
+            jsonObject.put("allMarked", student.getBoolean("all_marked"));
+
+        if (isResultsNeeded != null && isResultsNeeded)
+            jsonObject.put("totalMark", student.getOrDefault("total_mark", ""));
+
+        if (isStudentAnswersNeeded != null && isStudentAnswersNeeded) {
+
+            if (!student.containsKey("answers"))
+                jsonObject.put("answers", new JSONArray());
+
+            else {
+                jsonObject.put("answers", Utility.getQuestions(
+                        true, false,
+                        questions, student.getList("answers", Document.class),
+                        folder
+                ));
+            }
+        }
+
+        return jsonObject;
     }
 
     public static String addAttach(Common db,

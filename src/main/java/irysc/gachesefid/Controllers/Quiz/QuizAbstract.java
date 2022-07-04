@@ -5,7 +5,7 @@ import org.json.JSONObject;
 
 abstract class QuizAbstract {
 
-    abstract void registry(Document student, Document quiz, int paid);
+    abstract Document registry(Document student, Document quiz, int paid);
 
     abstract void quit(Document student, Document quiz);
 

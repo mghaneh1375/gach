@@ -44,8 +44,12 @@ public class RegularQuizController extends QuizAbstract {
             Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
             jsonObject.put("mode", KindQuiz.REGULAR.getName());
             Document newDoc = QuizController.store(userId, jsonObject);
+            iryscQuizRepository.insertOne(newDoc);
 
-            return iryscQuizRepository.insertOneWithReturn(newDoc);
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "quiz", new RegularQuizController()
+                            .convertDocToJSON(newDoc, false)
+            );
 
         } catch (InvalidFieldsException e) {
             return irysc.gachesefid.Utility.Utility.generateErr(
@@ -235,14 +239,14 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    void registry(Document student, Document quiz, int paid) {
+    Document registry(Document student, Document quiz, int paid) {
 
         List<Document> students = quiz.getList("students", Document.class);
 
         if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                 students, "_id", student.getObjectId("_id")
         ) != -1)
-            return;
+            return null;
 
         Document stdDoc = new Document("_id", student.getObjectId("_id"))
                 .append("paid", paid)
@@ -256,6 +260,7 @@ public class RegularQuizController extends QuizAbstract {
 
         students.add(stdDoc);
 
+        return stdDoc;
         //todo : send notif
     }
 

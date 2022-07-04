@@ -90,6 +90,7 @@ public class CommonController {
         int initListCount = list.size();
 
         JSONArray excepts = new JSONArray();
+        JSONArray removedIds = new JSONArray();
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
@@ -112,20 +113,13 @@ public class CommonController {
             }
 
             list.remove(idx);
+            removedIds.put(oId);
         }
 
         if(list.size() < initListCount)
             db.updateOne(docId, set(listKey, list));
 
-        if (excepts.length() == 0)
-            return generateSuccessMsg(
-                    "excepts", "تمامی موارد به درستی حذف گردیدند"
-            );
-
-        return generateSuccessMsg(
-                "excepts",
-                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts
-        );
+        return Utility.returnRemoveResponse(excepts, removedIds);
     }
 
 }
