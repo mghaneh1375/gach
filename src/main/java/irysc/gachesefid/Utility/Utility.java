@@ -605,6 +605,8 @@ public class Utility {
                     new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
+        else
+            dates.add(null);
 
         if (answerDateSolar != null) {
             String[] splited = answerDateSolar.split("-");
@@ -612,6 +614,8 @@ public class Utility {
                     new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
+        else
+            dates.add(null);
 
         if (sendDateSolarEndLimit != null) {
             String[] splited = sendDateSolarEndLimit.split("-");
@@ -619,6 +623,8 @@ public class Utility {
                     new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
+        else
+            dates.add(null);
 
         if (answerDateSolarEndLimit != null) {
             String[] splited = answerDateSolarEndLimit.split("-");
@@ -626,6 +632,8 @@ public class Utility {
                     new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         }
+        else
+            dates.add(null);
 
         return dates;
     }
@@ -831,33 +839,27 @@ public class Utility {
 
     public static String returnAddResponse(JSONArray excepts,
                                            JSONArray added) {
-
-        if (excepts.length() == 0)
-            return generateSuccessMsg(
-                    "excepts", "تمامی موارد به درستی اضافه شدند",
-                    new PairValue("addedItems", added)
-            );
-
-        return generateSuccessMsg(
-                "excepts",
-                "بجز موارد زیر سایرین به درستی اضافه گردیدند. " + excepts,
-                new PairValue("addedItems", added)
-        );
+        return returnBatchResponse(excepts, added, "addedItems", "اضافه");
     }
 
     public static String returnRemoveResponse(JSONArray excepts,
                                               JSONArray removeIds) {
+        return returnBatchResponse(excepts, removeIds, "removedIds", "حذف");
+    }
 
-        if (excepts.length() == 0)
+    public static String returnBatchResponse(JSONArray j1, JSONArray j2,
+                                              String doneKey, String doneFa) {
+
+        if (j1.length() == 0)
             return generateSuccessMsg(
-                    "excepts", "تمامی موارد به درستی حذف گردیدند",
-                    new PairValue("removedIds", removeIds)
+                    "excepts", "تمامی موارد به درستی " + doneFa + " گردیدند",
+                    new PairValue(doneKey, j2)
             );
 
         return generateSuccessMsg(
                 "excepts",
-                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts,
-                new PairValue("removedIds", removeIds)
+                "بجز موارد زیر سایرین به درستی " + doneFa + " گردیدند. " + j1,
+                new PairValue(doneKey, j2)
         );
     }
 }

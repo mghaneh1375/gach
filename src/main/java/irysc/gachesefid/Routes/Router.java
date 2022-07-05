@@ -33,12 +33,9 @@ public class Router {
                     throw new NotActivateAccountException("Account not activated");
                 }
 
-                if(u.getString("access").equals(Access.STUDENT.getName())) {
-                    if (
-                            (!u.containsKey("NID") && !u.containsKey("passport_no")) ||
-                                    !u.containsKey("pic")
-                    )
-                        throw new NotCompleteAccountException("Account not complete");
+                if(Authorization.isPureStudent(u.getList("accesses", String.class))) {
+//                    if (!u.containsKey("pic"))
+//                        throw new NotCompleteAccountException("Account not complete");
                 }
 
                 return u;

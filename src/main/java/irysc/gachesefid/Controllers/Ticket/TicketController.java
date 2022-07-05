@@ -30,6 +30,47 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class TicketController {
 
+    public static String rejectRequests(ObjectId userId, JSONArray jsonArray) {
+
+        Document doc;
+
+        BasicDBObject update = new BasicDBObject("status", "finish")
+                .append("finisher", userId)
+                .append("answer_date", System.currentTimeMillis());
+
+        JSONArray excepts = new JSONArray();
+        JSONArray closedItems = new JSONArray();
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            try {
+                ObjectId oId = new ObjectId(id);
+
+                doc = ticketRepository.findOneAndUpdate(
+                        eq("_id", oId),
+                        new BasicDBObject("$set", update)
+                );
+
+                if (doc != null) {
+                    ticketRepository.cleanReject(doc);
+                    closedItems.put(oId);
+                }
+                else
+                    excepts.put(i + 1);
+
+            } catch (Exception ignore) {
+                excepts.put(i + 1);
+            }
+        }
+        return returnBatchResponse(excepts, closedItems, "closedIds", "بسته");
+    }
+
     public static String getRequests(Boolean searchInArchive,
                                      Boolean answered,
                                      Boolean finished,
@@ -39,7 +80,7 @@ public class TicketController {
                                      String sendDate, String answerDate,
                                      String sendDateEndLimit, String answerDateEndLimit,
                                      Boolean isForTeacher, Boolean startByAdmin,
-                                     String section) {
+                                     String section, String priority) {
 
         ArrayList<Bson> constraints = new ArrayList<>();
 
@@ -58,6 +99,9 @@ public class TicketController {
         if (section != null)
             constraints.add(eq("section", section));
 
+        if (priority != null)
+            constraints.add(eq("priority", priority.toUpperCase()));
+
         AggregateIterable<Document> docs =
                 ticketRepository.findWithJoinUser("user_id", "student",
                         match(and(constraints)),
@@ -66,6 +110,7 @@ public class TicketController {
                                 .append("status", 1).append("_id", 1)
                                 .append("priority", 1).append("section", 1)
                                 .append("title", 1).append("start_by_admin", 1)
+                                .append("chats", 1)
                         ),
                         Sorts.descending("send_date"));
 
@@ -77,6 +122,7 @@ public class TicketController {
                         true, false)
                 );
             } catch (Exception ignore) {
+                ignore.printStackTrace();
             }
         }
 

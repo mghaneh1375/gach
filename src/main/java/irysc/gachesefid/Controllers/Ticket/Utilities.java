@@ -188,9 +188,9 @@ public class Utilities {
         result.put("statusFa", getStatusFa(request.getString("status")));
 
         result.put("startByAdmin", request.containsKey("start_by_admin"));
+
         if(request.containsKey("start_by_admin") && chats.size() == 2)
             result.put("statusFa", "نیازمند پاسخ");
-
 
         if(request.getString("status").equals("init"))
             result.put("sendDate", Utility.getSolarDate(request.getLong("created_at")));
