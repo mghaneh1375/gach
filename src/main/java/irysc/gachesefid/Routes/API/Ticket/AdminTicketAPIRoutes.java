@@ -34,13 +34,12 @@ public class AdminTicketAPIRoutes extends Router {
                               @RequestParam(value = "answerDateSolar", required = false) String answerDateSolar,
                               @RequestParam(value = "sendDateSolarEndLimit", required = false) String sendDateSolarEndLimit,
                               @RequestParam(value = "answerDateSolarEndLimit", required = false) String answerDateSolarEndLimit,
-                              @RequestParam(value = "answered", required = false) Boolean answered,
                               @RequestParam(value = "isForTeacher", required = false) Boolean isForTeacher,
                               @RequestParam(value = "startByAdmin", required = false) Boolean startByAdmin,
                               @RequestParam(value = "section", required = false) String section,
                               @RequestParam(value = "priority", required = false) String priority,
                               @RequestParam(value = "searchInArchive", required = false) Boolean searchInArchive,
-                              @RequestParam(value = "finished", required = false) Boolean finished,
+                              @RequestParam(value = "status", required = false) String status,
                               @RequestParam(value = "finisher", required = false) ObjectId finisher,
                               @RequestParam(value = "studentId", required = false) ObjectId studentId,
                               @RequestParam(value = "id", required = false) ObjectId id
@@ -57,7 +56,7 @@ public class AdminTicketAPIRoutes extends Router {
         getAdminPrivilegeUserVoid(request);
 
         return TicketController.getRequests(
-                searchInArchive, answered, finished,
+                searchInArchive, status,
                 finisher, id, studentId,
                 dates.get(0), dates.get(1), dates.get(2), dates.get(3),
                 isForTeacher, startByAdmin, section, priority

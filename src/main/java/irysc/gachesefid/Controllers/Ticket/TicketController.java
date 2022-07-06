@@ -72,8 +72,7 @@ public class TicketController {
     }
 
     public static String getRequests(Boolean searchInArchive,
-                                     Boolean answered,
-                                     Boolean finished,
+                                     String status,
                                      ObjectId finisherIdFilter,
                                      ObjectId idFilter,
                                      ObjectId studentIdFilter,
@@ -87,7 +86,7 @@ public class TicketController {
         fillConstraintArr(false, studentIdFilter, idFilter,
                 searchInArchive, sendDate, false, answerDate,
                 sendDateEndLimit, answerDateEndLimit,
-                finisherIdFilter, finished, answered, constraints
+                finisherIdFilter, status, constraints
         );
 
         if (startByAdmin != null)
@@ -462,8 +461,7 @@ public class TicketController {
     }
 
     public static String getMyRequests(ObjectId id,
-                                       Boolean answered,
-                                       Boolean finished,
+                                       String status,
                                        ObjectId userId,
                                        String sendDate, String answerDate,
                                        String sendDateEndLimit, String answerDateEndLimit) {
@@ -472,7 +470,7 @@ public class TicketController {
 
         fillConstraintArr(true, userId, id,
                 null, sendDate, false, answerDate, sendDateEndLimit, answerDateEndLimit,
-                null, finished, answered, constraints
+                null, status, constraints
         );
 
         ArrayList<Document> requests = ticketRepository.find(

@@ -98,8 +98,7 @@ public class Utilities {
                                   String answerDate,
                                   String sendDateEndLimit, String answerDateEndLimit,
                                   ObjectId finisherIdFilter,
-                                  Boolean finished,
-                                  Boolean answered,
+                                  String status,
                                   ArrayList<Bson> constraints) {
 
         if (!needInit)
@@ -148,19 +147,8 @@ public class Utilities {
         if (finisherIdFilter != null)
             constraints.add(eq("finisher", finisherIdFilter));
 
-        if (finished != null)
-            constraints.add(finished ? eq("status", "finish") :
-                    ne("status", "finish"));
-
-        if (answered != null) {
-            if (answered)
-                constraints.add(eq("status", "answer"));
-            else
-                constraints.add(or(
-                        eq("status", "pending"),
-                        eq("status", "finish")
-                ));
-        }
+        if (status != null)
+            constraints.add(eq("status", status));
     }
 
     static JSONObject fillJSON(Document request, boolean isStudentNeeded,
@@ -189,7 +177,8 @@ public class Utilities {
 
         result.put("startByAdmin", request.containsKey("start_by_admin"));
 
-        if(request.containsKey("start_by_admin") && chats.size() == 2)
+        if(!request.getString("status").equals("finish") &&
+                request.containsKey("start_by_admin") && chats.size() == 2)
             result.put("statusFa", "نیازمند پاسخ");
 
         if(request.getString("status").equals("init"))
@@ -205,7 +194,7 @@ public class Utilities {
 
         result.put("title", request.getString("title"));
 
-        result.put("priority", request.getString("priority"));
+        result.put("priority", request.getString("priority").toLowerCase());
         result.put("section", request.getString("section"));
 
         if(isChatNeeded)

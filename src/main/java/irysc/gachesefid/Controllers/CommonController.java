@@ -23,6 +23,7 @@ public class CommonController {
                                    Bson additionalFilter) {
 
         JSONArray excepts = new JSONArray();
+        JSONArray removedIds = new JSONArray();
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
@@ -33,12 +34,14 @@ public class CommonController {
                 continue;
             }
 
+            ObjectId oId = new ObjectId(id);
+
             Document doc = additionalFilter == null ?
                     db.findOneAndDelete(
-                            eq("_id", new ObjectId(id))
+                            eq("_id", oId)
                     ) : db.findOneAndDelete(
                     and(
-                            eq("_id", new ObjectId(id)),
+                            eq("_id", oId),
                             additionalFilter
                     )
             );
@@ -49,17 +52,10 @@ public class CommonController {
             }
 
             db.cleanRemove(doc);
+            removedIds.put(oId.toString());
         }
 
-        if (excepts.length() == 0)
-            return generateSuccessMsg(
-                    "excepts", "تمامی موارد به درستی حذف گردیدند"
-            );
-
-        return generateSuccessMsg(
-                "excepts",
-                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts
-        );
+        return Utility.returnRemoveResponse(excepts, removedIds);
     }
 
     public static String removeAllFormDocList(Common db, JSONArray jsonArray,
