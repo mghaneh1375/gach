@@ -358,7 +358,7 @@ public class TicketController {
         return JSON_OK;
     }
 
-    public static String addFileToRequest(ArrayList<String> accesses, ObjectId userId,
+    public static String addFileToRequest(List<String> accesses, ObjectId userId,
                                           ObjectId requestId, MultipartFile file) {
 
         Document request;
