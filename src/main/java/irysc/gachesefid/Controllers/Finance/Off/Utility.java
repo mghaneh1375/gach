@@ -94,6 +94,8 @@ public class Utility {
                 .put("used", off.getBoolean("used"))
                 .put("user", user.getString("first_name") + " " + user.getString("last_name"))
                 .put("id", off.getObjectId("_id").toString())
+                .put("expireAtTs",off.getLong("expire_at"))
+                .put("createdAtTs",off.getLong("created_at"))
                 .put("expireAt", getSolarDate(off.getLong("expire_at")))
                 .put("createdAt", getSolarDate(off.getLong("created_at")));
 

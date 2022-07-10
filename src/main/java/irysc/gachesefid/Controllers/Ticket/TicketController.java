@@ -68,7 +68,7 @@ public class TicketController {
                 excepts.put(i + 1);
             }
         }
-        return returnBatchResponse(excepts, closedItems, "closedIds", "بسته");
+        return returnBatchResponse(excepts, closedItems, "بسته");
     }
 
     public static String getRequests(Boolean searchInArchive,
@@ -224,6 +224,8 @@ public class TicketController {
 
             ObjectId studentId = new ObjectId(jsonObject.getString("userId"));
             Document user = userRepository.findById(studentId);
+            if(user == null)
+                return JSON_NOT_VALID_ID;
 
             JSONObject res = new JSONObject(insert(
                     user.getList("accesses", String.class),
@@ -457,7 +459,7 @@ public class TicketController {
                 requestId, set("chats", chats)
         )).start();
 
-        return generateSuccessMsg("filename", filename);
+        return generateSuccessMsg("filename", STATICS_SERVER + TicketRepository.FOLDER + "/" + filename);
     }
 
     public static String getMyRequests(ObjectId id,

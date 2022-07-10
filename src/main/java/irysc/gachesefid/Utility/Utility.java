@@ -839,27 +839,26 @@ public class Utility {
 
     public static String returnAddResponse(JSONArray excepts,
                                            JSONArray added) {
-        return returnBatchResponse(excepts, added, "addedItems", "اضافه");
+        return returnBatchResponse(excepts, added, "اضافه");
     }
 
     public static String returnRemoveResponse(JSONArray excepts,
                                               JSONArray removeIds) {
-        return returnBatchResponse(excepts, removeIds, "removedIds", "حذف");
+        return returnBatchResponse(excepts, removeIds, "حذف");
     }
 
-    public static String returnBatchResponse(JSONArray j1, JSONArray j2,
-                                              String doneKey, String doneFa) {
+    public static String returnBatchResponse(JSONArray j1, JSONArray j2, String doneFa) {
 
         if (j1.length() == 0)
             return generateSuccessMsg(
                     "excepts", "تمامی موارد به درستی " + doneFa + " گردیدند",
-                    new PairValue(doneKey, j2)
+                    new PairValue("doneIds", j2)
             );
 
         return generateSuccessMsg(
                 "excepts",
                 "بجز موارد زیر سایرین به درستی " + doneFa + " گردیدند. " + j1,
-                new PairValue(doneKey, j2)
+                new PairValue("doneIds", j2)
         );
     }
 }

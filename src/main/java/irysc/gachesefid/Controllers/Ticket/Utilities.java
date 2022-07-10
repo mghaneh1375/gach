@@ -178,8 +178,9 @@ public class Utilities {
         result.put("startByAdmin", request.containsKey("start_by_admin"));
 
         if(!request.getString("status").equals("finish") &&
-                request.containsKey("start_by_admin") && chats.size() == 2)
-            result.put("statusFa", "نیازمند پاسخ");
+                request.containsKey("start_by_admin") && chats.size() == 2) {
+            result.put("statusFa", "نیازمند پاسخ دانش آموز");
+        }
 
         if(request.getString("status").equals("init"))
             result.put("sendDate", Utility.getSolarDate(request.getLong("created_at")));

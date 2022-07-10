@@ -31,6 +31,58 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class OffCodeController {
 
+    public static String update(ObjectId id, JSONObject jsonObject) {
+
+        Document off = offcodeRepository.findById(id);
+        if(off == null)
+            return JSON_NOT_VALID_ID;
+
+        String type, section;
+        int amount;
+        long d;
+
+        if(jsonObject.has("type")) {
+            type = jsonObject.getString("type");
+            if (!EnumValidatorImp.isValid(type, OffCodeTypes.class))
+                return JSON_NOT_VALID_PARAMS;
+        }
+        else
+            type = off.getString("type");
+
+        if(jsonObject.has("amount")) {
+            amount = jsonObject.getInt("amount");
+            if (type.equals("percent") && amount > 100)
+                return JSON_NOT_VALID_PARAMS;
+        }
+        else
+            amount = off.getInteger("amount");
+
+        if(jsonObject.has("section")) {
+            section = jsonObject.getString("section");
+
+            if (!EnumValidatorImp.isValid(section, OffCodeSections.class))
+                return JSON_NOT_VALID_PARAMS;
+        }
+        else
+            section = off.getString("section");
+
+        if(jsonObject.has("expireAt")) {
+            d = jsonObject.getLong("expireAt");
+            if (System.currentTimeMillis() > d)
+                return JSON_NOT_VALID_PARAMS;
+        }
+        else
+            d = off.getLong("expireAt");
+
+        off.put("amount", amount);
+        off.put("type", type);
+        off.put("expire_at", d);
+        off.put("section", section);
+
+        offcodeRepository.replaceOne(id, off);
+        return JSON_OK;
+    }
+
     public static String store(JSONObject jsonObject) {
 
         if (!DateValidator.isValid(jsonObject.getString("expireAt")))

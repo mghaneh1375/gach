@@ -53,6 +53,24 @@ public class OffCodeAPIRoutes extends Router {
         return OffCodeController.store(new JSONObject(json));
     }
 
+    @PutMapping(value = "/update/{id}")
+    @ResponseBody
+    public String update(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId id,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {}, paramsType = {},
+                                 optionals = {
+                                         "type", "expireAt", "amount"
+                                 },
+                                 optionalsType = {
+                                         String.class, Long.class, Positive.class
+                                 }
+                         ) String json
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return OffCodeController.update(id, new JSONObject(json));
+    }
+
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody
     public String store(HttpServletRequest request,
@@ -152,7 +170,7 @@ public class OffCodeAPIRoutes extends Router {
         if (dateSolar != null && dateGregorian == null) {
             String[] splited = dateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         } else
             dates.add(dateGregorian);
@@ -160,7 +178,7 @@ public class OffCodeAPIRoutes extends Router {
         if (dateSolarEndLimit != null && dateGregorianEndLimit == null) {
             String[] splited = dateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
         } else
             dates.add(dateGregorianEndLimit);
@@ -177,13 +195,13 @@ public class OffCodeAPIRoutes extends Router {
     @ResponseBody
     public String deleteOffCode(HttpServletRequest request,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"ids"},
+                                        params = {"items"},
                                         paramsType = {JSONArray.class}
                                 ) @NotBlank String jsonStr)
             throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return CommonController.removeAll(offcodeRepository,
-                new JSONObject(jsonStr).getJSONArray("ids"),
+                new JSONObject(jsonStr).getJSONArray("items"),
                 ne("used", true)
         );
     }

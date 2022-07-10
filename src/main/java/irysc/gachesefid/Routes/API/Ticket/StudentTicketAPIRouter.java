@@ -5,6 +5,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.Document;
@@ -55,8 +56,15 @@ public class StudentTicketAPIRouter extends Router {
                             @PathVariable @ObjectIdConstraint ObjectId requestId,
                             @RequestBody @JSONConstraint(params = {"answer"}) String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
+        if(Authorization.isAdmin(user.getList("accesses", String.class)))
+            return TicketController.setRequestAnswer(
+                    requestId, user.getObjectId("_id"),
+                    new JSONObject(jsonStr)
+            );
+
         return TicketController.setRequestAnswerUser(
-                requestId, getUser(request).getObjectId("_id"),
+                requestId, user.getObjectId("_id"),
                 new JSONObject(jsonStr).getString("answer")
         );
     }
