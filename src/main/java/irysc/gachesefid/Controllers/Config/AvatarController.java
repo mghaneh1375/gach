@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Config;
 
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -26,11 +27,14 @@ public class AvatarController {
         if(filename == null)
             return JSON_UNKNOWN_UPLOAD_FILE;
 
-        avatarRepository.insertOne(new Document("file", filename)
+        ObjectId id = avatarRepository.insertOneWithReturnId(new Document("file", filename)
                 .append("used", 0)
         );
 
-        return JSON_OK;
+        return Utility.generateSuccessMsg(
+                "file", STATICS_SERVER + UserRepository.FOLDER + "/" + filename,
+                new PairValue("id", id.toString())
+        );
     }
 
     public static String delete(ObjectId avatarId) {

@@ -29,7 +29,7 @@ public class AvatarAPIRoutes extends Router {
         return AvatarController.get();
     }
 
-    @PostMapping(path = "/")
+    @PostMapping(path = "/add")
     @ResponseBody
     public String store(HttpServletRequest request,
                         @RequestBody MultipartFile file
@@ -65,7 +65,7 @@ public class AvatarAPIRoutes extends Router {
         return AvatarController.setDefault(avatarId);
     }
 
-    @DeleteMapping(path = "/{avatarId}")
+    @DeleteMapping(path = "/delete/{avatarId}")
     @ResponseBody
     public String delete(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId avatarId
