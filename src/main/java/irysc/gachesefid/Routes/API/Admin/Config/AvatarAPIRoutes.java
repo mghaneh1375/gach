@@ -21,7 +21,7 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class AvatarAPIRoutes extends Router {
 
-    @GetMapping(path = "/")
+    @GetMapping(path = "/getAll")
     @ResponseBody
     public String getAll(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException {
