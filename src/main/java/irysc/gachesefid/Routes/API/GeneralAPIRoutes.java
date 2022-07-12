@@ -26,4 +26,10 @@ public class GeneralAPIRoutes extends Router {
     public String fetchSchoolsDigest() {
         return UserController.fetchSchoolsDigest();
     }
+
+    @GetMapping(value = "/fetchSchools")
+    @ResponseBody
+    public String fetchSchools() {
+        return UserController.fetchSchools();
+    }
 }

@@ -533,6 +533,59 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String fetchSchools() {
+
+        ArrayList<Document> docs = schoolRepository.find(null,
+                new BasicDBObject("_id", 1).append("name", 1)
+                        .append("city_name", 1).append("kind", 1)
+                        .append("grade", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            String grade = doc.getString("grade");
+            String gradeStr;
+            String kind = doc.getString("kind");
+            String kindStr;
+
+            JSONObject jsonObject = new JSONObject().
+                    put("id", doc.getObjectId("_id").toString())
+                    .put("name", doc.getString("name"))
+                    .put("city", doc.getString("city_name"))
+                    .put("grade", grade)
+                    .put("kind", kind);
+
+            if(grade.equals(GradeSchool.DABESTAN.getName()))
+                gradeStr = "دبستان";
+            else if(grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
+                gradeStr = "متوسطه اول";
+            else
+                gradeStr = "متوسطه دوم";
+
+            if(kind.equals(KindSchool.SAMPAD.getName()))
+                kindStr = "سمپاد";
+            else if(kind.equals(KindSchool.GHEYR.getName()))
+                kindStr = "غیرانتفاعی";
+            else if(kind.equals(KindSchool.DOLATI.getName()))
+                kindStr = "دولتی";
+            else if(kind.equals(KindSchool.HEYAT.getName()))
+                kindStr = "هیت امنایی";
+            else if(kind.equals(KindSchool.SHAHED.getName()))
+                kindStr = "شاهد";
+            else
+                kindStr = "نمونه";
+
+            jsonObject.put("kindStr", kindStr);
+            jsonObject.put("gradeStr", gradeStr);
+
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String updateInfo(JSONObject jsonObject, Document user) {
 
         String NID = jsonObject.getString("NID");
