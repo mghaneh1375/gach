@@ -18,6 +18,8 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.avatarRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class AvatarController {
 
@@ -39,6 +41,9 @@ public class AvatarController {
 
     public static String delete(ObjectId avatarId) {
 
+        if(avatarRepository.count(null) == 1)
+            generateErr("حداقل یک تصویر باید به عنوان آواتار موجود باشد.");
+
         Document avatar = avatarRepository.findOneAndDelete(
                 and(
                         eq("_id", avatarId),
@@ -47,9 +52,23 @@ public class AvatarController {
         );
 
         if(avatar == null)
-            return Utility.generateErr("نفراتی از این آواتار استفاده می کنند و شما مجاز به حذف آن نیستید.");
+            return generateErr("نفراتی از این آواتار استفاده می کنند و شما مجاز به حذف آن نیستید.");
 
-        return JSON_OK;
+        avatarRepository.cleanRemove(avatar);
+        Document config = Utility.getConfig();
+
+        if(avatar.getObjectId("_id").equals(config.getObjectId("default_avatar"))) {
+
+            ArrayList<Document> docs = avatarRepository.find(null, null);
+            config.put("default_avatar", docs.get(0).getObjectId("_id"));
+
+            configRepository.updateOne(config.getObjectId("_id"),
+                    set("default_avatar", docs.get(0).getObjectId("_id"))
+            );
+
+            return generateSuccessMsg("default", docs.get(0).getObjectId("_id").toString());
+        }
+        return generateSuccessMsg("default", "no_change");
     }
 
     public static String get() {
@@ -64,6 +83,7 @@ public class AvatarController {
             data.put(new JSONObject()
                     .put("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"))
                     .put("id", avatar.getObjectId("_id").toString())
+                    .put("used", avatar.getInteger("used"))
                     .put("isDefault", avatar.getObjectId("_id").equals(defaultAvatar))
             );
         }
@@ -90,7 +110,7 @@ public class AvatarController {
                 set("file", filename)
         );
 
-        return JSON_OK;
+        return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + filename);
     }
 
     public static String setDefault(ObjectId avatarId) {

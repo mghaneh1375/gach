@@ -20,7 +20,7 @@ import javax.validation.constraints.NotBlank;
 @Validated
 public class ConfigAPIRoutes extends Router {
 
-    @GetMapping(path = "/")
+    @GetMapping(path = "/getAll")
     @ResponseBody
     public String get(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -36,9 +36,11 @@ public class ConfigAPIRoutes extends Router {
                          @RequestBody @StrongJSONConstraint(
                                  paramsType = {}, params = {},
                                  optionals = {"initCoin", "initMoney",
-                                         "invitationMoney", "invitationCoin",
+                                         "inviteMoney", "inviteCoin",
+                                         "completeInfoMoney", "completeInfoCoin",
+                                         "quizMoney", "quizCoin",
                                          "minRequestMoney", "advisorPercent",
-                                         "namayandeOffPercent",
+                                         "agentOffPercent", "coinRateCoef",
                                          "schoolOffPercent",
                                          "advisorOffPercent",
                                          "beckDep", "beckAnx",
@@ -48,24 +50,22 @@ public class ConfigAPIRoutes extends Router {
                                          "gardner", "izenk", "haland",
                                          "neo", "cannor", "GHQ", "RCMAS",
                                          "topInQuizForCert",
-                                         "topInQuizForGift",
-                                         "topInQuizGiftCoin",
-                                         "topInQuizGiftMoney",
                                          "schoolQuizAttachesMax",
                                          "schoolQuizAttachesJustLink",
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
-                                         Number.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class,
+                                         Number.class, Positive.class, Number.class,
                                          Positive.class, Number.class, Positive.class,
-                                         Positive.class, Boolean.class
+                                         Positive.class, Positive.class, Number.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Boolean.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

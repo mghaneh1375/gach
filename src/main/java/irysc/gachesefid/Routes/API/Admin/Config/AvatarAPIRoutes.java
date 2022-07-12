@@ -42,7 +42,7 @@ public class AvatarAPIRoutes extends Router {
         return AvatarController.store(file);
     }
 
-    @PutMapping(path = "/edit/{avatarId}")
+    @PostMapping(path = "/edit/{avatarId}")
     @ResponseBody
     public String edit(HttpServletRequest request,
                        @PathVariable @ObjectIdConstraint ObjectId avatarId,

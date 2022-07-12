@@ -560,7 +560,7 @@ public class UserAPIRoutes extends Router {
         return JSON_NOT_UNKNOWN;
     }
 
-    @PostMapping(value = "/setAvatar/{avatarId}")
+    @PutMapping(value = "/setAvatar/{avatarId}")
     @ResponseBody
     public String setAvatar(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId avatarId)

@@ -55,16 +55,20 @@ public class StrongJSONValidator implements
 
             for (String key : jsonObject.keySet()) {
 
-                if (jsonObject.get(key) instanceof String && jsonObject.getString(key).isEmpty())
+                if (jsonObject.get(key) instanceof String && jsonObject.getString(key).isEmpty()) {
+                    System.out.println(key);
                     return false;
+                }
 
                 idx = l1.indexOf(key);
                 if (idx != -1)
                     continue;
 
                 idx = l2.indexOf(key);
-                if (idx == -1 || !checkClasses(optionalValueListType[idx], jsonObject.get(key)))
+                if (idx == -1 || !checkClasses(optionalValueListType[idx], jsonObject.get(key))) {
+                    System.out.println(key);
                     return false;
+                }
             }
 
             return true;

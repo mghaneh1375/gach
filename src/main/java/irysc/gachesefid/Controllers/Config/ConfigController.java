@@ -21,7 +21,18 @@ public class ConfigController {
             if(key.equals("_id"))
                 continue;
 
-            jsonObject.put(Utility.camel(key, false), config.get(key));
+            boolean hasLittleChar = false;
+            for(int i = 0; i < key.length(); i++) {
+                if(!Character.isUpperCase(key.charAt(i))) {
+                    hasLittleChar = true;
+                    break;
+                }
+            }
+
+            if(hasLittleChar)
+                jsonObject.put(Utility.camel(key, false), config.get(key));
+            else
+                jsonObject.put(key, config.get(key));
 
         }
 
@@ -32,8 +43,20 @@ public class ConfigController {
 
         Document config = Utility.getConfig();
 
-        for(String key : data.keySet())
-            config.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+        for(String key : data.keySet()) {
+
+            boolean hasLittleChar = false;
+            for(int i = 0; i < key.length(); i++) {
+                if(!Character.isUpperCase(key.charAt(i))) {
+                    hasLittleChar = true;
+                    break;
+                }
+            }
+            if(hasLittleChar)
+                config.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+            else
+                config.put(key, data.get(key));
+        }
 
         configRepository.replaceOne(config.getObjectId("_id"), config);
         return JSON_OK;

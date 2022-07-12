@@ -285,6 +285,9 @@ public class UserController {
                 .append("pic", avatar.getString("file"))
                 .append("invitation_code", Utility.randomString(8))
                 .append("created_at", System.currentTimeMillis())
+                .append("accesses", new ArrayList<>() {
+                    {add("student");}
+                })
                 .append("password", doc.getString("password"));
 
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
@@ -467,7 +470,7 @@ public class UserController {
         avatar.put("used", avatar.getInteger("used") + 1);
         avatarRepository.updateOne(avatarId, set("used", avatar.getInteger("used")));
 
-        return JSON_OK;
+        return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
     }
 
     public static String addSchool(JSONObject data) {
