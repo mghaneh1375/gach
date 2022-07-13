@@ -9,8 +9,8 @@ public class StaticValues {
 
     //    public final static String STATICS_SERVER = "https://statics.okft.org/";
 //    public final static String STATICS_SERVER = "http://185.239.106.26:8083/";
-//    public final static String STATICS_SERVER = "http://192.168.0.106/";
-    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
+    public final static String STATICS_SERVER = "http://192.168.0.106/";
+//    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@mail.okft.org";
     public final static String mailPassword = "ASDFG12345!@#$%^assa";
@@ -68,15 +68,13 @@ public class StaticValues {
             .append("pic", 1);
 
     public final static BasicDBObject USER_MANAGEMENT_INFO_DIGEST = new BasicDBObject("_id", 1)
-            .append("name_fa", 1)
-            .append("last_name_fa", 1)
-            .append("name_en", 1)
-            .append("last_name_en", 1)
+            .append("first_name", 1)
+            .append("last_name", 1)
             .append("NID", 1)
-            .append("passport_no", 1)
-            .append("access", 1)
-            .append("passed", 1)
-            .append("birth_day", 1);
+            .append("mail", 1)
+            .append("phone", 1)
+            .append("coin", 1)
+            .append("school", 1);
 
     public static final String JSON_OK = new JSONObject().put("status", "ok").toString();
     public static final String JSON_NOT_VALID_TOKEN = new JSONObject().put("status", "nok").put("msg", "token is not valid").toString();

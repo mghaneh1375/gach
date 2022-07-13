@@ -481,8 +481,31 @@ public class UserController {
         if(!EnumValidatorImp.isValid(data.getString("grade"), GradeSchool.class))
             return JSON_NOT_VALID_PARAMS;
 
+        String id = data.getString("cityId");
+        if(!ObjectId.isValid(id))
+            return JSON_NOT_VALID_PARAMS;
 
-        return JSON_OK;
+        Document city = cityRepository.findById(new ObjectId(id));
+        if(city == null)
+            return JSON_NOT_VALID_ID;
+
+        Document newDoc = new Document();
+
+        for(String key : data.keySet()) {
+
+            if(key.equals("city"))
+                continue;
+
+            newDoc.append(
+                    Utility.camel(key, false),
+                    data.get(key)
+            );
+        }
+
+        newDoc.append("city_id", city.getObjectId("_id"));
+        newDoc.append("city_name", city.getString("name"));
+
+        return schoolRepository.insertOneWithReturn(newDoc);
     }
 
     public static String fetchSchoolsDigest() {
@@ -533,21 +556,33 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String fetchSchools() {
+    public static String fetchSchools(String grade, String kind, String city) {
 
-        ArrayList<Document> docs = schoolRepository.find(null,
+        ArrayList<Bson> filter = new ArrayList<>();
+
+        if(grade != null)
+            filter.add(eq("grade", grade));
+
+        if(kind != null)
+            filter.add(eq("kind", kind));
+
+        if(city != null)
+            filter.add(eq("city_name", city));
+
+        ArrayList<Document> docs = schoolRepository.find(
+                filter.size() == 0 ? null : and(filter),
                 new BasicDBObject("_id", 1).append("name", 1)
                         .append("city_name", 1).append("kind", 1)
-                        .append("grade", 1)
+                        .append("grade", 1).append("address", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
 
         for(Document doc : docs) {
 
-            String grade = doc.getString("grade");
+            grade = doc.getString("grade");
             String gradeStr;
-            String kind = doc.getString("kind");
+            kind = doc.getString("kind");
             String kindStr;
 
             JSONObject jsonObject = new JSONObject().
@@ -555,7 +590,8 @@ public class UserController {
                     .put("name", doc.getString("name"))
                     .put("city", doc.getString("city_name"))
                     .put("grade", grade)
-                    .put("kind", kind);
+                    .put("kind", kind)
+                    .put("address", doc.getOrDefault("address", ""));
 
             if(grade.equals(GradeSchool.DABESTAN.getName()))
                 gradeStr = "دبستان";

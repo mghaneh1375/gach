@@ -22,12 +22,12 @@ public class CorsFilter implements Filter {
         final HttpServletResponse response = (HttpServletResponse) res;
         HttpServletRequest request = (HttpServletRequest) req;
 
-        if (DEV_MODE) {
-            try {
-                Thread.sleep(2000);
-            } catch (Exception x) {
-            }
-        }
+//        if (DEV_MODE) {
+//            try {
+//                Thread.sleep(2000);
+//            } catch (Exception x) {
+//            }
+//        }
 
         response.setHeader("Access-Control-Allow-Origin",
                 (request.getHeader("Origin") != null) ?

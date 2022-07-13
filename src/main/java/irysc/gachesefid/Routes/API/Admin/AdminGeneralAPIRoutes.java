@@ -40,16 +40,4 @@ public class AdminGeneralAPIRoutes extends Router {
         return UploadController.uploadFiles(file, section);
     }
 
-    @PostMapping(value = "addSchool")
-    @ResponseBody
-    public String addSchool(HttpServletRequest request,
-                            @RequestBody @JSONConstraint(
-                                    params = {"name", "cityId", "grade", "kind"},
-                                    optionals = {"address", "tel", "bio", "site"}
-                            ) @NotBlank String str
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return UserController.addSchool(new JSONObject(str));
-    }
-
 }

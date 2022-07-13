@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.Authorization;
@@ -76,22 +77,31 @@ public class ManageUserController {
                                        String NID
     ) {
 
-        FindIterable<Document> cursor = userRepository.findByUniques(
-                name, lastname, phone, mail, NID
+        ArrayList<Bson> filters = new ArrayList<>();
+
+
+        ArrayList<Document> docs = userRepository.find(
+                filters.size() == 0 ? null : and(filters), USER_MANAGEMENT_INFO_DIGEST
         );
 
         try {
-            if (cursor == null || !cursor.iterator().hasNext())
-                return Utility.generateSuccessMsg("user", "");
+//            if (cursor == null || !cursor.iterator().hasNext())
+//                return Utility.generateSuccessMsg("user", "");
 
             JSONArray jsonArray = new JSONArray();
 
-            for (Document user : cursor) {
+            for (Document user : docs) {
 
                 JSONObject jsonObject = new JSONObject()
                         .put("id", user.getObjectId("_id").toString())
-                        .put("nameFa", user.getString("first_name"))
-                        .put("lastNameFa", user.getString("last_name"));
+                        .put("name", user.getString("first_name") + user.getString("last_name"))
+                        .put("mail", user.getOrDefault("mail", ""))
+                        .put("phone", user.getOrDefault("phone", ""))
+                        .put("NID", user.getString("NID"))
+                        .put("coin", user.get("coin"))
+                        .put("school", user.containsKey("school") ?
+                                ((Document)user.get("school")).getString("name") : ""
+                        );
 
                 jsonArray.put(jsonObject);
             }
