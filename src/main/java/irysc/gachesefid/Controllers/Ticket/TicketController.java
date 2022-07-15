@@ -263,7 +263,6 @@ public class TicketController {
                 !jsonObject.getString("priority").toLowerCase().equals("low")
         )
             return JSON_NOT_VALID_PARAMS;
-
         //todo: validate section
 
         ArrayList<Document> chats = new ArrayList<>();

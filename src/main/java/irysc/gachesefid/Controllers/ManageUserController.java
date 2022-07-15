@@ -1,7 +1,5 @@
 package irysc.gachesefid.Controllers;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.FindIterable;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
@@ -79,6 +77,20 @@ public class ManageUserController {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
+        if(NID != null)
+            filters.add(eq("NID", NID));
+
+        if(phone != null)
+            filters.add(eq("phone", phone));
+
+        if(mail != null)
+            filters.add(eq("mail", mail));
+
+        if (name!= null)
+            filters.add(regex("first_name", Pattern.compile(Pattern.quote(name), Pattern.CASE_INSENSITIVE)));
+
+        if (lastname != null)
+            filters.add(regex("last_name", Pattern.compile(Pattern.quote(lastname), Pattern.CASE_INSENSITIVE)));
 
         ArrayList<Document> docs = userRepository.find(
                 filters.size() == 0 ? null : and(filters), USER_MANAGEMENT_INFO_DIGEST

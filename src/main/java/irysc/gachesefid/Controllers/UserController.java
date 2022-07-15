@@ -508,6 +508,41 @@ public class UserController {
         return schoolRepository.insertOneWithReturn(newDoc);
     }
 
+    public static String editSchool(ObjectId schoolId, JSONObject data) {
+
+        Document school = schoolRepository.findById(schoolId);
+        if(school == null)
+            return JSON_NOT_VALID_ID;
+
+        if(data.has("cityId")) {
+
+            String id = data.getString("cityId");
+            if (!ObjectId.isValid(id))
+                return JSON_NOT_VALID_PARAMS;
+
+            Document city = cityRepository.findById(new ObjectId(id));
+            if(city == null)
+                return JSON_NOT_VALID_ID;
+
+            school.put("city_id", city.getObjectId("_id"));
+            school.put("city_name", city.getString("name"));
+        }
+
+        for(String key : data.keySet()) {
+
+            if(key.equals("city"))
+                continue;
+
+            school.put(
+                    Utility.camel(key, false),
+                    data.get(key)
+            );
+        }
+
+        schoolRepository.replaceOne(schoolId, school);
+        return JSON_OK;
+    }
+
     public static String fetchSchoolsDigest() {
 
         ArrayList<Document> docs = schoolRepository.find(null,
@@ -556,7 +591,7 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String fetchSchools(String grade, String kind, String city) {
+    public static String fetchSchools(String grade, String kind, ObjectId cityId, ObjectId stateId) {
 
         ArrayList<Bson> filter = new ArrayList<>();
 
@@ -566,19 +601,31 @@ public class UserController {
         if(kind != null)
             filter.add(eq("kind", kind));
 
-        if(city != null)
-            filter.add(eq("city_name", city));
+        if(cityId != null)
+            filter.add(eq("city_id", cityId));
 
         ArrayList<Document> docs = schoolRepository.find(
                 filter.size() == 0 ? null : and(filter),
                 new BasicDBObject("_id", 1).append("name", 1)
                         .append("city_name", 1).append("kind", 1)
-                        .append("grade", 1).append("address", 1)
+                        .append("city_id", 1).append("grade", 1)
+                        .append("address", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
 
         for(Document doc : docs) {
+
+            Document cityDoc = cityRepository.findById(doc.getObjectId("city_id"));
+            if(cityDoc == null)
+                continue;
+
+            Document state = stateRepository.findById(cityDoc.getObjectId("state_id"));
+            if(state == null)
+                continue;
+
+            if(stateId != null && !state.getObjectId("_id").equals(stateId))
+                continue;
 
             grade = doc.getString("grade");
             String gradeStr;
@@ -588,7 +635,14 @@ public class UserController {
             JSONObject jsonObject = new JSONObject().
                     put("id", doc.getObjectId("_id").toString())
                     .put("name", doc.getString("name"))
-                    .put("city", doc.getString("city_name"))
+                    .put("city", new JSONObject()
+                        .put("name", doc.getString("city_name"))
+                        .put("id", doc.getObjectId("city_id").toString())
+                    )
+                    .put("state", new JSONObject()
+                            .put("name", state.getString("name"))
+                            .put("id", state.getObjectId("_id").toString())
+                    )
                     .put("grade", grade)
                     .put("kind", kind)
                     .put("address", doc.getOrDefault("address", ""));
