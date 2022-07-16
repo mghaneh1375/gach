@@ -52,10 +52,10 @@ public class Utilities {
 
                 if (responder != null) {
                     chatJSONObj.put("responder", new JSONObject()
-                            .put("name", responder.getString("name_fa"))
                             .put("id", responder.getObjectId("_id").toString())
                             .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + responder.getString("pic"))
-                            .put("last_name", responder.getString("last_name_fa"))
+//                            .put("name", responder.getString("name_fa"))
+//                            .put("last_name", responder.getString("last_name_fa"))
                     );
                 }
 
@@ -87,6 +87,32 @@ public class Utilities {
         }
 
         return "نامشخص";
+    }
+
+    static String getPriorityFa(String priority) {
+
+        switch (priority.toLowerCase()) {
+            case "high":
+                return "بالا";
+            case "avg":
+                return "متوسط";
+            case "low":
+            default:
+                return "کم";
+        }
+    }
+
+    static String getSectionFa(String section) {
+
+        switch (section.toLowerCase()) {
+            case "quiz":
+                return "آزمون";
+            case "level":
+                return "ارتقا سطح";
+            case "alaki":
+            default:
+                return "الکی";
+        }
     }
 
     static void fillConstraintArr(boolean needInit,
@@ -196,7 +222,10 @@ public class Utilities {
         result.put("title", request.getString("title"));
 
         result.put("priority", request.getString("priority").toLowerCase());
-        result.put("section", request.getString("section"));
+        result.put("priorityFa", getPriorityFa(request.getString("priority")));
+
+        result.put("section", request.getString("section").toLowerCase());
+        result.put("sectionFa", getSectionFa(request.getString("section")));
 
         if(isChatNeeded)
             result.put("chats", createChatJSONArr(chats, request.containsKey("start_by_admin")));

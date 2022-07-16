@@ -74,6 +74,8 @@ public class StaticValues {
             .append("mail", 1)
             .append("phone", 1)
             .append("coin", 1)
+            .append("accesses", 1)
+            .append("status", 1)
             .append("school", 1);
 
     public static final String JSON_OK = new JSONObject().put("status", "ok").toString();

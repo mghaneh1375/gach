@@ -509,15 +509,15 @@ public class UserAPIRoutes extends Router {
         try {
             JSONObject jsonObject = new JSONObject(jsonStr);
 
-            String newPass = jsonObject.getString("newPass");
-            String confirmNewPass = jsonObject.getString("confirmNewPass");
-            String oldPassword = jsonObject.getString("oldPass");
+            String newPass = jsonObject.get("newPass").toString();
+            String confirmNewPass = jsonObject.get("confirmNewPass").toString();
+            String oldPassword = jsonObject.get("oldPass").toString();
 
             if (!newPass.equals(confirmNewPass))
-                return Utility.generateErr("رمزعبور جدید و تکرار آن یکسان نیستند.");
+                return generateErr("رمزعبور جدید و تکرار آن یکسان نیستند.");
 
             if (!Utility.isValidPassword(newPass))
-                return Utility.generateErr("رمزعبور جدید قوی نیست.");
+                return generateErr("رمزعبور جدید قوی نیست.");
 
             newPass = Utility.convertPersianDigits(newPass);
             oldPassword = Utility.convertPersianDigits(oldPassword);

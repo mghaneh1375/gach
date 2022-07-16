@@ -44,8 +44,8 @@ public class RequestController {
                 change = true;
             }
             else if(doc.getString("type").equals(RequestType.NAMAYANDE.getName()) &&
-                    !accesses.contains(Access.NAMAYANDE.getName())) {
-                accesses.add(Access.NAMAYANDE.getName());
+                    !accesses.contains(Access.AGENT.getName())) {
+                accesses.add(Access.AGENT.getName());
                 change = true;
             }
             else if(doc.getString("type").equals(RequestType.SCHOOL.getName()) &&

@@ -18,6 +18,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class ManageUserController {
 
@@ -27,7 +28,7 @@ public class ManageUserController {
         if (user == null) {
             user = userRepository.findByUnique(unique, true);
             if (user == null)
-                return Utility.generateSuccessMsg("user", "");
+                return generateSuccessMsg("user", "");
         }
 
         if (!isAdmin && !Authorization.isPureStudent(user.getList("accesses", String.class)))
@@ -67,7 +68,7 @@ public class ManageUserController {
                 .put("birthCity", user.containsKey("birth_city") && isAdmin ?
                         user.getString("birth_city") : "");
 
-        return Utility.generateSuccessMsg("user", userJson);
+        return generateSuccessMsg("user", userJson);
     }
 
     public static String fetchTinyUser(String name, String lastname,
@@ -111,6 +112,9 @@ public class ManageUserController {
                         .put("phone", user.getOrDefault("phone", ""))
                         .put("NID", user.getString("NID"))
                         .put("coin", user.get("coin"))
+                        .put("status", user.getString("status"))
+                        .put("statusFa", user.getString("status").equals("active") ? "فعال" : "غیرفعال")
+                        .put("accesses", user.getList("accesses", String.class))
                         .put("school", user.containsKey("school") ?
                                 ((Document)user.get("school")).getString("name") : ""
                         );
@@ -118,10 +122,10 @@ public class ManageUserController {
                 jsonArray.put(jsonObject);
             }
 
-            return Utility.generateSuccessMsg("users", jsonArray);
+            return generateSuccessMsg("users", jsonArray);
         }
         catch (Exception x) {
-            return Utility.generateSuccessMsg("user", "");
+            return generateSuccessMsg("user", "");
         }
     }
 
@@ -151,16 +155,19 @@ public class ManageUserController {
         if (!newAccess.equals(Access.STUDENT.getName()) && !user.getBoolean("level")) {
             user.put("level", true);
             change = true;
-        } else if (newAccess.equals(Access.STUDENT.getName()) && user.getBoolean("level")) {
+        }
+        else if (newAccess.equals(Access.STUDENT.getName()) && user.getBoolean("level")) {
             user.put("level", false);
-            user.remove("access");
+            user.put("accesses", new ArrayList<>() {
+                {add(Access.STUDENT.getName());}
+            });
             change = true;
         }
 
         if (!newAccess.equals(Access.STUDENT.getName())) {
 
             List<String> accesses;
-            if (user.containsKey("access"))
+            if (user.containsKey("accesses"))
                 accesses = user.getList("accesses", String.class);
             else
                 accesses = new ArrayList<>();
@@ -175,7 +182,7 @@ public class ManageUserController {
         if (change)
             userRepository.replaceOne(userId, user);
 
-        return JSON_OK;
+        return generateSuccessMsg("accesses", user.getList("accesses", String.class));
     }
 
     public static String removeAccess(ObjectId userId, String role) {
@@ -192,13 +199,15 @@ public class ManageUserController {
 
         accesses.remove(role);
         if (accesses.size() == 0) {
-            user.remove("accesses");
+            user.put("accesses", new ArrayList<>() {
+                {add(Access.STUDENT.getName());}
+            });
             user.put("level", false);
         } else
             user.put("accesses", accesses);
 
         userRepository.replaceOne(userId, user);
-        return JSON_OK;
+        return generateSuccessMsg("accesses", user.getList("accesses", String.class));
     }
 
     public static String fetchUserLike(String nameEn, String lastNameEn,
@@ -224,7 +233,7 @@ public class ManageUserController {
         for (Document user : users)
             jsonArray.put(UserRepository.convertUserDigestDocumentToJSON(user));
 
-        return Utility.generateSuccessMsg("users", jsonArray);
+        return generateSuccessMsg("users", jsonArray);
     }
 
     public static String setAdvisorPercent(ObjectId advisorId, int percent) {

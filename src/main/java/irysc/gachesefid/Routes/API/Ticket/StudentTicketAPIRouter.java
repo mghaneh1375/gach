@@ -26,6 +26,23 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 public class StudentTicketAPIRouter extends Router {
 
 
+    @GetMapping(value = "/getMyRequests")
+    @ResponseBody
+    public String getMyRequests(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        return TicketController.getMyRequests(
+                null, null,
+                user.getObjectId("_id"),
+                null, null, null, null
+
+        );
+    }
+
+
+
     @PostMapping(value = "/submit")
     @ResponseBody
     public String submit(HttpServletRequest request,
@@ -42,6 +59,7 @@ public class StudentTicketAPIRouter extends Router {
         JSONObject jsonObject = new JSONObject(jsonStr);
 
         Document user = getUser(request);
+        System.out.println(user);
         return TicketController.insert(
                 user.getList("accesses", String.class),
                 user.getObjectId("_id"),

@@ -74,8 +74,7 @@ public class ManageUserAPIRoutes extends Router {
                                @PathVariable @ObjectIdConstraint ObjectId userId)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        userService.toggleStatus(userId);
-        return JSON_OK;
+        return userService.toggleStatus(userId);
     }
 
     @GetMapping(value = "/fetchTinyUser")

@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.TicketRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.NewAlert;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
@@ -188,12 +189,17 @@ public class TicketController {
         else
             lastChat.put("msg", answer);
 
-        new Thread(() -> ticketRepository.updateOne(eq("_id", requestId),
+        long curr = System.currentTimeMillis();
+        doc.put("chats", chats);
+        doc.put("status", "answer");
+        doc.put("answer_date", curr);
+
+        ticketRepository.updateOne(requestId,
                 new BasicDBObject("$set", new BasicDBObject("chats", chats)
                         .append("status", "answer")
-                        .append("answer_date", System.currentTimeMillis())
+                        .append("answer_date", curr)
                 )
-        )).start();
+        );
 
         if (isFirstAdminAns)
             newThingsCache.put(NewAlert.NEW_TICKETS.getName(),
@@ -202,7 +208,16 @@ public class TicketController {
             newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
                     newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) - 1);
 
-        return JSON_OK;
+        try {
+            Document tmp = Document.parse(doc.toJson());
+            Document student = userRepository.findById(
+                    doc.getObjectId("user_id")
+            );
+            tmp.put("student", student);
+            return generateSuccessMsg("ticket", fillJSON(tmp, true, true, true));
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
     }
 
     // STUDENT SECTION
@@ -240,7 +255,7 @@ public class TicketController {
             if (!res.getString("status").equals("ok"))
                 return res.getString("msg");
 
-            ticketId = new ObjectId(res.getString("id"));
+            ticketId = new ObjectId(res.getJSONObject("ticket").getString("id"));
 
             Document ticket = ticketRepository.findById(ticketId);
             ticket.put("start_by_admin", true);
@@ -254,13 +269,23 @@ public class TicketController {
                     "ticket", user.getString("name_en") + " " + user.getString("last_name_en")
             )).start();
 
-            return Utility.generateSuccessMsg("id", ticketId);
+            try {
+                Document tmp = Document.parse(ticket.toJson());
+                tmp.put("student", user);
+
+                return Utility.generateSuccessMsg(
+                        "ticket",
+                        fillJSON(tmp, true, true, false)
+                );
+            } catch (InvalidFieldsException e) {
+                return generateErr(e.getMessage());
+            }
         }
 
         if (jsonObject.has("priority") &&
-                !jsonObject.getString("priority").toLowerCase().equals("high") &&
-                !jsonObject.getString("priority").toLowerCase().equals("avg") &&
-                !jsonObject.getString("priority").toLowerCase().equals("low")
+                !jsonObject.getString("priority").equalsIgnoreCase("high") &&
+                !jsonObject.getString("priority").equalsIgnoreCase("avg") &&
+                !jsonObject.getString("priority").equalsIgnoreCase("low")
         )
             return JSON_NOT_VALID_PARAMS;
         //todo: validate section
@@ -272,7 +297,7 @@ public class TicketController {
                 .append("files", new ArrayList<>())
         );
 
-        return ticketRepository.insertOneWithReturn(
+        ObjectId tId = ticketRepository.insertOneWithReturnId(
                 new Document("title", jsonObject.getString("title"))
                         .append("created_at", System.currentTimeMillis())
                         .append("is_for_teacher", Authorization.isTeacher(accesses))
@@ -283,6 +308,10 @@ public class TicketController {
                         .append("section", (jsonObject.has("section")) ?
                                 jsonObject.getString("section") : "public")
                         .append("user_id", userId)
+        );
+
+        return generateSuccessMsg("ticket", new JSONObject()
+                .put("id", tId.toString())
         );
     }
 
@@ -313,15 +342,31 @@ public class TicketController {
                     .append("is_for_user", true)
             );
 
-        new Thread(() -> ticketRepository.updateOne(eq("_id", requestId),
+        long curr = System.currentTimeMillis();
+        request.put("chats", chats);
+        request.put("status", "pending");
+        request.put("send_date", curr);
+
+        ticketRepository.updateOne(requestId,
                 new BasicDBObject("$set", new BasicDBObject("chats", chats)
-                        .append("status", "pending").append("send_date", System.currentTimeMillis()))
-        )).start();
+                        .append("status", "pending")
+                        .append("send_date", curr)
+                )
+        );
 
         newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
                 newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) + 1);
 
-        return JSON_OK;
+        try {
+            Document tmp = Document.parse(request.toJson());
+            Document student = userRepository.findById(
+                    request.getObjectId("user_id")
+            );
+            tmp.put("student", student);
+            return generateSuccessMsg("ticket", fillJSON(tmp, true, true, true));
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
     }
 
     public static String sendRequest(ObjectId userId, ObjectId requestId) {
@@ -345,16 +390,32 @@ public class TicketController {
             request.put("send_date", System.currentTimeMillis());
             request.put("status", "pending");
 
-            ticketRepository.replaceOne(eq("_id", requestId), request);
+            ticketRepository.replaceOne(requestId, request);
 
         }).start();
 
-        if (request.getString("status").equals("init"))
+        if (request.getString("status").equals("init")) {
+
             newThingsCache.put(NewAlert.NEW_TICKETS.getName(),
                     newThingsCache.get(NewAlert.NEW_TICKETS.getName()) + 1);
-        else
-            newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
-                    newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) + 1);
+
+            try {
+
+                Document user = userRepository.findById(request.getObjectId("user_id"));
+                Document tmp = Document.parse(request.toJson());
+                tmp.put("student", user);
+
+                return generateSuccessMsg(
+                        "ticket",
+                        fillJSON(tmp, true, true, false)
+                );
+            } catch (InvalidFieldsException e) {
+                return generateErr(e.getMessage());
+            }
+        }
+
+        newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
+                newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) + 1);
 
         return JSON_OK;
     }
@@ -490,7 +551,7 @@ public class TicketController {
             }
         }
 
-        return generateSuccessMsg("requests", jsonArray);
+        return generateSuccessMsg("data", jsonArray);
 
     }
 

@@ -10,7 +10,6 @@ import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Models.Role;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
@@ -58,11 +57,11 @@ public class UserService {
         }
     }
 
-    public void toggleStatus(ObjectId userId) {
+    public String toggleStatus(ObjectId userId) {
 
         Document user = userRepository.findById(userId);
         if(user == null)
-            return;
+            return null;
 
         switch (user.getString("status")) {
             case "active":
@@ -72,13 +71,15 @@ public class UserService {
                 user.put("status", "active");
                 break;
             default:
-                return;
+                return null;
         }
 
         userRepository.updateOne(
                 eq("_id", userId),
                 set("status", user.getString("status"))
         );
+
+        return Utility.generateSuccessMsg("newStatus", user.getString("status"));
     }
 
     public String signIn(String username, String password, boolean checkPass

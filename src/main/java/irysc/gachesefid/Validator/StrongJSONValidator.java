@@ -118,6 +118,9 @@ public class StrongJSONValidator implements
             }
         }
 
+        if(a.equals(String.class) && b.equals(Integer.class))
+            return true;
+
         return a.equals(b);
     }
 
