@@ -175,8 +175,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static void main(String[] args) {
         setupDB();
 //        Enc.init();
-//        setupNewThingsCache();
-//        new Thread(new Jobs()).start();
+        setupNewThingsCache();
+        new Thread(new Jobs()).start();
         new SpringApplicationBuilder(GachesefidApplication.class)
                 .run(args);
     }

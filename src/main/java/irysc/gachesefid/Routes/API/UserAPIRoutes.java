@@ -153,8 +153,6 @@ public class UserAPIRoutes extends Router {
 
         try {
             JSONObject jsonObject = new JSONObject(jsonStr);
-            System.out.println(jsonObject);
-
             Utility.convertPersian(jsonObject);
 
             return userService.signIn(
