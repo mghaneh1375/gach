@@ -31,7 +31,8 @@ import static irysc.gachesefid.Utility.Utility.printException;
 import static java.util.Map.entry;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
-@ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator", "irysc.gachesefid.Security", "irysc.gachesefid.Service"})
+@ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
+        "irysc.gachesefid.Security", "irysc.gachesefid.Service"})
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
 public class GachesefidApplication implements WebMvcConfigurer {
@@ -173,9 +174,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static void main(String[] args) {
         setupDB();
-        Enc.init();
-        setupNewThingsCache();
-        new Thread(new Jobs()).start();
+//        Enc.init();
+//        setupNewThingsCache();
+//        new Thread(new Jobs()).start();
         new SpringApplicationBuilder(GachesefidApplication.class)
                 .run(args);
     }
