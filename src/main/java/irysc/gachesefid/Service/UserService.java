@@ -101,7 +101,9 @@ public class UserService {
 //                }
             }
 
+            System.out.println(username);
             Document user = userRepository.findByUnique(username, false);
+            System.out.println(user);
 
             if (DEV_MODE || !checkPass) {
                 if (user == null)
