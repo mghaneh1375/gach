@@ -4,6 +4,7 @@ import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -71,12 +72,19 @@ public class ManageUserController {
         return generateSuccessMsg("user", userJson);
     }
 
-    public static String fetchTinyUser(String name, String lastname,
-                                       String phone, String mail,
-                                       String NID
+    public static String fetchTinyUser(String level, String name,
+                                       String lastname, String phone,
+                                       String mail, String NID
     ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
+
+        if(level != null) {
+            if(!EnumValidatorImp.isValid(level, Access.class))
+                return JSON_NOT_VALID_PARAMS;
+
+            filters.add(eq("accesses", level));
+        }
 
         if(NID != null)
             filters.add(eq("NID", NID));
@@ -154,6 +162,7 @@ public class ManageUserController {
 
         if (!newAccess.equals(Access.STUDENT.getName()) && !user.getBoolean("level")) {
             user.put("level", true);
+            user.put("accesses", new ArrayList<>());
             change = true;
         }
         else if (newAccess.equals(Access.STUDENT.getName()) && user.getBoolean("level")) {
@@ -202,9 +211,11 @@ public class ManageUserController {
             user.put("accesses", new ArrayList<>() {
                 {add(Access.STUDENT.getName());}
             });
-            user.put("level", false);
         } else
             user.put("accesses", accesses);
+
+        if(accesses.contains(Access.STUDENT.getName()))
+            user.put("level", false);
 
         userRepository.replaceOne(userId, user);
         return generateSuccessMsg("accesses", user.getList("accesses", String.class));

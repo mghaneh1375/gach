@@ -150,6 +150,26 @@ public class FileUtils {
     }
 
     @Nullable
+    public static String uploadDocOrMultimediaFile(MultipartFile file) {
+
+        try {
+
+            String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+
+            if (!fileType.equals("image") && !fileType.equals("word") &&
+                    !fileType.equals("pdf") && !fileType.equals("voice") &&
+                    !fileType.equals("video") && !fileType.equals("excel")
+            )
+                return null;
+
+            return fileType;
+
+        } catch (InvalidFileTypeException e) {
+            return null;
+        }
+    }
+
+    @Nullable
     public static String uploadPdfOrMultimediaFile(MultipartFile file) {
 
         try {
@@ -209,6 +229,12 @@ public class FileUtils {
                 return new PairValue("voice", ext);
             case "pdf":
                 return new PairValue("pdf", ext);
+            case "xls":
+            case "xlsx":
+                return new PairValue("excel", ext);
+            case "doc":
+            case "docx":
+                return new PairValue("word", ext);
             case "zip":
                 return new PairValue("zip", ext);
             default:

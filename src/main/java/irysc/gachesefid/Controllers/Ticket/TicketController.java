@@ -25,6 +25,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Ticket.Utilities.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.FileUtils.uploadDocOrMultimediaFile;
 import static irysc.gachesefid.Utility.FileUtils.uploadImageOrPdfFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -275,7 +276,7 @@ public class TicketController {
 
                 return Utility.generateSuccessMsg(
                         "ticket",
-                        fillJSON(tmp, true, true, false)
+                        fillJSON(tmp, true, true, true)
                 );
             } catch (InvalidFieldsException e) {
                 return generateErr(e.getMessage());
@@ -407,7 +408,7 @@ public class TicketController {
 
                 return generateSuccessMsg(
                         "ticket",
-                        fillJSON(tmp, true, true, false)
+                        fillJSON(tmp, true, true, true)
                 );
             } catch (InvalidFieldsException e) {
                 return generateErr(e.getMessage());
@@ -423,34 +424,36 @@ public class TicketController {
     public static String addFileToRequest(List<String> accesses, ObjectId userId,
                                           ObjectId requestId, MultipartFile file) {
 
-        Document request;
         boolean isAdmin = Authorization.isAdmin(accesses);
+        Document request = ticketRepository.findById(requestId);
 
-        if (!isAdmin)
-            request = ticketRepository.findOne(
-                    and(
-                            eq("_id", requestId),
-                            eq("user_id", userId),
-                            or(
-                                    eq("status", "init"),
-                                    eq("status", "answer")
-                            )
-                    ), null
-            );
-        else
-            request = ticketRepository.findOne(
-                    and(
-                            eq("_id", requestId),
-                            eq("status", "pending")
-                    ), null
-            );
+        if(request == null)
+            return JSON_NOT_VALID_ID;
 
-        if (request == null)
+        if (!isAdmin && (
+                !request.getObjectId("user_id").equals(userId) ||
+                (
+                        !request.getString("status").equals("init") &&
+                                !request.getString("status").equals("answer")
+                )
+        ))
             return JSON_NOT_ACCESS;
+//        else if(isAdmin)
+//            request = ticketRepository.findOne(
+//                    and(
+//                            eq("_id", requestId),
+//                            eq("status", "pending")
+//                    ), null
+//            );
 
         List<Document> chats = request.getList("chats", Document.class);
         int total = 0;
         ObjectId adminId = null;
+
+        if(chats.size() == 0)
+            return JSON_NOT_ACCESS;
+
+        Document lastChat = chats.get(chats.size() - 1);
 
         for (Document chat : chats) {
 
@@ -473,7 +476,7 @@ public class TicketController {
         if (file.getSize() > MAX_TICKET_FILE_SIZE)
             return generateErr("حداکثر حجم مجاز، " + MAX_TICKET_FILE_SIZE + " مگ است.");
 
-        String fileType = uploadImageOrPdfFile(file);
+        String fileType = uploadDocOrMultimediaFile(file);
 
         if (fileType == null)
             return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
@@ -484,7 +487,6 @@ public class TicketController {
 
         boolean createNew = false;
 
-        Document lastChat = chats.get(chats.size() - 1);
         if (
                 (
                         lastChat.getBoolean("is_for_user") &&

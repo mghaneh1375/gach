@@ -80,6 +80,7 @@ public class ManageUserAPIRoutes extends Router {
     @GetMapping(value = "/fetchTinyUser")
     @ResponseBody
     public String fetchTinyUser(HttpServletRequest request,
+                                @RequestParam(value = "level", required = false) String level,
                                 @RequestParam(value = "name", required = false) String name,
                                 @RequestParam(value = "lastname", required = false) String lastname,
                                 @RequestParam(value = "phone", required = false) String phone,
@@ -87,7 +88,7 @@ public class ManageUserAPIRoutes extends Router {
                                 @RequestParam(value = "NID", required = false) String NID
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return ManageUserController.fetchTinyUser(name, lastname, phone, mail, NID);
+        return ManageUserController.fetchTinyUser(level, name, lastname, phone, mail, NID);
     }
 
     @GetMapping(value = "/fetchUser/{unique}")
