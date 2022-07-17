@@ -79,7 +79,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     private static void setupDB() {
         try {
-            
+
 //            Class.forName("com.mysql.jdbc.Driver");
 //            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
 //            Statement st = con.createStatement();
@@ -180,12 +180,4 @@ public class GachesefidApplication implements WebMvcConfigurer {
                 .run(args);
     }
 
-//    @Bean
-//    public Docket api() {
-//        return new Docket(DocumentationType.SWAGGER_2)
-//                .select()
-//                .apis(RequestHandlerSelectors.any())
-//                .paths(PathSelectors.any())
-//                .build();
-//    }
 }
