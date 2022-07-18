@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 
+import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -31,5 +32,13 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String fetchSchoolsDigest() {
         return UserController.fetchSchoolsDigest();
+    }
+
+    @GetMapping(value = "/getNewAlerts")
+    @ResponseBody
+    public String getNewAlerts(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return AlertController.newAlerts();
     }
 }

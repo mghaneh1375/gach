@@ -6,9 +6,13 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.TicketRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.NewAlert;
+import irysc.gachesefid.Models.TicketPriority;
+import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -98,7 +102,7 @@ public class TicketController {
             constraints.add(eq("is_for_teacher", isForTeacher));
 
         if (section != null)
-            constraints.add(eq("section", section));
+            constraints.add(eq("section", section.toLowerCase()));
 
         if (priority != null)
             constraints.add(eq("priority", priority.toUpperCase()));
@@ -226,6 +230,16 @@ public class TicketController {
     // tickets strategy: 1- admin to any user 2- student or any other access to just admin
     public static String insert(List<String> accesses, ObjectId userId, JSONObject jsonObject) {
 
+        if(jsonObject.has("section") &&
+                !EnumValidatorImp.isValid(jsonObject.getString("section"), TicketSection.class)
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        if(jsonObject.has("priority") &&
+                !EnumValidatorImp.isValid(jsonObject.getString("priority"), TicketPriority.class)
+        )
+            return JSON_NOT_VALID_PARAMS;
+
         boolean isAdmin = Authorization.isAdmin(accesses);
 
         if (
@@ -249,7 +263,7 @@ public class TicketController {
                     new JSONObject()
                             .put("title", jsonObject.getString("title"))
                             .put("description", "")
-                            .put("section", jsonObject.has("section") ? jsonObject.getString("section") : "public")
+                            .put("section", jsonObject.has("section") ? jsonObject.getString("section") : "quiz")
                             .put("priority", jsonObject.has("priority") ? jsonObject.getString("priority") : "avg")
             ));
 
@@ -283,14 +297,6 @@ public class TicketController {
             }
         }
 
-        if (jsonObject.has("priority") &&
-                !jsonObject.getString("priority").equalsIgnoreCase("high") &&
-                !jsonObject.getString("priority").equalsIgnoreCase("avg") &&
-                !jsonObject.getString("priority").equalsIgnoreCase("low")
-        )
-            return JSON_NOT_VALID_PARAMS;
-        //todo: validate section
-
         ArrayList<Document> chats = new ArrayList<>();
         chats.add(new Document("msg", jsonObject.getString("description"))
                 .append("created_at", System.currentTimeMillis())
@@ -307,7 +313,7 @@ public class TicketController {
                         .append("priority", (jsonObject.has("priority")) ?
                                 jsonObject.getString("priority").toUpperCase() : "avg")
                         .append("section", (jsonObject.has("section")) ?
-                                jsonObject.getString("section") : "public")
+                                jsonObject.getString("section") : "quiz")
                         .append("user_id", userId)
         );
 

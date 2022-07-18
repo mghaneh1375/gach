@@ -111,7 +111,6 @@ public class Router {
             throws NotActivateAccountException, UnAuthException {
 
         boolean auth = new JwtTokenFilter().isAuth(request);
-        System.out.println(auth);
         Document u;
         if(auth) {
             u = userService.whoAmI(request);

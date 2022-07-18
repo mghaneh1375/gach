@@ -11,6 +11,7 @@ import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Positive;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Path;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
@@ -129,12 +131,29 @@ public class UserAPIRoutes extends Router {
         return JSON_OK;
     }
 
-    @GetMapping(value = "/fetchUser")
+    @GetMapping(value = {"/fetchUser", "/fetchUser/{userId}"})
     @ResponseBody
-    public String fetchUser(HttpServletRequest request)
+    public String fetchUser(HttpServletRequest request,
+                            @PathVariable(required = false) String userId)
             throws NotActivateAccountException, UnAuthException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(userId != null && !isAdmin)
+            return JSON_NOT_ACCESS;
+
+        if(userId != null && !ObjectId.isValid(userId))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(userId != null)
+            user = userRepository.findById(new ObjectId(userId));
+
+        if(user == null)
+            return JSON_NOT_VALID_ID;
+
         return generateSuccessMsg("user",
-                UserController.isAuth(getUserWithOutCheckCompleteness(request))
+                UserController.isAuth(user)
         );
     }
 
@@ -275,10 +294,14 @@ public class UserAPIRoutes extends Router {
                                        params = {"role"},
                                        paramsType = {String.class},
                                        optionals = {
-                                               "schoolName", "schoolPhone", "stateName"
+                                               "schoolName", "schoolPhone", "stateName",
+                                               "workYear", "workSchools", "universeField",
+                                               "bio",
                                        },
                                        optionalsType = {
-                                               String.class, String.class, String.class
+                                               String.class, String.class, String.class,
+                                               Positive.class, String.class, String.class,
+                                               String.class,
                                        }
                                ) String json
     ) throws UnAuthException, NotActivateAccountException {
@@ -559,13 +582,28 @@ public class UserAPIRoutes extends Router {
         return JSON_NOT_UNKNOWN;
     }
 
-    @PutMapping(value = "/setAvatar/{avatarId}")
+    @PutMapping(value = {"/setAvatar/{avatarId}", "/setAvatar/{avatarId}/{userId}"})
     @ResponseBody
     public String setAvatar(HttpServletRequest request,
-                            @PathVariable @ObjectIdConstraint ObjectId avatarId)
-            throws UnAuthException, NotActivateAccountException {
+                            @PathVariable @ObjectIdConstraint ObjectId avatarId,
+                            @PathVariable(required = false) String userId
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        return UserController.setAvatar(getUserWithOutCheckCompleteness(request), avatarId);
+        if(userId != null && !isAdmin)
+            return JSON_NOT_ACCESS;
+
+        if(userId != null && !ObjectId.isValid(userId))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(userId != null)
+            user = userRepository.findById(new ObjectId(userId));
+
+        if(user == null)
+            return JSON_NOT_VALID_ID;
+
+        return UserController.setAvatar(user, avatarId);
     }
 
 

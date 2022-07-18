@@ -4,20 +4,26 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import static irysc.gachesefid.Main.GachesefidApplication.alertsRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.newThingsCache;
 
 public class AlertController {
 
     public static String newAlerts() {
 
-        JSONObject jsonObject = new JSONObject();
-        //todo : imp
-//        for(String itr : newThingsCache.keySet())
-//            jsonObject.put(itr, newThingsCache.get(itr));
+        JSONArray jsonArray= new JSONArray();
+        for(String itr : newThingsCache.keySet()) {
+            if(newThingsCache.get(itr) > 0)
+                jsonArray.put(new JSONObject()
+                        .put("key", itr)
+                        .put("value", newThingsCache.get(itr))
+                );
+        }
 
-        return new JSONObject().put("status", "ok").put("data", jsonObject).toString();
+        return Utility.generateSuccessMsg("data", jsonArray);
     }
 
     public static void store(ObjectId userId, String msg, boolean needSMS) {

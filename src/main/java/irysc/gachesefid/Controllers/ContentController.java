@@ -201,15 +201,33 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String delete(ObjectId gradeId) {
+    public static String delete(JSONArray ids) {
 
-        if (subjectRepository.exist(eq("grade._id", gradeId)))
-            return generateErr("مقطع مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+        JSONArray excepts = new JSONArray();
+        JSONArray removeIds = new JSONArray();
 
-        gradeRepository.deleteOne(eq("_id", gradeId));
-        gradeRepository.clearFromCache(gradeId);
+        for(int i = 0; i < ids.length(); i++) {
 
-        return JSON_OK;
+            String id = ids.getString(i);
+
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId gradeId = new ObjectId(id);
+
+            if (subjectRepository.exist(eq("grade._id", gradeId))) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            gradeRepository.deleteOne(gradeId);
+            gradeRepository.clearFromCache(gradeId);
+            removeIds.put(gradeId);
+        }
+
+        return Utility.returnRemoveResponse(excepts, removeIds);
     }
 
     public static String addLesson(JSONObject jsonObject, ObjectId gradeId) {

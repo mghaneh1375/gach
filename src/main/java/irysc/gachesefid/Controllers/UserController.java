@@ -15,7 +15,6 @@ import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,8 +34,11 @@ public class UserController {
     private static String[] fieldsNeededForSchool = new String[]{
             "a", "b", "c"
     };
-    private static String[] fieldsNeededForAdvisor = new String[]{
+    private static String[] getFieldsNeededForSchool = new String[]{
             "schoolName", "schoolPhone"
+    };
+    private static String[] getFieldsNeededForAdvisor = new String[]{
+            "workYear", "workSchools", "universeField",
     };
     private static String[] fieldsNeededForAgent = new String[]{
             "stateName"
@@ -219,6 +221,29 @@ public class UserController {
         return JSON_OK;
     }
 
+    private static String translateRole(String role) {
+
+        if (role.equalsIgnoreCase(Access.ADVISOR.getName()))
+            return "مشاور";
+
+        if (role.equalsIgnoreCase(Access.SCHOOL.getName()))
+            return "مدرسه";
+
+        if (role.equalsIgnoreCase(Access.TEACHER.getName()))
+            return "دبیر";
+
+        if (role.equalsIgnoreCase(Access.AGENT.getName()))
+            return "نماینده";
+
+        if (role.equalsIgnoreCase(Access.ADMIN.getName()))
+            return "ادمین";
+
+        if (role.equalsIgnoreCase(Access.SUPERADMIN.getName()))
+            return "سوپر ادمین";
+
+        return "دانش آموز";
+    }
+
     public static String setRole(Document user, JSONObject jsonObject) {
 
         String role = jsonObject.getString("role");
@@ -232,7 +257,7 @@ public class UserController {
         Set<String> keys = jsonObject.keySet();
         String[] wantedList;
         if (role.equals(Access.ADVISOR.getName()))
-            wantedList = fieldsNeededForAdvisor;
+            wantedList = getFieldsNeededForAdvisor;
         else if (role.equals(Access.SCHOOL.getName()))
             wantedList = fieldsNeededForSchool;
         else
@@ -249,6 +274,26 @@ public class UserController {
         userRepository.replaceOne(
                 user.getObjectId("_id"),
                 user
+        );
+
+        long curr = System.currentTimeMillis();
+
+        ArrayList<Document> chats = new ArrayList<>();
+        chats.add(new Document("msg", "برای مشاهده روی " + "<a href='https://google.com' target='_blank'>" + "لینک" + "</a>" + "کلیک کنید.")
+                .append("created_at", curr)
+                .append("is_for_user", true)
+                .append("files", new ArrayList<>())
+        );
+
+        ticketRepository.insertOne(
+                new Document("title", "درخواست ارتقای سطح به " + translateRole(role))
+                        .append("created_at", curr)
+                        .append("is_for_teacher", false)
+                        .append("chats", chats)
+                        .append("status", "pending")
+                        .append("priority", TicketPriority.HIGH.getName())
+                        .append("section", TicketSection.UPGRADELEVEL.getName())
+                        .append("user_id", user.getObjectId("_id"))
         );
 
         return JSON_OK;
@@ -286,7 +331,9 @@ public class UserController {
                 .append("invitation_code", Utility.randomString(8))
                 .append("created_at", System.currentTimeMillis())
                 .append("accesses", new ArrayList<>() {
-                    {add("student");}
+                    {
+                        add("student");
+                    }
                 })
                 .append("password", doc.getString("password"));
 
@@ -344,15 +391,15 @@ public class UserController {
         convertPersian(data);
         String via = data.getString("mode");
 
-        if(!EnumValidatorImp.isValid(via, AuthVia.class))
+        if (!EnumValidatorImp.isValid(via, AuthVia.class))
             return JSON_NOT_VALID_PARAMS;
 
         String username = data.getString("username").toLowerCase();
 
-        if(via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(username))
+        if (via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(username))
             return generateErr("شماره همراه وارد شده معتبر نمی باشد.");
 
-        if(via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(username))
+        if (via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(username))
             return generateErr("ایمیل وارد شده معتبر نمی باشد.");
 
         Bson filter = via.equals(AuthVia.SMS.getName()) ?
@@ -453,11 +500,13 @@ public class UserController {
         if (user.containsKey("avatar_id")) {
 
             if (user.getObjectId("avatar_id").equals(avatarId))
-                return JSON_OK;
+                return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
 
             Document oldAvatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-            oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
-            avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
+            if(oldAvatar == null) {
+                oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
+                avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
+            }
 
         }
 
@@ -475,25 +524,25 @@ public class UserController {
 
     public static String addSchool(JSONObject data) {
 
-        if(!EnumValidatorImp.isValid(data.getString("kind"), KindSchool.class))
+        if (!EnumValidatorImp.isValid(data.getString("kind"), KindSchool.class))
             return JSON_NOT_VALID_PARAMS;
 
-        if(!EnumValidatorImp.isValid(data.getString("grade"), GradeSchool.class))
+        if (!EnumValidatorImp.isValid(data.getString("grade"), GradeSchool.class))
             return JSON_NOT_VALID_PARAMS;
 
         String id = data.getString("cityId");
-        if(!ObjectId.isValid(id))
+        if (!ObjectId.isValid(id))
             return JSON_NOT_VALID_PARAMS;
 
         Document city = cityRepository.findById(new ObjectId(id));
-        if(city == null)
+        if (city == null)
             return JSON_NOT_VALID_ID;
 
         Document newDoc = new Document();
 
-        for(String key : data.keySet()) {
+        for (String key : data.keySet()) {
 
-            if(key.equals("city"))
+            if (key.equals("city"))
                 continue;
 
             newDoc.append(
@@ -511,26 +560,26 @@ public class UserController {
     public static String editSchool(ObjectId schoolId, JSONObject data) {
 
         Document school = schoolRepository.findById(schoolId);
-        if(school == null)
+        if (school == null)
             return JSON_NOT_VALID_ID;
 
-        if(data.has("cityId")) {
+        if (data.has("cityId")) {
 
             String id = data.getString("cityId");
             if (!ObjectId.isValid(id))
                 return JSON_NOT_VALID_PARAMS;
 
             Document city = cityRepository.findById(new ObjectId(id));
-            if(city == null)
+            if (city == null)
                 return JSON_NOT_VALID_ID;
 
             school.put("city_id", city.getObjectId("_id"));
             school.put("city_name", city.getString("name"));
         }
 
-        for(String key : data.keySet()) {
+        for (String key : data.keySet()) {
 
-            if(key.equals("city"))
+            if (key.equals("city"))
                 continue;
 
             school.put(
@@ -553,7 +602,7 @@ public class UserController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject().
                     put("id", doc.getObjectId("_id").toString());
@@ -562,26 +611,26 @@ public class UserController {
             String grade = doc.getString("grade");
             String kind = doc.getString("kind");
 
-            if(grade.equals(GradeSchool.DABESTAN.getName()))
+            if (grade.equals(GradeSchool.DABESTAN.getName()))
                 name += "دبستان";
-            else if(grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
+            else if (grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
                 name += "متوسطه اول";
             else
                 name += "متوسطه دوم";
 
             name += " - ";
 
-            if(kind.equals(KindSchool.SAMPAD.getName()))
+            if (kind.equals(KindSchool.SAMPAD.getName()))
                 name += "سمپاد";
-            else if(kind.equals(KindSchool.GHEYR.getName()))
+            else if (kind.equals(KindSchool.GHEYR.getName()))
                 name += "غیرانتفاعی";
-            else if(kind.equals(KindSchool.DOLATI.getName()))
+            else if (kind.equals(KindSchool.DOLATI.getName()))
                 name += "دولتی";
-            else if(kind.equals(KindSchool.HEYAT.getName()))
+            else if (kind.equals(KindSchool.HEYAT.getName()))
                 name += "هیت امنایی";
-            else if(kind.equals(KindSchool.SHAHED.getName()))
+            else if (kind.equals(KindSchool.SHAHED.getName()))
                 name += "شاهد";
-            else if(kind.equals(KindSchool.NEMONE.getName()))
+            else if (kind.equals(KindSchool.NEMONE.getName()))
                 name += "نمونه";
 
             jsonObject.put("name", name);
@@ -595,13 +644,13 @@ public class UserController {
 
         ArrayList<Bson> filter = new ArrayList<>();
 
-        if(grade != null)
+        if (grade != null)
             filter.add(eq("grade", grade));
 
-        if(kind != null)
+        if (kind != null)
             filter.add(eq("kind", kind));
 
-        if(cityId != null)
+        if (cityId != null)
             filter.add(eq("city_id", cityId));
 
         ArrayList<Document> docs = schoolRepository.find(
@@ -614,17 +663,17 @@ public class UserController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             Document cityDoc = cityRepository.findById(doc.getObjectId("city_id"));
-            if(cityDoc == null)
+            if (cityDoc == null)
                 continue;
 
             Document state = stateRepository.findById(cityDoc.getObjectId("state_id"));
-            if(state == null)
+            if (state == null)
                 continue;
 
-            if(stateId != null && !state.getObjectId("_id").equals(stateId))
+            if (stateId != null && !state.getObjectId("_id").equals(stateId))
                 continue;
 
             grade = doc.getString("grade");
@@ -636,8 +685,8 @@ public class UserController {
                     put("id", doc.getObjectId("_id").toString())
                     .put("name", doc.getString("name"))
                     .put("city", new JSONObject()
-                        .put("name", doc.getString("city_name"))
-                        .put("id", doc.getObjectId("city_id").toString())
+                            .put("name", doc.getString("city_name"))
+                            .put("id", doc.getObjectId("city_id").toString())
                     )
                     .put("state", new JSONObject()
                             .put("name", state.getString("name"))
@@ -647,22 +696,22 @@ public class UserController {
                     .put("kind", kind)
                     .put("address", doc.getOrDefault("address", ""));
 
-            if(grade.equals(GradeSchool.DABESTAN.getName()))
+            if (grade.equals(GradeSchool.DABESTAN.getName()))
                 gradeStr = "دبستان";
-            else if(grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
+            else if (grade.equals(GradeSchool.MOTEVASETEAVAL.getName()))
                 gradeStr = "متوسطه اول";
             else
                 gradeStr = "متوسطه دوم";
 
-            if(kind.equals(KindSchool.SAMPAD.getName()))
+            if (kind.equals(KindSchool.SAMPAD.getName()))
                 kindStr = "سمپاد";
-            else if(kind.equals(KindSchool.GHEYR.getName()))
+            else if (kind.equals(KindSchool.GHEYR.getName()))
                 kindStr = "غیرانتفاعی";
-            else if(kind.equals(KindSchool.DOLATI.getName()))
+            else if (kind.equals(KindSchool.DOLATI.getName()))
                 kindStr = "دولتی";
-            else if(kind.equals(KindSchool.HEYAT.getName()))
+            else if (kind.equals(KindSchool.HEYAT.getName()))
                 kindStr = "هیت امنایی";
-            else if(kind.equals(KindSchool.SHAHED.getName()))
+            else if (kind.equals(KindSchool.SHAHED.getName()))
                 kindStr = "شاهد";
             else
                 kindStr = "نمونه";
@@ -679,14 +728,14 @@ public class UserController {
     public static String updateInfo(JSONObject jsonObject, Document user) {
 
         String NID = jsonObject.getString("NID");
-        if(!Utility.validationNationalCode(NID))
+        if (!Utility.validationNationalCode(NID))
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
         String sex = jsonObject.getString("sex");
-        if(!EnumValidatorImp.isValid(sex, Sex.class))
+        if (!EnumValidatorImp.isValid(sex, Sex.class))
             return JSON_NOT_VALID_PARAMS;
 
-        if(userRepository.exist(and(
+        if (userRepository.exist(and(
                 eq("NID", NID),
                 ne("_id", user.getObjectId("_id"))
         )))
@@ -695,12 +744,12 @@ public class UserController {
         JSONArray branches = jsonObject.getJSONArray("branches");
         List<Document> branchesDoc = new ArrayList<>();
 
-        for(int i = 0; i < branches.length(); i++) {
-            if(!ObjectId.isValid(branches.getString(i)))
+        for (int i = 0; i < branches.length(); i++) {
+            if (!ObjectId.isValid(branches.getString(i)))
                 return JSON_NOT_VALID_PARAMS;
 
             Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
-            if(branch == null)
+            if (branch == null)
                 return JSON_NOT_VALID_PARAMS;
 
             branchesDoc.add(
@@ -713,21 +762,21 @@ public class UserController {
                 new ObjectId(jsonObject.getString("cityId"))
         );
 
-        if(city == null)
+        if (city == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document grade = gradeRepository.findById(
                 new ObjectId(jsonObject.getString("gradeId"))
         );
 
-        if(grade == null)
+        if (grade == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document school = schoolRepository.findById(
                 new ObjectId(jsonObject.getString("schoolId"))
         );
 
-        if(school == null)
+        if (school == null)
             return JSON_NOT_VALID_PARAMS;
 
         user.put("first_name", jsonObject.getString("firstName"));

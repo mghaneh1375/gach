@@ -10,6 +10,7 @@ import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -173,13 +174,16 @@ public class ContentAPIRoutes extends Router {
         return ContentController.editSubject(subjectId, new JSONObject(jsonStr));
     }
 
-    @DeleteMapping(value = "/deleteGrade/{gradeId}")
+    @DeleteMapping(value = "/deleteGrade")
     @ResponseBody
     public String deleteGrade(HttpServletRequest request,
-                              @PathVariable @ObjectIdConstraint ObjectId gradeId)
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {"items"},
+                                      paramsType = {JSONArray.class}
+                              ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.delete(gradeId);
+        return ContentController.delete(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
     @DeleteMapping(value = "/deleteLesson/{gradeId}/{lessonId}")
