@@ -268,8 +268,19 @@ public class UserController {
                 generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
         }
 
+        Document form = new Document("role", role);
+
         for (String key : keys)
-            user.put(key, jsonObject.get(key));
+            form.put(key, jsonObject.get(key));
+
+        List<Document> forms;
+        if(user.containsKey("form_list"))
+            forms = user.getList("form_list", Document.class);
+        else
+            forms = new ArrayList<>();
+
+        forms.add(form);
+        user.put("forms", forms);
 
         userRepository.replaceOne(
                 user.getObjectId("_id"),
@@ -279,7 +290,7 @@ public class UserController {
         long curr = System.currentTimeMillis();
 
         ArrayList<Document> chats = new ArrayList<>();
-        chats.add(new Document("msg", "برای مشاهده روی " + "<a href='https://google.com' target='_blank'>" + "لینک" + "</a>" + "کلیک کنید.")
+        chats.add(new Document("msg", "")
                 .append("created_at", curr)
                 .append("is_for_user", true)
                 .append("files", new ArrayList<>())

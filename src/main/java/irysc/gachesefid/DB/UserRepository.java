@@ -174,7 +174,7 @@ public class UserRepository extends Common {
             );
         }
 
-        return new JSONObject()
+        JSONObject jsonObject = new JSONObject()
                 .put("id", userId.toString())
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
@@ -198,12 +198,30 @@ public class UserRepository extends Common {
                         .put("name", state.getString("name"))
                 )
                 .put("branches", branchesJSON)
-                .put("nameEn", user.getOrDefault("name_en", ""))
                 .put("lastName", user.getString("last_name"))
-                .put("lastNameEn", user.getOrDefault("last_name_en", ""))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
+
+        if(user.containsKey("forms")) {
+
+            JSONArray formsJSON = new JSONArray();
+            List<Document> forms = user.getList("forms", Document.class);
+
+            for(Document form : forms) {
+                JSONObject jsonObject1 = new JSONObject();
+
+                for(String str : form.keySet())
+                    jsonObject1.put(str, form.get(str));
+
+                formsJSON.put(jsonObject1);
+            }
+
+            jsonObject.put("forms", formsJSON);
+        }
+
+
+        return jsonObject;
 
     }
 

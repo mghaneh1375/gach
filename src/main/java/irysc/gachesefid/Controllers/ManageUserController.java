@@ -39,35 +39,18 @@ public class ManageUserController {
                 .put("id", user.getObjectId("_id").toString())
                 .put("pic", user.containsKey("pic") ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("nameFa", user.getString("name_fa"))
-                .put("nameEn", user.getString("name_en"))
                 .put("lastNameFa", user.getString("last_name_fa"))
-                .put("lastNameEn", user.getString("last_name_en"))
                 .put("address", user.containsKey("address") && isAdmin ? user.getString("address") : "")
                 .put("preTel", user.containsKey("pre_tel") && isAdmin ? user.getString("pre_tel") : "")
                 .put("tel", user.containsKey("tel") && isAdmin ? user.getString("tel") : "")
-                .put("passportFile", user.containsKey("passport_file") ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("passport_file") : "")
                 .put("access", user.getList("accesses", String.class))
                 .put("city", user.containsKey("city") && isAdmin ? user.getString("city") : "")
-                .put("NIDOrPassport", (user.containsKey("NID")) ?
-                        user.getString("NID") : (user.containsKey("passport_no")) ?
-                        user.getString("passport_no") : "")
-                .put("NIDOrPassportType", (user.containsKey("NID")) ?
-                        "NID" : "passport")
+                .put("NID", user.getString("NID"))
                 .put("birthDay", user.containsKey("birth_day") ?
                         user.getString("birth_day") : "")
                 .put("sex", user.getString("sex"))
-                .put("postalCode", user.containsKey("postal_code") && isAdmin ?
-                        user.getString("postal_code") : "")
                 .put("mail", user.getString("mail"))
-                .put("username", user.getString("username"))
-                .put("birthCountry", user.containsKey("birth_country") && isAdmin ?
-                        user.getString("birth_country") : "")
-                .put("country", user.containsKey("country") && isAdmin ?
-                        user.getString("country") : "")
-                .put("title", user.containsKey("title") ?
-                        user.getString("title") : "")
-                .put("birthCity", user.containsKey("birth_city") && isAdmin ?
-                        user.getString("birth_city") : "");
+                ;
 
         return generateSuccessMsg("user", userJson);
     }

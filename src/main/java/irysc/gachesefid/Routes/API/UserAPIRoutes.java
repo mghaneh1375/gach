@@ -135,22 +135,9 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String fetchUser(HttpServletRequest request,
                             @PathVariable(required = false) String userId)
-            throws NotActivateAccountException, UnAuthException {
+            throws NotActivateAccountException, UnAuthException, InvalidFieldsException, NotCompleteAccountException {
 
-        Document user = getUserWithOutCheckCompleteness(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-
-        if(userId != null && !isAdmin)
-            return JSON_NOT_ACCESS;
-
-        if(userId != null && !ObjectId.isValid(userId))
-            return JSON_NOT_VALID_PARAMS;
-
-        if(userId != null)
-            user = userRepository.findById(new ObjectId(userId));
-
-        if(user == null)
-            return JSON_NOT_VALID_ID;
+        Document user = (Document) getUserWithAdminAccess(request, false, false, userId).get("user");
 
         return generateSuccessMsg("user",
                 UserController.isAuth(user)
