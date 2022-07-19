@@ -119,7 +119,20 @@ public class ContentAPIRoutes extends Router {
         return ContentController.addSubject(gradeId, lessonId, new JSONObject(json));
     }
 
-    @PostMapping(value = "/updateGrade/{gradeId}")
+    @PutMapping(value = "/updateBranch/{branchId}")
+    @ResponseBody
+    public String updateBranch(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId branchId,
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {"name"},
+                                      paramsType = {String.class}
+                              ) @NotBlank String jsonStr
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return ContentController.updateBranch(branchId, new JSONObject(jsonStr).getString("name"));
+    }
+
+    @PutMapping(value = "/updateGrade/{gradeId}")
     @ResponseBody
     public String updateGrade(HttpServletRequest request,
                               @PathVariable @ObjectIdConstraint ObjectId gradeId,
@@ -183,7 +196,7 @@ public class ContentAPIRoutes extends Router {
                               ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.delete(new JSONObject(jsonStr).getJSONArray("items"));
+        return ContentController.deleteGrade(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
     @DeleteMapping(value = "/deleteLesson/{gradeId}/{lessonId}")
@@ -205,6 +218,12 @@ public class ContentAPIRoutes extends Router {
         return ContentController.deleteSubject(subjectId);
     }
 
+    @GetMapping(value = "/gradesAndBranches")
+    @ResponseBody
+    public String gradesAndBranches() {
+        return ContentController.getGradesAndBranches();
+    }
+
     @GetMapping(value = "/grades")
     @ResponseBody
     public String grades() {
@@ -215,6 +234,12 @@ public class ContentAPIRoutes extends Router {
     @ResponseBody
     public String branches() {
         return ContentController.getGradesOrBranches(branchRepository);
+    }
+
+    @GetMapping(value = "/lessons")
+    @ResponseBody
+    public String lessons() {
+        return ContentController.getLessons();
     }
 
     @GetMapping(value = "/all")

@@ -230,9 +230,10 @@ public class UserAPIRoutes extends Router {
         return JSON_NOT_VALID;
     }
 
-    @PostMapping(value = "/updateInfo")
+    @PostMapping(value = {"/updateInfo", "/updateInfo/{userId}"})
     @ResponseBody
     public String updateInfo(HttpServletRequest request,
+                             @PathVariable(required = false) String userId,
                              @RequestBody @StrongJSONConstraint(
                                      params = {
                                              "sex", "cityId", "gradeId",
@@ -244,8 +245,8 @@ public class UserAPIRoutes extends Router {
                                              String.class, String.class,
                                              Positive.class, JSONArray.class, ObjectId.class}
                              ) String json
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUserWithOutCheckCompleteness(request);
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+        Document user = (Document) getUserWithAdminAccess(request, false, false, userId).get("user");
         JSONObject jsonObject = new JSONObject(json);
         convertPersian(jsonObject);
         return UserController.updateInfo(jsonObject, user);
@@ -463,13 +464,21 @@ public class UserAPIRoutes extends Router {
         return JSON_OK;
     }
 
-    @PostMapping(value = "/updateUsername")
+    @PostMapping(value = {"/updateUsername", "/updateUsername/{userId}"})
     @ResponseBody
     public String updateUsername(HttpServletRequest request,
+                                 @PathVariable(required = false) String userId,
                                  @RequestBody @JSONConstraint(params = {"mode", "username"})
                                  @NotBlank String json
-    ) throws UnAuthException, NotActivateAccountException {
-        getUserWithOutCheckCompleteness(request);
+
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+        Document doc = getUserWithAdminAccess(request, false, false, userId);
+
+        if(doc.getBoolean("isAdmin"))
+            return UserController.forceUpdateUsername(
+                    (Document)doc.get("user"), new JSONObject(json)
+            );
+
         return UserController.updateUsername(new JSONObject(json));
     }
 
@@ -514,9 +523,10 @@ public class UserAPIRoutes extends Router {
         return JSON_OK;
     }
 
-    @PostMapping(value = "/changePassword")
+    @PostMapping(value = {"/changePassword", "/changePassword/{userId}"})
     @ResponseBody
     public String changePassword(HttpServletRequest request,
+                                 @PathVariable(required = false) String userId,
                                  @RequestBody @StrongJSONConstraint(
                                          params = {
                                                  "oldPass", "newPass", "confirmNewPass"
@@ -524,9 +534,11 @@ public class UserAPIRoutes extends Router {
                                          paramsType = {
                                                  String.class, String.class, String.class
                                          }) String jsonStr
-    ) throws NotActivateAccountException, UnAuthException {
+    ) throws NotActivateAccountException, UnAuthException, NotCompleteAccountException, InvalidFieldsException {
 
-        Document user = getUserWithOutCheckCompleteness(request);
+        Document doc = getUserWithAdminAccess(request, false, false, userId);
+        Document user = (Document) doc.get("user");
+        boolean isAdmin = doc.getBoolean("isAdmin");
 
         try {
             JSONObject jsonObject = new JSONObject(jsonStr);
@@ -542,20 +554,27 @@ public class UserAPIRoutes extends Router {
                 return generateErr("رمزعبور جدید قوی نیست.");
 
             newPass = Utility.convertPersianDigits(newPass);
-            oldPassword = Utility.convertPersianDigits(oldPassword);
+            if(!isAdmin) {
+                oldPassword = Utility.convertPersianDigits(oldPassword);
 
-            if (!userService.isOldPassCorrect(oldPassword, user.getString("password")))
-                return Utility.generateErr("رمزعبور وارد شده صحیح نیست.");
+                if (!userService.isOldPassCorrect(oldPassword, user.getString("password")))
+                    return Utility.generateErr("رمزعبور وارد شده صحیح نیست.");
+            }
 
-            newPass = userService.getEncPass(user.getString("username"), newPass);
+            userService.deleteFromCache(user.getString("NID"));
 
+            if(user.containsKey("phone") && !user.getString("phone").isEmpty())
+                userService.deleteFromCache(user.getString("phone"));
+
+            if(user.containsKey("mail") && !user.getString("mail").isEmpty())
+                userService.deleteFromCache(user.getString("mail"));
+
+            newPass = userService.getEncPass(newPass);
             user.put("password", newPass);
+
             userRepository.updateOne(user.getObjectId("_id"), set("password", newPass));
-
-            userService.deleteFromCache(user.getString("phone"));
-            userService.deleteFromCache(user.getString("mail"));
-
             logout(request);
+
             return JSON_OK;
 
         } catch (Exception x) {
@@ -566,16 +585,18 @@ public class UserAPIRoutes extends Router {
     }
 
 
-    @PostMapping(value = "/setPic")
+    @PostMapping(value = {"/setPic", "/setPic/{userId}"})
     @ResponseBody
     public String setPic(HttpServletRequest request,
-                         @RequestBody MultipartFile file)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
+                         @RequestBody MultipartFile file,
+                         @PathVariable(required = false) String userId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getPrivilegeUser(request);
+        Document user = getUserWithAdminAccess(request, false, true, userId);
+
         if (UserController.setPic(file, user))
             return JSON_OK;
 
@@ -587,23 +608,11 @@ public class UserAPIRoutes extends Router {
     public String setAvatar(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId avatarId,
                             @PathVariable(required = false) String userId
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUserWithOutCheckCompleteness(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-
-        if(userId != null && !isAdmin)
-            return JSON_NOT_ACCESS;
-
-        if(userId != null && !ObjectId.isValid(userId))
-            return JSON_NOT_VALID_PARAMS;
-
-        if(userId != null)
-            user = userRepository.findById(new ObjectId(userId));
-
-        if(user == null)
-            return JSON_NOT_VALID_ID;
-
-        return UserController.setAvatar(user, avatarId);
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+        return UserController.setAvatar((
+                Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
+                avatarId
+        );
     }
 
 

@@ -160,6 +160,24 @@ public class ContentController {
         );
     }
 
+    public static String updateBranch(ObjectId branchId, String name) {
+
+        Document branch = branchRepository.findById(branchId);
+        if (branch == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if(branch.getString("name").equals(name))
+            return JSON_OK;
+
+        if (branchRepository.exist(eq("name", name)))
+            return generateErr("رشته ای با این نام در سیستم موجود است.");
+
+        branch.put("name", name);
+        branchRepository.updateOne(branchId, set("name", name));
+
+        return JSON_OK;
+    }
+
     public static String addGrade(String name) {
 
         if (gradeRepository.find(eq("name", name), new BasicDBObject("_id", 1)).size() > 0)
@@ -201,7 +219,7 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String delete(JSONArray ids) {
+    public static String deleteGrade(JSONArray ids) {
 
         JSONArray excepts = new JSONArray();
         JSONArray removeIds = new JSONArray();
@@ -217,14 +235,31 @@ public class ContentController {
 
             ObjectId gradeId = new ObjectId(id);
 
-            if (subjectRepository.exist(eq("grade._id", gradeId))) {
-                excepts.put(i + 1);
-                continue;
-            }
+            if(gradeRepository.findById(gradeId) != null) {
 
-            gradeRepository.deleteOne(gradeId);
-            gradeRepository.clearFromCache(gradeId);
-            removeIds.put(gradeId);
+                if (subjectRepository.exist(eq("grade._id", gradeId))) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                gradeRepository.deleteOne(gradeId);
+                gradeRepository.clearFromCache(gradeId);
+                removeIds.put(gradeId);
+            }
+            else if(branchRepository.findById(gradeId) != null) {
+
+                if (userRepository.exist(eq("branches._id", gradeId))) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                branchRepository.deleteOne(gradeId);
+                branchRepository.clearFromCache(gradeId);
+
+                removeIds.put(gradeId);
+            }
+            else
+                excepts.put(i + 1);
         }
 
         return Utility.returnRemoveResponse(excepts, removeIds);
@@ -486,6 +521,33 @@ public class ContentController {
         return generateSuccessMsg("grades", jsonArray);
     }
 
+    public static String getLessons() {
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+        JSONArray lessonsJSON = new JSONArray();
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+            JSONObject gradeJSON = new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            for (Document lesson : lessons) {
+
+                JSONObject lessonJSON = new JSONObject()
+                        .put("grade", gradeJSON)
+                        .put("name", lesson.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                        .put("description", lesson.getString("description"));
+
+                lessonsJSON.put(lessonJSON);
+            }
+        }
+
+        return generateSuccessMsg("data", lessonsJSON);
+    }
+
     public static String getSubjects(ObjectId gradeId, ObjectId lessonId) {
 
         ArrayList<Document> subjects = subjectRepository.find(
@@ -622,6 +684,34 @@ public class ContentController {
 //        return jsonArray;
 //    }
 //
+
+    public static String getGradesAndBranches() {
+
+        JSONArray jsonArray = new JSONArray();
+
+        ArrayList<Document> docs = gradeRepository.find(null, new BasicDBObject("_id", 1).append("name", 1));
+        for (Document doc : docs) {
+            jsonArray.put(
+                    new JSONObject()
+                            .put("id", doc.getObjectId("_id").toString())
+                            .put("name", doc.getString("name"))
+                            .put("isOlympiad", false)
+            );
+        }
+
+        docs = branchRepository.find(null, new BasicDBObject("_id", 1).append("name", 1));
+        for (Document doc : docs) {
+            jsonArray.put(
+                    new JSONObject()
+                            .put("id", doc.getObjectId("_id").toString())
+                            .put("name", doc.getString("name"))
+                            .put("isOlympiad", true)
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String getGradesOrBranches(Common db) {
 
         JSONArray jsonArray = new JSONArray();

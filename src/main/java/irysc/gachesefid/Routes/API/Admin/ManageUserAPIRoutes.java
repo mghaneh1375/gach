@@ -117,40 +117,6 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.fetchUserLike(nameEn, lastNameEn, nameFa, lastNameFa);
     }
 
-    @PostMapping(value = "/resetPassword/{userId}")
-    @ResponseBody
-    public String resetPassword(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId userId,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {"newPass", "rNewPass"},
-                                        paramsType = {String.class, String.class}
-                                ) String json
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUserVoid(request);
-
-        JSONObject jsonObject = new JSONObject(json);
-        Utility.convertPersian(jsonObject);
-
-        if (!jsonObject.getString("newPass").equals(jsonObject.getString("rNewPass")))
-            return generateErr("رمزجدید و تکرار آن یکسان نیستند.");
-
-        if (!Utility.isValidPassword(jsonObject.getString("newPass")))
-            return generateErr("رمزجدید انتخاب شده قوی نیست.");
-
-        Document user = userRepository.findById(userId);
-        if (user == null)
-            return JSON_NOT_VALID_ID;
-
-        userRepository.updateOne(userId,
-                set("password", userService.getEncPass(user.getString("username"),
-                        jsonObject.getString("newPass"))
-                )
-        );
-
-        return JSON_OK;
-    }
-
     @PutMapping(value = "/setAdvisorPercent/{userId}/{percent}")
     @ResponseBody
     public String resetPassword(HttpServletRequest request,
@@ -176,7 +142,7 @@ public class ManageUserAPIRoutes extends Router {
             if (user == null || Authorization.isAdmin(user.getList("accesses", String.class)))
                 return JSON_NOT_VALID_ID;
 
-            return userService.signIn(user.getString("username"), "1", false);
+            return userService.signIn(user.getString("NID"), "1", false);
 
         } catch (NotActivateAccountException x) {
             return generateErr("not active account");

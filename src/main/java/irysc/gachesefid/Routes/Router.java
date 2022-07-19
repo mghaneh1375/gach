@@ -1,17 +1,19 @@
 package irysc.gachesefid.Routes;
 
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Models.Access;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.http.HttpServletRequest;
+
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class Router {
 
@@ -218,5 +220,33 @@ public class Router {
         }
 
         throw new UnAuthException("Token is not valid");
+    }
+
+    protected Document getUserWithAdminAccess(HttpServletRequest request,
+                                              boolean checkCompleteness,
+                                              boolean isPrivilege,
+                                              String userId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+
+        Document user = checkCompleteness ? getUser(request) : getUserWithOutCheckCompleteness(request);
+
+        if(isPrivilege && Authorization.isPureStudent(user.getList("accesses", String.class)))
+            throw new InvalidFieldsException("Access denied");
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(userId != null && !isAdmin)
+            throw new InvalidFieldsException("no access");
+
+        if(userId != null && !ObjectId.isValid(userId))
+            throw new InvalidFieldsException("invalid objectId");
+
+        if(userId != null)
+            user = userRepository.findById(new ObjectId(userId));
+
+        if(user == null)
+            throw new InvalidFieldsException("invalid userId");
+
+        return new Document("user", user).append("isAdmin", isAdmin);
     }
 }

@@ -386,6 +386,37 @@ public class UserController {
         return sendSMSOrMail(NID, via);
     }
 
+    public static String forceUpdateUsername(Document user, JSONObject data) {
+
+        convertPersian(data);
+        String via = data.getString("mode");
+
+        if (!EnumValidatorImp.isValid(via, AuthVia.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        String username = data.getString("username").toLowerCase();
+
+        if (via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(username))
+            return generateErr("شماره همراه وارد شده معتبر نمی باشد.");
+
+        if (via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(username))
+            return generateErr("ایمیل وارد شده معتبر نمی باشد.");
+
+        Bson filter = via.equals(AuthVia.SMS.getName()) ?
+                eq("phone", username) : eq("mail", username);
+
+        if (userRepository.exist(filter))
+            return generateErr("ایمیل/شماره همراه وارد شده در سیستم موجود است.");
+
+        if(via.equals(AuthVia.SMS.getName()))
+            user.put("phone", username);
+        else
+            user.put("mail", username);
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+        return JSON_OK;
+    }
+
     public static String updateUsername(JSONObject data) {
 
         convertPersian(data);
