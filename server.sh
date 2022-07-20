@@ -1,1 +1,1 @@
-mvn spring-boot:run -X
+mvn spring-boot:run
