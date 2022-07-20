@@ -122,6 +122,7 @@ public class TicketController {
         JSONArray jsonArray = new JSONArray();
 
         for (Document request : docs) {
+
             try {
                 jsonArray.put(fillJSON(request, true,
                         true, false)

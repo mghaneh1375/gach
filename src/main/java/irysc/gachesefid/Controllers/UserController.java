@@ -31,17 +31,23 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class UserController {
 
-    private static String[] fieldsNeededForSchool = new String[]{
-            "a", "b", "c"
+    private static FormField[] fieldsNeededForSchool = new FormField[]{
+            new FormField(true, "tel", "تلفن مدرسه", null, true),
+            new FormField(true, "address", "آدرس مدرسه", null, false),
+            new FormField(true, "name", "نام مدرسه", null, false),
+            new FormField(false, "bio", "بیو", "اختیاری", false),
     };
-    private static String[] getFieldsNeededForSchool = new String[]{
-            "schoolName", "schoolPhone"
+
+    private static FormField[] fieldsNeededForAdvisor = new FormField[]{
+            new FormField(true, "workYear", "سابقه کار", null, true),
+            new FormField(true, "workSchools", "مدارس کارکرده", null, false),
+            new FormField(true, "universeField", "رشته تحصیلی", null, false),
+            new FormField(false, "bio", "بیو", "اختیاری", false),
     };
-    private static String[] getFieldsNeededForAdvisor = new String[]{
-            "workYear", "workSchools", "universeField",
-    };
-    private static String[] fieldsNeededForAgent = new String[]{
-            "stateName"
+
+    private static FormField[] fieldsNeededForAgent = new FormField[]{
+            new FormField(true, "state", "استان", null, false),
+            new FormField(false, "bio", "بیو", "اختیاری", false),
     };
 
     public static String whichKindOfAuthIsAvailable(String NID) {
@@ -244,6 +250,20 @@ public class UserController {
         return "دانش آموز";
     }
 
+    private static FormField[] getWantedList(String role) {
+
+        FormField[] wantedList = null;
+
+        if (role.equals(Access.ADVISOR.getName()))
+            wantedList = fieldsNeededForAdvisor;
+        else if (role.equals(Access.SCHOOL.getName()))
+            wantedList = fieldsNeededForSchool;
+        else
+            wantedList = fieldsNeededForAgent;
+
+        return wantedList;
+    }
+
     public static String setRole(Document user, JSONObject jsonObject) {
 
         String role = jsonObject.getString("role");
@@ -255,16 +275,12 @@ public class UserController {
             return generateErr("سطح دسترسی انتخاب شده معتبر نمی باشد.");
 
         Set<String> keys = jsonObject.keySet();
-        String[] wantedList;
-        if (role.equals(Access.ADVISOR.getName()))
-            wantedList = getFieldsNeededForAdvisor;
-        else if (role.equals(Access.SCHOOL.getName()))
-            wantedList = fieldsNeededForSchool;
-        else
-            wantedList = fieldsNeededForAgent;
+        FormField[] wantedList = getWantedList(role);
+        if(wantedList == null)
+            return JSON_NOT_VALID_PARAMS;
 
-        for (String key : wantedList) {
-            if (!keys.contains(key))
+        for (FormField field : wantedList) {
+            if (field.isMandatory && !keys.contains(field.key))
                 generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
         }
 
@@ -274,14 +290,21 @@ public class UserController {
             form.put(key, jsonObject.get(key));
 
         List<Document> forms;
-        if(user.containsKey("form_list"))
+        int idx = -1;
+
+        if(user.containsKey("form_list")) {
             forms = user.getList("form_list", Document.class);
+            idx = Utility.searchInDocumentsKeyValIdx(forms, "role", role);
+        }
         else
             forms = new ArrayList<>();
 
-        forms.add(form);
-        user.put("forms", forms);
+        if(idx == -1)
+            forms.add(form);
+        else
+            forms.set(idx, form);
 
+        user.put("forms", forms);
         userRepository.replaceOne(
                 user.getObjectId("_id"),
                 user
@@ -299,6 +322,7 @@ public class UserController {
         ticketRepository.insertOne(
                 new Document("title", "درخواست ارتقای سطح به " + translateRole(role))
                         .append("created_at", curr)
+                        .append("send_date", curr)
                         .append("is_for_teacher", false)
                         .append("chats", chats)
                         .append("status", "pending")
@@ -357,12 +381,140 @@ public class UserController {
         return doc.getString("password");
     }
 
+
+    public static JSONObject convertUser(Document user) {
+
+        ObjectId userId = user.getObjectId("_id");
+
+        Document city = !user.containsKey("city") ? null :
+                (Document) user.get("city");
+
+        ObjectId cityId = city != null ? city.getObjectId("_id") : null;
+
+        Document state = cityId != null ? stateRepository.findById(
+                cityRepository.findById(cityId).getObjectId("state_id")
+        ) : null;
+
+        List<Document> branches = user.containsKey("branches") ?
+                user.getList("branches", Document.class) :
+                new ArrayList<>();
+
+        JSONArray branchesJSON = new JSONArray();
+        for(Document branch : branches) {
+            branchesJSON.put(new JSONObject()
+                    .put("id", branch.getObjectId("_id").toString())
+                    .put("name", branch.getString("name"))
+            );
+        }
+
+        JSONObject jsonObject = new JSONObject()
+                .put("id", userId.toString())
+                .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
+                .put("firstName", user.getString("first_name"))
+                .put("NID", user.getString("NID"))
+                .put("grade", !user.containsKey("grade") ? ""  : new JSONObject().put("id",
+                                ((Document)user.get("grade")).getObjectId("_id").toString())
+                        .put("name",
+                                ((Document)user.get("grade")).getString("name"))
+                )
+                .put("school", !user.containsKey("school") ? "" : new JSONObject().put("id",
+                                ((Document)user.get("school")).getObjectId("_id").toString())
+                        .put("name",
+                                ((Document)user.get("school")).getString("name"))
+                )
+                .put("city", city == null ? "" : new JSONObject()
+                        .put("id", cityId.toString())
+                        .put("name", city.getString("name"))
+                )
+                .put("state", state == null ? "" : new JSONObject()
+                        .put("id", state.getObjectId("_id").toString())
+                        .put("name", state.getString("name"))
+                )
+                .put("branches", branchesJSON)
+                .put("lastName", user.getString("last_name"))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("sex", user.getOrDefault("sex", ""))
+                .put("phone", user.getOrDefault("phone", ""));
+
+        if(user.containsKey("forms")) {
+
+            JSONArray formsJSON = new JSONArray();
+            List<Document> forms = user.getList("forms", Document.class);
+
+            for(Document form : forms) {
+                JSONObject jsonObject1 = new JSONObject();
+                String role = form.getString("role");
+
+                FormField[] wantedList = getWantedList(role);
+                if(wantedList == null)
+                    continue;
+
+                jsonObject1.put("role", role)
+                        .put("roleFa", translateRole(role));
+
+                JSONArray data = new JSONArray();
+
+                for(FormField field : wantedList) {
+                    data.put(
+                            new JSONObject()
+                                    .put("key", field.key)
+                                    .put("value", form.getOrDefault(field.key, ""))
+                                    .put("help", field.help)
+                                    .put("title", field.title)
+                                    .put("isJustNum", field.isJustNum)
+                    );
+                }
+
+                jsonObject1.put("data", data);
+                formsJSON.put(jsonObject1);
+            }
+
+            jsonObject.put("forms", formsJSON);
+        }
+
+
+        return jsonObject;
+
+    }
+
+    private static void fillWithFormFields(FormField[] fields, JSONArray jsonArray, String role) {
+
+        JSONObject jsonObject1 = new JSONObject()
+                .put("role", role);
+
+        JSONArray data = new JSONArray();
+
+        for(FormField field : fields) {
+            data.put(
+                    new JSONObject()
+                            .put("key", field.key)
+                            .put("help", field.help)
+                            .put("isMandatory", field.isMandatory)
+                            .put("title", field.title)
+                            .put("isJustNum", field.isJustNum)
+            );
+        }
+
+        jsonObject1.put("data", data);
+        jsonArray.put(jsonObject1);
+    }
+
+    public static String getRoleForms() {
+
+        JSONArray formsJSON = new JSONArray();
+        fillWithFormFields(fieldsNeededForAdvisor, formsJSON, Access.ADVISOR.getName());
+        fillWithFormFields(fieldsNeededForAgent, formsJSON, Access.AGENT.getName());
+        fillWithFormFields(fieldsNeededForSchool, formsJSON, Access.SCHOOL.getName());
+
+        return generateSuccessMsg("data", formsJSON);
+    }
+
     public static JSONObject isAuth(Document user) {
 
         boolean isComplete = user.containsKey("NID") && user.containsKey("pic");
         JSONObject jsonObject = new JSONObject().put("isComplete", isComplete);
 
-        jsonObject.put("user", UserRepository.convertUser(user));
+        jsonObject.put("user", convertUser(user));
         if (user.containsKey("accesses"))
             return jsonObject.put("accesses", user.getList("accesses", String.class));
 

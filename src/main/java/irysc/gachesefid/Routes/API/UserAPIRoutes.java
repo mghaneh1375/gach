@@ -275,26 +275,33 @@ public class UserAPIRoutes extends Router {
         }
     }
 
-    @PostMapping(value = "/sendRoleForm")
+    @GetMapping(value = "/getRoleForms")
+    @ResponseBody
+    public String getRoleForms() {
+        return UserController.getRoleForms();
+    }
+
+    @PostMapping(value = {"/sendRoleForm", "/sendRoleForm/{userId}"})
     @ResponseBody
     public String sendRoleForm(HttpServletRequest request,
+                               @PathVariable(required = false) String userId,
                                @RequestBody @StrongJSONConstraint(
                                        params = {"role"},
                                        paramsType = {String.class},
                                        optionals = {
-                                               "schoolName", "schoolPhone", "stateName",
+                                               "name", "tel", "state",
                                                "workYear", "workSchools", "universeField",
-                                               "bio",
+                                               "bio", "address"
                                        },
                                        optionalsType = {
                                                String.class, String.class, String.class,
                                                Positive.class, String.class, String.class,
-                                               String.class,
+                                               String.class, String.class
                                        }
                                ) String json
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         return UserController.setRole(
-                getUserWithOutCheckCompleteness(request),
+                (Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
                 new JSONObject(json)
         );
     }

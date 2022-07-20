@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Ticket;
 import irysc.gachesefid.DB.TicketRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -21,11 +22,10 @@ import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 public class Utilities {
 
-    static JSONArray createChatJSONArr(List<Document> chats, boolean startByAdmin) {
+    static JSONArray createChatJSONArr(List<Document> chats, boolean shouldSkip) {
 
         HashMap<ObjectId, Document> fetchedResponders = new HashMap<>();
         JSONArray chatsJSONArr = new JSONArray();
-        boolean shouldSkip = startByAdmin;
 
         for (Document chat : chats) {
 
@@ -104,15 +104,19 @@ public class Utilities {
 
     static String getSectionFa(String section) {
 
-        switch (section.toLowerCase()) {
-            case "quiz":
-                return "آزمون";
-            case "level":
-                return "ارتقا سطح";
-            case "alaki":
-            default:
-                return "الکی";
-        }
+        if(section.equalsIgnoreCase(TicketSection.QUIZ.getName()))
+            return "آزمون";
+
+        if(section.equalsIgnoreCase(TicketSection.CLASS.getName()))
+            return "کلاس";
+
+        if(section.equalsIgnoreCase(TicketSection.UPGRADELEVEL.getName()))
+            return "ارتقای سطح";
+
+        if(section.equalsIgnoreCase(TicketSection.REQUESTMOENY.getName()))
+            return "تسویه مالی";
+
+        return "آزمون";
     }
 
     static void fillConstraintArr(boolean needInit,
@@ -228,7 +232,12 @@ public class Utilities {
         result.put("sectionFa", getSectionFa(request.getString("section")));
 
         if(isChatNeeded)
-            result.put("chats", createChatJSONArr(chats, request.containsKey("start_by_admin")));
+            result.put("chats", createChatJSONArr(chats,
+                    request.containsKey("start_by_admin") ||
+                            request.getString("section").equalsIgnoreCase(
+                                    TicketSection.UPGRADELEVEL.getName())
+                    )
+            );
 
         result.put("id", request.getObjectId("_id").toString());
 

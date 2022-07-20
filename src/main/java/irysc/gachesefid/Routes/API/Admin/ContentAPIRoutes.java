@@ -145,7 +145,7 @@ public class ContentAPIRoutes extends Router {
         return ContentController.updateGrade(gradeId, new JSONObject(jsonStr).getString("name"));
     }
 
-    @PostMapping(value = "/updateLesson/{gradeId}/{lessonId}")
+    @PutMapping(value = "/updateLesson/{gradeId}/{lessonId}")
     @ResponseBody
     public String updateLesson(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId gradeId,
@@ -153,9 +153,9 @@ public class ContentAPIRoutes extends Router {
                                @RequestBody @StrongJSONConstraint(
                                        params = {},
                                        paramsType = {},
-                                       optionals = {"name", "description"},
+                                       optionals = {"name", "description", "gradeId"},
                                        optionalsType = {
-                                               String.class, String.class
+                                               String.class, String.class, ObjectId.class
                                        }
                                ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
