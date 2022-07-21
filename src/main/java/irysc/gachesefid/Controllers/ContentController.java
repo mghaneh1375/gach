@@ -305,13 +305,34 @@ public class ContentController {
             return JSON_NOT_VALID_ID;
 
         boolean nameChange = false;
+        Document newGrade = null;
+
+        if(jsonObject.has("gradeId") &&
+                !jsonObject.getString("gradeId").equals(gradeId.toString())
+        ) {
+
+            newGrade = gradeRepository.findById(new ObjectId(jsonObject.getString("gradeId")));
+            if(newGrade == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
+
+        List<Document> lessonsInNewGrade = newGrade != null ?
+                newGrade.getList("lessons", Document.class) : null;
 
         if (jsonObject.has("name") &&
-                !lesson.getString("name").equals(jsonObject.getString("name"))) {
+                !lesson.getString("name").equals(
+                        jsonObject.getString("name"))
+        ) {
 
             nameChange = true;
 
-            if (Utility.searchInDocumentsKeyValIdx(lessons, "name", jsonObject.getString("name")) != -1)
+            if (newGrade == null &&
+                    Utility.searchInDocumentsKeyValIdx(lessons, "name", jsonObject.getString("name")) != -1
+            )
+                return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
+            else if(lessonsInNewGrade != null &&
+                    Utility.searchInDocumentsKeyValIdx(lessonsInNewGrade, "name", jsonObject.getString("name")) != -1
+            )
                 return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
 
             lesson.put("name", jsonObject.getString("name"));
@@ -320,23 +341,41 @@ public class ContentController {
         if(jsonObject.has("description"))
             lesson.put("description", jsonObject.getString("description"));
 
+        if(lessonsInNewGrade!= null) {
+            lessonsInNewGrade.add(Document.parse(lesson.toJson()));
+            lessons.remove(lesson);
+            newGrade.put("lessons", lessonsInNewGrade);
+        }
+
         grade.put("lessons", lessons);
 
-        boolean finalNameChange = nameChange;
+        boolean needClearCache = nameChange || newGrade != null;
 
-        new Thread(() -> {
 
-            gradeRepository.updateOne(gradeId, set("lessons", lessons));
+        gradeRepository.updateOne(gradeId, set("lessons", lessons));
+        if(newGrade != null)
+            gradeRepository.updateOne(newGrade.getObjectId("_id"), set("lessons", lessonsInNewGrade));
 
-            if (finalNameChange) {
+        if (needClearCache) {
+
+            if(newGrade == null)
                 subjectRepository.updateMany(and(
                         eq("grade._id", gradeId),
                         eq("lesson._id", lessonId)
                 ), set("lesson.name", jsonObject.getString("name")));
+            else
+                subjectRepository.updateMany(and(
+                        eq("grade._id", gradeId),
+                        eq("lesson._id", lessonId)
+                ), new BasicDBObject("$set",
+                        new BasicDBObject("lesson.name", jsonObject.getString("name"))
+                                .append("grade._id", newGrade.getObjectId("_id"))
+                                .append("grade.name", newGrade.getString("name"))
+                        )
+                );
 
-                subjectRepository.clearFormCacheByLessonId(lessonId);
-            }
-        }).start();
+            subjectRepository.clearFormCacheByLessonId(lessonId);
+        }
 
         return JSON_OK;
     }

@@ -14,7 +14,6 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
-import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
@@ -30,8 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 
@@ -481,6 +479,85 @@ public class QuizAPIRoutes extends Router {
             return QuizController.fetchQuestions(iryscQuizRepository, null, quizId);
 
         return QuizController.fetchQuestions(schoolQuizRepository, user.getObjectId("_id"), quizId);
+    }
+
+    @PostMapping(value = "/createPackage")
+    @ResponseBody
+    public String createPackage(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"minSelect", "offPercent", "title"},
+                                        paramsType = {Positive.class, Positive.class, String.class},
+                                        optionals = {"description"},
+                                        optionalsType = {String.class}
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.createPackage(new JSONObject(jsonStr));
+    }
+
+    @PutMapping(value = "/updatePackage/{packageId}")
+    @ResponseBody
+    public String updatePackage(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId packageId,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {},
+                                        paramsType = {},
+                                        optionals = {"description", "minSelect", "offPercent", "title"},
+                                        optionalsType = {String.class, Positive.class, Positive.class, String.class}
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.editPackage(packageId, new JSONObject(jsonStr));
+    }
+
+    @PutMapping(value = "/addQuizToPackage/{packageId}/{quizId}")
+    @ResponseBody
+    public String addQuizToPackage(HttpServletRequest request,
+                                   @PathVariable @ObjectIdConstraint ObjectId packageId,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.addQuizToPackage(packageId, quizId);
+    }
+
+    @DeleteMapping(value = "/removeQuizFromPackage/{packageId}/{quizId}")
+    @ResponseBody
+    public String removeQuizFromPackage(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId packageId,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.removeQuizFromPackage(packageId, quizId);
+    }
+
+    @DeleteMapping(value = "/removePackages")
+    @ResponseBody
+    public String removePackages(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {"items"},
+                                         paramsType = {JSONArray.class}
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return CommonController.removeAll(packageRepository,
+                new JSONObject(jsonStr).getJSONArray("items"),
+                null
+        );
+    }
+
+    @GetMapping(value = "/getPackages")
+    @ResponseBody
+    public String getPackages(HttpServletRequest request
+    ) {
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+        return QuizController.getPackages(isAdmin);
+    }
+
+    @GetMapping(value = "/getPackage/{packageId}")
+    @ResponseBody
+    public String getPackage(@PathVariable @ObjectIdConstraint ObjectId packageId) {
+        return QuizController.getPackage(packageId);
     }
 }
 

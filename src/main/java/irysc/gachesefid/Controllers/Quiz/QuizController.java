@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.gt;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -67,6 +68,165 @@ public class QuizController {
 
         return new PairValue(quiz, idx);
     }
+
+    public static String createPackage(JSONObject jsonObject) {
+
+        Document newDoc = new Document("title", jsonObject.getString("title"))
+                .append("off_percent", jsonObject.getInt("offPercent"))
+                .append("min_select", jsonObject.getInt("minSelect"))
+                .append("description", jsonObject.has("description") ? jsonObject.getString("description") : "")
+                .append("quizzes", new ArrayList<>())
+                .append("expire_at", System.currentTimeMillis());
+
+        return packageRepository.insertOneWithReturn(newDoc);
+    }
+
+    public static String editPackage(ObjectId packageId, JSONObject jsonObject) {
+
+        Document packageDoc = packageRepository.findById(packageId);
+        if (packageDoc == null)
+            return JSON_NOT_VALID_ID;
+
+        if (jsonObject.has("title"))
+            packageDoc.put("title", jsonObject.getString("title"));
+
+        if (jsonObject.has("offPercent"))
+            packageDoc.put("off_percent", jsonObject.getInt("offPercent"));
+
+        if (jsonObject.has("minSelect"))
+            packageDoc.put("min_select", jsonObject.getInt("minSelect"));
+
+        if(jsonObject.has("description"))
+            packageDoc.put("description", jsonObject.getString("description"));
+
+        packageRepository.replaceOne(packageId, packageDoc);
+        return JSON_OK;
+    }
+
+    public static String addQuizToPackage(ObjectId packageId, ObjectId quizId) {
+
+        Document packageDoc = packageRepository.findById(packageId);
+        if (packageDoc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        long endRegistry = quiz.containsKey("end_registry") ?
+                quiz.getLong("end_registry") : quiz.getLong("end");
+
+        if (endRegistry < System.currentTimeMillis())
+            return generateErr("زمان ثبت نام آزمون موردنظر به اتمام رسیده است.");
+
+        List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+        if (quizzes.contains(quizId))
+            return JSON_OK;
+
+        if (endRegistry > packageDoc.getLong("expire_at"))
+            packageDoc.put("expire_at", endRegistry);
+
+        quizzes.add(quizId);
+        packageDoc.put("quizzes", quizzes);
+
+        packageRepository.replaceOne(packageId, packageDoc);
+        return JSON_OK;
+    }
+
+    public static String removeQuizFromPackage(ObjectId packageId, ObjectId quizId) {
+
+        Document packageDoc = packageRepository.findById(packageId);
+        if (packageDoc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+        if (!quizzes.contains(quizId))
+            return JSON_NOT_VALID_ID;
+
+        long max = 13000000;
+
+        for (ObjectId qId : quizzes) {
+
+            if (qId.equals(quizId))
+                continue;
+
+            Document q = iryscQuizRepository.findById(qId);
+
+            long e = q.containsKey("end_registry") ?
+                    q.getLong("end_registry") :
+                    q.getLong("end");
+
+            if (e > max)
+                max = e;
+        }
+
+        packageDoc.put("expire_at", max);
+        quizzes.remove(quizId);
+        packageDoc.put("quizzes", quizzes);
+
+        packageRepository.replaceOne(packageId, packageDoc);
+        return JSON_OK;
+    }
+
+    public static String getPackages(boolean isAdmin) {
+
+        ArrayList<Document> packages = packageRepository.find(
+                isAdmin ? null : gt("expire_at", System.currentTimeMillis()),
+                null);
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document packageDoc : packages) {
+            jsonArray.put(new JSONObject()
+                    .put("id", packageDoc.getObjectId("_id").toString())
+                    .put("title", packageDoc.getString("title"))
+                    .put("quizzes", packageDoc.getList("quizzes", ObjectId.class).size())
+                    .put("offPercent", packageDoc.getInteger("off_percent"))
+                    .put("minSelect", packageDoc.getInteger("min_select"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String getPackage(ObjectId packageId) {
+
+        Document packageDoc = packageRepository.findById(packageId);
+        if(packageDoc == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray jsonArray = new JSONArray();
+        for(ObjectId quizId : packageDoc.getList("quizzes", ObjectId.class)) {
+
+            Document quiz = iryscQuizRepository.findById(quizId);
+
+            if(quiz == null)
+                continue;
+
+            QuizAbstract quizAbstract;
+
+            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+                quizAbstract = new RegularQuizController();
+            else
+                quizAbstract = new TashrihiQuizController();
+
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true));
+        }
+
+        JSONObject jsonObject = new JSONObject()
+                .put("id", packageDoc.getObjectId("_id").toString())
+                .put("title", packageDoc.getString("title"))
+                .put("offPercent", packageDoc.getInteger("off_percent"))
+                .put("minSelect", packageDoc.getInteger("min_select"))
+                .put("quizzes", jsonArray);
+
+        return generateSuccessMsg("data", jsonObject);
+    }
+
 
     public static Document store(ObjectId userId, JSONObject data
     ) throws InvalidFieldsException {
@@ -193,11 +353,11 @@ public class QuizController {
             JSONArray excepts = new JSONArray();
             JSONArray addedItems = new JSONArray();
 
-            for(int i = 0; i < jsonArray.length(); i++) {
+            for (int i = 0; i < jsonArray.length(); i++) {
 
                 String NID = jsonArray.getString(i);
 
-                if(!irysc.gachesefid.Utility.Utility.validationNationalCode(NID)) {
+                if (!irysc.gachesefid.Utility.Utility.validationNationalCode(NID)) {
                     excepts.put(i + 1);
                     continue;
                 }
@@ -217,7 +377,7 @@ public class QuizController {
                 }
 
                 Document stdDoc = quizAbstract.registry(student, quiz, paid);
-                if(stdDoc != null)
+                if (stdDoc != null)
                     addedItems.put(convertStudentDocToJSON(stdDoc, student,
                             null, null, null, null)
                     );
@@ -255,7 +415,7 @@ public class QuizController {
             for (int i = 0; i < jsonArray.length(); i++) {
 
                 String id = jsonArray.getString(i);
-                if(!ObjectId.isValid(id)) {
+                if (!ObjectId.isValid(id)) {
                     excepts.put(i + 1);
                     continue;
                 }
@@ -341,11 +501,11 @@ public class QuizController {
         JSONArray excepts = new JSONArray();
         JSONArray removedIds = new JSONArray();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -456,8 +616,8 @@ public class QuizController {
                     continue;
 
                 jsonArray.put(convertStudentDocToJSON(student, user,
-                                isResultsNeeded, isStudentAnswersNeeded,
-                                quiz.getList("questions", Document.class),
+                        isResultsNeeded, isStudentAnswersNeeded,
+                        quiz.getList("questions", Document.class),
                         db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
                 ));
             }
@@ -849,7 +1009,7 @@ public class QuizController {
 
                     addedItems.put(
                             QuestionController.convertDocToJSON(question)
-                            .put("mark", mark)
+                                    .put("mark", mark)
                     );
 
                 } catch (Exception x) {

@@ -39,10 +39,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static public int MAX_ALLOWED_THREAD = 300;
     public static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(30);
-    final static private String username = "root";
-    final static private String password = "Ghhy@110";
-//    final static private String username = "test";
-//    final static private String password = "123456";
+//    final static private String username = "root";
+//    final static private String password = "Ghhy@110";
+    final static private String username = "test";
+    final static private String password = "123456";
 
     final static private String dbName = "gach"; // mydb
 
@@ -64,6 +64,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ConfigRepository configRepository;
     public static GradeRepository gradeRepository;
     public static OffcodeRepository offcodeRepository;
+    public static PackageRepository packageRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
     public static RequestRepository requestRepository;
@@ -106,6 +107,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             gradeRepository = new GradeRepository();
             mailRepository = new MailRepository();
             offcodeRepository = new OffcodeRepository();
+            packageRepository = new PackageRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();
             requestRepository = new RequestRepository();
