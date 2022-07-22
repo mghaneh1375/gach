@@ -33,7 +33,7 @@ public class ContentController {
         ArrayList<Row> rows = Excel.read(filename);
         FileUtils.removeTempFile(filename);
 
-        if(rows == null)
+        if (rows == null)
             return generateErr("File is not valid");
 
         HashMap<String, Document> grades = new HashMap<>();
@@ -43,7 +43,7 @@ public class ContentController {
 
         long curr = System.currentTimeMillis();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
             grades.put(doc.getString("name"), doc);
             isNew.put(doc.getString("name"), false);
         }
@@ -51,7 +51,7 @@ public class ContentController {
         rows.remove(0);
         boolean needUpdate = false;
 
-        for(Row row : rows) {
+        for (Row row : rows) {
 
             try {
 
@@ -62,7 +62,7 @@ public class ContentController {
                 ObjectId gradeId;
                 List<Document> lessons;
 
-                if(!grades.containsKey(grade)) {
+                if (!grades.containsKey(grade)) {
                     lessons = new ArrayList<>();
                     ObjectId newId = new ObjectId();
 
@@ -75,8 +75,7 @@ public class ContentController {
                     grades.put(grade, newDoc);
                     gradeId = newId;
                     needUpdate = true;
-                }
-                else {
+                } else {
                     gradeId = grades.get(grade).getObjectId("_id");
                     lessons = grades.get(grade).getList("lessons", Document.class);
                 }
@@ -84,7 +83,7 @@ public class ContentController {
                 String lesson = row.getCell(2).getStringCellValue();
                 Document lessonDoc = searchInDocumentsKeyVal(lessons, "name", lesson);
 
-                if(lessonDoc == null) {
+                if (lessonDoc == null) {
 
                     ObjectId newLessonId = new ObjectId();
                     lessonDoc = new Document("name", lesson)
@@ -114,11 +113,11 @@ public class ContentController {
                                 !row.getCell(5).getStringCellValue().isEmpty() ?
                                 row.getCell(5).getStringCellValue() : "")
                         .append("easy_price", row.getCell(6) != null ?
-                                (int)(row.getCell(6).getNumericCellValue()) : 0)
+                                (int) (row.getCell(6).getNumericCellValue()) : 0)
                         .append("mid_price", row.getCell(7) != null ?
-                                (int)(row.getCell(7).getNumericCellValue()) : 0)
+                                (int) (row.getCell(7).getNumericCellValue()) : 0)
                         .append("hard_price", row.getCell(8) != null ?
-                                (int)(row.getCell(8).getNumericCellValue()) : 0);
+                                (int) (row.getCell(8).getNumericCellValue()) : 0);
 
                 subjectRepository.updateOne(
                         and(
@@ -131,16 +130,15 @@ public class ContentController {
                 );
 
             } catch (Exception ignore) {
-                System.out.println(ignore.getMessage());
                 ignore.printStackTrace();
             }
         }
 
-        if(!needUpdate)
+        if (!needUpdate)
             return JSON_OK;
 
-        for(String key : isNew.keySet()) {
-            if(isNew.get(key))
+        for (String key : isNew.keySet()) {
+            if (isNew.get(key))
                 gradeRepository.insertOne(grades.get(key));
             else
                 gradeRepository.replaceOne(grades.get(key).getObjectId("_id"), grades.get(key));
@@ -156,7 +154,7 @@ public class ContentController {
 
         return branchRepository.insertOneWithReturn(
                 new Document("name", name)
-                .append("created_at", System.currentTimeMillis())
+                        .append("created_at", System.currentTimeMillis())
         );
     }
 
@@ -166,7 +164,7 @@ public class ContentController {
         if (branch == null)
             return JSON_NOT_VALID_PARAMS;
 
-        if(branch.getString("name").equals(name))
+        if (branch.getString("name").equals(name))
             return JSON_OK;
 
         if (branchRepository.exist(eq("name", name)))
@@ -195,7 +193,7 @@ public class ContentController {
         if (grade == null)
             return JSON_NOT_VALID_PARAMS;
 
-        if(grade.getString("name").equals(name))
+        if (grade.getString("name").equals(name))
             return JSON_OK;
 
         if (gradeRepository.exist(eq("name", name)))
@@ -224,18 +222,18 @@ public class ContentController {
         JSONArray excepts = new JSONArray();
         JSONArray removeIds = new JSONArray();
 
-        for(int i = 0; i < ids.length(); i++) {
+        for (int i = 0; i < ids.length(); i++) {
 
             String id = ids.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
 
             ObjectId gradeId = new ObjectId(id);
 
-            if(gradeRepository.findById(gradeId) != null) {
+            if (gradeRepository.findById(gradeId) != null) {
 
                 if (subjectRepository.exist(eq("grade._id", gradeId))) {
                     excepts.put(i + 1);
@@ -245,8 +243,7 @@ public class ContentController {
                 gradeRepository.deleteOne(gradeId);
                 gradeRepository.clearFromCache(gradeId);
                 removeIds.put(gradeId);
-            }
-            else if(branchRepository.findById(gradeId) != null) {
+            } else if (branchRepository.findById(gradeId) != null) {
 
                 if (userRepository.exist(eq("branches._id", gradeId))) {
                     excepts.put(i + 1);
@@ -257,8 +254,7 @@ public class ContentController {
                 branchRepository.clearFromCache(gradeId);
 
                 removeIds.put(gradeId);
-            }
-            else
+            } else
                 excepts.put(i + 1);
         }
 
@@ -307,12 +303,12 @@ public class ContentController {
         boolean nameChange = false;
         Document newGrade = null;
 
-        if(jsonObject.has("gradeId") &&
+        if (jsonObject.has("gradeId") &&
                 !jsonObject.getString("gradeId").equals(gradeId.toString())
         ) {
 
             newGrade = gradeRepository.findById(new ObjectId(jsonObject.getString("gradeId")));
-            if(newGrade == null)
+            if (newGrade == null)
                 return JSON_NOT_VALID_PARAMS;
         }
 
@@ -330,7 +326,7 @@ public class ContentController {
                     Utility.searchInDocumentsKeyValIdx(lessons, "name", jsonObject.getString("name")) != -1
             )
                 return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
-            else if(lessonsInNewGrade != null &&
+            else if (lessonsInNewGrade != null &&
                     Utility.searchInDocumentsKeyValIdx(lessonsInNewGrade, "name", jsonObject.getString("name")) != -1
             )
                 return generateErr("درس موردنظر در مقطع موردنظر موجود است.");
@@ -338,10 +334,10 @@ public class ContentController {
             lesson.put("name", jsonObject.getString("name"));
         }
 
-        if(jsonObject.has("description"))
+        if (jsonObject.has("description"))
             lesson.put("description", jsonObject.getString("description"));
 
-        if(lessonsInNewGrade!= null) {
+        if (lessonsInNewGrade != null) {
             lessonsInNewGrade.add(Document.parse(lesson.toJson()));
             lessons.remove(lesson);
             newGrade.put("lessons", lessonsInNewGrade);
@@ -353,12 +349,12 @@ public class ContentController {
 
 
         gradeRepository.updateOne(gradeId, set("lessons", lessons));
-        if(newGrade != null)
+        if (newGrade != null)
             gradeRepository.updateOne(newGrade.getObjectId("_id"), set("lessons", lessonsInNewGrade));
 
         if (needClearCache) {
 
-            if(newGrade == null)
+            if (newGrade == null)
                 subjectRepository.updateMany(and(
                         eq("grade._id", gradeId),
                         eq("lesson._id", lessonId)
@@ -367,10 +363,10 @@ public class ContentController {
                 subjectRepository.updateMany(and(
                         eq("grade._id", gradeId),
                         eq("lesson._id", lessonId)
-                ), new BasicDBObject("$set",
-                        new BasicDBObject("lesson.name", jsonObject.getString("name"))
-                                .append("grade._id", newGrade.getObjectId("_id"))
-                                .append("grade.name", newGrade.getString("name"))
+                        ), new BasicDBObject("$set",
+                                new BasicDBObject("lesson.name", jsonObject.getString("name"))
+                                        .append("grade._id", newGrade.getObjectId("_id"))
+                                        .append("grade.name", newGrade.getString("name"))
                         )
                 );
 
@@ -380,29 +376,52 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String deleteLesson(ObjectId gradeId, ObjectId lessonId) {
+    public static String deleteLessons(JSONArray ids) {
 
-        if (subjectRepository.exist(eq("lesson._id", lessonId)))
-            return generateErr("درس مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
 
-        Document grade = gradeRepository.findById(gradeId);
-        if (grade == null)
-            return JSON_NOT_VALID_ID;
+        for (int i = 0; i < ids.length(); i++) {
 
-        List<Document> lessons = grade.getList("lessons", Document.class);
-        int idx = Utility.searchInDocumentsKeyValIdx(lessons, "_id", lessonId);
+            String id = ids.getString(i);
+            if (!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
 
-        if (idx == -1)
-            return JSON_NOT_VALID_ID;
+            ObjectId lessonId = new ObjectId(id);
+            if (subjectRepository.exist(eq("lesson._id", lessonId))) {
+                excepts.put(i + 1);
+                continue;
+            }
+//                return generateErr("درس مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
 
-        lessons.remove(idx);
+            Document grade = gradeRepository.findOne(eq("lessons._id", lessonId), null);
+            if (grade == null) {
+                excepts.put(i + 1);
+                continue;
+            }
 
-        gradeRepository.updateOne(
-                gradeId,
-                set("lessons", lessons)
-        );
+            ObjectId gradeId = grade.getObjectId("_id");
+            grade = gradeRepository.findById(gradeId);
 
-        return JSON_OK;
+            List<Document> lessons = grade.getList("lessons", Document.class);
+            int idx = Utility.searchInDocumentsKeyValIdx(lessons, "_id", lessonId);
+
+            if (idx == -1) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            lessons.remove(idx);
+            gradeRepository.updateOne(
+                    gradeId,
+                    set("lessons", lessons)
+            );
+            doneIds.put(id);
+        }
+
+        return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
     public static String addSubject(ObjectId gradeId, ObjectId lessonId, JSONObject subject) {
@@ -418,22 +437,22 @@ public class ContentController {
 
         if (subjectRepository.exist(
                 and(
-                    eq("grade._id", gradeId),
-                    eq("lesson._id", lessonId),
-                    eq("name", subject.getString("name"))
+                        eq("grade._id", gradeId),
+                        eq("lesson._id", lessonId),
+                        eq("name", subject.getString("name"))
                 )
         ))
             return generateErr("مبحث موردنظر در درس موردنظر موجود است.");
 
         return subjectRepository.insertOneWithReturn(
                 new Document("name", subject.getString("name"))
-                .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
-                .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
-                .append("easy_price", subject.getInt("easyPrice"))
-                .append("mid_price", subject.getInt("midPrice"))
-                .append("hard_price", subject.getInt("hardPrice"))
-                .append("description", subject.has("description") ? subject.getString("description") : "")
-                .append("created_at", System.currentTimeMillis())
+                        .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
+                        .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
+                        .append("easy_price", subject.getInt("easyPrice"))
+                        .append("mid_price", subject.getInt("midPrice"))
+                        .append("hard_price", subject.getInt("hardPrice"))
+                        .append("description", subject.has("description") ? subject.getString("description") : "")
+                        .append("created_at", System.currentTimeMillis())
         );
     }
 
@@ -512,52 +531,66 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String deleteSubject(ObjectId subjectId) {
+    public static String deleteSubjects(JSONArray ids) {
 
-        if (questionRepository.exist(eq("subject_id", subjectId)))
-            return generateErr("مبحث مورد نظر در یک/چند سوال به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
 
-        subjectRepository.deleteOne(subjectId);
-        subjectRepository.clearFromCache(subjectId);
+        for(int i = 0; i < ids.length(); i++) {
 
-        return JSON_OK;
+            String id = ids.getString(i);
+
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId subjectId = new ObjectId(id);
+
+            if (questionRepository.exist(eq("subject_id", subjectId))) {
+                excepts.put(i + 1);
+                continue;
+            }
+//                return generateErr("مبحث مورد نظر در یک/چند سوال به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
+
+            subjectRepository.deleteOne(subjectId);
+            subjectRepository.clearFromCache(subjectId);
+            doneIds.put(id);
+        }
+
+        return returnRemoveResponse(excepts, doneIds);
     }
 
-    public static String all() {
+    public static String all(ObjectId lessonId, ObjectId gradeId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if (lessonId != null)
+            filters.add(eq("lesson._id", lessonId));
+
+        if (gradeId != null)
+            filters.add(eq("grade._id", gradeId));
+
+        ArrayList<Document> docs = gradeRepository.find(
+                filters.size() == 0 ? null : and(filters), null
+        );
 
         JSONArray jsonArray = new JSONArray();
-        ArrayList<Document> docs = gradeRepository.find(null, null);
 
         for (Document doc : docs) {
 
             List<Document> lessons = doc.getList("lessons", Document.class);
-            JSONObject jsonObject = new JSONObject()
-                    .put("name", doc.getString("name"))
-                    .put("id", doc.getObjectId("_id").toString());
-
-            JSONArray lessonsJSON = new JSONArray();
 
             for (Document lesson : lessons) {
-
-                JSONObject lessonJSON = new JSONObject()
-                        .put("name", lesson.getString("name"))
-                        .put("id", lesson.getObjectId("_id").toString())
-                        .put("description", lesson.getString("description"));
-
-                JSONObject subjects = new JSONObject(getSubjects(
+                getSubjects(
+                        jsonArray,
                         doc.getObjectId("_id"),
-                        lesson.getObjectId("_id"))
+                        lesson.getObjectId("_id")
                 );
-
-                lessonJSON.put("subjects", subjects.getJSONArray("subjects"));
-                lessonsJSON.put(lessonJSON);
             }
-
-            jsonObject.put("lessons", lessonsJSON);
-            jsonArray.put(jsonObject);
         }
 
-        return generateSuccessMsg("grades", jsonArray);
+        return generateSuccessMsg("data", jsonArray);
     }
 
     public static String getLessons() {
@@ -587,7 +620,37 @@ public class ContentController {
         return generateSuccessMsg("data", lessonsJSON);
     }
 
-    public static String getSubjects(ObjectId gradeId, ObjectId lessonId) {
+    public static String gradeLessons() {
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            JSONArray lessonsJSON = new JSONArray();
+            JSONObject gradeJSON = new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            for (Document lesson : lessons) {
+                lessonsJSON.put(new JSONObject()
+                        .put("name", lesson.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                );
+            }
+
+            gradeJSON.put("lessons", lessonsJSON);
+            jsonArray.put(gradeJSON);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static void getSubjects(JSONArray jsonArray,
+                                        ObjectId gradeId,
+                                        ObjectId lessonId) {
 
         ArrayList<Document> subjects = subjectRepository.find(
                 and(
@@ -596,28 +659,37 @@ public class ContentController {
                 ), null
         );
 
-        JSONArray jsonArray = new JSONArray();
         for (Document subject : subjects) {
+
+            Document grade = ((Document) subject.get("grade"));
+            Document lesson = ((Document) subject.get("lesson"));
+
             jsonArray.put(new JSONObject().put("id", subject.getObjectId("_id").toString())
                     .put("name", subject.getString("name"))
                     .put("midPrice", subject.getInteger("mid_price"))
                     .put("easyPrice", subject.getInteger("easy_price"))
                     .put("hardPrice", subject.getInteger("hard_price"))
                     .put("description", subject.getString("description"))
+                    .put("grade", new JSONObject()
+                        .put("name", grade.getString("name"))
+                        .put("id", grade.getObjectId("_id").toString())
+                    )
+                    .put("lesson", new JSONObject()
+                            .put("name", lesson.getString("name"))
+                            .put("id", lesson.getObjectId("_id").toString())
+                    )
             );
         }
-
-        return generateSuccessMsg("subjects", jsonArray);
     }
 
     public static String allSubjects(ObjectId gradeId, ObjectId lessonId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if(gradeId != null)
+        if (gradeId != null)
             filters.add(eq("grade._id", gradeId));
 
-        if(lessonId != null)
+        if (lessonId != null)
             filters.add(eq("lesson._id", lessonId));
 
         ArrayList<Document> subjects = subjectRepository.find(
@@ -759,8 +831,8 @@ public class ContentController {
         for (Document doc : docs) {
             jsonArray.put(
                     new JSONObject()
-                    .put("id", doc.getObjectId("_id").toString())
-                    .put("name", doc.getString("name"))
+                            .put("id", doc.getObjectId("_id").toString())
+                            .put("name", doc.getString("name"))
             );
         }
 
@@ -777,9 +849,9 @@ public class ContentController {
         ArrayList<Document> docs = gradeRepository.find(or(constraints), null);
         JSONArray output = new JSONArray();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
-            if(doc.getString("name").contains(key))
+            if (doc.getString("name").contains(key))
                 output.put(new JSONObject()
                         .put("section", "grade")
                         .put("name", doc.getString("name"))
@@ -788,9 +860,9 @@ public class ContentController {
 
             List<Document> lessons = doc.getList("lessons", Document.class);
 
-            for(Document lesson : lessons) {
+            for (Document lesson : lessons) {
 
-                if(lesson.getString("name").contains(key))
+                if (lesson.getString("name").contains(key))
                     output.put(new JSONObject()
                             .put("section", "lesson")
                             .put("name", lesson.getString("name"))

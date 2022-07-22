@@ -450,4 +450,49 @@ public class QuestionController extends Utilities {
                 "data", jsonArray
         );
     }
+
+    public static String subjectQuestions(Boolean isQuestionNeeded,
+                                          ObjectId subjectId,
+                                          ObjectId lessonId,
+                                          ObjectId gradeId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if(subjectId != null)
+            filters.add(eq("_id", subjectId));
+
+        if(lessonId != null)
+            filters.add(eq("lesson._id", lessonId));
+
+        if(gradeId != null)
+            filters.add(eq("grade._id", gradeId));
+
+        ArrayList<Document> docs = subjectRepository.find(
+                filters.size() == 0 ? null : and(filters),
+                null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+            jsonArray.put(
+                    new JSONObject()
+                        .put("qNo", doc.getOrDefault("q_no", 0))
+                        .put("subject", new JSONObject()
+                                .put("name", doc.getString("name"))
+                                .put("id", doc.getObjectId("_id").toString()))
+                        .put("lesson", new JSONObject()
+                                .put("name", ((Document)doc.get("lesson")).getString("name"))
+                                .put("id", ((Document)doc.get("lesson")).getObjectId("_id").toString())
+                        )
+                        .put("grade", new JSONObject()
+                                .put("name", ((Document)doc.get("grade")).getString("name"))
+                                .put("id", ((Document)doc.get("grade")).getObjectId("_id").toString())
+                        )
+
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 }

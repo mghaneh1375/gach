@@ -30,6 +30,20 @@ import static irysc.gachesefid.Utility.Utility.printException;
 @Validated
 public class QuestionAPIRoutes extends Router {
 
+    @GetMapping(value = "/subjectQuestions")
+    @ResponseBody
+    public String subjectQuestions(HttpServletRequest request,
+                                   @RequestParam(required = false) Boolean isQuestionNeeded,
+                                   @RequestParam(required = false) ObjectId subjectId,
+                                   @RequestParam(required = false) ObjectId lessonId,
+                                   @RequestParam(required = false) ObjectId gradeId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return QuestionController.subjectQuestions(
+                isQuestionNeeded, subjectId, lessonId, gradeId
+        );
+    }
+
 
     @PostMapping(value = "/test")
     @ResponseBody

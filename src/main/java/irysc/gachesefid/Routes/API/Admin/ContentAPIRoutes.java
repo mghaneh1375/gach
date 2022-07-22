@@ -58,17 +58,17 @@ public class ContentAPIRoutes extends Router {
     public String addBatch(HttpServletRequest request,
                            @RequestBody @NotNull MultipartFile file)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-//        getAdminPrivilegeUserVoid(request);
+        getAdminPrivilegeUserVoid(request);
         return ContentController.addBatch(file);
     }
 
     @PostMapping(value = "/addBranch")
     @ResponseBody
     public String addBranch(HttpServletRequest request,
-                           @RequestBody @StrongJSONConstraint(
-                                   params = {"name"},
-                                   paramsType = {String.class}
-                           ) @NotBlank String jsonStr)
+                            @RequestBody @StrongJSONConstraint(
+                                    params = {"name"},
+                                    paramsType = {String.class}
+                            ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
 //        getAdminPrivilegeUserVoid(request);
         return ContentController.addBranch(new JSONObject(jsonStr).getString("name"));
@@ -103,17 +103,17 @@ public class ContentAPIRoutes extends Router {
     @PostMapping(value = "/addSubject/{gradeId}/{lessonId}")
     @ResponseBody
     public String addSubject(HttpServletRequest request,
-                          @PathVariable @ObjectIdConstraint ObjectId gradeId,
-                          @PathVariable @ObjectIdConstraint ObjectId lessonId,
-                          @RequestBody @StrongJSONConstraint(
-                                  params = {"name", "midPrice", "easyPrice", "hardPrice"},
-                                  paramsType = {
-                                          String.class, Positive.class,
-                                          Positive.class, Positive.class
-                                  },
-                                  optionals = {"description"},
-                                  optionalsType = {String.class}
-                          ) @NotBlank String json)
+                             @PathVariable @ObjectIdConstraint ObjectId gradeId,
+                             @PathVariable @ObjectIdConstraint ObjectId lessonId,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {"name", "midPrice", "easyPrice", "hardPrice"},
+                                     paramsType = {
+                                             String.class, Positive.class,
+                                             Positive.class, Positive.class
+                                     },
+                                     optionals = {"description"},
+                                     optionalsType = {String.class}
+                             ) @NotBlank String json)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ContentController.addSubject(gradeId, lessonId, new JSONObject(json));
@@ -122,11 +122,11 @@ public class ContentAPIRoutes extends Router {
     @PutMapping(value = "/updateBranch/{branchId}")
     @ResponseBody
     public String updateBranch(HttpServletRequest request,
-                              @PathVariable @ObjectIdConstraint ObjectId branchId,
-                              @RequestBody @StrongJSONConstraint(
-                                      params = {"name"},
-                                      paramsType = {String.class}
-                              ) @NotBlank String jsonStr
+                               @PathVariable @ObjectIdConstraint ObjectId branchId,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"name"},
+                                       paramsType = {String.class}
+                               ) @NotBlank String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ContentController.updateBranch(branchId, new JSONObject(jsonStr).getString("name"));
@@ -163,7 +163,7 @@ public class ContentAPIRoutes extends Router {
         return ContentController.updateLesson(gradeId, lessonId, new JSONObject(jsonStr));
     }
 
-    @PostMapping(value = "/updateSubject/{subjectId}")
+    @PutMapping(value = "/updateSubject/{subjectId}")
     @ResponseBody
     public String updateSubject(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId subjectId,
@@ -199,23 +199,27 @@ public class ContentAPIRoutes extends Router {
         return ContentController.deleteGrade(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
-    @DeleteMapping(value = "/deleteLesson/{gradeId}/{lessonId}")
+    @DeleteMapping(value = "/deleteLessons")
     @ResponseBody
-    public String deleteLesson(HttpServletRequest request,
-                               @PathVariable @ObjectIdConstraint ObjectId gradeId,
-                               @PathVariable @ObjectIdConstraint ObjectId lessonId)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
+    public String deleteLessons(HttpServletRequest request,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"items"},
+                                       paramsType = {JSONArray.class}) @NotBlank String jsonStr
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.deleteLesson(gradeId, lessonId);
+        return ContentController.deleteLessons(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
-    @DeleteMapping(value = "/deleteSubject/{subjectId}")
+    @DeleteMapping(value = "/deleteSubjects")
     @ResponseBody
     public String deleteSubject(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId subjectId)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"items"},
+                                        paramsType = {JSONArray.class}
+                                        ) @NotBlank String jsonStr
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.deleteSubject(subjectId);
+        return ContentController.deleteSubjects(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
     @GetMapping(value = "/gradesAndBranches")
@@ -242,18 +246,25 @@ public class ContentAPIRoutes extends Router {
         return ContentController.getLessons();
     }
 
+    @GetMapping(value = "/gradeLessons")
+    @ResponseBody
+    public String gradeLessons() {
+        return ContentController.gradeLessons();
+    }
+
     @GetMapping(value = "/all")
     @ResponseBody
-    public String all(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
-        return ContentController.all();
+    public String all(
+            @RequestParam(required = false) ObjectId lessonId,
+            @RequestParam(required = false) ObjectId gradeId
+    ) {
+        return ContentController.all(lessonId, gradeId);
     }
 
     @GetMapping(value = "/search")
     @ResponseBody
     public String search(HttpServletRequest request,
-                      @RequestParam(value = "key") @NotBlank String key
+                         @RequestParam(value = "key") @NotBlank String key
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return ContentController.search(key);
