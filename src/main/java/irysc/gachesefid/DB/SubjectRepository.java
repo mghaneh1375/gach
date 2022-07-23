@@ -13,6 +13,7 @@ public class SubjectRepository extends Common {
     @Override
     void init() {
         table = "subject";
+        secKey = "code";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 

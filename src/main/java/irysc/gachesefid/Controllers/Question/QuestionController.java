@@ -1,7 +1,6 @@
 package irysc.gachesefid.Controllers.Question;
 
 import com.google.common.base.CaseFormat;
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -10,6 +9,7 @@ import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Cell;
@@ -22,11 +22,12 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
+import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
@@ -235,6 +236,11 @@ public class QuestionController extends Utilities {
         JSONArray excepts = new JSONArray();
         int rowIdx = 0;
 
+        HashMap<ObjectId, Integer> subjectsCounter = new HashMap<>();
+        HashMap<ObjectId, Integer> authorCounter = new HashMap<>();
+
+        boolean addAtLeastOne = false;
+
         for (Row row : rows) {
 
             rowIdx++;
@@ -263,8 +269,8 @@ public class QuestionController extends Utilities {
                     }
                 }
 
-                if (!ObjectIdValidator.isValid(row.getCell(2).getStringCellValue()) ||
-                        !ObjectIdValidator.isValid(row.getCell(3).getStringCellValue())
+                if (
+                        !Utility.validationNationalCode(row.getCell(3).getStringCellValue())
                 ) {
                     excepts.put(rowIdx);
                     continue;
@@ -272,8 +278,33 @@ public class QuestionController extends Utilities {
 
                 JSONObject jsonObject = new JSONObject();
 
-                jsonObject.put("subjectId", row.getCell(2).getStringCellValue());
-                jsonObject.put("authorId", row.getCell(3).getStringCellValue());
+                int code = (int)row.getCell(2).getNumericCellValue();
+                Document subject = subjectRepository.findBySecKey(String.format("%07d", code));
+
+                if(subject == null) {
+                    excepts.put(rowIdx);
+                    continue;
+                }
+
+                ObjectId subjectId = subject.getObjectId("_id");
+
+                if(!subjectsCounter.containsKey(subjectId))
+                    subjectsCounter.put(subjectId, (Integer) subject.getOrDefault("q_no", 0));
+
+//                int nid = (int) row.getCell(3).getNumericCellValue();
+//                Document author = userRepository.findBySecKey(String.format("%010d", nid));
+
+                Document author = userRepository.findBySecKey(row.getCell(3).getStringCellValue());
+
+                if(author == null) {
+                    excepts.put(rowIdx);
+                    continue;
+                }
+
+                ObjectId authorId = author.getObjectId("_id");
+
+                if(!authorCounter.containsKey(authorId))
+                    authorCounter.put(authorId, (Integer) author.getOrDefault("q_no", 0));
 
                 String kindQuestion = row.getCell(4).getStringCellValue();
                 if (!EnumValidatorImp.isValid(kindQuestion, QuestionType.class)) {
@@ -300,7 +331,6 @@ public class QuestionController extends Utilities {
                         jsonObject.put("answer", cell.getNumericCellValue());
                 } else
                     jsonObject.put("answer", row.getCell(6).getStringCellValue());
-
 
                 jsonObject.put("organizationId", row.getCell(7).getStringCellValue());
 
@@ -343,17 +373,37 @@ public class QuestionController extends Utilities {
                 jsonObject.put("visibility", true);
                 jsonObject.put("createdAt", System.currentTimeMillis());
 
-                Document newDoc = new Document();
+                Document newDoc = new Document("subject_id", subjectId)
+                        .append("author_id", authorId);
 
                 for (String str : jsonObject.keySet())
                     newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
 
                 questionRepository.insertOne(newDoc);
+                subjectsCounter.put(subjectId, subjectsCounter.get(subjectId) + 1);
+                authorCounter.put(authorId, authorCounter.get(authorId) + 1);
+                addAtLeastOne = true;
 
             } catch (Exception ignore) {
                 printException(ignore);
                 excepts.put(rowIdx);
             }
+        }
+
+        if(addAtLeastOne) {
+
+            for(ObjectId subjectId : subjectsCounter.keySet()) {
+                subjectRepository.updateOne(subjectId,
+                        set("q_no", subjectsCounter.get(subjectId))
+                );
+            }
+
+            for(ObjectId authorId : authorCounter.keySet()) {
+                userRepository.updateOne(authorId,
+                        set("q_no", authorCounter.get(authorId))
+                );
+            }
+
         }
 
         if(excepts.length() == 0)
@@ -443,7 +493,7 @@ public class QuestionController extends Utilities {
                         questionRepository.find(filters.size() > 0 ?
                                 and(filters) : null, null,
                                 sortByFilter
-                        ), isSubjectsNeeded, isAuthorsNeeded
+                        ), isSubjectsNeeded, isAuthorsNeeded, false, false
         );
 
         return generateSuccessMsg(
@@ -452,6 +502,7 @@ public class QuestionController extends Utilities {
     }
 
     public static String subjectQuestions(Boolean isQuestionNeeded,
+                                          Integer criticalThresh,
                                           ObjectId subjectId,
                                           ObjectId lessonId,
                                           ObjectId gradeId) {
@@ -467,6 +518,12 @@ public class QuestionController extends Utilities {
         if(gradeId != null)
             filters.add(eq("grade._id", gradeId));
 
+        if(criticalThresh != null)
+            filters.add(or(
+                    exists("q_no", false),
+                    lte("q_no", criticalThresh)
+            ));
+
         ArrayList<Document> docs = subjectRepository.find(
                 filters.size() == 0 ? null : and(filters),
                 null
@@ -475,22 +532,33 @@ public class QuestionController extends Utilities {
         JSONArray jsonArray = new JSONArray();
 
         for(Document doc : docs) {
-            jsonArray.put(
-                    new JSONObject()
-                        .put("qNo", doc.getOrDefault("q_no", 0))
-                        .put("subject", new JSONObject()
-                                .put("name", doc.getString("name"))
-                                .put("id", doc.getObjectId("_id").toString()))
-                        .put("lesson", new JSONObject()
-                                .put("name", ((Document)doc.get("lesson")).getString("name"))
-                                .put("id", ((Document)doc.get("lesson")).getObjectId("_id").toString())
-                        )
-                        .put("grade", new JSONObject()
-                                .put("name", ((Document)doc.get("grade")).getString("name"))
-                                .put("id", ((Document)doc.get("grade")).getObjectId("_id").toString())
-                        )
 
-            );
+            JSONObject jsonObject = new JSONObject()
+                    .put("qNo", doc.getOrDefault("q_no", 0))
+                    .put("subject", new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("id", doc.getObjectId("_id").toString()))
+                    .put("lesson", new JSONObject()
+                            .put("name", ((Document)doc.get("lesson")).getString("name"))
+                            .put("id", ((Document)doc.get("lesson")).getObjectId("_id").toString())
+                    )
+                    .put("grade", new JSONObject()
+                            .put("name", ((Document)doc.get("grade")).getString("name"))
+                            .put("id", ((Document)doc.get("grade")).getObjectId("_id").toString())
+                    );
+
+            if(isQuestionNeeded != null && isQuestionNeeded) {
+                ArrayList<Document> questions = questionRepository.find(
+                        eq("subject_id", doc.getObjectId("_id")), null
+                );
+
+                jsonObject.put("questions", convertList(
+                        questions, false, true,
+                        true, true
+                ));
+            }
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);

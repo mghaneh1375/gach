@@ -485,8 +485,14 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String createPackage(HttpServletRequest request,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"minSelect", "offPercent", "title"},
-                                        paramsType = {Positive.class, Positive.class, String.class},
+                                        params = {
+                                                "minSelect", "offPercent", "title",
+                                                "gradeId", "lessonId"
+                                        },
+                                        paramsType = {
+                                                Positive.class, Positive.class, String.class,
+                                                ObjectId.class, ObjectId.class
+                                        },
                                         optionals = {"description"},
                                         optionalsType = {String.class}
                                 ) @NotBlank String jsonStr
@@ -502,8 +508,16 @@ public class QuizAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {},
                                         paramsType = {},
-                                        optionals = {"description", "minSelect", "offPercent", "title"},
-                                        optionalsType = {String.class, Positive.class, Positive.class, String.class}
+                                        optionals = {
+                                                "description", "minSelect",
+                                                "offPercent", "title",
+                                                "gradeId", "lessonId"
+                                        },
+                                        optionalsType = {
+                                                String.class, Positive.class,
+                                                Positive.class, String.class,
+                                                ObjectId.class, ObjectId.class
+                                        }
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
@@ -547,11 +561,13 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(value = "/getPackages")
     @ResponseBody
-    public String getPackages(HttpServletRequest request
+    public String getPackages(HttpServletRequest request,
+                              @RequestParam(required = false) ObjectId gradeId,
+                              @RequestParam(required = false) ObjectId lessonId
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return QuizController.getPackages(isAdmin);
+        return QuizController.getPackages(isAdmin, gradeId, lessonId);
     }
 
     @GetMapping(value = "/getPackage/{packageId}")

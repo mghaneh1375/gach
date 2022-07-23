@@ -21,7 +21,6 @@ public class UploadController {
         if (section.equalsIgnoreCase(UploadSection.QUESTION.getName())) {
 
             try {
-
                 unzip(file.getInputStream(), null,
                         QuestionRepository.FOLDER, true, false
                 );

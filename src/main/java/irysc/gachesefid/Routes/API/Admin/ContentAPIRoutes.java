@@ -24,6 +24,7 @@ import javax.validation.constraints.NotNull;
 import static irysc.gachesefid.Main.GachesefidApplication.branchRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.gradeRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
@@ -116,7 +117,7 @@ public class ContentAPIRoutes extends Router {
                              ) @NotBlank String json)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.addSubject(gradeId, lessonId, new JSONObject(json));
+        return ContentController.addSubject(gradeId, lessonId, convertPersian(new JSONObject(json)));
     }
 
     @PutMapping(value = "/updateBranch/{branchId}")
@@ -184,7 +185,7 @@ public class ContentAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.editSubject(subjectId, new JSONObject(jsonStr));
+        return ContentController.editSubject(subjectId, convertPersian(new JSONObject(jsonStr)));
     }
 
     @DeleteMapping(value = "/deleteGrade")

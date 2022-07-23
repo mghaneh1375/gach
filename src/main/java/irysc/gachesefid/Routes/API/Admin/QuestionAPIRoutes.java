@@ -34,13 +34,14 @@ public class QuestionAPIRoutes extends Router {
     @ResponseBody
     public String subjectQuestions(HttpServletRequest request,
                                    @RequestParam(required = false) Boolean isQuestionNeeded,
+                                   @RequestParam(required = false) Integer criticalThresh,
                                    @RequestParam(required = false) ObjectId subjectId,
                                    @RequestParam(required = false) ObjectId lessonId,
                                    @RequestParam(required = false) ObjectId gradeId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return QuestionController.subjectQuestions(
-                isQuestionNeeded, subjectId, lessonId, gradeId
+                isQuestionNeeded, criticalThresh, subjectId, lessonId, gradeId
         );
     }
 

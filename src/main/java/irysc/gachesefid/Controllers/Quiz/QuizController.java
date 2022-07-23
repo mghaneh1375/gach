@@ -16,6 +16,7 @@ import irysc.gachesefid.Validator.LinkValidator;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -24,8 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.gt;
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadPdfOrMultimediaFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -71,11 +71,29 @@ public class QuizController {
 
     public static String createPackage(JSONObject jsonObject) {
 
+        ObjectId gradeId = new ObjectId(jsonObject.getString("gradeId"));
+
+        Document grade = gradeRepository.findById(gradeId);
+
+        if(grade == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        ObjectId lessonId = new ObjectId(jsonObject.getString("lessonId"));
+
+        if(irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                grade.getList("lessons", Document.class),
+                "_id", lessonId
+        ) == -1)
+            return JSON_NOT_VALID_PARAMS;
+
         Document newDoc = new Document("title", jsonObject.getString("title"))
                 .append("off_percent", jsonObject.getInt("offPercent"))
                 .append("min_select", jsonObject.getInt("minSelect"))
                 .append("description", jsonObject.has("description") ? jsonObject.getString("description") : "")
                 .append("quizzes", new ArrayList<>())
+                .append("lesson_id", lessonId)
+                .append("grade_id", gradeId)
+                .append("buyers", 0)
                 .append("expire_at", System.currentTimeMillis());
 
         return packageRepository.insertOneWithReturn(newDoc);
@@ -86,6 +104,28 @@ public class QuizController {
         Document packageDoc = packageRepository.findById(packageId);
         if (packageDoc == null)
             return JSON_NOT_VALID_ID;
+
+        if(jsonObject.has("lessonId") && jsonObject.has("gradeId")) {
+
+            ObjectId gradeId = new ObjectId(jsonObject.getString("gradeId"));
+
+            Document grade = gradeRepository.findById(gradeId);
+
+            if(grade == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            ObjectId lessonId = new ObjectId(jsonObject.getString("lessonId"));
+
+            if(irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    grade.getList("lessons", Document.class),
+                    "_id", lessonId
+            ) == -1)
+                return JSON_NOT_VALID_PARAMS;
+
+            packageDoc.put("lesson_id", lessonId);
+            packageDoc.put("grade_id", gradeId);
+
+        }
 
         if (jsonObject.has("title"))
             packageDoc.put("title", jsonObject.getString("title"));
@@ -172,19 +212,43 @@ public class QuizController {
         return JSON_OK;
     }
 
-    public static String getPackages(boolean isAdmin) {
+    public static String getPackages(boolean isAdmin, ObjectId gradeId, ObjectId lessonId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if(!isAdmin)
+            filters.add(gt("expire_at", System.currentTimeMillis()));
+
+        if(gradeId != null)
+            filters.add(eq("grade_id", gradeId));
+
+        if(lessonId != null)
+            filters.add(eq("lesson_id", lessonId));
 
         ArrayList<Document> packages = packageRepository.find(
-                isAdmin ? null : gt("expire_at", System.currentTimeMillis()),
-                null);
+                filters.size() == 0 ? null : and(filters), null
+        );
 
         JSONArray jsonArray = new JSONArray();
 
         for (Document packageDoc : packages) {
+
+            Document grade = gradeRepository.findById(packageDoc.getObjectId("grade_id"));
+            if(grade == null)
+                continue;
+
+            Document lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    grade.getList("lessons", Document.class),
+                    "_id", packageDoc.getObjectId("lesson_id")
+            );
+
             jsonArray.put(new JSONObject()
                     .put("id", packageDoc.getObjectId("_id").toString())
                     .put("title", packageDoc.getString("title"))
+                    .put("buyers", isAdmin ? packageDoc.getInteger("buyers") : 0)
                     .put("quizzes", packageDoc.getList("quizzes", ObjectId.class).size())
+                    .put("grade", grade.getString("name"))
+                    .put("lesson", lesson.getString("name"))
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"))
             );
@@ -222,6 +286,8 @@ public class QuizController {
                 .put("title", packageDoc.getString("title"))
                 .put("offPercent", packageDoc.getInteger("off_percent"))
                 .put("minSelect", packageDoc.getInteger("min_select"))
+                .put("lessonId", packageDoc.getObjectId("lesson_id"))
+                .put("gradeId", packageDoc.getObjectId("grade_id"))
                 .put("quizzes", jsonArray);
 
         return generateSuccessMsg("data", jsonObject);

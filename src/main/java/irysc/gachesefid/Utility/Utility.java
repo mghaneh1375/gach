@@ -259,7 +259,7 @@ public class Utility {
         return new String(chars);
     }
 
-    public static void convertPersian(JSONObject jsonObject) {
+    public static JSONObject convertPersian(JSONObject jsonObject) {
 
         for (String key : jsonObject.keySet()) {
             if (jsonObject.get(key) instanceof Integer)
@@ -267,6 +267,8 @@ public class Utility {
             else if (jsonObject.get(key) instanceof String)
                 jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
         }
+
+        return jsonObject;
     }
 
     public static int calcYearDiff(String birthDay) {
@@ -674,6 +676,17 @@ public class Utility {
             return getRandIntForStudentId(firstSection);
 
         return studentId;
+    }
+
+    public static String getRandIntForSubjectId() {
+
+        int number = random.nextInt(9999999);
+        String code = String.format("%07d", number);
+
+        if (subjectRepository.exist(eq("code", code)))
+            return getRandIntForSubjectId();
+
+        return code;
     }
 
     public static ArrayList<Object> paginate(Common repository,

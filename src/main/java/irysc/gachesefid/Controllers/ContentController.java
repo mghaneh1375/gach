@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
@@ -100,6 +101,8 @@ public class ContentController {
                 }
 
                 String subject = row.getCell(3).getStringCellValue();
+                String code = getRandIntForSubjectId();
+
                 Document newSubject = new Document("name", subject)
                         .append("created_at", curr)
                         .append("lesson", new Document("_id", lessonDoc.getObjectId("_id"))
@@ -108,6 +111,7 @@ public class ContentController {
                         .append("grade", new Document("_id", gradeId)
                                 .append("name", grade)
                         )
+                        .append("code", code)
                         .append("description", row.getCell(5) != null &&
                                 row.getCell(5).getStringCellValue() != null &&
                                 !row.getCell(5).getStringCellValue().isEmpty() ?
@@ -444,8 +448,11 @@ public class ContentController {
         ))
             return generateErr("مبحث موردنظر در درس موردنظر موجود است.");
 
-        return subjectRepository.insertOneWithReturn(
+        String code = getRandIntForSubjectId();
+
+        ObjectId oId = subjectRepository.insertOneWithReturnId(
                 new Document("name", subject.getString("name"))
+                        .append("code", code)
                         .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
                         .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
                         .append("easy_price", subject.getInt("easyPrice"))
@@ -454,6 +461,8 @@ public class ContentController {
                         .append("description", subject.has("description") ? subject.getString("description") : "")
                         .append("created_at", System.currentTimeMillis())
         );
+
+        return generateSuccessMsg("id", oId.toString(), new PairValue("code", code));
     }
 
     public static String editSubject(ObjectId subjectId, JSONObject jsonObject) {
@@ -670,6 +679,7 @@ public class ContentController {
                     .put("easyPrice", subject.getInteger("easy_price"))
                     .put("hardPrice", subject.getInteger("hard_price"))
                     .put("description", subject.getString("description"))
+                    .put("code", subject.getString("code"))
                     .put("grade", new JSONObject()
                         .put("name", grade.getString("name"))
                         .put("id", grade.getObjectId("_id").toString())

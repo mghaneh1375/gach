@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Question;
 
+import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Validator.ObjectIdValidator;
@@ -15,6 +16,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 
 public class Utilities {
@@ -92,7 +94,9 @@ public class Utilities {
 
     static JSONArray convertList(ArrayList<Document> docs,
                                  boolean isSubjectsNeeded,
-                                 boolean isAuthorsNeeded) {
+                                 boolean isAuthorsNeeded,
+                                 boolean isQuestionFileNeeded,
+                                 boolean isAnswerFileNeeded) {
 
         JSONArray jsonArray = new JSONArray();
         HashMap<ObjectId, String> subjects = new HashMap<>();
@@ -106,6 +110,12 @@ public class Utilities {
                     .put("neededTime", doc.getInteger("needed_time"))
                     .put("organizationId", doc.getString("organization_id"))
                     .put("level", doc.getString("level"));
+
+            if(isQuestionFileNeeded && doc.containsKey("question_file"))
+                jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
+
+            if(isAnswerFileNeeded && doc.containsKey("answer_file"))
+                jsonObject.put("answerFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("answer_file"));
 
             if(isSubjectsNeeded) {
 
@@ -143,7 +153,7 @@ public class Utilities {
 
                     Document user = userRepository.findById(authorId);
 
-                    jsonObject.put("subject", new JSONObject()
+                    jsonObject.put("author", new JSONObject()
                             .put("id", authorId)
                             .put("name", user.getString("name"))
                     );
@@ -157,6 +167,7 @@ public class Utilities {
                     .put("visibility", doc.getBoolean("visibility"))
                     .put("kindQuestion", doc.getString("kind_question"));
 
+            jsonArray.put(jsonObject);
         }
 
         return jsonArray;
