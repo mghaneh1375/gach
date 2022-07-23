@@ -245,10 +245,17 @@ public class QuizController {
             jsonArray.put(new JSONObject()
                     .put("id", packageDoc.getObjectId("_id").toString())
                     .put("title", packageDoc.getString("title"))
+                    .put("description", packageDoc.getOrDefault("description", ""))
                     .put("buyers", isAdmin ? packageDoc.getInteger("buyers") : 0)
                     .put("quizzes", packageDoc.getList("quizzes", ObjectId.class).size())
-                    .put("grade", grade.getString("name"))
-                    .put("lesson", lesson.getString("name"))
+                    .put("grade", new JSONObject()
+                            .put("id", grade.getObjectId("_id").toString())
+                            .put("name", grade.getString("name"))
+                    )
+                    .put("lesson", new JSONObject()
+                            .put("id", lesson.getObjectId("_id").toString())
+                            .put("name", lesson.getString("name"))
+                    )
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"))
             );
@@ -257,7 +264,7 @@ public class QuizController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getPackage(ObjectId packageId) {
+    public static String getPackageQuizzes(ObjectId packageId) {
 
         Document packageDoc = packageRepository.findById(packageId);
         if(packageDoc == null)
@@ -281,16 +288,7 @@ public class QuizController {
             jsonArray.put(quizAbstract.convertDocToJSON(quiz, true));
         }
 
-        JSONObject jsonObject = new JSONObject()
-                .put("id", packageDoc.getObjectId("_id").toString())
-                .put("title", packageDoc.getString("title"))
-                .put("offPercent", packageDoc.getInteger("off_percent"))
-                .put("minSelect", packageDoc.getInteger("min_select"))
-                .put("lessonId", packageDoc.getObjectId("lesson_id"))
-                .put("gradeId", packageDoc.getObjectId("grade_id"))
-                .put("quizzes", jsonArray);
-
-        return generateSuccessMsg("data", jsonObject);
+        return generateSuccessMsg("data", jsonArray);
     }
 
 

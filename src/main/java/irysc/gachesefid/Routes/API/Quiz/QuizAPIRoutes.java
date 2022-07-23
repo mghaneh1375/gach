@@ -570,10 +570,10 @@ public class QuizAPIRoutes extends Router {
         return QuizController.getPackages(isAdmin, gradeId, lessonId);
     }
 
-    @GetMapping(value = "/getPackage/{packageId}")
+    @GetMapping(value = "/getPackageQuizzes/{packageId}")
     @ResponseBody
-    public String getPackage(@PathVariable @ObjectIdConstraint ObjectId packageId) {
-        return QuizController.getPackage(packageId);
+    public String getPackageQuizzes(@PathVariable @ObjectIdConstraint ObjectId packageId) {
+        return QuizController.getPackageQuizzes(packageId);
     }
 }
 
