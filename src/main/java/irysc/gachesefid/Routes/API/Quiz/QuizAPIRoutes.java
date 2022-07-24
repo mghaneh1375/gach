@@ -161,9 +161,9 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin)
-            return QuizController.getAll(iryscQuizRepository, null, mode);
+            return QuizController.getAll(iryscQuizRepository, null);
 
-        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"), mode);
+        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"));
     }
 
     @GetMapping(value = "/get/{mode}/{quizId}")
@@ -524,24 +524,36 @@ public class QuizAPIRoutes extends Router {
         return QuizController.editPackage(packageId, new JSONObject(jsonStr));
     }
 
-    @PutMapping(value = "/addQuizToPackage/{packageId}/{quizId}")
+    @PutMapping(value = "/addQuizzesToPackage/{packageId}")
     @ResponseBody
-    public String addQuizToPackage(HttpServletRequest request,
+    public String addQuizzesToPackage(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId packageId,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId
+                                   @RequestBody @StrongJSONConstraint(
+                                           params = {"ids"},
+                                           paramsType = {JSONArray.class}
+                                   ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.addQuizToPackage(packageId, quizId);
+        return QuizController.addQuizzesToPackage(
+                packageId,
+                new JSONObject(jsonStr).getJSONArray("ids")
+        );
     }
 
-    @DeleteMapping(value = "/removeQuizFromPackage/{packageId}/{quizId}")
+    @DeleteMapping(value = "/removeQuizzesFromPackage/{packageId}")
     @ResponseBody
-    public String removeQuizFromPackage(HttpServletRequest request,
+    public String removeQuizzesFromPackage(HttpServletRequest request,
                                         @PathVariable @ObjectIdConstraint ObjectId packageId,
-                                        @PathVariable @ObjectIdConstraint ObjectId quizId
+                                        @RequestBody @StrongJSONConstraint(
+                                                params = {"ids"},
+                                                paramsType = {JSONArray.class}
+                                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.removeQuizFromPackage(packageId, quizId);
+        return QuizController.removeQuizzesFromPackage(
+                packageId,
+                new JSONObject(jsonStr).getJSONArray("ids")
+        );
     }
 
     @DeleteMapping(value = "/removePackages")
@@ -572,8 +584,14 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(value = "/getPackageQuizzes/{packageId}")
     @ResponseBody
-    public String getPackageQuizzes(@PathVariable @ObjectIdConstraint ObjectId packageId) {
-        return QuizController.getPackageQuizzes(packageId);
+    public String getPackageQuizzes(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId packageId
+    ) {
+        Document user = getUserIfLogin(request);
+        return QuizController.getPackageQuizzes(
+                packageId,
+                user != null && Authorization.isAdmin(user.getList("accesses", String.class))
+        );
     }
 }
 

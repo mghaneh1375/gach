@@ -11,5 +11,5 @@ abstract class QuizAbstract {
 
     abstract String buy(Document student, Document quiz);
 
-    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest);
+    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin);
 }

@@ -111,6 +111,18 @@ public class Utilities {
                     .put("organizationId", doc.getString("organization_id"))
                     .put("level", doc.getString("level"));
 
+            if(doc.containsKey("telorance"))
+                jsonObject.put("telorance", doc.get("telorance"));
+
+            if(doc.containsKey("choices_count"))
+                jsonObject.put("choicesCount", doc.get("choices_count"));
+
+            if(doc.containsKey("sentences_count"))
+                jsonObject.put("sentencesCount", doc.get("sentences_count"));
+
+            if(doc.containsKey("needed_lines"))
+                jsonObject.put("neededLines", doc.get("needed_lines"));
+
             if(isQuestionFileNeeded && doc.containsKey("question_file"))
                 jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
 
@@ -155,10 +167,10 @@ public class Utilities {
 
                     jsonObject.put("author", new JSONObject()
                             .put("id", authorId)
-                            .put("name", user.getString("name"))
+                            .put("name", user.getString("first_name") + " " + user.getString("last_name"))
                     );
 
-                    authors.put(authorId, user.getString("name"));
+                    authors.put(authorId, user.getString("first_name") + " " + user.getString("last_name"));
                 }
 
             }

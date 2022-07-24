@@ -60,6 +60,27 @@ public class StaticValues {
             new BasicDBObject("title", 1).append("_id", 1)
             .append("start", 1).append("end", 1);
 
+    public final static BasicDBObject QUIZ_DIGEST =
+            new BasicDBObject("title", 1).append("_id", 1)
+                    .append("start", 1).append("end", 1)
+                    .append("start_registry", 1)
+                    .append("end_registry", 1)
+                    .append("tags", 1).append("mode", 1)
+                    .append("price", 1).append("is_online", 1)
+                    .append("capacity", 1).append("registered", 1)
+            ;
+
+    public final static BasicDBObject QUIZ_DIGEST_MANAGEMENT =
+            new BasicDBObject("title", 1).append("_id", 1)
+                    .append("start", 1).append("end", 1)
+                    .append("start_registry", 1)
+                    .append("end_registry", 1)
+                    .append("tags", 1).append("mode", 1)
+                    .append("price", 1).append("is_online", 1)
+                    .append("capacity", 1).append("registered", 1)
+                    .append("questions", 1)
+            ;
+
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
             .append("first_name", 1)
             .append("last_name", 1)

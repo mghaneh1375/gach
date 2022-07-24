@@ -48,7 +48,7 @@ public class RegularQuizController extends QuizAbstract {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "quiz", new RegularQuizController()
-                            .convertDocToJSON(newDoc, false)
+                            .convertDocToJSON(newDoc, false, true)
             );
 
         } catch (InvalidFieldsException e) {
@@ -207,7 +207,7 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest) {
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
@@ -216,23 +216,27 @@ public class RegularQuizController extends QuizAbstract {
                 .put("startRegistry", quiz.getLong("start_registry"))
                 .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                 .put("price", quiz.getInteger("price"))
-                .put("visibility", quiz.getBoolean("visibility"))
                 .put("generalMode", "IRYSC")
-                .put("id", quiz.getObjectId("_id").toString())
-                .put("studentsCount", quiz.getList("students", Document.class).size())
-                .put("questionsCount", quiz.getList("questions", Document.class).size())
-                ;
+                .put("mode", quiz.getString("mode"))
+                .put("isOnline", quiz.getBoolean("is_online"))
+                .put("tags", quiz.getString("tags"))
+                .put("id", quiz.getObjectId("_id").toString());
+
+        if(isAdmin)
+            jsonObject
+                    .put("studentsCount", quiz.getInteger("registered"))
+                    .put("questionsCount", quiz.getList("questions", Document.class).size())
+                    .put("visibility", quiz.getBoolean("visibility"))
+                    .put("capacity", quiz.getInteger("capacity"));
+
+        if(quiz.containsKey("capacity"))
+            jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
 
         if(!isDigest) {
             jsonObject
-                    .put("tags", quiz.getList("tags", String.class))
-                    .put("isOnline", quiz.getBoolean("isOnline"))
                     .put("description", quiz.getOrDefault("description", ""))
-                    .put("capacity", quiz.getInteger("capacity"))
                     .put("topStudentsCount", quiz.getInteger("top_students_count"))
-                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"))
-                    .put("mode", quiz.getString("mode"))
-            ;
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
         }
 
         return jsonObject;

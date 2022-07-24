@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -143,73 +144,98 @@ public class QuizController {
         return JSON_OK;
     }
 
-    public static String addQuizToPackage(ObjectId packageId, ObjectId quizId) {
+    public static String addQuizzesToPackage(ObjectId packageId, JSONArray jsonArray) {
 
         Document packageDoc = packageRepository.findById(packageId);
         if (packageDoc == null)
             return JSON_NOT_VALID_ID;
 
-        Document quiz = iryscQuizRepository.findById(quizId);
-        if (quiz == null)
-            return JSON_NOT_VALID_ID;
-
-        long endRegistry = quiz.containsKey("end_registry") ?
-                quiz.getLong("end_registry") : quiz.getLong("end");
-
-        if (endRegistry < System.currentTimeMillis())
-            return generateErr("زمان ثبت نام آزمون موردنظر به اتمام رسیده است.");
-
         List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
-        if (quizzes.contains(quizId))
-            return JSON_OK;
 
-        if (endRegistry > packageDoc.getLong("expire_at"))
-            packageDoc.put("expire_at", endRegistry);
+        for(int i = 0; i < jsonArray.length(); i++) {
 
-        quizzes.add(quizId);
-        packageDoc.put("quizzes", quizzes);
+            String id = jsonArray.getString(i);
 
-        packageRepository.replaceOne(packageId, packageDoc);
-        return JSON_OK;
-    }
-
-    public static String removeQuizFromPackage(ObjectId packageId, ObjectId quizId) {
-
-        Document packageDoc = packageRepository.findById(packageId);
-        if (packageDoc == null)
-            return JSON_NOT_VALID_ID;
-
-        Document quiz = iryscQuizRepository.findById(quizId);
-        if (quiz == null)
-            return JSON_NOT_VALID_ID;
-
-        List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
-        if (!quizzes.contains(quizId))
-            return JSON_NOT_VALID_ID;
-
-        long max = 13000000;
-
-        for (ObjectId qId : quizzes) {
-
-            if (qId.equals(quizId))
+            if(!ObjectId.isValid(id))
                 continue;
 
-            Document q = iryscQuizRepository.findById(qId);
+            ObjectId quizId = new ObjectId(id);
 
-            long e = q.containsKey("end_registry") ?
-                    q.getLong("end_registry") :
-                    q.getLong("end");
+            Document quiz = iryscQuizRepository.findById(quizId);
+            if (quiz == null)
+                continue;
 
-            if (e > max)
-                max = e;
+            long endRegistry = quiz.containsKey("end_registry") ?
+                    quiz.getLong("end_registry") : quiz.getLong("end");
+
+            if (endRegistry < System.currentTimeMillis())
+                continue;
+//                return generateErr("زمان ثبت نام آزمون موردنظر به اتمام رسیده است.");
+
+            if (quizzes.contains(quizId))
+                continue;
+//                return JSON_OK;
+
+            if (endRegistry > packageDoc.getLong("expire_at"))
+                packageDoc.put("expire_at", endRegistry);
+
+            quizzes.add(quizId);
         }
 
-        packageDoc.put("expire_at", max);
-        quizzes.remove(quizId);
         packageDoc.put("quizzes", quizzes);
-
         packageRepository.replaceOne(packageId, packageDoc);
-        return JSON_OK;
+
+        return getPackageQuizzes(packageId, true);
+    }
+
+    public static String removeQuizzesFromPackage(ObjectId packageId, JSONArray jsonArray) {
+
+        Document packageDoc = packageRepository.findById(packageId);
+        if (packageDoc == null)
+            return JSON_NOT_VALID_ID;
+
+        List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+
+            if(!ObjectId.isValid(id))
+                continue;
+
+            ObjectId quizId = new ObjectId(id);
+
+            Document quiz = iryscQuizRepository.findById(quizId);
+            if (quiz == null)
+                continue;
+
+            if (!quizzes.contains(quizId))
+                continue;
+
+            long max = 13000000;
+
+            for (ObjectId qId : quizzes) {
+
+                if (qId.equals(quizId))
+                    continue;
+
+                Document q = iryscQuizRepository.findById(qId);
+
+                long e = q.containsKey("end_registry") ?
+                        q.getLong("end_registry") :
+                        q.getLong("end");
+
+                if (e > max)
+                    max = e;
+            }
+
+            packageDoc.put("expire_at", max);
+            quizzes.remove(quizId);
+        }
+
+        packageDoc.put("quizzes", quizzes);
+        packageRepository.replaceOne(packageId, packageDoc);
+        return getPackageQuizzes(packageId, true);
     }
 
     public static String getPackages(boolean isAdmin, ObjectId gradeId, ObjectId lessonId) {
@@ -264,7 +290,7 @@ public class QuizController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getPackageQuizzes(ObjectId packageId) {
+    public static String getPackageQuizzes(ObjectId packageId, boolean isAdmin) {
 
         Document packageDoc = packageRepository.findById(packageId);
         if(packageDoc == null)
@@ -285,7 +311,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -372,14 +398,14 @@ public class QuizController {
 
     }
 
-    public static String getAll(Common db, ObjectId userId, String mode) {
+    public static String getAll(Common db, ObjectId userId) {
 
         ArrayList<Document> docs;
 
         if (userId != null)
-            docs = db.find(eq("created_by", userId), null, Sorts.descending("created_at"));
+            docs = db.find(eq("created_by", userId), QUIZ_DIGEST, Sorts.descending("created_at"));
         else
-            docs = db.find(null, null, Sorts.descending("created_at"));
+            docs = db.find(null, QUIZ_DIGEST_MANAGEMENT, Sorts.descending("created_at"));
 
         QuizAbstract quizAbstract;
 
@@ -392,7 +418,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -518,9 +544,9 @@ public class QuizController {
                 quizAbstract = new RegularQuizController();
 
             if (quizAbstract != null)
-                return generateSuccessMsg("data", quizAbstract.convertDocToJSON(
-                        quiz, false
-                ));
+                return generateSuccessMsg("data",
+                        quizAbstract.convertDocToJSON(quiz, false, true)
+                );
 
             return JSON_OK;
         } catch (InvalidFieldsException x) {
@@ -1100,5 +1126,51 @@ public class QuizController {
                     x.getMessage()
             );
         }
+    }
+
+    public static String getRegistrable(Common db, boolean isAdmin,
+                                        String tag, Boolean finishedIsNeeded) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        long curr = System.currentTimeMillis();
+
+        if(isAdmin) {
+            filters.add(gt("start", curr));
+        }
+        else {
+            filters.add(eq("visibility", true));
+
+            if(finishedIsNeeded == null || !finishedIsNeeded)
+                filters.add(gt("end", curr));
+            else
+                filters.add(gt("start_registry", curr));
+
+            filters.add(
+                    or(
+                            exists("end_registry", false),
+                            gt("end_registry", curr)
+                    )
+            );
+        }
+
+        if(tag != null)
+            filters.add(regex("tag", Pattern.compile(Pattern.quote(tag), Pattern.CASE_INSENSITIVE)));
+
+        ArrayList<Document> docs = db.find(and(filters), isAdmin ? QUIZ_DIGEST_MANAGEMENT : QUIZ_DIGEST);
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            QuizAbstract quizAbstract;
+
+            if(doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                quizAbstract = new RegularQuizController();
+            else
+                quizAbstract = new TashrihiQuizController();
+
+            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 }
