@@ -61,27 +61,6 @@ public class UserAPIRoutes extends Router {
     }
 
 
-    @GetMapping(path = "createExam")
-    @ResponseBody
-    public String createExam(HttpServletRequest request)
-            throws NotAccessException, UnAuthException, NotActivateAccountException {
-        ArrayList<String> files = new ArrayList<>();
-        files.add(uploadDir_dev + "questions/1.jpg");
-        files.add(uploadDir_dev + "questions/2.png");
-        files.add(uploadDir_dev + "questions/3.png");
-        files.add(uploadDir_dev + "questions/4.png");
-        files.add(uploadDir_dev + "questions/5.png");
-        files.add(uploadDir_dev + "questions/6.png");
-        files.add(uploadDir_dev + "questions/7.png");
-        files.add(uploadDir_dev + "questions/8.png");
-        files.add(uploadDir_dev + "questions/9.png");
-        files.add(uploadDir_dev + "questions/10.png");
-        files.add(uploadDir_dev + "questions/11.png");
-        files.add(uploadDir_dev + "questions/12.png");
-        PDFUtils.createExam(files);
-        return JSON_OK;
-    }
-
     @GetMapping(path = "getCertificate")
     @ResponseBody
     public String getCertificate(HttpServletRequest request,

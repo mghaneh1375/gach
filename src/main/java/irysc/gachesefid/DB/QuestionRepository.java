@@ -6,6 +6,7 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Main.GachesefidApplication;
+import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 
 import java.sql.PreparedStatement;
@@ -114,5 +115,12 @@ public class QuestionRepository extends Common {
     @Override
     public void cleanReject(Document doc) {
 
+    }
+
+    @Override
+    public void cleanRemove(Document doc) {
+        FileUtils.removeFile(doc.getString("question_file"), QuestionRepository.FOLDER);
+        if(doc.containsKey("answer_file"))
+            FileUtils.removeFile(doc.getString("answer_file"), QuestionRepository.FOLDER);
     }
 }

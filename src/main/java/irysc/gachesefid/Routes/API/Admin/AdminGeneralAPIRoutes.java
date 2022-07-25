@@ -1,5 +1,6 @@
 package irysc.gachesefid.Routes.API.Admin;
 
+import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Controllers.UploadController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -38,6 +39,15 @@ public class AdminGeneralAPIRoutes extends Router {
 
         getSuperAdminPrivilegeUser(request);
         return UploadController.uploadFiles(file, section);
+    }
+
+    @GetMapping(value = "refreshSubjectQNo")
+    @ResponseBody
+    public String refreshSubjectQNo(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+        return ContentController.refreshSubjectQNo();
     }
 
 }

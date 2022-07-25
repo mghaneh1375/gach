@@ -898,6 +898,23 @@ public class ContentController {
         return generateSuccessMsg("data", output);
     }
 
+    public static String refreshSubjectQNo() {
+
+        ArrayList<Document> subjects = subjectRepository.find(null, null);
+
+        for(Document subject : subjects) {
+
+            subject.put("q_no", questionRepository.count(
+                    eq("subject_id", subject.getObjectId("_id"))
+            ));
+
+            subjectRepository.replaceOne(subject.getObjectId("_id"), subject);
+            subjectRepository.clearFromCache(subject);
+        }
+
+        return JSON_OK;
+    }
+
 //
 //
 //    public static String allCourses() {

@@ -92,7 +92,7 @@ public class Utilities {
 
     }
 
-    static JSONArray convertList(ArrayList<Document> docs,
+    public static JSONArray convertList(ArrayList<Document> docs,
                                  boolean isSubjectsNeeded,
                                  boolean isAuthorsNeeded,
                                  boolean isQuestionFileNeeded,
@@ -107,12 +107,16 @@ public class Utilities {
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("answer", doc.get("answer"))
+                    .put("used", doc.getOrDefault("used", 0))
                     .put("neededTime", doc.getInteger("needed_time"))
                     .put("organizationId", doc.getString("organization_id"))
                     .put("level", doc.getString("level"));
 
             if(doc.containsKey("telorance"))
                 jsonObject.put("telorance", doc.get("telorance"));
+
+            if(doc.containsKey("mark"))
+                jsonObject.put("mark", doc.get("mark"));
 
             if(doc.containsKey("choices_count"))
                 jsonObject.put("choicesCount", doc.get("choices_count"));

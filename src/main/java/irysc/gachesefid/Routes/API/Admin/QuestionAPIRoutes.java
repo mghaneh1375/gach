@@ -1,9 +1,11 @@
 package irysc.gachesefid.Routes.API.Admin;
 
+import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Routes.Router;
@@ -11,7 +13,9 @@ import irysc.gachesefid.Test.Question.QuestionTestController;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -21,6 +25,13 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.printException;
@@ -43,6 +54,56 @@ public class QuestionAPIRoutes extends Router {
         return QuestionController.subjectQuestions(
                 isQuestionNeeded, criticalThresh, subjectId, lessonId, gradeId
         );
+    }
+
+    @DeleteMapping(value = "remove")
+    @ResponseBody
+    public String removeQuestions(HttpServletRequest request,
+                                  @RequestBody @StrongJSONConstraint(
+                                          params = {"items"},
+                                          paramsType = {JSONArray.class}
+                                  ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        PairValue p = CommonController.removeAllReturnDocs(
+                questionRepository,
+                new JSONObject(jsonStr).getJSONArray("items"),
+                or(
+                        exists("used", false),
+                        eq("used", 0)
+                )
+        );
+
+        ArrayList<Document> docs = (ArrayList<Document>) p.getValue();
+        HashMap<ObjectId, Integer> subjectsQNo = new HashMap<>();
+
+        for(Document doc : docs) {
+            Document subject = subjectRepository.findById(doc.getObjectId("subject_id"));
+            if(subject == null)
+                continue;
+
+            if(!subjectsQNo.containsKey(subject.getObjectId("_id")))
+                subjectsQNo.put(subject.getObjectId("_id"), subject.getInteger("q_no") - 1);
+            else
+                subjectsQNo.put(subject.getObjectId("_id"), subjectsQNo.get(subject.getObjectId("_id")) - 1);
+
+        }
+
+        for(ObjectId subjectId : subjectsQNo.keySet()) {
+
+            Document subject = subjectRepository.findById(subjectId);
+            if(subject == null)
+                continue;
+
+            subject.put("q_no", subjectsQNo.get(subjectId));
+            subjectRepository.updateOne(
+                    subjectId,
+                    set("q_no", subjectsQNo.get(subjectId))
+            );
+
+        }
+
+        return (String) p.getKey();
     }
 
 

@@ -57,11 +57,9 @@ public class QuestionController extends Utilities {
     }
 
     public static JSONObject convertDocToJSON(Document doc) {
-        JSONObject jsonObject = new JSONObject()
+        return new JSONObject()
                 .put("id", doc.getObjectId("_id").toString())
                 .put("organizationId", doc.getString("organization_id"));
-
-        return jsonObject;
     }
 
     public static String setQuestionFiles(ObjectId questionId,
@@ -393,12 +391,25 @@ public class QuestionController extends Utilities {
         if(addAtLeastOne) {
 
             for(ObjectId subjectId : subjectsCounter.keySet()) {
+                Document subject = subjectRepository.findById(subjectId);
+                if(subject == null)
+                    continue;
+
+                subject.put("q_no", subjectsCounter.get(subjectId));
+
                 subjectRepository.updateOne(subjectId,
                         set("q_no", subjectsCounter.get(subjectId))
                 );
             }
 
             for(ObjectId authorId : authorCounter.keySet()) {
+
+                Document user = userRepository.findById(authorId);
+                if(user == null)
+                    continue;
+
+                user.put("q_no", authorCounter.get(authorId));
+
                 userRepository.updateOne(authorId,
                         set("q_no", authorCounter.get(authorId))
                 );
@@ -534,6 +545,7 @@ public class QuestionController extends Utilities {
         for(Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
                     .put("qNo", doc.getOrDefault("q_no", 0))
                     .put("subject", new JSONObject()
                             .put("name", doc.getString("name"))

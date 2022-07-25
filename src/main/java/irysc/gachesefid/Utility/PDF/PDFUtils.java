@@ -64,7 +64,6 @@ public class PDFUtils {
             for(String file : files) {
 
                 File f = new File(file);
-
                 BufferedImage bimg = ImageIO.read(f);
 
                 int h = w * bimg.getHeight() / bimg.getWidth();
