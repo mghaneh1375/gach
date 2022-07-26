@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.CommonController;
+import irysc.gachesefid.Controllers.Python.CVController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
@@ -710,5 +711,74 @@ public class QuizAPIRoutes extends Router {
                 user != null && Authorization.isAdmin(user.getList("accesses", String.class))
         );
     }
+
+
+    @PostMapping(value = "/correct/{col}/{row}/{qNo}/{eyes}/{choices}/{quizId}/{userId}")
+    @ResponseBody
+    public String correct(HttpServletRequest request,
+                          @PathVariable Integer col,
+                          @PathVariable Integer row,
+                          @PathVariable Integer qNo,
+                          @PathVariable Integer eyes,
+                          @PathVariable Integer choices,
+                          @PathVariable @ObjectIdConstraint ObjectId quizId,
+                          @PathVariable @ObjectIdConstraint ObjectId userId
+//                          @RequestBody MultipartFile file
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+//        getAdminPrivilegeUser(request);
+        return CVController.correct(quizId, userId, col, row, qNo, eyes, choices);
+    }
+
+    @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")
+    @ResponseBody
+    public String getQuizAnswerSheets(HttpServletRequest request,
+                                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                      @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getQuizAnswerSheets(
+                    iryscQuizRepository, null, quizId
+            );
+
+        return QuizController.getQuizAnswerSheets(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId
+        );
+    }
+
+    @PostMapping(value = "/setQuizAnswerSheet/{mode}/{quizId}/{userId}")
+    @ResponseBody
+    public String setQuizAnswerSheet(HttpServletRequest request,
+                                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                     @PathVariable @ObjectIdConstraint ObjectId userId,
+                                     @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if(file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.setQuizAnswerSheet(
+                    iryscQuizRepository, null, quizId, userId, file
+            );
+
+        return QuizController.setQuizAnswerSheet(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, userId, file
+        );
+    }
+
 }
 

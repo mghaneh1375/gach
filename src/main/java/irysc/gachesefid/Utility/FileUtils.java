@@ -19,15 +19,33 @@ import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 
 public class FileUtils {
 
+    public final static String baseDir_dev = "./src/main/";
+
     public final static String uploadDir = "/var/www/statics/";
 //    public final static String uploadDir_dev = "/var/www/gach/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
 //    public final static String limboDir_dev = "/var/www/gach/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+
+    public static PairValue uploadFileWithPath(MultipartFile file, String folder) {
+
+        try {
+            String[] splited = file.getOriginalFilename().split("\\.");
+            String filename = System.currentTimeMillis() + "." + splited[splited.length - 1];
+            Path copyLocation = Paths.get(folder + filename);
+            Files.copy(file.getInputStream(), copyLocation, StandardCopyOption.REPLACE_EXISTING);
+            return new PairValue(filename, copyLocation.toAbsolutePath().toString());
+        } catch (Exception e) {
+            System.out.println("Could not store file " + file.getOriginalFilename()
+                    + ". Please try again!");
+        }
+
+        return null;
+    }
 
     public static String uploadFile(MultipartFile file, String folder) {
 
@@ -85,6 +103,14 @@ public class FileUtils {
             Files.delete(location);
         } catch (Exception x) {
         }
+    }
+
+    public static void removeFileWithSpecificPath(String filename, String folder) {
+
+        Path location = Paths.get(folder + File.separator + filename);
+        try {
+            Files.delete(location);
+        } catch (Exception ignore) {}
     }
 
     public static boolean checkExist(String filename, String folder) {

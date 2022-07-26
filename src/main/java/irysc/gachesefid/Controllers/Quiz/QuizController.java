@@ -1289,4 +1289,79 @@ public class QuizController {
 
         return generateSuccessMsg("data", jsonArray);
     }
+
+    public static String getQuizAnswerSheets(Common db, ObjectId userId,
+                                           ObjectId quizId) {
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+            if(doc.getBoolean("is_online") ||
+                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
+            )
+                return JSON_NOT_VALID_ID;
+
+            List<Document> students = doc.getList("students", Document.class);
+            JSONArray jsonArray = new JSONArray();
+
+            for(Document student : students) {
+
+                Document user = userRepository.findById(
+                        student.getObjectId("_id")
+                );
+
+                String answerSheet = (String) student.getOrDefault("answer_sheet", "");
+                String answerSheetAfterCorrection = (String) student.getOrDefault("answer_sheet_after_correction", "");
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("answerSheet", answerSheet.isEmpty() ? "" :
+                                STATICS_SERVER + "answer_sheets/" + answerSheet)
+                        .put("answerSheetAfterCorrection", answerSheetAfterCorrection.isEmpty() ? "" :
+                                STATICS_SERVER + "answer_sheets/" + answerSheetAfterCorrection);
+
+                irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+                jsonArray.put(jsonObject);
+            }
+
+            return generateSuccessMsg("data", jsonArray);
+
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+            return null;
+        }
+    }
+
+    public static String setQuizAnswerSheet(Common db, ObjectId userId,
+                                            ObjectId quizId, ObjectId studentId,
+                                            MultipartFile file) {
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+            if(doc.getBoolean("is_online") ||
+                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
+            )
+                return JSON_NOT_VALID_ID;
+
+            List<Document> students = doc.getList("students", Document.class);
+            Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    students, "_id", studentId
+            );
+
+            if(student == null)
+                return JSON_NOT_VALID_ID;
+
+            //todo
+            String filename = FileUtils.uploadFile(file, "answer_sheets");
+            if(filename == null)
+                return JSON_UNKNOWN_UPLOAD_FILE;
+
+            student.put("answer_sheet", filename);
+            db.replaceOne(quizId, doc);
+
+            return generateSuccessMsg("file", STATICS_SERVER + "answer_sheets/" + filename);
+
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+            return null;
+        }
+    }
 }
