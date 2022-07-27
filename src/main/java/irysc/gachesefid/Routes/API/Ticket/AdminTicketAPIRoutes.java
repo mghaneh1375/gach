@@ -4,11 +4,14 @@ import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Ticket.TicketController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -19,11 +22,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 
+import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.ticketRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @RestController
-@RequestMapping(path="/api/admin/ticket/")
+@RequestMapping(path = "/api/admin/ticket/")
 @Validated
 public class AdminTicketAPIRoutes extends Router {
 
@@ -50,7 +54,7 @@ public class AdminTicketAPIRoutes extends Router {
                 sendDateSolarEndLimit, answerDateSolarEndLimit
         );
 
-        if(dates == null)
+        if (dates == null)
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
@@ -75,15 +79,18 @@ public class AdminTicketAPIRoutes extends Router {
     @DeleteMapping(value = "/remove")
     @ResponseBody
     public String remove(HttpServletRequest request,
-                              @RequestBody @StrongJSONConstraint(
-                                      params = {"items"},
-                                      paramsType = {JSONArray.class}
-                              ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {"items"},
+                                 paramsType = {JSONArray.class}
+                         ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+//        getAdminPrivilegeUserVoid(request);
+        Document user = getUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
         return CommonController.removeAll(ticketRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
-                null
+                isAdmin ? null : eq("user_id", user.getObjectId("_id"))
         );
     }
 

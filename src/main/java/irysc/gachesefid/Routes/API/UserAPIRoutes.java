@@ -34,7 +34,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.Path;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -52,12 +55,53 @@ public class UserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
-    @PostMapping(value = "/sampleUpload")
+    @GetMapping(value = "/test")
     @ResponseBody
-    public String sampleUpload(@RequestBody MultipartFile file) {
-        System.out.println(file.getOriginalFilename());
-        String filename = FileUtils.uploadFile(file, UserRepository.FOLDER);
-        return generateSuccessMsg("filename", filename);
+    public String test(@RequestBody MultipartFile file) {
+        ArrayList<Integer> a = new ArrayList<>() {
+            {add(1); add(3); add(2); add(5); add(4); add(6); add(2); add(0);}
+        };
+        byte[] bytes = irysc.gachesefid.Controllers.Quiz.Utility.getByteArr(a);
+
+        double d = 65.43;
+        byte[] output = new byte[8];
+        long lng = Double.doubleToLongBits(d);
+        for(int i = 0; i < 8; i++) output[i] = (byte)((lng >> ((7 - i) * 8)) & 0xff);
+
+        byte[] delimeter0 = new byte[4];
+        delimeter0[0] = (byte) 0xff;
+        delimeter0[1] = (byte) 0xff;
+        delimeter0[2] = (byte) 0xff;
+        delimeter0[3] = (byte) 0x00;
+
+
+        byte[] delimeter = new byte[4];
+        delimeter[0] = (byte) 0xff;
+        delimeter[1] = (byte) 0xff;
+        delimeter[2] = (byte) 0xff;
+        delimeter[3] = (byte) 0x01;
+
+        double d2 = 23.03;
+        byte[] output2 = new byte[8];
+        long lng2 = Double.doubleToLongBits(d2);
+        for(int i = 0; i < 8; i++) output2[i] = (byte)((lng2 >> ((7 - i) * 8)) & 0xff);
+
+        byte[] allByteArray = new byte[bytes.length + output.length + output2.length + 4 * 3];
+
+        ByteBuffer buff = ByteBuffer.wrap(allByteArray);
+        buff.put(delimeter0);
+        buff.put(bytes);
+        buff.put(delimeter);
+        buff.put(output);
+        buff.put(delimeter);
+        buff.put(output2);
+
+
+        ArrayList<Number> b = irysc.gachesefid.Controllers.Quiz.Utility.getNumbers(buff.array());
+        for(Number itr : b)
+            System.out.println(itr);
+
+        return "s";
     }
 
 

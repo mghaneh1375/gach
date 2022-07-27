@@ -189,4 +189,32 @@ public class Utilities {
         return jsonArray;
     }
 
+    public static byte convertTypeToByte(String type) {
+
+        if(type.equalsIgnoreCase(QuestionType.TEST.getName()))
+            return (byte) 0;
+
+        if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+            return (byte) 1;
+
+        if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
+            return (byte) 2;
+
+        return (byte) 3;
+    }
+
+//    public static void convertAnswerToByte(byte[] String,) {
+
+//        if(type.equalsIgnoreCase(QuestionType.TEST.getName()))
+//            return (byte) 0;
+//
+//        if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+//            return (byte) 1;
+//
+//        if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
+//            return (byte) 2;
+//
+//        return (byte) 3;
+//    }
+
 }

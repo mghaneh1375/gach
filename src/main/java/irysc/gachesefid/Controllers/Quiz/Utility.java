@@ -4,15 +4,15 @@ package irysc.gachesefid.Controllers.Quiz;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindAnswer;
-import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.List;
-import java.util.Set;
+import java.nio.ByteBuffer;
+import java.util.*;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
@@ -217,5 +217,92 @@ public class Utility {
             return String.format("%.2f", mark);
 
         return mark.toString();
+    }
+
+    public static byte[] getByteArr(ArrayList<Integer> numbers) {
+
+        byte[] output = new byte[numbers.size()];
+        int idx = 0;
+
+        for (int num : numbers)
+            output[idx++] = (byte) num;
+
+        return output;
+    }
+    public static byte[] getByteArr(JSONArray numbers) {
+
+        byte[] output = new byte[numbers.length()];
+
+        for (int i = 0; i < numbers.length(); i++)
+            output[i] = (byte) numbers.getInt(i);
+
+        return output;
+    }
+
+    public static List<byte[]> tokens(byte[] array, byte[] delimiter) {
+        List<byte[]> byteArrays = new LinkedList<>();
+        if (delimiter.length == 0) {
+            return byteArrays;
+        }
+        int begin = 0;
+
+        outer:
+        for (int i = 0; i < array.length - delimiter.length + 1; i++) {
+            for (int j = 0; j < delimiter.length; j++) {
+                if (array[i + j] != delimiter[j]) {
+                    continue outer;
+                }
+            }
+            byteArrays.add(Arrays.copyOfRange(array, begin, i));
+            begin = i + delimiter.length;
+        }
+        byteArrays.add(Arrays.copyOfRange(array, begin, array.length));
+        return byteArrays;
+    }
+
+    public static ArrayList<Number> getNumbers(byte[] bytes) {
+
+        byte[] delimeter = new byte[3];
+        delimeter[0] = (byte) 0xff;
+        delimeter[1] = (byte) 0xff;
+        delimeter[2] = (byte) 0xff;
+
+        System.out.println(bytes.length);
+
+        ArrayList<Number> numbers = new ArrayList<>();
+        List<byte[]> tokens = tokens(bytes, delimeter);
+        System.out.println(tokens.size());
+
+        for(byte[] itr : tokens) {
+
+            byte type = itr[0];
+            if(type == 0x00) {
+                boolean first = true;
+                for (byte aByte : itr) {
+                    if(first) {
+                        first = false;
+                        continue;
+                    }
+                    numbers.add(aByte & 0xFF);
+                }
+            }
+            else if(type == 0x01) {
+//                itr = Arrays.copyOfRange(itr, 1, bytes.length);
+//                System.out.println(itr.length);
+                numbers.add(ByteBuffer.wrap(itr).getDouble());
+            }
+        }
+
+        return numbers;
+    }
+
+    public static ArrayList<Integer> getNumbers(Binary binary) {
+
+        ArrayList<Integer> numbers = new ArrayList<>();
+
+        for (byte aByte : binary.getData())
+            numbers.add(aByte & 0xFF);
+
+        return numbers;
     }
 }

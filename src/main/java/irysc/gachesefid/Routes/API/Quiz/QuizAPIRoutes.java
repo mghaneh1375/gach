@@ -1,7 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.CommonController;
-import irysc.gachesefid.Controllers.Python.CVController;
+//import irysc.gachesefid.Controllers.Python.CVController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
@@ -726,7 +726,8 @@ public class QuizAPIRoutes extends Router {
 //                          @RequestBody MultipartFile file
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 //        getAdminPrivilegeUser(request);
-        return CVController.correct(quizId, userId, col, row, qNo, eyes, choices);
+//        return CVController.correct(quizId, userId, col, row, qNo, eyes, choices);
+        return "salam";
     }
 
     @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")
@@ -761,7 +762,7 @@ public class QuizAPIRoutes extends Router {
                                      @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document user = getPrivilegeUser(request);
@@ -777,6 +778,35 @@ public class QuizAPIRoutes extends Router {
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, userId, file
+        );
+    }
+
+    @PutMapping(value = "/storeAnswers/{mode}/{quizId}/{userId}")
+    @ResponseBody
+    public String storeAnswers(HttpServletRequest request,
+                               @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId,
+                               @PathVariable @ObjectIdConstraint ObjectId userId,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"answers"},
+                                       paramsType = {JSONArray.class}
+                               ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.storeAnswers(
+                    iryscQuizRepository, null, quizId,
+                    userId, new JSONObject(jsonStr).getJSONArray("answers")
+            );
+
+        return QuizController.storeAnswers(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, userId, new JSONObject(jsonStr).getJSONArray("answers")
         );
     }
 
