@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Aggregates.project;
@@ -82,8 +83,8 @@ public class TicketController {
                                      ObjectId finisherIdFilter,
                                      ObjectId idFilter,
                                      ObjectId studentIdFilter,
-                                     String sendDate, String answerDate,
-                                     String sendDateEndLimit, String answerDateEndLimit,
+                                     Long sendDate, Long answerDate,
+                                     Long sendDateEndLimit, Long answerDateEndLimit,
                                      Boolean isForTeacher, Boolean startByAdmin,
                                      String section, String priority) {
 
@@ -102,10 +103,10 @@ public class TicketController {
             constraints.add(eq("is_for_teacher", isForTeacher));
 
         if (section != null)
-            constraints.add(eq("section", section.toLowerCase()));
+            constraints.add(regex("section", Pattern.compile(Pattern.quote(section), Pattern.CASE_INSENSITIVE)));
 
         if (priority != null)
-            constraints.add(eq("priority", priority.toUpperCase()));
+            constraints.add(regex("priority", Pattern.compile(Pattern.quote(priority), Pattern.CASE_INSENSITIVE)));
 
         AggregateIterable<Document> docs =
                 ticketRepository.findWithJoinUser("user_id", "student",
@@ -529,107 +530,5 @@ public class TicketController {
         )).start();
 
         return generateSuccessMsg("filename", STATICS_SERVER + TicketRepository.FOLDER + "/" + filename);
-    }
-
-    public static String getMyRequests(ObjectId id,
-                                       String status,
-                                       ObjectId userId,
-                                       String sendDate, String answerDate,
-                                       String sendDateEndLimit, String answerDateEndLimit) {
-
-        ArrayList<Bson> constraints = new ArrayList<>();
-
-        fillConstraintArr(true, userId, id,
-                null, sendDate, false, answerDate, sendDateEndLimit, answerDateEndLimit,
-                null, status, constraints
-        );
-
-        ArrayList<Document> requests = ticketRepository.find(
-                and(constraints), null,
-                Sorts.descending("send_date")
-        );
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (Document request : requests) {
-            try {
-                jsonArray.put(fillJSON(request, false,
-                        false, true)
-                );
-            } catch (Exception ignore) {
-            }
-        }
-
-        return generateSuccessMsg("data", jsonArray);
-
-    }
-
-    public static String deleteRequestFile(List<String> accesses,
-                                           ObjectId userId,
-                                           ObjectId requestId,
-                                           String filename) {
-
-        Document request;
-        boolean isAdmin = Authorization.isAdmin(accesses);
-
-        if (!isAdmin)
-            request = ticketRepository.findOne(
-                    and(
-                            eq("_id", requestId),
-                            eq("user_id", userId),
-                            or(
-                                    eq("status", "init"),
-                                    eq("status", "answer")
-                            )
-                    ), null
-            );
-        else
-            request = ticketRepository.findOne(
-                    and(
-                            eq("_id", requestId),
-                            eq("status", "pending")
-                    ), null
-            );
-
-        if (request == null)
-            return JSON_NOT_ACCESS;
-
-        List<Document> chats = request.getList("chats", Document.class);
-        boolean deleted = false;
-
-        int i = chats.size() - 1;
-
-        if (
-                (
-                        !isAdmin &&
-                                !chats.get(i).getBoolean("is_for_user")
-                ) ||
-                        (
-                                isAdmin &&
-                                        chats.get(i).getBoolean("is_for_user")
-                        )
-        )
-            return JSON_NOT_ACCESS;
-
-        if (chats.get(i).getList("files", String.class).contains(filename)) {
-
-            if (
-                    !isAdmin || chats.get(i).getObjectId("user_id").equals(userId)
-            ) {
-                FileUtils.removeFile(filename, TicketRepository.FOLDER);
-                chats.get(i).getList("files", String.class).remove(filename);
-                deleted = true;
-            }
-        }
-
-        if (!deleted)
-            return JSON_NOT_ACCESS;
-
-        new Thread(() -> ticketRepository.updateOne(
-                request.getObjectId("_id"),
-                set("chats", chats)
-        )).start();
-
-        return JSON_OK;
     }
 }

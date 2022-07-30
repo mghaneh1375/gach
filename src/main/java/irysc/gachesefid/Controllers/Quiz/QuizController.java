@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Controllers.Quiz.Utility.getAnswers;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -325,7 +326,6 @@ public class QuizController {
 
         return generateSuccessMsg("data", jsonArray);
     }
-
 
 
     public static Document store(ObjectId userId, JSONObject data
@@ -1039,8 +1039,6 @@ public class QuizController {
             //todo: check edit access
             //todo: check school access to questions
 
-            List<Document> questions = quiz.getList("questions", Document.class);
-
             String filename = FileUtils.uploadTempFile(file);
             ArrayList<Row> rows = Excel.read(filename);
             FileUtils.removeTempFile(filename);
@@ -1051,6 +1049,8 @@ public class QuizController {
             rows.remove(0);
 
             JSONArray excepts = new JSONArray();
+            JSONArray jsonArray = new JSONArray();
+
             int rowIdx = 0;
 
             for (Row row : rows) {
@@ -1064,25 +1064,10 @@ public class QuizController {
                         continue;
                     }
 
-                    String organizationId = row.getCell(1).getStringCellValue();
-                    double mark = row.getCell(2).getNumericCellValue();
-
-                    Document question = questionRepository.findBySecKey(organizationId);
-
-                    if (question == null) {
-                        excepts.put(rowIdx);
-                        continue;
-                    }
-
-                    questions.add(new Document("mark", mark)
-                            .append("_id", question.getObjectId("_id"))
-                    );
-
-                    int used = (int) question.getOrDefault("used", 0);
-
-                    questionRepository.updateOne(
-                            question.getObjectId("_id"),
-                            set("used", used + 1)
+                    jsonArray.put(
+                            new JSONObject()
+                                    .put("organizationId", row.getCell(1).getStringCellValue())
+                                    .put("mark", row.getCell(2).getNumericCellValue())
                     );
 
                 } catch (Exception x) {
@@ -1090,17 +1075,7 @@ public class QuizController {
                 }
             }
 
-            db.replaceOne(quizId, quiz);
-
-            if (excepts.length() == 0)
-                return generateSuccessMsg(
-                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
-                );
-
-            return generateSuccessMsg(
-                    "excepts",
-                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts
-            );
+            return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3);
 
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -1119,17 +1094,47 @@ public class QuizController {
 
             //todo: check edit access
             //todo: check school access to questions
+            return doAddQuestionsToQuiz(db, quiz, jsonArray,
+                    new JSONArray(), mark
+            );
 
-            Document questions = quiz.get("questions", Document.class);
-            JSONArray excepts = new JSONArray();
-            JSONArray addedItems = new JSONArray();
-            ArrayList<Document> questionsArr = new ArrayList<>();
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
+        }
+    }
+
+    private static String doAddQuestionsToQuiz(Common db, Document quiz,
+                                               Object questionsList,
+                                               JSONArray excepts,
+                                               double mark) {
+
+        JSONArray addedItems = new JSONArray();
+
+        Document questions = quiz.get("questions", Document.class);
+
+        List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
+        List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
+
+        if (questionsList instanceof JSONArray) {
+            JSONArray jsonArray = (JSONArray) questionsList;
 
             for (int i = 0; i < jsonArray.length(); i++) {
 
                 try {
 
-                    String organizationId = jsonArray.getString(i);
+                    double tmpMark = mark;
+                    String organizationId;
+
+                    if (jsonArray.get(i) instanceof JSONObject) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+                        organizationId = jsonObject.getString("organizationId");
+                        if (jsonObject.has("mark"))
+                            tmpMark = jsonObject.getDouble("mark");
+                    } else
+                        organizationId = jsonArray.getString(i);
+
                     Document question = questionRepository.findBySecKey(organizationId);
 
                     if (question == null) {
@@ -1137,66 +1142,61 @@ public class QuizController {
                         continue;
                     }
 
-                    questionsArr.add(question);
+                    int used = (int) question.getOrDefault("used", 0);
+
+                    questionRepository.updateOne(
+                            question.getObjectId("_id"),
+                            set("used", used + 1)
+                    );
+
+                    ids.add(question.getObjectId("_id"));
+                    marks.add(tmpMark);
+
+                    addedItems.put(
+                            QuestionController.convertDocToJSON(question)
+                                    .put("mark", mark)
+                    );
 
                 } catch (Exception x) {
                     excepts.put(i + 1);
                 }
             }
 
-
-            Binary types = (Binary) questions.getOrDefault("types", new Binary(new byte[0]));
-            Binary answers = (Binary) questions.getOrDefault("answers", new Binary(new byte[0]));
-
-            byte[] allTypes = new byte[types.length() + questionsArr.size()];
-            ArrayList<Byte> bytes = new ArrayList<>();
-
-            List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
-            List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
-            int idx = 0;
-
-            for(byte b : types.getData())
-                allTypes[idx++] = b;
-
-//            idx = 0;
-//            for(byte b : answers.getData())
-//                allAnswers[idx++] = b;
-
-            for(Document question : questionsArr) {
-
-                ids.add(question.getObjectId("_id"));
-                marks.add(mark);
-                allTypes[idx] = Utilities.convertTypeToByte(question.getString("kind_question"));
-//                Utilities.convertAnswerToByte(allAnswers, idx, question.get("answer"));
-
-                addedItems.put(
-                        QuestionController.convertDocToJSON(question)
-                                .put("mark", mark)
-                );
-
-                int used = (int) question.getOrDefault("used", 0);
-
-                questionRepository.updateOne(
-                        question.getObjectId("_id"),
-                        set("used", used + 1)
-                );
-
-            }
-
-            questions.put("types", allTypes);
             questions.put("marks", marks);
             questions.put("_ids", ids);
-
-            db.replaceOne(quizId, quiz);
+            questions.put("answers",
+                    Utility.getAnswersByteArr(ids)
+            );
 
             return irysc.gachesefid.Utility.Utility.returnAddResponse(
                     excepts, addedItems
             );
-        } catch (InvalidFieldsException x) {
-            return generateErr(
-                    x.getMessage()
-            );
+
         }
+
+        Document question = (Document) questionsList;
+
+        ids.add(question.getObjectId("_id"));
+        marks.add(mark);
+
+        byte[] answersByte;
+
+        if (questions.containsKey("answers"))
+            answersByte = questions.get("answers", Binary.class).getData();
+        else
+            answersByte = new byte[0];
+
+        questions.put("answers",
+                Utility.addAnswerToByteArr(answersByte, question.getString("kind_question"),
+                        question.get("answer")
+                )
+        );
+
+        questions.put("marks", marks);
+        questions.put("_ids", ids);
+
+        db.replaceOne(quiz.getObjectId("_id"), quiz);
+        return "ok";
     }
 
     public static String addQuestionToQuizzes(String organizationCode, Common db,
@@ -1222,15 +1222,9 @@ public class QuizController {
             ObjectId quizId = new ObjectId(id);
             try {
                 Document quiz = hasAccess(db, userId, quizId);
-
-                List<Document> questions = quiz.getList("questions", Document.class);
-
-                questions.add(new Document("mark", mark)
-                        .append("_id", question.getObjectId("_id"))
+                doAddQuestionsToQuiz(db, quiz,
+                        question, null, mark
                 );
-
-                db.replaceOne(quizId, quiz);
-
                 addedItems.put(
                         QuestionController.convertDocToJSON(question)
                                 .put("mark", mark)
@@ -1251,7 +1245,6 @@ public class QuizController {
                 excepts, addedItems
         );
     }
-
 
 
     public static String updateQuestionMark(Common db, ObjectId userId,
@@ -1337,7 +1330,7 @@ public class QuizController {
                     students, "_id", studentId
             );
 
-            if(student == null)
+            if (student == null)
                 return JSON_NOT_VALID_ID;
 
             student.put("answers", Utility.getByteArr(answers));
@@ -1345,6 +1338,42 @@ public class QuizController {
 
             db.replaceOne(quizId, doc);
             return JSON_OK;
+
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            return null;
+        }
+    }
+
+    public static String getQuizAnswerSheet(Common db, ObjectId userId,
+                                            ObjectId quizId) {
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+            JSONArray jsonArray = new JSONArray();
+
+            Document questions = doc.get("questions", Document.class);
+            ArrayList<PairValue> answers = questions.containsKey("answers") ?
+                    getAnswers(questions.get("answers", Binary.class).getData()) :
+                    new ArrayList<>();
+
+            List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
+
+            System.out.println(marks.size());
+            System.out.println(answers.size());
+
+//            if(answers.size() != marks.size())
+//                return JSON_NOT_UNKNOWN;
+
+            for(int i = 0; i < marks.size(); i++) {
+
+                jsonArray.put(new JSONObject()
+                        .put("type", answers.get(i).getKey())
+                        .put("answer", answers.get(i).getValue())
+                        .put("mark", marks.get(i))
+                );
+            }
+
+            return generateSuccessMsg("data", jsonArray);
 
         } catch (Exception x) {
             System.out.println(x.getMessage());
@@ -1375,7 +1404,7 @@ public class QuizController {
                 String answerSheetAfterCorrection = (String) student.getOrDefault("answer_sheet_after_correction", "");
 
                 JSONObject jsonObject = new JSONObject()
-                        .put("answers", Utility.getNumbers(student.get("answers", org.bson.types.Binary.class)))
+//                        .put("answers", Utility.getNumbers(student.get("answers", org.bson.types.Binary.class).getData()))
                         .put("answerSheet", answerSheet.isEmpty() ? "" :
                                 STATICS_SERVER + "answer_sheets/" + answerSheet)
                         .put("answerSheetAfterCorrection", answerSheetAfterCorrection.isEmpty() ? "" :

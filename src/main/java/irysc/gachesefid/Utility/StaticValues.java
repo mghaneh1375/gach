@@ -9,7 +9,7 @@ public class StaticValues {
 
 //    public final static String STATICS_SERVER = "http://185.239.106.26:8086/";
 //    public final static String STATICS_SERVER = "http://192.168.0.106/";
-    public final static String STATICS_SERVER = "http://192.168.0.145/";
+    public final static String STATICS_SERVER = "http://192.168.1.11/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@mail.okft.org";

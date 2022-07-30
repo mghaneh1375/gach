@@ -155,31 +155,13 @@ public class Utilities {
                 }
             }
 
-            if(isAuthorsNeeded) {
-
-                ObjectId authorId = doc.getObjectId("author_id");
-                // todo : what should i put in json
-
-                if (authors.containsKey(authorId))
-                    jsonObject.put("author", new JSONObject()
-                            .put("id", authorId)
-                            .put("name", authors.get(authorId))
-                    );
-                else {
-
-                    Document user = userRepository.findById(authorId);
-
-                    jsonObject.put("author", new JSONObject()
-                            .put("id", authorId)
-                            .put("name", user.getString("first_name") + " " + user.getString("last_name"))
-                    );
-
-                    authors.put(authorId, user.getString("first_name") + " " + user.getString("last_name"));
-                }
-
-            }
+            if(isAuthorsNeeded)
+                jsonObject.put("author", doc.getString("author"));
 
             jsonObject
+                    .put("oldCorrect", doc.getInteger("old_correct"))
+                    .put("oldIncorrect", doc.getInteger("old_incorrect"))
+                    .put("oldWhite", doc.getInteger("old_white"))
                     .put("visibility", doc.getBoolean("visibility"))
                     .put("kindQuestion", doc.getString("kind_question"));
 
@@ -189,32 +171,19 @@ public class Utilities {
         return jsonArray;
     }
 
-    public static byte convertTypeToByte(String type) {
+    public static byte[] convertTypeToByte(String type) {
 
         if(type.equalsIgnoreCase(QuestionType.TEST.getName()))
-            return (byte) 0;
+            return new byte[] {(byte) 0};
 
         if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
-            return (byte) 1;
+            return new byte[] {(byte) 1};
 
         if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
-            return (byte) 2;
+            return new byte[] {(byte) 2};
 
-        return (byte) 3;
+        return new byte[] {(byte) 3};
     }
 
-//    public static void convertAnswerToByte(byte[] String,) {
-
-//        if(type.equalsIgnoreCase(QuestionType.TEST.getName()))
-//            return (byte) 0;
-//
-//        if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
-//            return (byte) 1;
-//
-//        if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
-//            return (byte) 2;
-//
-//        return (byte) 3;
-//    }
 
 }

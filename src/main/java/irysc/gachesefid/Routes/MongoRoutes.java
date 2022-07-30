@@ -2,10 +2,8 @@ package irysc.gachesefid.Routes;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.MongoCollection;
-import irysc.gachesefid.DB.CityRepository;
-import irysc.gachesefid.DB.QuestionRepository;
-import irysc.gachesefid.DB.SchoolRepository;
-import irysc.gachesefid.DB.StateRepository;
+import irysc.gachesefid.DB.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.Quiz;
 import org.bson.Document;
@@ -16,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 
@@ -49,23 +49,116 @@ public class MongoRoutes extends Router {
         return "salam";
     }
 
+    @GetMapping(value = "/transfer_basics")
+    @ResponseBody
+    public String transferBasics() {
+
+        HashMap<PairValue, ArrayList<PairValue>> grades = GradeRepository.getGradeWithLessonsFromMySQL();
+        int counter = 0;
+
+        for(PairValue grade : grades.keySet()) {
+
+            List<Document> lessonsDoc = new ArrayList<>();
+            List<PairValue> lessons = grades.get(grade);
+
+            for(PairValue lesson : lessons) {
+                counter++;
+                lessonsDoc.add(
+                        new Document("name", lesson.getValue())
+                            .append("_id", new ObjectId())
+                            .append("mysql_id", lesson.getKey())
+                );
+            }
+
+            gradeRepository.insertOne(
+                    new Document("name", grade.getValue())
+                    .append("lessons", lessonsDoc)
+            );
+        }
+        System.out.println(counter);
+
+        return "ok";
+    }
+
+    @GetMapping(value = "/transfer_subjects")
+    @ResponseBody
+    public String transferSubjects() {
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+        for(Document doc : docs) {
+
+            if(!doc.containsKey("lessons"))
+                continue;
+
+            Document gradeDoc = new Document(
+                    "_id", doc.getObjectId("_id")
+            ).append("name", doc.getString("name"));
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            for(Document lesson : lessons) {
+
+                if(!lesson.containsKey("mysql_id"))
+                    continue;
+
+                Document lessonDoc = new Document(
+                        "_id", lesson.getObjectId("_id")
+                ).append("name", lesson.getString("name"));
+
+                ArrayList<Document> subjects = SubjectRepository.getAllSubjectsByLessonIdFromMySQL(
+                        lesson.getInteger("mysql_id")
+                );
+
+                for(Document subject : subjects) {
+                    subject.put("lesson", lessonDoc);
+                    subject.put("grade", gradeDoc);
+                    subjectRepository.insertOne(subject);
+                }
+            }
+
+        }
+
+        return "ok";
+    }
+
     @GetMapping(value = "/transfer_questions")
     @ResponseBody
     public String transferQuestions() {
 
-        MongoCollection<Document> documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection("question");
-        ArrayList<Document> docs = QuestionRepository.findAllMysql();
+        ArrayList<Document> docs = subjectRepository.find(null, null);
+        for(Document doc : docs) {
 
-        for (Document doc : docs) {
-            try {
-                doc.put("ans", Integer.parseInt(doc.getString("ans")));
-                documentMongoCollection.insertOne(doc);
-            } catch (Exception x) {
-                documentMongoCollection.insertOne(doc);
+            if(!doc.containsKey("code"))
+                continue;
+
+            int code = Integer.parseInt(doc.getString("code").replace(" ", ""));
+            if(code > 10000)
+                continue;
+
+            ArrayList<Document> questions = QuestionRepository.findAllMysql(
+                    code
+            );
+
+            for(Document question : questions) {
+                question.put("subject_id", doc.getObjectId("_id"));
+                questionRepository.insertOne(question);
             }
+
         }
 
-        return "salam";
+        return "ok";
+    }
+
+    @GetMapping(value = "/transfer_authors")
+    @ResponseBody
+    public String transferAuthors() {
+
+        ArrayList<Document> docs = UserRepository.fetchAuthorsFromMySQL();
+
+        for(Document doc : docs)
+            authorRepository.insertOne(doc);
+
+        return "ok";
     }
 
     @GetMapping(value = "/transfer_quizes")

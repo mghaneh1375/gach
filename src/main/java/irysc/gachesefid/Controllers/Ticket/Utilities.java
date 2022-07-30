@@ -123,10 +123,11 @@ public class Utilities {
                                   ObjectId studentIdFilter,
                                   ObjectId id,
                                   Boolean searchInArchive,
-                                  String sendDate,
+                                  Long sendDate,
                                   boolean isCreatedAt,
-                                  String answerDate,
-                                  String sendDateEndLimit, String answerDateEndLimit,
+                                  Long answerDate,
+                                  Long sendDateEndLimit,
+                                  Long answerDateEndLimit,
                                   ObjectId finisherIdFilter,
                                   String status,
                                   ArrayList<Bson> constraints) {
@@ -137,29 +138,17 @@ public class Utilities {
         if (id != null)
             constraints.add(eq("_id", id));
 
-        if (sendDate != null) {
-            long ts = Utility.getTimestamp(sendDate);
-            if (ts != -1)
-                constraints.add(gte(isCreatedAt ? "created_at" : "send_date", ts));
-        }
+        if (sendDate != null)
+            constraints.add(gte(isCreatedAt ? "created_at" : "send_date", sendDate));
 
-        if (answerDate != null) {
-            long ts = Utility.getTimestamp(answerDate);
-            if (ts != -1)
-                constraints.add(gte("answer_date", ts));
-        }
+        if (answerDate != null)
+            constraints.add(gte("answer_date", answerDate));
 
-        if (sendDateEndLimit != null) {
-            long ts = Utility.getTimestamp(sendDateEndLimit);
-            if (ts != -1)
-                constraints.add(lte(isCreatedAt ? "created_at" : "send_date", ts));
-        }
+        if (sendDateEndLimit != null)
+            constraints.add(lte(isCreatedAt ? "created_at" : "send_date", sendDateEndLimit));
 
-        if (answerDateEndLimit != null) {
-            long ts = Utility.getTimestamp(answerDateEndLimit);
-            if (ts != -1)
-                constraints.add(lte("answer_date", ts));
-        }
+        if (answerDateEndLimit != null)
+            constraints.add(lte("answer_date", answerDateEndLimit));
 
         if (studentIdFilter != null)
             constraints.add(eq("user_id", studentIdFilter));

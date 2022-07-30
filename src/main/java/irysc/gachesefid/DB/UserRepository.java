@@ -14,6 +14,8 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -258,23 +260,6 @@ public class UserRepository extends Common {
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 
-    public int findAny(String phone, String mail) {
-
-        FindIterable<Document> cursor = documentMongoCollection.find(or(
-                eq("username", phone),
-                eq("mail", mail)
-        )).projection(new BasicDBObject("username", true));
-
-        if (!cursor.iterator().hasNext())
-            return 0;
-
-        Document doc = cursor.iterator().next();
-        if (doc.getString("username").equals(phone))
-            return -4;
-
-        return -2;
-    }
-
     public int isExistByNID(String NID, ObjectId userId) {
 
         FindIterable<Document> cursor = documentMongoCollection.find(or(
@@ -296,51 +281,49 @@ public class UserRepository extends Common {
         return 0;
     }
 
-    public Document findByNID(String NID) {
-
-        FindIterable<Document> cursor = documentMongoCollection.find(or(
-                eq("NID", NID),
-                eq("passport_no", NID)
-        ));
-
-        if (cursor.iterator().hasNext())
-            return cursor.iterator().next();
-
-        return null;
-    }
-
-    public ArrayList<Document> findByIds(ArrayList<ObjectId> objectIds) {
-
-        List<Document> cursor = new ArrayList<>();
-
-        for (ObjectId objectId : objectIds)
-            cursor.add(userRepository.findById(objectId));
-
-        ArrayList<Document> infos = new ArrayList<>(cursor);
-        if (infos.size() != objectIds.size())
-            return null;
-
-        return infos;
-    }
-
-    public String searchByPhone(String phone) {
-
-        JSONObject result = new JSONObject();
-        FindIterable<Document> cursor = documentMongoCollection.find(eq("username", phone)).projection(USER_MANAGEMENT_INFO_DIGEST);
-
-        ArrayList<Document> docs = new ArrayList<>();
-        for (Document doc : cursor)
-            docs.add(doc);
-
-        if (docs.size() == 0)
-            return result.put("status", "nok").toString();
-
-        return result.put("status", "ok")
-                .put("user", UserRepository.covertDocToJsonArr(docs).getJSONObject(0))
-                .toString();
-    }
-
     public void checkCache(Document newDoc) {
         removeFromCache(table, newDoc.getObjectId("_id"));
+    }
+
+
+    public static ArrayList<Document> fetchAuthorsFromMySQL() {
+
+
+        ArrayList<Document> output = new ArrayList<>();
+
+        try {
+            String sql = "select u.firstName, u.lastName, u.username, (select count(*) from question where author = u.id) as q_no, u.id from users u where u.level = 10";
+            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                Document doc = new Document("first_name", rs.getString(1))
+                        .append("last_name", rs.getString(2))
+                        .append("username", rs.getString(3))
+                        .append("code", rs.getInt(5))
+                        .append("q_no", rs.getInt(4));
+
+                if(doc.getString("last_name").isEmpty()) {
+                    String[] splited = doc.getString("first_name").split(" ");
+                    if(splited.length >= 2) {
+
+                        String tmp = "";
+                        for(int i = 0; i < splited.length - 1; i++)
+                            tmp += splited[i] + " ";
+
+                        doc.put("first_name", tmp);
+                        doc.put("last_name", splited[splited.length - 1]);
+                    }
+                }
+
+                output.add(doc);
+            }
+        }
+        catch (Exception x) {
+            x.printStackTrace();
+        }
+
+        return output;
     }
 }

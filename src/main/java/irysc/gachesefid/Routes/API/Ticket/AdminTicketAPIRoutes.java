@@ -34,10 +34,10 @@ public class AdminTicketAPIRoutes extends Router {
     @GetMapping(value = "/getRequests")
     @ResponseBody
     public String getRequests(HttpServletRequest request,
-                              @RequestParam(value = "sendDateSolar", required = false) String sendDateSolar,
-                              @RequestParam(value = "answerDateSolar", required = false) String answerDateSolar,
-                              @RequestParam(value = "sendDateSolarEndLimit", required = false) String sendDateSolarEndLimit,
-                              @RequestParam(value = "answerDateSolarEndLimit", required = false) String answerDateSolarEndLimit,
+                              @RequestParam(value = "sendDateSolar", required = false) Long sendDateSolar,
+                              @RequestParam(value = "answerDateSolar", required = false) Long answerDateSolar,
+                              @RequestParam(value = "sendDateSolarEndLimit", required = false) Long sendDateSolarEndLimit,
+                              @RequestParam(value = "answerDateSolarEndLimit", required = false) Long answerDateSolarEndLimit,
                               @RequestParam(value = "isForTeacher", required = false) Boolean isForTeacher,
                               @RequestParam(value = "startByAdmin", required = false) Boolean startByAdmin,
                               @RequestParam(value = "section", required = false) String section,
@@ -49,20 +49,21 @@ public class AdminTicketAPIRoutes extends Router {
                               @RequestParam(value = "id", required = false) ObjectId id
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
-        ArrayList<String> dates = Utility.checkDatesConstriant(
-                sendDateSolar, answerDateSolar,
-                sendDateSolarEndLimit, answerDateSolarEndLimit
-        );
-
-        if (dates == null)
-            return JSON_NOT_VALID_PARAMS;
+//        ArrayList<String> dates = Utility.checkDatesConstriant(
+//                sendDateSolar, answerDateSolar,
+//                sendDateSolarEndLimit, answerDateSolarEndLimit
+//        );
+//
+//        if (dates == null)
+//            return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
 
         return TicketController.getRequests(
                 searchInArchive, status,
                 finisher, id, studentId,
-                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
+//                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
+                sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 isForTeacher, startByAdmin, section, priority
         );
     }

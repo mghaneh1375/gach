@@ -6,6 +6,7 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Main.GachesefidApplication;
+import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 
@@ -17,6 +18,7 @@ import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.in;
+import static irysc.gachesefid.Main.GachesefidApplication.authorRepository;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 public class QuestionRepository extends Common {
@@ -46,33 +48,79 @@ public class QuestionRepository extends Common {
     }
 
     // todo : after all transfer from mysql to mongo it should be delete
-    public static ArrayList<Document> findAllMysql() {
+    public static ArrayList<Document> findAllMysql(int subjectId) {
 
         ArrayList<Document> output = new ArrayList<>();
 
         try {
-            String sql = "select * from question where 1";
+            String sql = "select q.*, (select count(*) from regularQOQ where questionId = q.id) as used from question q, soq s where s.qId = q.id and s.sId = ?";
             PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
+            ps.setInt(1, subjectId);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
+                try {
+                    ResultSetMetaData rsmd = rs.getMetaData();
+                    Document document = new Document();
 
-                ResultSetMetaData rsmd = rs.getMetaData();
-                Document document = new Document();
+                    for (int i = 1; i <= rsmd.getColumnCount(); i++)
+                        document.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, rsmd.getColumnName(i)), rs.getObject(i));
 
-                for (int i = 1; i <= rsmd.getColumnCount(); i++)
-                    document.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, rsmd.getColumnName(i)), rs.getObject(i));
+                    document.remove("s_id");
+                    document.put("visibility", document.getInteger("status") == 1);
+                    document.remove("status");
 
-                HashMap<String, Object> tmp = findAllLessonMysql(document.getInteger("s_id"));
-                for (String key : tmp.keySet())
-                    document.put(key, tmp.get(key));
+                    document.put("answer", document.get("ans"));
+                    document.remove("ans");
 
-                document.remove("s_id");
-                output.add(document);
+                    document.put("answer_file", document.get("ans_file"));
+                    document.remove("ans_file");
+
+                    document.put("kind_question",
+                            Integer.parseInt(document.get("kind_q").toString()) == 1 ? QuestionType.TEST.getName() :
+                                    Integer.parseInt(document.get("kind_q").toString()) == 0 ? QuestionType.SHORT_ANSWER.getName() :
+                                            QuestionType.MULTI_SENTENCE.getName()
+                    );
+
+                    document.remove("kind_q");
+
+                    if(document.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                        document.put("answer", document.get("answer").toString().replace("2", "0"));
+                        document.put("sentences_count", document.get("answer").toString().length());
+                    }
+                    else {
+                        if(document.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                            document.put("answer", Double.parseDouble(document.get("answer").toString()));
+                        else
+                            document.put("answer", Integer.parseInt(document.get("answer").toString()));
+                    }
+
+                    document.put("level", document.getInteger("level") == 1 ?
+                            "easy" :
+                            document.getInteger("level") == 2 ? "mid" : "hard");
+
+                    if(!document.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                        document.remove("telorance");
+
+                    if(!document.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                        document.remove("choices_count");
+
+                    Document author = authorRepository.findBySecKey(document.getInteger("author"));
+                    if(author == null)
+                        document.put("author", "آیریسک");
+                    else
+                        document.put("author", author.getString("first_name") + " " + author.getString("last_name"));
+
+                    document.remove("id");
+                    output.add(document);
+                }
+                catch (Exception ignore) {
+                    ignore.printStackTrace();
+                }
             }
         }
         catch (Exception x) {
-            printException(x);
+            x.printStackTrace();
         }
 
         return output;

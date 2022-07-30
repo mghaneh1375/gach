@@ -1,7 +1,6 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.CommonController;
-//import irysc.gachesefid.Controllers.Python.CVController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
@@ -13,7 +12,6 @@ import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -34,17 +32,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+
+//import irysc.gachesefid.Controllers.Python.CVController;
 
 
 @Controller
@@ -747,6 +743,29 @@ public class QuizAPIRoutes extends Router {
             );
 
         return QuizController.getQuizAnswerSheets(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId
+        );
+    }
+
+    @GetMapping(value = "/getQuizAnswerSheet/{mode}/{quizId}")
+    @ResponseBody
+    public String getQuizAnswerSheet(HttpServletRequest request,
+                                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getQuizAnswerSheet(
+                    iryscQuizRepository, null, quizId
+            );
+
+        return QuizController.getQuizAnswerSheet(
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId

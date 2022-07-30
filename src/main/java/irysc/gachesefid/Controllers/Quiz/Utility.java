@@ -1,9 +1,13 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 
+import irysc.gachesefid.Controllers.Question.Utilities;
+import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindAnswer;
+import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -14,6 +18,7 @@ import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.util.*;
 
+import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 
@@ -219,90 +224,259 @@ public class Utility {
         return mark.toString();
     }
 
-    public static byte[] getByteArr(ArrayList<Integer> numbers) {
 
-        byte[] output = new byte[numbers.size()];
-        int idx = 0;
+    private static byte[] getByteArrFromBooleans(ArrayList<Boolean> sentences) {
 
-        for (int num : numbers)
-            output[idx++] = (byte) num;
-
-        return output;
-    }
-    public static byte[] getByteArr(JSONArray numbers) {
-
-        byte[] output = new byte[numbers.length()];
-
-        for (int i = 0; i < numbers.length(); i++)
-            output[i] = (byte) numbers.getInt(i);
-
-        return output;
-    }
-
-    public static List<byte[]> tokens(byte[] array, byte[] delimiter) {
-        List<byte[]> byteArrays = new LinkedList<>();
-        if (delimiter.length == 0) {
-            return byteArrays;
+        int sum = 0;
+        for(int i = 0; i < sentences.size(); i++) {
+            if(sentences.get(i))
+                sum += Math.pow(2, i);
         }
-        int begin = 0;
 
-        outer:
-        for (int i = 0; i < array.length - delimiter.length + 1; i++) {
-            for (int j = 0; j < delimiter.length; j++) {
-                if (array[i + j] != delimiter[j]) {
-                    continue outer;
-                }
+        int needed = (int) Math.ceil(sentences.size() / 8.0);
+
+        byte[] tmp;
+
+        if(needed == 1)
+            tmp = new byte[] {(byte) sum};
+
+        else if(needed == 2)
+            tmp = new byte[] { (byte)(sum >>> 8), (byte) sum};
+
+        else if(needed == 3)
+            tmp = new byte[] { (byte)(sum >>> 16), (byte)(sum >>> 8), (byte) sum};
+
+        else
+            tmp = new byte[] { (byte)(sum >>> 24), (byte)(sum >>> 16), (byte)(sum >>> 8), (byte) sum};
+
+        byte[] out = new byte[tmp.length + 1];
+        out[0] = (byte) sentences.size();
+        System.arraycopy(tmp, 0, out, 1, out.length - 1);
+
+        return  out;
+    }
+
+    public static ArrayList<PairValue> getAnswers(byte[] bytes) {
+
+        ArrayList<PairValue> numbers = new ArrayList<>();
+
+        int currIdx = 0;
+        int next = 1;
+
+        while (currIdx < bytes.length) {
+
+            if(bytes[currIdx] == 0x00) {
+
+                int i = currIdx + 1;
+                while(i < bytes.length && bytes[i] != (byte)0xff)
+                    i++;
+
+                for(int j = currIdx + 1; j < i; j++)
+                    numbers.add(new PairValue(QuestionType.TEST.getName(), bytes[j] & 0xff));
+
+                next = i + 1;
             }
-            byteArrays.add(Arrays.copyOfRange(array, begin, i));
-            begin = i + delimiter.length;
-        }
-        byteArrays.add(Arrays.copyOfRange(array, begin, array.length));
-        return byteArrays;
-    }
+            else if(bytes[currIdx] == 0x01) {
+                byte[] tmp = Arrays.copyOfRange(bytes, currIdx + 1, currIdx + 9);
+                numbers.add(new PairValue(QuestionType.SHORT_ANSWER.getName(), ByteBuffer.wrap(tmp).getDouble()));
+                next = currIdx + 9;
+            }
+            else if(bytes[currIdx] == 0x02) {
 
-    public static ArrayList<Number> getNumbers(byte[] bytes) {
+                int senetencesCount = bytes[currIdx + 1] & 0xff;
 
-        byte[] delimeter = new byte[3];
-        delimeter[0] = (byte) 0xff;
-        delimeter[1] = (byte) 0xff;
-        delimeter[2] = (byte) 0xff;
+                next = currIdx + 1 + (int) Math.ceil(senetencesCount / 8.0) + 1;
+                int counter = 0;
+                ArrayList<Boolean> booleans = new ArrayList<>();
 
-        System.out.println(bytes.length);
+                for(int j = next - 1; j >= currIdx + 2; j--) {
 
-        ArrayList<Number> numbers = new ArrayList<>();
-        List<byte[]> tokens = tokens(bytes, delimeter);
-        System.out.println(tokens.size());
+                    for (int k = 0; k < 8 ; k++){
 
-        for(byte[] itr : tokens) {
+                        if(counter == senetencesCount)
+                            break;
 
-            byte type = itr[0];
-            if(type == 0x00) {
-                boolean first = true;
-                for (byte aByte : itr) {
-                    if(first) {
-                        first = false;
-                        continue;
+                        booleans.add((bytes[j] & (1 << k)) != 0);
+                        counter++;
                     }
-                    numbers.add(aByte & 0xFF);
+
+                    if(counter == senetencesCount)
+                        break;
                 }
+
+                numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, booleans));
             }
-            else if(type == 0x01) {
-//                itr = Arrays.copyOfRange(itr, 1, bytes.length);
-//                System.out.println(itr.length);
-                numbers.add(ByteBuffer.wrap(itr).getDouble());
-            }
+
+            currIdx = next;
         }
 
         return numbers;
     }
 
-    public static ArrayList<Integer> getNumbers(Binary binary) {
+    public static byte[] getByteArr(Object o) {
 
-        ArrayList<Integer> numbers = new ArrayList<>();
+        if(o instanceof JSONArray) {
+            ArrayList<Object> tmp = new ArrayList<>();
+            JSONArray jsonArray = (JSONArray)o;
+            for(int i = 0; i < jsonArray.length(); i++)
+                tmp.add(jsonArray.get(i));
 
-        for (byte aByte : binary.getData())
-            numbers.add(aByte & 0xFF);
+            return getByteArr(tmp);
+        }
 
-        return numbers;
+        byte[] output = null;
+
+        if(o instanceof Double) {
+            output = new byte[8];
+            long lng = Double.doubleToLongBits((Double) o);
+            for (int i = 0; i < 8; i++) output[i] = (byte) ((lng >> ((7 - i) * 8)) & 0xff);
+        }
+
+        else if(o instanceof Integer) {
+            int a = (int) o;
+            output = new byte[]{(byte) a};
+        }
+
+        else if(o instanceof ArrayList) {
+            if(((ArrayList) o).get(0) instanceof Integer) {
+                output = new byte[((ArrayList) o).size()];
+                int idx = 0;
+
+                for (Object num : (ArrayList) o)
+                    output[idx++] = (byte) num;
+            }
+            else
+                return getByteArrFromBooleans((ArrayList<Boolean>) o);
+        }
+
+        return output;
     }
+
+    public static byte[] getAnswersByteArr(List<ObjectId> ids) {
+
+        ArrayList<byte[]> bytes = new ArrayList<>();
+        ArrayList<Document> questions = new ArrayList<>();
+
+        for (ObjectId id : ids) {
+
+            Document question = questionRepository.findById(id);
+
+            if (question == null)
+                continue;
+
+            questions.add(question);
+        }
+
+        int i = 0;
+        while (i < questions.size()) {
+
+            bytes.add(Utilities.convertTypeToByte(questions.get(i).getString("type")));
+
+            if(questions.get(i).getString("type").equalsIgnoreCase(QuestionType.TEST.getName())) {
+
+                ArrayList<Integer> answers = new ArrayList<>();
+
+                answers.add(questions.get(i).getInteger("answer"));
+
+                int j;
+
+                for(j = i + 1; j < ids.size(); j++) {
+
+                    if(!questions.get(j).getString("type").equalsIgnoreCase(QuestionType.TEST.getName()))
+                        break;
+
+                    answers.add(questions.get(j).getInteger("answer"));
+                }
+
+                bytes.add(getByteArr(answers));
+                bytes.add(new byte[] {(byte) 0xff});
+
+                i = j;
+            }
+            else if(questions.get(i).getString("type").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
+                bytes.add(getByteArr(questions.get(i).getDouble("answer")));
+                i++;
+            }
+            else if(questions.get(i).getString("type").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+
+                ArrayList<Boolean> answers = new ArrayList<>();
+                String str = questions.get(i).getString("answer");
+
+                for(int j = 0; j < str.length(); j++) {
+                    if(str.charAt(j) == '1')
+                        answers.add(true);
+                    else
+                        answers.add(false);
+                }
+
+                bytes.add(getByteArr(answers));
+                i++;
+            }
+        }
+
+        int neededSize = 0;
+        for(byte[] itr : bytes)
+            neededSize += itr.length;
+
+        ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
+
+        for(byte[] itr : bytes)
+            buff.put(itr);
+
+        return buff.array();
+    }
+
+    public static byte[] addAnswerToByteArr(byte[] answers, String type, Object answer) {
+
+        try {
+            ByteBuffer buff;
+
+            if (answers.length > 0 &&
+                    answers[answers.length - 1] == (byte) 0xff &&
+                    type.equalsIgnoreCase(QuestionType.TEST.getName())
+            ) {
+                buff = ByteBuffer.wrap(new byte[answers.length + 1]);
+                answers[answers.length - 1] = (byte) (int)answer;
+                buff.put(answers);
+                buff.put((byte) 0xff);
+            } else {
+                byte[] typeBytes = Utilities.convertTypeToByte(type);
+                byte[] answerBytes = null;
+                int neededSize = answers.length + 1;
+
+                if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
+                    neededSize += 8;
+                    answerBytes = getByteArr(answer);
+                } else if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+                    neededSize += 2;
+                    answerBytes = getByteArr(answer);
+                } else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                    String str = (String) answer;
+                    ArrayList<Boolean> vals = new ArrayList<>();
+
+                    for (int i = 0; i < str.length(); i++)
+                        vals.add(str.charAt(i) == '1');
+
+                    answerBytes = getByteArr(vals);
+                    neededSize += answerBytes.length;
+                }
+
+                buff = ByteBuffer.wrap(new byte[neededSize]);
+                buff.put(answers);
+                buff.put(typeBytes);
+                if (answerBytes != null)
+                    buff.put(answerBytes);
+
+                if (type.equalsIgnoreCase(QuestionType.TEST.getName()))
+                    buff.put((byte) 0xff);
+            }
+
+            return buff.array();
+        }
+        catch (Exception x) {
+            x.printStackTrace();
+        }
+        return answers;
+    }
+
 }

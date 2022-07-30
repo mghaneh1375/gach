@@ -276,7 +276,7 @@ public class UserController {
 
         Set<String> keys = jsonObject.keySet();
         FormField[] wantedList = getWantedList(role);
-        if(wantedList == null)
+        if (wantedList == null)
             return JSON_NOT_VALID_PARAMS;
 
         for (FormField field : wantedList) {
@@ -292,14 +292,13 @@ public class UserController {
         List<Document> forms;
         int idx = -1;
 
-        if(user.containsKey("form_list")) {
+        if (user.containsKey("form_list")) {
             forms = user.getList("form_list", Document.class);
             idx = Utility.searchInDocumentsKeyValIdx(forms, "role", role);
-        }
-        else
+        } else
             forms = new ArrayList<>();
 
-        if(idx == -1)
+        if (idx == -1)
             forms.add(form);
         else
             forms.set(idx, form);
@@ -381,7 +380,6 @@ public class UserController {
         return doc.getString("password");
     }
 
-
     public static JSONObject convertUser(Document user) {
 
         ObjectId userId = user.getObjectId("_id");
@@ -400,7 +398,7 @@ public class UserController {
                 new ArrayList<>();
 
         JSONArray branchesJSON = new JSONArray();
-        for(Document branch : branches) {
+        for (Document branch : branches) {
             branchesJSON.put(new JSONObject()
                     .put("id", branch.getObjectId("_id").toString())
                     .put("name", branch.getString("name"))
@@ -412,15 +410,15 @@ public class UserController {
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
                 .put("NID", user.getString("NID"))
-                .put("grade", !user.containsKey("grade") ? ""  : new JSONObject().put("id",
-                                ((Document)user.get("grade")).getObjectId("_id").toString())
+                .put("grade", !user.containsKey("grade") ? "" : new JSONObject().put("id",
+                        ((Document) user.get("grade")).getObjectId("_id").toString())
                         .put("name",
-                                ((Document)user.get("grade")).getString("name"))
+                                ((Document) user.get("grade")).getString("name"))
                 )
                 .put("school", !user.containsKey("school") ? "" : new JSONObject().put("id",
-                                ((Document)user.get("school")).getObjectId("_id").toString())
+                        ((Document) user.get("school")).getObjectId("_id").toString())
                         .put("name",
-                                ((Document)user.get("school")).getString("name"))
+                                ((Document) user.get("school")).getString("name"))
                 )
                 .put("city", city == null ? "" : new JSONObject()
                         .put("id", cityId.toString())
@@ -436,17 +434,17 @@ public class UserController {
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
 
-        if(user.containsKey("forms")) {
+        if (user.containsKey("forms")) {
 
             JSONArray formsJSON = new JSONArray();
             List<Document> forms = user.getList("forms", Document.class);
 
-            for(Document form : forms) {
+            for (Document form : forms) {
                 JSONObject jsonObject1 = new JSONObject();
                 String role = form.getString("role");
 
                 FormField[] wantedList = getWantedList(role);
-                if(wantedList == null)
+                if (wantedList == null)
                     continue;
 
                 jsonObject1.put("role", role)
@@ -454,7 +452,7 @@ public class UserController {
 
                 JSONArray data = new JSONArray();
 
-                for(FormField field : wantedList) {
+                for (FormField field : wantedList) {
                     data.put(
                             new JSONObject()
                                     .put("key", field.key)
@@ -484,7 +482,7 @@ public class UserController {
 
         JSONArray data = new JSONArray();
 
-        for(FormField field : fields) {
+        for (FormField field : fields) {
             data.put(
                     new JSONObject()
                             .put("key", field.key)
@@ -571,7 +569,7 @@ public class UserController {
         if (userRepository.exist(filter))
             return generateErr("ایمیل/شماره همراه وارد شده در سیستم موجود است.");
 
-        if(via.equals(AuthVia.SMS.getName()))
+        if (via.equals(AuthVia.SMS.getName()))
             user.put("phone", username);
         else
             user.put("mail", username);
@@ -697,7 +695,7 @@ public class UserController {
                 return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
 
             Document oldAvatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-            if(oldAvatar == null) {
+            if (oldAvatar == null) {
                 oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
                 avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
             }
@@ -714,6 +712,67 @@ public class UserController {
         avatarRepository.updateOne(avatarId, set("used", avatar.getInteger("used")));
 
         return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
+    }
+
+    public static String addAuthorTransaction(ObjectId authorId,
+                                              JSONObject data) {
+
+        Document author = authorRepository.findById(authorId);
+        if (author == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> transactions = author.containsKey("transactions") ?
+                author.getList("transactions", Document.class) : new ArrayList<>();
+
+        Document newDoc = new Document(
+                "_id", new ObjectId()
+        );
+
+        for (String key : data.keySet()) {
+            newDoc.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    data.get(key)
+            );
+        }
+
+        transactions.add(newDoc);
+        author.put("transactions", transactions);
+
+        authorRepository.replaceOne(authorId, author);
+        return returnLastAuthorTransaction(transactions);
+    }
+
+    public static String returnLastAuthorTransaction(List<Document> transactions) {
+
+        long lastTransaction = 0;
+        int sumPayment = 0;
+
+        for (Document itr : transactions) {
+            sumPayment += itr.getInteger("pay");
+            if (lastTransaction < itr.getLong("pay_at"))
+                lastTransaction = itr.getLong("pay_at");
+        }
+
+        return generateSuccessMsg("sumPayment", sumPayment,
+                new PairValue("lastTransaction", lastTransaction == 0 ? "" :
+                        Utility.getSolarDate(lastTransaction)
+                )
+        );
+
+    }
+
+    public static String addAuthor(JSONObject data) {
+
+        Document newDoc = new Document();
+
+        for (String key : data.keySet()) {
+            newDoc.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    data.get(key)
+            );
+        }
+
+        return authorRepository.insertOneWithReturn(newDoc);
     }
 
     public static String addSchool(JSONObject data) {
@@ -912,6 +971,75 @@ public class UserController {
 
             jsonObject.put("kindStr", kindStr);
             jsonObject.put("gradeStr", gradeStr);
+
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String getAuthorTransactions(ObjectId authorId) {
+
+        Document author = authorRepository.findById(authorId);
+        if (author == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray jsonArray = new JSONArray();
+
+        if (author.containsKey("transactions")) {
+            List<Document> transactions = author.getList("transactions", Document.class);
+            if (transactions.size() > 0) {
+                for (Document itr : transactions) {
+                    jsonArray.put(
+                            new JSONObject()
+                                    .put("pay", itr.getInteger("pay"))
+                                    .put("payAt", Utility.getSolarDate(itr.getLong("pay_at")))
+                                    .put("description", itr.getOrDefault("description", ""))
+                    );
+                }
+            }
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String getAuthors(String tag) {
+
+        ArrayList<Bson> filter = new ArrayList<>();
+
+        if (tag != null)
+            filter.add(eq("tag", tag));
+
+        ArrayList<Document> docs = authorRepository.find(
+                filter.size() == 0 ? null : and(filter),
+                null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            long lastTransaction = 0;
+            int sumPayment = 0;
+
+            if (doc.containsKey("transactions")) {
+                List<Document> transactions = doc.getList("transactions", Document.class);
+                if (transactions.size() > 0) {
+                    for (Document itr : transactions) {
+                        sumPayment += itr.getInteger("pay");
+                        if (lastTransaction < itr.getLong("pay_at"))
+                            lastTransaction = itr.getLong("pay_at");
+                    }
+                }
+            }
+
+            JSONObject jsonObject = new JSONObject().
+                    put("id", doc.getObjectId("_id").toString())
+                    .put("name", doc.getString("first_name") + " " + doc.getString("last_name"))
+                    .put("tag", doc.getString("tag"))
+                    .put("sumPayment", sumPayment)
+                    .put("lastTransaction", lastTransaction == 0 ? "" : Utility.getSolarDate(lastTransaction))
+                    .put("questionCount", doc.getOrDefault("q_no", 0));
 
             jsonArray.put(jsonObject);
         }

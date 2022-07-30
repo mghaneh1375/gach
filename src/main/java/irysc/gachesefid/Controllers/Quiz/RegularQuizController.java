@@ -225,9 +225,17 @@ public class RegularQuizController extends QuizAbstract {
         if(isAdmin)
             jsonObject
                     .put("studentsCount", quiz.getInteger("registered"))
-                    .put("questionsCount", quiz.getList("questions", Document.class).size())
                     .put("visibility", quiz.getBoolean("visibility"))
                     .put("capacity", quiz.getInteger("capacity"));
+
+        try {
+            jsonObject
+                    .put("questionsCount", quiz.get("questions", Document.class)
+                            .getList("_ids", ObjectId.class).size());
+        }
+        catch (Exception x) {
+            jsonObject.put("questionsCount", 0);
+        }
 
         if(quiz.containsKey("capacity"))
             jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
