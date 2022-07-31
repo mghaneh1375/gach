@@ -43,7 +43,7 @@ public class AuthorAPIRoutes extends Router {
     @GetMapping(value = "/getTransactions/{authorId}")
     @ResponseBody
     public String getTransactions(HttpServletRequest request,
-                      @PathVariable @ObjectIdConstraint ObjectId authorId
+                                  @PathVariable @ObjectIdConstraint ObjectId authorId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return UserController.getAuthorTransactions(authorId);
@@ -68,12 +68,25 @@ public class AuthorAPIRoutes extends Router {
     @ResponseBody
     public String addAuthor(HttpServletRequest request,
                             @RequestBody @JSONConstraint(
-                                    params = {"firstName", "lastName"},
+                                    params = {"name"},
                                     optionals = {"tag"}
                             ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return UserController.addAuthor(new JSONObject(str));
+    }
+
+    @PostMapping(value = "edit/{authorId}")
+    @ResponseBody
+    public String edit(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId authorId,
+                       @RequestBody @JSONConstraint(
+                               params = {"name"},
+                               optionals = {"tag"}
+                       ) @NotBlank String str
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return UserController.editAuthor(authorId, new JSONObject(str));
     }
 
     @PostMapping(value = "addTransaction/{authorId}")
@@ -94,11 +107,11 @@ public class AuthorAPIRoutes extends Router {
     @DeleteMapping(value = "/removeTransactions/{authorId}")
     @ResponseBody
     public String removeTransactions(HttpServletRequest request,
-                                    @PathVariable @ObjectIdConstraint ObjectId authorId,
-                                    @RequestBody @StrongJSONConstraint(
-                                            params = {"items"},
-                                            paramsType = {JSONArray.class}
-                                    ) @NotBlank String jsonStr
+                                     @PathVariable @ObjectIdConstraint ObjectId authorId,
+                                     @RequestBody @StrongJSONConstraint(
+                                             params = {"items"},
+                                             paramsType = {JSONArray.class}
+                                     ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         String str = CommonController.removeAllFormDocList(authorRepository,
@@ -106,11 +119,11 @@ public class AuthorAPIRoutes extends Router {
                 authorId, "transactions", null
         );
 
-        if(str.contains("nok"))
+        if (str.contains("nok"))
             return str;
 
         Document author = authorRepository.findById(authorId);
-        if(author == null || !author.containsKey("transactions"))
+        if (author == null || !author.containsKey("transactions"))
             return JSON_NOT_VALID_ID;
 
         return UserController.returnLastAuthorTransaction(author.getList("transactions", Document.class));

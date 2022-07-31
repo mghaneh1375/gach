@@ -2,6 +2,7 @@ package irysc.gachesefid.DB;
 
 import irysc.gachesefid.Main.GachesefidApplication;
 
+
 public class AuthorRepository extends Common {
 
     public AuthorRepository() {
@@ -14,5 +15,4 @@ public class AuthorRepository extends Common {
         secKey = "code";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
-
 }

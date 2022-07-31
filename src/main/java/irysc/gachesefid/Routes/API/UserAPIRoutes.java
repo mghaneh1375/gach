@@ -42,8 +42,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -59,6 +58,15 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
+
+        ArrayList<Document> docs = authorRepository.find(null, null);
+        for(Document doc : docs) {
+            doc.put("name", doc.getString("first_name") + " " + doc.getString("last_name"));
+            doc.remove("first_name");
+            doc.remove("last_name");
+            authorRepository.replaceOne(doc.getObjectId("_id"), doc);
+        }
+
 //        ArrayList<Integer> a = new ArrayList<>() {
 //            {add(1); add(3); add(2); add(5); add(4); add(6); add(2); add(0);}
 //        };

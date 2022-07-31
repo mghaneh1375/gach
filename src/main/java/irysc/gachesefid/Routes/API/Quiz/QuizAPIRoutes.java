@@ -10,9 +10,11 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
+import irysc.gachesefid.Models.LaunchMode;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -63,7 +65,7 @@ public class QuizAPIRoutes extends Router {
                                         "price", "permute",
                                         "description", "startRegistry",
                                         "endRegistry", "start",
-                                        "end", "tags", "isOnline",
+                                        "end", "tags", "launchMode",
                                         "capacity", "minusMark",
                                         "backEn", "showResultsAfterCorrection",
                                         "topStudentsGiftCoin",
@@ -71,14 +73,14 @@ public class QuizAPIRoutes extends Router {
                                         "topStudentsCount",
                                         "paperTheme", "database",
                                         "descAfter", "desc",
-                                        "duration" // duration is in min format
+                                        "duration", // duration is in min format
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
                                         String.class, Long.class,
                                         Long.class, Long.class,
-                                        Long.class, String.class,
-                                        Boolean.class, Positive.class,
+                                        Long.class, JSONArray.class,
+                                        LaunchMode.class, Positive.class,
                                         Boolean.class, Boolean.class,
                                         Boolean.class, Number.class,
                                         Positive.class, Positive.class,
@@ -90,20 +92,24 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getAdminPrivilegeUser(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
-        if (mode.equals(KindQuiz.REGULAR.getName()))
-            return RegularQuizController.create(user.getObjectId("_id"),
-                    new JSONObject(jsonStr)
+        if (mode.equalsIgnoreCase(KindQuiz.REGULAR.getName()) ||
+                mode.equalsIgnoreCase(KindQuiz.HYBRID.getName())
+        )
+            return RegularQuizController.create(
+                    user.getObjectId("_id"),
+                    jsonObject, mode
             );
 
         if (mode.equals(KindQuiz.OPEN.getName()))
             return OpenQuizController.create(user.getObjectId("_id"),
-                    new JSONObject(jsonStr)
+                    jsonObject
             );
 
         if (mode.equals(KindQuiz.TASHRIHI.getName()))
             return TashrihiQuizController.create(user.getObjectId("_id"),
-                    new JSONObject(jsonStr)
+                    jsonObject
             );
 
         return "sd";
@@ -724,6 +730,12 @@ public class QuizAPIRoutes extends Router {
 //        getAdminPrivilegeUser(request);
 //        return CVController.correct(quizId, userId, col, row, qNo, eyes, choices);
         return "salam";
+    }
+
+    @GetMapping(value = "/getDistinctTags")
+    @ResponseBody
+    public String getDistinctTags() {
+        return QuizController.getDistinctTags();
     }
 
     @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")

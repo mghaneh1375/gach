@@ -30,19 +30,19 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price",
-            "end", "isOnline", "showResultsAfterCorrection",
+            "end", "launchMode", "showResultsAfterCorrection",
     };
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database"
     };
 
-    public static String create(ObjectId userId, JSONObject jsonObject) {
+    public static String create(ObjectId userId, JSONObject jsonObject, String mode) {
 
         try {
 
             Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
-            jsonObject.put("mode", KindQuiz.REGULAR.getName());
+            jsonObject.put("mode", mode);
             Document newDoc = QuizController.store(userId, jsonObject);
             iryscQuizRepository.insertOne(newDoc);
 
@@ -218,8 +218,8 @@ public class RegularQuizController extends QuizAbstract {
                 .put("price", quiz.getInteger("price"))
                 .put("generalMode", "IRYSC")
                 .put("mode", quiz.getString("mode"))
-                .put("isOnline", quiz.getBoolean("is_online"))
-                .put("tags", quiz.getString("tags"))
+                .put("launchMode", quiz.getString("launch_mode"))
+                .put("tags", quiz.getList("tags", String.class))
                 .put("id", quiz.getObjectId("_id").toString());
 
         if(isAdmin)

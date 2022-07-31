@@ -1,8 +1,8 @@
 package irysc.gachesefid.Models;
 
-public enum KindQuiz {
+public enum LaunchMode {
 
-    OPEN, REGULAR, HYBRID, ONLINE, TASHRIHI;
+    ONLINE, PHYSICAL, HYBRID;
 
     public String getName() {
         return name().toLowerCase();
