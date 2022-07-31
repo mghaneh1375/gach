@@ -8,8 +8,8 @@ import org.json.JSONObject;
 public class StaticValues {
 
 //    public final static String STATICS_SERVER = "http://185.239.106.26:8086/";
-//    public final static String STATICS_SERVER = "http://192.168.0.106/";
-    public final static String STATICS_SERVER = "http://192.168.1.11/";
+    public final static String STATICS_SERVER = "http://192.168.0.106/";
+//    public final static String STATICS_SERVER = "http://192.168.1.11/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@mail.okft.org";
@@ -67,7 +67,7 @@ public class StaticValues {
                     .append("start_registry", 1)
                     .append("end_registry", 1)
                     .append("tags", 1).append("mode", 1)
-                    .append("price", 1).append("is_online", 1)
+                    .append("price", 1).append("launch_mode", 1)
                     .append("capacity", 1).append("registered", 1)
             ;
 
@@ -77,7 +77,7 @@ public class StaticValues {
                     .append("start_registry", 1)
                     .append("end_registry", 1)
                     .append("tags", 1).append("mode", 1)
-                    .append("price", 1).append("is_online", 1)
+                    .append("price", 1).append("launch_mode", 1)
                     .append("capacity", 1).append("registered", 1)
                     .append("questions", 1)
             ;

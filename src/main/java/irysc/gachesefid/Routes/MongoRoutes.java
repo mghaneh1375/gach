@@ -1,11 +1,9 @@
 package irysc.gachesefid.Routes;
 
-import com.google.common.base.CaseFormat;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
-import irysc.gachesefid.Models.Quiz;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;

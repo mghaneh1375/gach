@@ -53,7 +53,7 @@ public class QuestionRepository extends Common {
         ArrayList<Document> output = new ArrayList<>();
 
         try {
-            String sql = "select q.*, (select count(*) from regularQOQ where questionId = q.id) as used from question q, soq s where s.qId = q.id and s.sId = ?";
+            String sql = "select q.*, (select count(*) from regularqoq where questionId = q.id) as used from question q, soq s where s.qId = q.id and s.sId = ?";
             PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
             ps.setInt(1, subjectId);
             ResultSet rs = ps.executeQuery();
@@ -75,6 +75,8 @@ public class QuestionRepository extends Common {
 
                     document.put("answer_file", document.get("ans_file"));
                     document.remove("ans_file");
+
+                    document.put("used", Integer.parseInt(document.get("used").toString()));
 
                     document.put("kind_question",
                             Integer.parseInt(document.get("kind_q").toString()) == 1 ? QuestionType.TEST.getName() :

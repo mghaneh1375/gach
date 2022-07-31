@@ -1,5 +1,6 @@
 package irysc.gachesefid.DB;
 
+import com.mongodb.client.DistinctIterable;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.Quiz;
 
@@ -13,6 +14,10 @@ import static irysc.gachesefid.Utility.Utility.printException;
 public class IRYSCQuizRepository extends Common {
 
     public final static String FOLDER = "irysc_quizzes";
+
+    public DistinctIterable<String> distinctTags() {
+        return documentMongoCollection.distinct("tags", String.class);
+    }
 
     // todo : after all transfer from mysql to mongo it should be delete
     public static ArrayList<Quiz> findAllMysql() {

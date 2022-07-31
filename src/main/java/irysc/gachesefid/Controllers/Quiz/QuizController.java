@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
@@ -328,6 +330,19 @@ public class QuizController {
     }
 
 
+    // ##################### END PACKAGE ###################
+
+
+    public static String getDistinctTags() {
+
+        DistinctIterable<String> cursor = iryscQuizRepository.distinctTags();
+        JSONArray jsonArray = new JSONArray();
+        for (String itr : cursor)
+            jsonArray.put(itr);
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static Document store(ObjectId userId, JSONObject data
     ) throws InvalidFieldsException {
 
@@ -354,17 +369,19 @@ public class QuizController {
 
         newDoc.put("visibility", true);
         newDoc.put("students", new ArrayList<>());
-        newDoc.put("remove_questions", new ArrayList<>());
+        newDoc.put("registered", 0);
+        newDoc.put("removed_questions", new ArrayList<>());
         newDoc.put("tags", new ArrayList<>());
         newDoc.put("attaches", new ArrayList<>());
         newDoc.put("created_by", userId);
         newDoc.put("created_at", System.currentTimeMillis());
 
-        //todo: consider other modes
-        if (newDoc.getString("mode").equals(KindQuiz.REGULAR.getName()) ||
-                newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
-        )
-            newDoc.put("questions", new ArrayList<>());
+        newDoc.put("questions", new Document());
+
+//        //todo: consider other modes
+//        if (newDoc.getString("mode").equals(KindQuiz.REGULAR.getName()) ||
+//                newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
+//        )
 
         if (newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
             newDoc.put("correctors", new ArrayList<>());
@@ -1427,10 +1444,11 @@ public class QuizController {
                                             MultipartFile file) {
         try {
             Document doc = hasAccess(db, userId, quizId);
-            if (doc.getBoolean("is_online") ||
-                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
-            )
-                return JSON_NOT_VALID_ID;
+            //todo
+//            if (doc.getBoolean("is_online") ||
+//                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
+//            )
+//                return JSON_NOT_VALID_ID;
 
             List<Document> students = doc.getList("students", Document.class);
             Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
