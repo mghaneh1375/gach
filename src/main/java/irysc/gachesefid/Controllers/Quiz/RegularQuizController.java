@@ -219,7 +219,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("generalMode", "IRYSC")
                 .put("mode", quiz.getString("mode"))
                 .put("launchMode", quiz.getString("launch_mode"))
-                .put("tags", quiz.getString("tags"))
+                .put("tags", quiz.getList("tags", String.class))
                 .put("id", quiz.getObjectId("_id").toString());
 
         if(isAdmin)

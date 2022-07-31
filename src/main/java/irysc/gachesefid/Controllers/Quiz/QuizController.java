@@ -349,10 +349,22 @@ public class QuizController {
         Document newDoc = new Document();
 
         for (String key : data.keySet()) {
+            if(key.equalsIgnoreCase("tags"))
+                continue;
             newDoc.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
                     data.get(key)
             );
+        }
+
+        ArrayList<String> tagsArr = new ArrayList<>();
+
+        if(data.has("tags")) {
+
+            JSONArray tags = data.getJSONArray("tags");
+
+            for(int i = 0; i < tags.length(); i++)
+                tagsArr.add(tags.getString(i));
         }
 
         Utility.isValid(newDoc);
@@ -371,7 +383,7 @@ public class QuizController {
         newDoc.put("students", new ArrayList<>());
         newDoc.put("registered", 0);
         newDoc.put("removed_questions", new ArrayList<>());
-        newDoc.put("tags", new ArrayList<>());
+        newDoc.put("tags", tagsArr);
         newDoc.put("attaches", new ArrayList<>());
         newDoc.put("created_by", userId);
         newDoc.put("created_at", System.currentTimeMillis());

@@ -264,8 +264,15 @@ public class Utility {
         for (String key : jsonObject.keySet()) {
             if (jsonObject.get(key) instanceof Integer)
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
-            else if (jsonObject.get(key) instanceof String)
-                jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
+            else if (jsonObject.get(key) instanceof String) {
+                String str = Utility.convertPersianDigits(jsonObject.getString(key));
+                try {
+                    jsonObject.put(key, Integer.parseInt(str));
+                }
+                catch (Exception x) {
+                    jsonObject.put(key, str);
+                }
+            }
         }
 
         return jsonObject;

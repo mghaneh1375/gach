@@ -14,6 +14,7 @@ import irysc.gachesefid.Models.LaunchMode;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -78,7 +79,7 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Boolean.class,
                                         String.class, Long.class,
                                         Long.class, Long.class,
-                                        Long.class, String.class,
+                                        Long.class, JSONArray.class,
                                         LaunchMode.class, Positive.class,
                                         Boolean.class, Boolean.class,
                                         Boolean.class, Number.class,
@@ -91,24 +92,24 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getAdminPrivilegeUser(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
         if (mode.equalsIgnoreCase(KindQuiz.REGULAR.getName()) ||
                 mode.equalsIgnoreCase(KindQuiz.HYBRID.getName())
         )
             return RegularQuizController.create(
                     user.getObjectId("_id"),
-                    new JSONObject(jsonStr),
-                    mode
+                    jsonObject, mode
             );
 
         if (mode.equals(KindQuiz.OPEN.getName()))
             return OpenQuizController.create(user.getObjectId("_id"),
-                    new JSONObject(jsonStr)
+                    jsonObject
             );
 
         if (mode.equals(KindQuiz.TASHRIHI.getName()))
             return TashrihiQuizController.create(user.getObjectId("_id"),
-                    new JSONObject(jsonStr)
+                    jsonObject
             );
 
         return "sd";

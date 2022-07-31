@@ -775,6 +775,24 @@ public class UserController {
         return authorRepository.insertOneWithReturn(newDoc);
     }
 
+    public static String editAuthor(ObjectId authorId, JSONObject data) {
+
+        Document document = authorRepository.findById(authorId);
+        if(document == null)
+            return JSON_NOT_VALID_ID;
+
+        for (String key : data.keySet()) {
+            document.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    data.get(key)
+            );
+        }
+
+        authorRepository.replaceOne(authorId, document);
+
+        return JSON_OK;
+    }
+
     public static String addSchool(JSONObject data) {
 
         if (!EnumValidatorImp.isValid(data.getString("kind"), KindSchool.class))
@@ -1035,7 +1053,7 @@ public class UserController {
 
             JSONObject jsonObject = new JSONObject().
                     put("id", doc.getObjectId("_id").toString())
-                    .put("name", doc.getString("first_name") + " " + doc.getString("last_name"))
+                    .put("name", doc.getString("name"))
                     .put("tag", doc.getString("tag"))
                     .put("sumPayment", sumPayment)
                     .put("lastTransaction", lastTransaction == 0 ? "" : Utility.getSolarDate(lastTransaction))
