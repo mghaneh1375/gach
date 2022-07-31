@@ -6,7 +6,6 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.Document;
@@ -18,9 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
-import java.util.ArrayList;
-
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @RestController
@@ -41,20 +37,11 @@ public class StudentTicketAPIRouter extends Router {
                                 @RequestParam(value = "status", required = false) String status
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
-//        ArrayList<String> dates = Utility.checkDatesConstriant(
-//                sendDateSolar, answerDateSolar,
-//                sendDateSolarEndLimit, answerDateSolarEndLimit
-//        );
-//
-//        if (dates == null)
-//            return JSON_NOT_VALID_PARAMS;
-
         Document user = getUser(request);
 
         return TicketController.getRequests(
                 null, status,
                 null, null, user.getObjectId("_id"),
-//                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 null, null, section, priority
         );

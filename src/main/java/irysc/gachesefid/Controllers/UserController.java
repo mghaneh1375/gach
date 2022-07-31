@@ -35,7 +35,17 @@ public class UserController {
             new FormField(true, "tel", "تلفن مدرسه", null, true),
             new FormField(true, "address", "آدرس مدرسه", null, false),
             new FormField(true, "name", "نام مدرسه", null, false),
-            new FormField(false, "bio", "بیو", "اختیاری", false),
+            new FormField(true, "managerName", "نام مدیر مدرسه", null, false),
+            new FormField(true, "schoolSex", "نوع مدرسه", null,
+                    new PairValue("female", "دخترانه"),
+                    new PairValue("male", "پسرانه")
+            ),
+            new FormField(true, "kindSchool", "مقطع مدرسه", null,
+                    new PairValue(GradeSchool.DABESTAN.getName(), "دبستان"),
+                    new PairValue(GradeSchool.MOTEVASETEAVAL.getName(), "متوسطه اول"),
+                    new PairValue(GradeSchool.MOTEVASETEDOVOM.getName(), "متوسطه دوم")
+            ),
+//            new FormField(false, "bio", "بیو", "اختیاری", false),
     };
 
     private static FormField[] fieldsNeededForAdvisor = new FormField[]{
@@ -281,7 +291,18 @@ public class UserController {
 
         for (FormField field : wantedList) {
             if (field.isMandatory && !keys.contains(field.key))
-                generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
+                return generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
+            if(keys.contains(field.key) && field.pairValues != null) {
+                boolean find = false;
+                for(PairValue p : field.pairValues) {
+                    if(jsonObject.get(field.key).equals(p.getValue())) {
+                        find = true;
+                        break;
+                    }
+                }
+                if(!find)
+                    return JSON_NOT_VALID_PARAMS;
+            }
         }
 
         Document form = new Document("role", role);
@@ -483,14 +504,27 @@ public class UserController {
         JSONArray data = new JSONArray();
 
         for (FormField field : fields) {
-            data.put(
-                    new JSONObject()
-                            .put("key", field.key)
-                            .put("help", field.help)
-                            .put("isMandatory", field.isMandatory)
-                            .put("title", field.title)
-                            .put("isJustNum", field.isJustNum)
-            );
+
+            JSONObject jsonObject =  new JSONObject()
+                    .put("key", field.key)
+                    .put("help", field.help)
+                    .put("isMandatory", field.isMandatory)
+                    .put("title", field.title)
+                    .put("isJustNum", field.isJustNum);
+
+            if(field.pairValues != null) {
+                JSONArray jsonArray1 = new JSONArray();
+                for(PairValue p : field.pairValues)
+                    jsonArray1.put(
+                            new JSONObject()
+                                .put("id", p.getKey())
+                                .put("item", p.getValue())
+                    );
+
+                jsonObject.put("keyVals", jsonArray1);
+            }
+
+            data.put(jsonObject);
         }
 
         jsonObject1.put("data", data);
