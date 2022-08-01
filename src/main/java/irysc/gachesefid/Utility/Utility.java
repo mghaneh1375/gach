@@ -266,11 +266,14 @@ public class Utility {
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                try {
-                    jsonObject.put(key, Integer.parseInt(str));
-                }
-                catch (Exception x) {
+                if(str.charAt(0) == '0')
                     jsonObject.put(key, str);
+                else {
+                    try {
+                        jsonObject.put(key, Integer.parseInt(str));
+                    } catch (Exception x) {
+                        jsonObject.put(key, str);
+                    }
                 }
             }
         }

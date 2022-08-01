@@ -246,8 +246,7 @@ public class UserAPIRoutes extends Router {
     }) String json) {
 
         try {
-            JSONObject jsonObject = new JSONObject(json);
-            Utility.convertPersian(jsonObject);
+            JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
             if (!Utility.isValidPassword(jsonObject.getString("password")))
                 return generateErr("رمزعبور وارد شده ملاحظات امنیتی لازم را ندارد.");
@@ -336,12 +335,15 @@ public class UserAPIRoutes extends Router {
                                        optionals = {
                                                "name", "tel", "state",
                                                "workYear", "workSchools", "universeField",
-                                               "bio", "address"
+                                               "bio", "address", "managerName", "schoolSex",
+                                               "kindSchool"
                                        },
                                        optionalsType = {
                                                String.class, String.class, String.class,
                                                Positive.class, String.class, String.class,
-                                               String.class, String.class
+                                               String.class, String.class, String.class,
+                                               String.class, String.class,
+
                                        }
                                ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {

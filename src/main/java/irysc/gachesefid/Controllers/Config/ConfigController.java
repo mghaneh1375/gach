@@ -3,7 +3,11 @@ package irysc.gachesefid.Controllers.Config;
 import com.google.common.base.CaseFormat;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
+import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
@@ -18,7 +22,11 @@ public class ConfigController {
 
         for(String key : config.keySet()) {
 
-            if(key.equals("_id"))
+            if(key.equals("_id") || key.equalsIgnoreCase("maxWebGiftSlot") ||
+                    key.equalsIgnoreCase("maxAppGiftSlot") ||
+                    key.equalsIgnoreCase("appGiftDays") ||
+                    key.equalsIgnoreCase("webGiftDays")
+            )
                 continue;
 
             boolean hasLittleChar = false;
@@ -45,6 +53,10 @@ public class ConfigController {
 
         for(String key : data.keySet()) {
 
+            Object o = data.get(key);
+            if(o instanceof JSONArray)
+                o = new ArrayList<>(((JSONArray) o).toList());
+
             boolean hasLittleChar = false;
             for(int i = 0; i < key.length(); i++) {
                 if(!Character.isUpperCase(key.charAt(i))) {
@@ -53,9 +65,9 @@ public class ConfigController {
                 }
             }
             if(hasLittleChar)
-                config.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+                config.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), o);
             else
-                config.put(key, data.get(key));
+                config.put(key, o);
         }
 
         configRepository.replaceOne(config.getObjectId("_id"), config);

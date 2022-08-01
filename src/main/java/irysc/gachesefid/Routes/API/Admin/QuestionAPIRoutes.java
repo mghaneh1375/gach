@@ -134,7 +134,9 @@ public class QuestionAPIRoutes extends Router {
     @ResponseBody
     public String add(HttpServletRequest request,
                       @PathVariable @ObjectIdConstraint ObjectId subjectId,
-                      @RequestBody @StrongJSONConstraint(
+                      @RequestPart MultipartFile questionFile,
+                      @RequestPart(required = false) MultipartFile answerFile,
+                      @RequestPart @StrongJSONConstraint(
                               params = {
                                       "level", "authorId",
                                       "neededTime", "answer",
@@ -155,7 +157,7 @@ public class QuestionAPIRoutes extends Router {
                               }
                       ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-//        getAdminPrivilegeUserVoid(request);
+        getAdminPrivilegeUserVoid(request);
         return QuestionController.addQuestion(subjectId, new JSONObject(jsonStr));
     }
 

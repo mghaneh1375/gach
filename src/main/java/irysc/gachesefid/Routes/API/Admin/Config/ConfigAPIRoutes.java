@@ -7,6 +7,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
@@ -55,7 +56,9 @@ public class ConfigAPIRoutes extends Router {
                                          "schoolQuizAttachesJustLink",
                                          "maxStudentQuizPerDay",
                                          "quizPerStudentPrice",
-                                         "giftPeriod",
+                                         "giftPeriod", "maxAppGiftSlot",
+                                         "maxWebGiftSlot", "appGiftDays",
+                                         "webGiftDays",
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -70,7 +73,9 @@ public class ConfigAPIRoutes extends Router {
                                          Positive.class, Positive.class, Positive.class,
                                          Positive.class, Positive.class, Positive.class,
                                          Boolean.class, Positive.class,
-                                         Positive.class, Positive.class
+                                         Positive.class, Positive.class,
+                                         Positive.class, Positive.class,
+                                         JSONArray.class, JSONArray.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

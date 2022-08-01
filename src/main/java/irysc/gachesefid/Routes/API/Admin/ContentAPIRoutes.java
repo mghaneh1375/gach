@@ -280,4 +280,13 @@ public class ContentAPIRoutes extends Router {
         getAdminPrivilegeUserVoid(request);
         return ContentController.allSubjects(gradeId, lessonId);
     }
+
+    @GetMapping(value = "/getSubjectsKeyVals")
+    @ResponseBody
+    public String getSubjectsKeyVals(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ContentController.getSubjectsKeyVals();
+    }
+
 }

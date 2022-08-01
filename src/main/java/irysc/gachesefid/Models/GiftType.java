@@ -1,11 +1,10 @@
 package irysc.gachesefid.Models;
 
-public enum OffCodeSections {
+public enum GiftType {
 
-    ALL, GACH_EXAM, BANK_EXAM, RAVAN_EXAM, CLASSES, BOOK, COUNSELING;
+    COIN, MONEY, OFFCODE;
 
     public String getName() {
         return name().toLowerCase();
     }
-
 }

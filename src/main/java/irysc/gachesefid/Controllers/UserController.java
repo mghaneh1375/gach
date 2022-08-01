@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -293,9 +294,10 @@ public class UserController {
             if (field.isMandatory && !keys.contains(field.key))
                 return generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
             if(keys.contains(field.key) && field.pairValues != null) {
+
                 boolean find = false;
                 for(PairValue p : field.pairValues) {
-                    if(jsonObject.get(field.key).equals(p.getValue())) {
+                    if(jsonObject.get(field.key).equals(p.getKey())) {
                         find = true;
                         break;
                     }
@@ -748,85 +750,6 @@ public class UserController {
         return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
     }
 
-    public static String addAuthorTransaction(ObjectId authorId,
-                                              JSONObject data) {
-
-        Document author = authorRepository.findById(authorId);
-        if (author == null)
-            return JSON_NOT_VALID_ID;
-
-        List<Document> transactions = author.containsKey("transactions") ?
-                author.getList("transactions", Document.class) : new ArrayList<>();
-
-        Document newDoc = new Document(
-                "_id", new ObjectId()
-        );
-
-        for (String key : data.keySet()) {
-            newDoc.put(
-                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
-                    data.get(key)
-            );
-        }
-
-        transactions.add(newDoc);
-        author.put("transactions", transactions);
-
-        authorRepository.replaceOne(authorId, author);
-        return returnLastAuthorTransaction(transactions);
-    }
-
-    public static String returnLastAuthorTransaction(List<Document> transactions) {
-
-        long lastTransaction = 0;
-        int sumPayment = 0;
-
-        for (Document itr : transactions) {
-            sumPayment += itr.getInteger("pay");
-            if (lastTransaction < itr.getLong("pay_at"))
-                lastTransaction = itr.getLong("pay_at");
-        }
-
-        return generateSuccessMsg("sumPayment", sumPayment,
-                new PairValue("lastTransaction", lastTransaction == 0 ? "" :
-                        Utility.getSolarDate(lastTransaction)
-                )
-        );
-
-    }
-
-    public static String addAuthor(JSONObject data) {
-
-        Document newDoc = new Document();
-
-        for (String key : data.keySet()) {
-            newDoc.put(
-                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
-                    data.get(key)
-            );
-        }
-
-        return authorRepository.insertOneWithReturn(newDoc);
-    }
-
-    public static String editAuthor(ObjectId authorId, JSONObject data) {
-
-        Document document = authorRepository.findById(authorId);
-        if(document == null)
-            return JSON_NOT_VALID_ID;
-
-        for (String key : data.keySet()) {
-            document.put(
-                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
-                    data.get(key)
-            );
-        }
-
-        authorRepository.replaceOne(authorId, document);
-
-        return JSON_OK;
-    }
-
     public static String addSchool(JSONObject data) {
 
         if (!EnumValidatorImp.isValid(data.getString("kind"), KindSchool.class))
@@ -1030,74 +953,6 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getAuthorTransactions(ObjectId authorId) {
-
-        Document author = authorRepository.findById(authorId);
-        if (author == null)
-            return JSON_NOT_VALID_ID;
-
-        JSONArray jsonArray = new JSONArray();
-
-        if (author.containsKey("transactions")) {
-            List<Document> transactions = author.getList("transactions", Document.class);
-            if (transactions.size() > 0) {
-                for (Document itr : transactions) {
-                    jsonArray.put(
-                            new JSONObject()
-                                    .put("pay", itr.getInteger("pay"))
-                                    .put("payAt", Utility.getSolarDate(itr.getLong("pay_at")))
-                                    .put("description", itr.getOrDefault("description", ""))
-                    );
-                }
-            }
-        }
-
-        return generateSuccessMsg("data", jsonArray);
-    }
-
-    public static String getAuthors(String tag) {
-
-        ArrayList<Bson> filter = new ArrayList<>();
-
-        if (tag != null)
-            filter.add(eq("tag", tag));
-
-        ArrayList<Document> docs = authorRepository.find(
-                filter.size() == 0 ? null : and(filter),
-                null
-        );
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (Document doc : docs) {
-
-            long lastTransaction = 0;
-            int sumPayment = 0;
-
-            if (doc.containsKey("transactions")) {
-                List<Document> transactions = doc.getList("transactions", Document.class);
-                if (transactions.size() > 0) {
-                    for (Document itr : transactions) {
-                        sumPayment += itr.getInteger("pay");
-                        if (lastTransaction < itr.getLong("pay_at"))
-                            lastTransaction = itr.getLong("pay_at");
-                    }
-                }
-            }
-
-            JSONObject jsonObject = new JSONObject().
-                    put("id", doc.getObjectId("_id").toString())
-                    .put("name", doc.getString("name"))
-                    .put("tag", doc.getString("tag"))
-                    .put("sumPayment", sumPayment)
-                    .put("lastTransaction", lastTransaction == 0 ? "" : Utility.getSolarDate(lastTransaction))
-                    .put("questionCount", doc.getOrDefault("q_no", 0));
-
-            jsonArray.put(jsonObject);
-        }
-
-        return generateSuccessMsg("data", jsonArray);
-    }
 
     public static String updateInfo(JSONObject jsonObject, Document user) {
 

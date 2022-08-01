@@ -1,7 +1,7 @@
 package irysc.gachesefid.Routes.API.Admin.Config;
 
 import irysc.gachesefid.Controllers.CommonController;
-import irysc.gachesefid.Controllers.UserController;
+import irysc.gachesefid.Controllers.Config.AuthorController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import java.util.ArrayList;
+
 import static irysc.gachesefid.Main.GachesefidApplication.authorRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 
@@ -37,7 +39,15 @@ public class AuthorAPIRoutes extends Router {
                          @RequestParam(value = "tag", required = false) String tag
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.getAuthors(tag);
+        return AuthorController.getAuthors(tag);
+    }
+
+    @GetMapping(value = "/getAuthorsKeyVals")
+    @ResponseBody
+    public String getAuthorsKeyVals(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return AuthorController.getAuthorsKeyVals();
     }
 
     @GetMapping(value = "/getTransactions/{authorId}")
@@ -46,7 +56,7 @@ public class AuthorAPIRoutes extends Router {
                                   @PathVariable @ObjectIdConstraint ObjectId authorId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.getAuthorTransactions(authorId);
+        return AuthorController.getAuthorTransactions(authorId);
     }
 
     @DeleteMapping(value = "/remove")
@@ -73,7 +83,7 @@ public class AuthorAPIRoutes extends Router {
                             ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.addAuthor(new JSONObject(str));
+        return AuthorController.addAuthor(new JSONObject(str));
     }
 
     @PostMapping(value = "edit/{authorId}")
@@ -86,7 +96,7 @@ public class AuthorAPIRoutes extends Router {
                        ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.editAuthor(authorId, new JSONObject(str));
+        return AuthorController.editAuthor(authorId, new JSONObject(str));
     }
 
     @PostMapping(value = "addTransaction/{authorId}")
@@ -101,7 +111,7 @@ public class AuthorAPIRoutes extends Router {
                                  ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.addAuthorTransaction(authorId, new JSONObject(str));
+        return AuthorController.addAuthorTransaction(authorId, new JSONObject(str));
     }
 
     @DeleteMapping(value = "/removeTransactions/{authorId}")
@@ -114,40 +124,27 @@ public class AuthorAPIRoutes extends Router {
                                      ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        String str = CommonController.removeAllFormDocList(authorRepository,
+        return CommonController.removeAllFormDocList(authorRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
                 authorId, "transactions", null
         );
-
-        if (str.contains("nok"))
-            return str;
-
-        Document author = authorRepository.findById(authorId);
-        if (author == null || !author.containsKey("transactions"))
-            return JSON_NOT_VALID_ID;
-
-        return UserController.returnLastAuthorTransaction(author.getList("transactions", Document.class));
     }
 
-    @PutMapping(value = "edit/{schoolId}")
+    @GetMapping(value = "/getLastTransaction/{authorId}")
     @ResponseBody
-    public String editSchool(HttpServletRequest request,
-                             @PathVariable @ObjectIdConstraint ObjectId schoolId,
-                             @RequestBody @StrongJSONConstraint(
-                                     params = {},
-                                     paramsType = {},
-                                     optionals = {
-                                             "name", "cityId", "grade", "kind",
-                                             "address", "tel", "bio", "site"
-                                     },
-                                     optionalsType = {
-                                             String.class, ObjectId.class, GradeSchool.class,
-                                             KindSchool.class, String.class, Positive.class,
-                                             String.class, String.class
-                                     }
-                             ) @NotBlank String str
+    public String getLastTransaction(HttpServletRequest request,
+                                     @PathVariable @ObjectIdConstraint ObjectId authorId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return UserController.editSchool(schoolId, new JSONObject(str));
+        getAdminPrivilegeUserVoid(request);
+
+        Document doc = authorRepository.findById(authorId);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        return AuthorController.returnLastAuthorTransaction(
+                doc.containsKey("transactions") ?
+                        doc.getList("transactions", Document.class) :
+                        new ArrayList<>(), null
+        );
     }
 }
