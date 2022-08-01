@@ -28,6 +28,9 @@ import java.util.regex.Pattern;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.FileUtils.uploadDocOrMultimediaFile;
+import static irysc.gachesefid.Utility.FileUtils.uploadFile;
+import static irysc.gachesefid.Utility.FileUtils.uploadImageFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
@@ -38,9 +41,11 @@ public class QuestionController extends Utilities {
     // get answer from db should always be general because input type in object
 
     public static String addQuestion(ObjectId subjectId,
+                                     MultipartFile questionFile,
+                                     MultipartFile answerFile,
                                      JSONObject jsonObject) {
 
-        jsonObject.put("subjectId", subjectId);
+        jsonObject.put("subjectId", subjectId.toString());
 
         try {
             checkAnswer(jsonObject);
@@ -48,7 +53,44 @@ public class QuestionController extends Utilities {
             return generateErr(e.getMessage());
         }
 
-        Document newDoc = new Document("visibility", false);
+        if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
+            return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE+ " مگ است.");
+
+        String fileType = uploadImageFile(questionFile);
+
+        if (fileType == null)
+            return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+
+        if(answerFile != null) {
+            if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            fileType = uploadImageFile(answerFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        String questionFileName = FileUtils.uploadFile(questionFile, QuestionRepository.FOLDER);
+        if(questionFileName == null)
+            return JSON_NOT_VALID_FILE;
+
+        String answerFileName = null;
+        if(answerFile != null) {
+            answerFileName = FileUtils.uploadFile(answerFile, QuestionRepository.FOLDER);
+
+            if(answerFileName == null) {
+                FileUtils.removeFile(questionFileName, QuestionRepository.FOLDER);
+                return JSON_NOT_VALID_FILE;
+            }
+
+        }
+
+        Document newDoc = new Document("visibility", !jsonObject.has("visibility") || jsonObject.getBoolean("visibility"))
+                .append("question_file", questionFileName);
+
+        if(answerFileName != null)
+            newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet())
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));

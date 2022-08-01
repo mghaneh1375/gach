@@ -24,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -77,22 +76,22 @@ public class QuestionAPIRoutes extends Router {
         ArrayList<Document> docs = (ArrayList<Document>) p.getValue();
         HashMap<ObjectId, Integer> subjectsQNo = new HashMap<>();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
             Document subject = subjectRepository.findById(doc.getObjectId("subject_id"));
-            if(subject == null)
+            if (subject == null)
                 continue;
 
-            if(!subjectsQNo.containsKey(subject.getObjectId("_id")))
+            if (!subjectsQNo.containsKey(subject.getObjectId("_id")))
                 subjectsQNo.put(subject.getObjectId("_id"), subject.getInteger("q_no") - 1);
             else
                 subjectsQNo.put(subject.getObjectId("_id"), subjectsQNo.get(subject.getObjectId("_id")) - 1);
 
         }
 
-        for(ObjectId subjectId : subjectsQNo.keySet()) {
+        for (ObjectId subjectId : subjectsQNo.keySet()) {
 
             Document subject = subjectRepository.findById(subjectId);
-            if(subject == null)
+            if (subject == null)
                 continue;
 
             subject.put("q_no", subjectsQNo.get(subjectId));
@@ -130,35 +129,43 @@ public class QuestionAPIRoutes extends Router {
     }
 
 
-    @PostMapping(value = "/add/{subjectId}")
+    @PostMapping(value = "store/{subjectId}")
     @ResponseBody
-    public String add(HttpServletRequest request,
-                      @PathVariable @ObjectIdConstraint ObjectId subjectId,
-                      @RequestPart MultipartFile questionFile,
-                      @RequestPart(required = false) MultipartFile answerFile,
-                      @RequestPart @StrongJSONConstraint(
-                              params = {
-                                      "level", "authorId",
-                                      "neededTime", "answer",
-                                      "organizationId", "kindQuestion"
-                              },
-                              paramsType = {
-                                      QuestionLevel.class, ObjectId.class,
-                                      Positive.class, Object.class,
-                                      String.class, QuestionType.class
-                              },
-                              optionals = {
-                                      "sentencesCount", "telorance",
-                                      "choicesCount", "neededLines"
-                              },
-                              optionalsType = {
-                                      Positive.class, Number.class,
-                                      Positive.class, Positive.class
-                              }
-                      ) @NotBlank String jsonStr)
+    public String store(HttpServletRequest request,
+                        @PathVariable @ObjectIdConstraint ObjectId subjectId,
+                        @RequestPart(value = "questionFile") MultipartFile questionFile,
+                        @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                        @RequestPart(value = "json") @StrongJSONConstraint(
+                                params = {
+                                        "level", "authorId",
+                                        "neededTime", "answer",
+                                        "kindQuestion",
+                                        "organizationId",
+                                },
+                                paramsType = {
+                                        QuestionLevel.class, ObjectId.class,
+                                        Positive.class, Object.class,
+                                        QuestionType.class,
+                                        String.class,
+                                },
+                                optionals = {
+                                        "sentencesCount", "telorance",
+                                        "choicesCount", "neededLines",
+                                        "visibility"
+                                },
+                                optionalsType = {
+                                        Positive.class, Number.class,
+                                        Positive.class, Positive.class,
+                                        Boolean.class
+                                }
+                        ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (questionFile == null)
+            return JSON_NOT_VALID_PARAMS;
+
         getAdminPrivilegeUserVoid(request);
-        return QuestionController.addQuestion(subjectId, new JSONObject(jsonStr));
+        return QuestionController.addQuestion(subjectId, questionFile, answerFile, new JSONObject(jsonStr));
     }
 
 
@@ -168,7 +175,7 @@ public class QuestionAPIRoutes extends Router {
                            @RequestBody MultipartFile file)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);

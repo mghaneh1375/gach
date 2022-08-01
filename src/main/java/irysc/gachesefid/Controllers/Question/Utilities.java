@@ -13,9 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 
@@ -43,7 +41,7 @@ public class Utilities {
 
             ObjectId authorId = new ObjectId(jsonObject.getString("authorId"));
 
-            if(userRepository.findById(authorId) == null)
+            if(authorRepository.findById(authorId) == null)
                 throw new InvalidFieldsException("آی دی مولف نامعتبر است.");
 
             jsonObject.put("authorId", authorId);
