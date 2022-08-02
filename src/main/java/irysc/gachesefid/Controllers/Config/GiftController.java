@@ -108,38 +108,41 @@ public class GiftController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document doc : docs) {
-
-            JSONObject jsonObject = new JSONObject().
-                    put("id", doc.getObjectId("_id").toString())
-                    .put("type", doc.getString("type"))
-                    .put("count", doc.getInteger("count"))
-                    .put("prob", doc.get("prob"))
-                    .put("priority", doc.getInteger("priority"))
-                    .put("isForSite", doc.getBoolean("is_for_site"))
-                    .put("isForSiteFa", doc.getBoolean("is_for_site") ? "سایت" : "اپ")
-                    .put("used", doc.containsKey("users") ? doc.getList("users", Document.class).size() : 0);
-
-            if (doc.getString("type").equalsIgnoreCase(GiftType.OFFCODE.getName()))
-                jsonObject
-                        .put("typeFa",
-                                translateType(doc.getString("type")) + " - " +
-                                        "برای " + translateUseFor(doc.getString("use_for")) + " - " +
-                                        " به صورت " + translateOffCodeType(doc.getString("off_code_type")) + " -" +
-                                        " تاریخ انقضا " + Utility.getSolarDate(doc.getLong("expire_at"))
-                        )
-                        .put("offCodeType", doc.getString("off_code_type"))
-                        .put("expireAt", doc.getLong("expire_at"))
-                        .put("useFor", doc.getString("use_for"));
-            else
-                jsonObject
-                        .put("typeFa", translateType(doc.getString("type")));
-
-            jsonArray.put(jsonObject);
-        }
+        for (Document doc : docs)
+            jsonArray.put(convertDocToJSON(doc));
 
         return generateSuccessMsg("data", jsonArray);
 
+    }
+
+    private static JSONObject convertDocToJSON(Document doc) {
+
+        JSONObject jsonObject = new JSONObject().
+                put("id", doc.getObjectId("_id").toString())
+                .put("type", doc.getString("type"))
+                .put("count", doc.getInteger("count"))
+                .put("prob", doc.get("prob"))
+                .put("priority", doc.getInteger("priority"))
+                .put("isForSite", doc.getBoolean("is_for_site"))
+                .put("isForSiteFa", doc.getBoolean("is_for_site") ? "سایت" : "اپ")
+                .put("used", doc.containsKey("users") ? doc.getList("users", Document.class).size() : 0);
+
+        if (doc.getString("type").equalsIgnoreCase(GiftType.OFFCODE.getName()))
+            jsonObject
+                    .put("typeFa",
+                            translateType(doc.getString("type")) + " - " +
+                                    "برای " + translateUseFor(doc.getString("use_for")) + " - " +
+                                    " به صورت " + translateOffCodeType(doc.getString("off_code_type")) + " -" +
+                                    " تاریخ انقضا " + Utility.getSolarDate(doc.getLong("expire_at"))
+                    )
+                    .put("offCodeType", doc.getString("off_code_type"))
+                    .put("expireAt", doc.getLong("expire_at"))
+                    .put("useFor", doc.getString("use_for"));
+        else
+            jsonObject
+                    .put("typeFa", translateType(doc.getString("type")));
+
+        return jsonObject;
     }
 
     public static String store(JSONObject data) {
@@ -177,7 +180,9 @@ public class GiftController {
             );
         }
 
-        return giftRepository.insertOneWithReturn(newDoc);
+        giftRepository.insertOne(newDoc);
+
+        return generateSuccessMsg("data", convertDocToJSON(newDoc));
     }
 
     public static String getConfig() {

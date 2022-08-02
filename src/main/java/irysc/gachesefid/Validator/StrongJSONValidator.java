@@ -70,7 +70,6 @@ public class StrongJSONValidator implements
                     return false;
                 }
             }
-
             return true;
         } catch (Exception x) {
             return false;
@@ -91,6 +90,7 @@ public class StrongJSONValidator implements
         Class b = value.getClass();
 
         if(a.equals(Number.class) && (b.equals(Integer.class) || b.equals(Double.class) || b.equals(Float.class))) {
+//            || b.equals(String.class)
 
             if(value instanceof Integer && (int)value < 0)
                 return false;
@@ -100,6 +100,34 @@ public class StrongJSONValidator implements
 
             if(value instanceof Float && (float)value < 0)
                 return false;
+
+//            if(value instanceof String) {
+//
+//                Number n;
+//
+//                try {
+//                    n = Double.parseDouble(value.toString());
+//                }
+//                catch (Exception x) {
+//                    try {
+//                        n = Float.parseFloat(value.toString());
+//                    }
+//                    catch (Exception xx) {
+//                        try {
+//                            n = Integer.parseInt(value.toString());
+//                        }
+//                        catch (Exception xxx) {
+//                            return false;
+//                        }
+//                    }
+//                }
+//
+//                if(n.doubleValue() < 0)
+//                    return false;
+//
+//                value = n.doubleValue();
+//                return true;
+//            }
 
             return true;
         }

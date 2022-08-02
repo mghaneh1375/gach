@@ -33,6 +33,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 @Controller
@@ -150,7 +151,7 @@ public class QuestionAPIRoutes extends Router {
                                 },
                                 optionals = {
                                         "sentencesCount", "telorance",
-                                        "choicesCount", "neededLines",
+                                        "choicesCount", "neededLine",
                                         "visibility"
                                 },
                                 optionalsType = {
@@ -165,9 +166,43 @@ public class QuestionAPIRoutes extends Router {
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
-        return QuestionController.addQuestion(subjectId, questionFile, answerFile, new JSONObject(jsonStr));
+        return QuestionController.addQuestion(subjectId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PostMapping(value = "edit/{questionId}")
+    @ResponseBody
+    public String edit(HttpServletRequest request,
+                        @PathVariable @ObjectIdConstraint ObjectId questionId,
+                        @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
+                        @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                        @RequestPart(value = "json") @StrongJSONConstraint(
+                                params = {
+                                        "level",
+                                        "neededTime", "answer",
+                                        "kindQuestion", "subjectId",
+                                        "organizationId",
+                                },
+                                paramsType = {
+                                        QuestionLevel.class,
+                                        Positive.class, Object.class,
+                                        QuestionType.class, ObjectId.class,
+                                        String.class,
+                                },
+                                optionals = {
+                                        "sentencesCount", "telorance",
+                                        "choicesCount", "neededLine",
+                                        "visibility", "authorId",
+                                },
+                                optionalsType = {
+                                        Positive.class, Number.class,
+                                        Positive.class, Positive.class,
+                                        Boolean.class, ObjectId.class,
+                                }
+                        ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.updateQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
+    }
 
     @PostMapping(value = "/addBatch")
     @ResponseBody

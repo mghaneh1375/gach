@@ -181,7 +181,7 @@ public class AuthorController {
             JSONObject jsonObject = new JSONObject().
                     put("id", doc.getObjectId("_id").toString())
                     .put("name", doc.getString("name"))
-                    .put("tag", doc.getString("tag"))
+                    .put("tag", "") //doc.getString("tag")
                     .put("sumPayment", sumPayment)
                     .put("lastTransaction", lastTransaction == 0 ? "" : Utility.getSolarDate(lastTransaction))
                     .put("questionCount", doc.getOrDefault("q_no", 0));

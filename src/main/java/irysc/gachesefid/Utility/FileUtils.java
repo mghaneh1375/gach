@@ -220,6 +220,7 @@ public class FileUtils {
         try {
 
             String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+            System.out.println(fileType);
 
             if (!fileType.equals("image"))
                 return null;
@@ -227,6 +228,8 @@ public class FileUtils {
             return fileType;
 
         } catch (InvalidFileTypeException e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }

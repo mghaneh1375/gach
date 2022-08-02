@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Question;
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.QuestionRepository;
+import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionLevel;
@@ -92,8 +93,33 @@ public class QuestionController extends Utilities {
         if(answerFileName != null)
             newDoc.append("answer_file", answerFileName);
 
-        for (String str : jsonObject.keySet())
+        for (String str : jsonObject.keySet()) {
+            if(str.equalsIgnoreCase("authorId"))
+                continue;
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
+        }
+
+        Document subject = subjectRepository.findById(subjectId);
+        if(subject != null) {
+            int qNo = ((int) subject.getOrDefault("q_no", 0) + 1);
+            subject.put("q_no", qNo);
+            subjectRepository.updateOne(subjectId,
+                    set("q_no", qNo)
+            );
+        }
+
+        ObjectId authorId = new ObjectId(jsonObject.get("authorId").toString());
+
+        Document user = authorRepository.findById(authorId);
+        if(user != null) {
+            int qNo = ((int) user.getOrDefault("q_no", 0) + 1);
+
+            user.put("q_no", qNo);
+            userRepository.updateOne(authorId,
+                    set("q_no", qNo)
+            );
+            newDoc.put("author", user.getString("name"));
+        }
 
         return questionRepository.insertOneWithReturn(newDoc);
     }
@@ -104,80 +130,14 @@ public class QuestionController extends Utilities {
                 .put("organizationId", doc.getString("organization_id"));
     }
 
-    public static String setQuestionFiles(ObjectId questionId,
-                                          MultipartFile questionFile,
-                                          MultipartFile answerFile) {
-
-        Document question = questionRepository.findById(questionId);
-        if (question == null)
-            return JSON_NOT_VALID_ID;
-
-        if (questionFile != null && questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
-            return generateErr("حداکثر حجم مجاز برای آپلود " + MAX_QUESTION_FILE_SIZE + " می باشد.");
-
-        if (answerFile != null && answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
-            return generateErr("حداکثر حجم مجاز برای آپلود " + MAX_QUESTION_FILE_SIZE + " می باشد.");
-
-        String questionFilename = null;
-        if (questionFile != null) {
-            questionFilename = FileUtils.uploadImageFile(questionFile);
-            if (questionFilename == null)
-                return generateErr("فایل موردنظر برای صورت سوال معتبر نمی باشد.");
-        }
-
-        String answerFilename = null;
-        if (answerFile != null) {
-            answerFilename = FileUtils.uploadImageFile(answerFile);
-            if (answerFilename == null)
-                return generateErr("فایل موردنظر برای پاسخ سوال معتبر نمی باشد.");
-        }
-
-        if (questionFilename != null) {
-
-            questionFilename = FileUtils.uploadFile(questionFile, QuestionRepository.FOLDER);
-
-            if (questionFilename == null)
-                return JSON_UNKNOWN_UPLOAD_FILE;
-        }
-
-        if (answerFilename != null) {
-
-            answerFilename = FileUtils.uploadFile(answerFile, QuestionRepository.FOLDER);
-
-            if (answerFilename == null) {
-
-                if (questionFilename != null)
-                    FileUtils.removeFile(questionFilename, QuestionRepository.FOLDER);
-
-                return JSON_UNKNOWN_UPLOAD_FILE;
-            }
-        }
-
-        if (questionFilename != null)
-            question.put("question_file", questionFilename);
-
-        if (answerFilename != null)
-            question.put("answer_file", answerFilename);
-
-        if (question.containsKey("question_file"))
-            question.put("visibility", true);
-
-        return JSON_OK;
-    }
-
     public static String updateQuestion(ObjectId questionId,
+                                        MultipartFile questionFile,
+                                        MultipartFile answerFile,
                                         JSONObject jsonObject) {
 
         Document question = questionRepository.findById(questionId);
         if (question == null)
             return JSON_NOT_VALID_ID;
-
-        if (jsonObject.has("visibility") &&
-                jsonObject.getBoolean("visibility") &&
-                !question.containsKey("question_file")
-        )
-            return generateErr("برای قابل مشاهده کردن سوال ابتدا باید فایل صورت سوال را آپلود نمایید.");
-
 
         if (!jsonObject.has("kindQuestion"))
             jsonObject.put("kindQuestion", question.getString("kind_question"));
@@ -189,15 +149,122 @@ public class QuestionController extends Utilities {
         )
             jsonObject.put("sentencesCount", question.getInteger("sentences_count"));
 
+        if(jsonObject.has("organizationId") &&
+                jsonObject.getString("organizationId").equalsIgnoreCase(
+                        question.getString("organization_id")
+                )
+        )
+            jsonObject.remove("organizationId");
+
+        if(jsonObject.has("subjectId") &&
+                jsonObject.getString("subjectId").equalsIgnoreCase(
+                        question.getObjectId("subject_id").toString()
+                )
+        )
+            jsonObject.remove("subjectId");
+
+        if(jsonObject.has("authorId") &&
+                jsonObject.getString("authorId").equalsIgnoreCase(
+                        question.getObjectId("author_id").toString()
+                )
+        )
+            jsonObject.remove("authorId");
+
         try {
             checkAnswer(jsonObject);
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
 
+        if(questionFile != null) {
+            if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            String fileType = uploadImageFile(questionFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        if(answerFile != null) {
+            if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            String fileType = uploadImageFile(answerFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        String questionFileName = null;
+        if(questionFile != null) {
+            questionFileName = FileUtils.uploadFile(questionFile, QuestionRepository.FOLDER);
+            if (questionFileName == null)
+                return JSON_NOT_VALID_FILE;
+        }
+
+        String answerFileName = null;
+        if(answerFile != null) {
+            answerFileName = FileUtils.uploadFile(answerFile, QuestionRepository.FOLDER);
+
+            if(answerFileName == null) {
+                FileUtils.removeFile(questionFileName, QuestionRepository.FOLDER);
+                return JSON_NOT_VALID_FILE;
+            }
+
+        }
+
+        if(jsonObject.has("subjectId")) {
+
+            Document subject = subjectRepository.findById(question.getObjectId("subject_id"));
+            if(subject != null) {
+                subject.put("q_no", subject.getInteger("q_no") - 1);
+                subjectRepository.replaceOne(subject.getObjectId("_id"), subject);
+            }
+
+            Document newSubject = subjectRepository.findById(
+                    (ObjectId) jsonObject.get("subjectId")
+            );
+
+            if(newSubject != null) {
+                newSubject.put("q_no", newSubject.getInteger("q_no") + 1);
+                subjectRepository.replaceOne(newSubject.getObjectId("_id"), newSubject);
+            }
+        }
+
+        if(jsonObject.has("authorId")) {
+
+            Document author = authorRepository.findById(question.getObjectId("author_id"));
+            if(author != null) {
+                author.put("q_no", author.getInteger("q_no") - 1);
+                authorRepository.replaceOne(author.getObjectId("_id"), author);
+            }
+
+            Document newAuthor = authorRepository.findById(
+                    (ObjectId) jsonObject.get("authorId")
+            );
+
+            if(newAuthor != null) {
+                newAuthor.put("q_no", newAuthor.getInteger("q_no") + 1);
+                authorRepository.replaceOne(newAuthor.getObjectId("_id"), newAuthor);
+            }
+
+        }
+
+        if(questionFileName != null) {
+            FileUtils.removeFile(question.getString("question_file"), QuestionRepository.FOLDER);
+            question.put("question_file", questionFileName);
+        }
+
+        if(answerFileName != null) {
+            FileUtils.removeFile(question.getString("answer_file"), QuestionRepository.FOLDER);
+            question.put("answer_file", answerFileName);
+        }
+
         for (String str : jsonObject.keySet())
             question.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
 
+        questionRepository.replaceOne(questionId, question);
         return JSON_OK;
 
     }
@@ -388,7 +455,7 @@ public class QuestionController extends Utilities {
 
                 cell = row.getCell(13);
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                    jsonObject.put("neededLines", (int) cell.getNumericCellValue());
+                    jsonObject.put("neededLine", (int) cell.getNumericCellValue());
 
                 checkAnswer(jsonObject);
 

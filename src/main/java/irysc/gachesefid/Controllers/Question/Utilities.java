@@ -47,10 +47,12 @@ public class Utilities {
             jsonObject.put("authorId", authorId);
         }
 
-        if(questionRepository.exist(
-                eq("organization_id", jsonObject.getString("organizationId"))
-        ))
-            throw new InvalidFieldsException("کد سازمانی سوال در سامانه موجود است.");
+        if(jsonObject.has("organizationId")) {
+            if (questionRepository.exist(
+                    eq("organization_id", jsonObject.getString("organizationId"))
+            ))
+                throw new InvalidFieldsException("کد سازمانی سوال در سامانه موجود است.");
+        }
 
         if (jsonObject.getString("kindQuestion").equals(QuestionType.TEST.getName())) {
 
@@ -122,8 +124,8 @@ public class Utilities {
             if(doc.containsKey("sentences_count"))
                 jsonObject.put("sentencesCount", doc.get("sentences_count"));
 
-            if(doc.containsKey("needed_lines"))
-                jsonObject.put("neededLines", doc.get("needed_lines"));
+            if(doc.containsKey("needed_line"))
+                jsonObject.put("neededLine", doc.get("needed_line"));
 
             if(isQuestionFileNeeded && doc.containsKey("question_file"))
                 jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
