@@ -121,7 +121,13 @@ public class ContentController {
                         .append("mid_price", row.getCell(7) != null ?
                                 (int) (row.getCell(7).getNumericCellValue()) : 0)
                         .append("hard_price", row.getCell(8) != null ?
-                                (int) (row.getCell(8).getNumericCellValue()) : 0);
+                                (int) (row.getCell(8).getNumericCellValue()) : 0)
+                        .append("school_easy_price", row.getCell(9) != null ?
+                                (int) (row.getCell(9).getNumericCellValue()) : 0)
+                        .append("school_mid_price", row.getCell(10) != null ?
+                                (int) (row.getCell(10).getNumericCellValue()) : 0)
+                        .append("school_hard_price", row.getCell(11) != null ?
+                                (int) (row.getCell(11).getNumericCellValue()) : 0);
 
                 subjectRepository.updateOne(
                         and(
@@ -458,6 +464,9 @@ public class ContentController {
                         .append("easy_price", subject.getInt("easyPrice"))
                         .append("mid_price", subject.getInt("midPrice"))
                         .append("hard_price", subject.getInt("hardPrice"))
+                        .append("school_easy_price", subject.getInt("schoolEasyPrice"))
+                        .append("school_mid_price", subject.getInt("schoolMidPrice"))
+                        .append("school_hard_price", subject.getInt("schoolHardPrice"))
                         .append("description", subject.has("description") ? subject.getString("description") : "")
                         .append("created_at", System.currentTimeMillis())
         );
@@ -533,6 +542,15 @@ public class ContentController {
         if (jsonObject.has("hardPrice"))
             subject.put("hard_price", jsonObject.getInt("hardPrice"));
 
+        if (jsonObject.has("schoolEasyPrice"))
+            subject.put("school_easy_price", jsonObject.getInt("schoolEasyPrice"));
+
+        if (jsonObject.has("schoolMidPrice"))
+            subject.put("school_mid_price", jsonObject.getInt("schoolMidPrice"));
+
+        if (jsonObject.has("schoolHardPrice"))
+            subject.put("school_hard_price", jsonObject.getInt("schoolHardPrice"));
+
         subject.put("lesson", newLesson);
         subject.put("grade", newGrade);
 
@@ -545,11 +563,11 @@ public class ContentController {
         JSONArray excepts = new JSONArray();
         JSONArray doneIds = new JSONArray();
 
-        for(int i = 0; i < ids.length(); i++) {
+        for (int i = 0; i < ids.length(); i++) {
 
             String id = ids.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -657,9 +675,9 @@ public class ContentController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static void getSubjects(JSONArray jsonArray,
-                                        ObjectId gradeId,
-                                        ObjectId lessonId) {
+    private static void getSubjects(JSONArray jsonArray,
+                                    ObjectId gradeId,
+                                    ObjectId lessonId) {
 
         ArrayList<Document> subjects = subjectRepository.find(
                 and(
@@ -678,11 +696,14 @@ public class ContentController {
                     .put("midPrice", subject.getInteger("mid_price"))
                     .put("easyPrice", subject.getInteger("easy_price"))
                     .put("hardPrice", subject.getInteger("hard_price"))
+                    .put("schoolMidPrice", subject.getInteger("school_mid_price"))
+                    .put("schoolEasyPrice", subject.getInteger("school_easy_price"))
+                    .put("schoolHardPrice", subject.getInteger("school_hard_price"))
                     .put("description", subject.getString("description"))
                     .put("code", subject.getString("code"))
                     .put("grade", new JSONObject()
-                        .put("name", grade.getString("name"))
-                        .put("id", grade.getObjectId("_id").toString())
+                            .put("name", grade.getString("name"))
+                            .put("id", grade.getObjectId("_id").toString())
                     )
                     .put("lesson", new JSONObject()
                             .put("name", lesson.getString("name"))
@@ -725,6 +746,9 @@ public class ContentController {
                     .put("midPrice", subject.getInteger("mid_price"))
                     .put("easyPrice", subject.getInteger("easy_price"))
                     .put("hardPrice", subject.getInteger("hard_price"))
+                    .put("schoolMidPrice", subject.getInteger("school_mid_price"))
+                    .put("schoolEasyPrice", subject.getInteger("school_easy_price"))
+                    .put("schoolHardPrice", subject.getInteger("school_hard_price"))
                     .put("description", subject.getString("description"))
                     .put("name", subject.getString("name"))
             );
@@ -902,7 +926,7 @@ public class ContentController {
 
         ArrayList<Document> subjects = subjectRepository.find(null, null);
 
-        for(Document subject : subjects) {
+        for (Document subject : subjects) {
 
             subject.put("q_no", questionRepository.count(
                     eq("subject_id", subject.getObjectId("_id"))

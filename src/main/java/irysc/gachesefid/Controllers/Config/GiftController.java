@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.giftRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class GiftController {
@@ -122,6 +124,7 @@ public class GiftController {
                 .put("type", doc.getString("type"))
                 .put("count", doc.getInteger("count"))
                 .put("prob", doc.get("prob"))
+                .put("amount", doc.get("amount"))
                 .put("priority", doc.getInteger("priority"))
                 .put("isForSite", doc.getBoolean("is_for_site"))
                 .put("isForSiteFa", doc.getBoolean("is_for_site") ? "سایت" : "اپ")
@@ -145,7 +148,7 @@ public class GiftController {
         return jsonObject;
     }
 
-    public static String store(JSONObject data) {
+    public static String store(ObjectId id, JSONObject data) {
 
         if (data.getString("type").equalsIgnoreCase(
                 GiftType.OFFCODE.getName()
@@ -171,7 +174,11 @@ public class GiftController {
         if (data.has("expireAt") && data.getLong("expireAt") < System.currentTimeMillis())
             return JSON_NOT_VALID_PARAMS;
 
-        Document newDoc = new Document();
+        Document newDoc = id == null ?
+                new Document() : giftRepository.findById(id);
+
+        if(newDoc == null)
+            return JSON_NOT_VALID_ID;
 
         for (String key : data.keySet()) {
             newDoc.put(
@@ -180,9 +187,13 @@ public class GiftController {
             );
         }
 
-        giftRepository.insertOne(newDoc);
+        if(id == null) {
+            giftRepository.insertOne(newDoc);
+            return generateSuccessMsg("data", convertDocToJSON(newDoc));
+        }
 
-        return generateSuccessMsg("data", convertDocToJSON(newDoc));
+        giftRepository.replaceOne(id, newDoc);
+        return JSON_OK;
     }
 
     public static String getConfig() {

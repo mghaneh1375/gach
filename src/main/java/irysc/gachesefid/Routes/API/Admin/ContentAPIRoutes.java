@@ -107,10 +107,17 @@ public class ContentAPIRoutes extends Router {
                              @PathVariable @ObjectIdConstraint ObjectId gradeId,
                              @PathVariable @ObjectIdConstraint ObjectId lessonId,
                              @RequestBody @StrongJSONConstraint(
-                                     params = {"name", "midPrice", "easyPrice", "hardPrice"},
+                                     params = {
+                                             "name", "midPrice",
+                                             "easyPrice", "hardPrice",
+                                             "schoolMidPrice", "schoolEasyPrice",
+                                             "schoolHardPrice"
+                                     },
                                      paramsType = {
                                              String.class, Positive.class,
-                                             Positive.class, Positive.class
+                                             Positive.class, Positive.class,
+                                             Positive.class, Positive.class,
+                                             Positive.class
                                      },
                                      optionals = {"description"},
                                      optionalsType = {String.class}
@@ -171,16 +178,19 @@ public class ContentAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {},
                                         paramsType = {},
-                                        optionals = {"name", "hardPrice",
+                                        optionals = {
+                                                "name", "hardPrice",
                                                 "midPrice", "easyPrice",
-                                                "gradeId", "lessonId",
-                                                "description"
+                                                "schoolHardPrice", "schoolMidPrice",
+                                                "schoolEasyPrice", "gradeId",
+                                                "lessonId", "description"
                                         },
                                         optionalsType = {
                                                 String.class, Positive.class,
                                                 Positive.class, Positive.class,
-                                                String.class, String.class,
-                                                String.class
+                                                Positive.class, Positive.class,
+                                                Positive.class, String.class,
+                                                String.class, String.class
                                         }
                                 ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {

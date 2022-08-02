@@ -7,7 +7,9 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -58,13 +60,28 @@ public class GiftAPIRoutes extends Router {
     public String store(HttpServletRequest request,
                             @RequestBody @StrongJSONConstraint(
                                     params = {"type", "amount", "isForSite", "count", "prob", "priority"},
-                                    paramsType = {GiftType.class, Positive.class, Boolean.class, Positive.class, Number.class, Positive.class},
+                                    paramsType = {GiftType.class, Number.class, Boolean.class, Positive.class, Number.class, Positive.class},
                                     optionals = {"useFor", "offCodeType", "expireAt"},
                                     optionalsType = {OffCodeSections.class, OffCodeTypes.class, Long.class}
                             ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return GiftController.store(new JSONObject(str));
+        return GiftController.store(null, new JSONObject(str));
+    }
+
+    @PostMapping(value = "edit/{giftId}")
+    @ResponseBody
+    public String edit(HttpServletRequest request,
+                        @PathVariable @ObjectIdConstraint ObjectId giftId,
+                        @RequestBody @StrongJSONConstraint(
+                                params = {"type", "amount", "isForSite", "count", "prob", "priority"},
+                                paramsType = {GiftType.class, Number.class, Boolean.class, Positive.class, Number.class, Positive.class},
+                                optionals = {"useFor", "offCodeType", "expireAt"},
+                                optionalsType = {OffCodeSections.class, OffCodeTypes.class, Long.class}
+                        ) @NotBlank String str
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return GiftController.store(giftId, new JSONObject(str));
     }
 
 //    @PostMapping(value = "edit/{authorId}")
