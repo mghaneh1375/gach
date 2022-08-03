@@ -601,21 +601,34 @@ public class QuizController {
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
-            List<Document> questions = quiz.getList("questions", Document.class);
+            Document questionsDoc = quiz.get("questions", Document.class);
 
-            ArrayList<Document> questionsDoc = new ArrayList<>();
+            ArrayList<Document> questionsList = new ArrayList<>();
+            List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                    "_ids", new ArrayList<ObjectId>()
+            );
+            List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+                    "_ids", new ArrayList<Double>()
+            );
 
-            for (Document itr : questions) {
+            if(questionsMark.size() != questions.size())
+                return JSON_NOT_UNKNOWN;
 
-                Document question = questionRepository.findById(itr.getObjectId("_id"));
+            int i = 0;
+            for (ObjectId itr : questions) {
 
-                if (question == null)
+                Document question = questionRepository.findById(itr);
+
+                if (question == null) {
+                    i++;
                     continue;
+                }
 
-                questionsDoc.add(Document.parse(question.toJson()).append("mark", itr.get("mark")));
+                questionsList.add(Document.parse(question.toJson()).append("mark", questionsMark.get(i)));
+                i++;
             }
 
-            JSONArray jsonArray = Utilities.convertList(questionsDoc, true, true, true, true);
+            JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true);
 
             return generateSuccessMsg("data", jsonArray);
         } catch (InvalidFieldsException x) {
