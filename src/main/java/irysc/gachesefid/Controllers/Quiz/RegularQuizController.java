@@ -265,7 +265,7 @@ public class RegularQuizController extends QuizAbstract {
                 .append("register_at", System.currentTimeMillis())
                 .append("finish_at", null)
                 .append("start_at", null)
-                .append("answers", new ArrayList<>());
+                .append("answers", new byte[0]);
 
         if ((boolean) quiz.getOrDefault("permute", false))
             stdDoc.put("question_indices", new ArrayList<>());

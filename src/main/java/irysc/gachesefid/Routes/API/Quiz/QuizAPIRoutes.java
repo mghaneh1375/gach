@@ -413,7 +413,7 @@ public class QuizAPIRoutes extends Router {
                                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
@@ -469,14 +469,14 @@ public class QuizAPIRoutes extends Router {
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, file);
 
-        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, file);
+        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
 
     }
 
@@ -491,7 +491,7 @@ public class QuizAPIRoutes extends Router {
                                           ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONObject jsonObject = new JSONObject(jsonStr);
@@ -502,7 +502,7 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, jsonArray, mark);
 
-        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, user.getObjectId("_id"), quizId, jsonArray, mark);
+        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, jsonArray, mark);
     }
 
 
@@ -591,14 +591,14 @@ public class QuizAPIRoutes extends Router {
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.fetchQuestions(iryscQuizRepository, null, quizId);
 
-        return QuizController.fetchQuestions(schoolQuizRepository, user.getObjectId("_id"), quizId);
+        return QuizController.fetchQuestions(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
     }
 
     @PostMapping(value = "/createPackage")

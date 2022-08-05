@@ -8,6 +8,7 @@ import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
@@ -59,69 +60,78 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-        ArrayList<Document> docs = authorRepository.find(null, null);
-        for(Document doc : docs) {
-            doc.put("name", doc.getString("first_name") + " " + doc.getString("last_name"));
-            doc.remove("first_name");
-            doc.remove("last_name");
-            authorRepository.replaceOne(doc.getObjectId("_id"), doc);
-        }
+//        ArrayList<Document> docs = questionRepository.find(null, null);
+//        for(Document doc : docs) {
+//            long l = (long)doc.getOrDefault("used", 0);
+//            doc.put("used", (int)l);
+//            doc.remove("name");
+//
+//            questionRepository.replaceOne(doc.getObjectId("_id"), doc);
+//        }
 
-//        ArrayList<Integer> a = new ArrayList<>() {
-//            {add(1); add(3); add(2); add(5); add(4); add(6); add(2); add(0);}
-//        };
-//        byte[] bytes = irysc.gachesefid.Controllers.Quiz.Utility.getByteArr(a);
-//
-//        double d = 65.43;
-//        byte[] output = new byte[8];
-//        long lng = Double.doubleToLongBits(d);
-//        for(int i = 0; i < 8; i++) output[i] = (byte)((lng >> ((7 - i) * 8)) & 0xff);
-//
-//        double d2 = 5434.2;
-//        byte[] output2 = new byte[8];
-//        long lng2 = Double.doubleToLongBits(d2);
-//        for(int i = 0; i < 8; i++) output2[i] = (byte)((lng2 >> ((7 - i) * 8)) & 0xff);
-//
-//        ArrayList<Integer> b = new ArrayList<>() {
-//            {add(4); add(4); add(3); add(2); }
-//        };
-//
-//        byte[] bytes2 = irysc.gachesefid.Controllers.Quiz.Utility.getByteArr(b);
-//
-//        byte[] c = irysc.gachesefid.Controllers.Quiz.Utility.getByteArrFromBooleans(
-//                new ArrayList<>(){
-//                    {add(true);add(false);add(true);add(true);add(false);add(false);add(false);add(true);add(true);add(true);add(false);}
-//                }
-//        );
-//
-//        double d3 = 54.2;
-//        byte[] output3 = new byte[8];
-//        long lng3 = Double.doubleToLongBits(d3);
-//        for(int i = 0; i < 8; i++) output3[i] = (byte)((lng3 >> ((7 - i) * 8)) & 0xff);
-//
-//        byte[] allByteArray = new byte[bytes.length + bytes2.length + c.length +
-//                output.length + output2.length + output3.length + 6 + 2
-//        ];
-//
-//        ByteBuffer buff = ByteBuffer.wrap(allByteArray);
-//        buff.put((byte) 0x00);
-//        buff.put(bytes);
-//        buff.put((byte) 0xff);
-//        buff.put((byte) 0x01);
-//        buff.put(output);
-//        buff.put((byte) 0x00);
-//        buff.put(bytes2);
-//        buff.put((byte) 0xff);
-//        buff.put((byte) 0x01);
-//        buff.put(output2);
-//        buff.put((byte) 0x02);
-//        buff.put(c);
-//        buff.put((byte) 0x01);
-//        buff.put(output3);
-//
-//        ArrayList<Object> bb = irysc.gachesefid.Controllers.Quiz.Utility.getNumbers(buff.array());
-//        for(Object itr : bb)
-//            System.out.println(itr);
+        ArrayList<PairValue> a = new ArrayList<>();
+        a.add(new PairValue(4, 1));
+        a.add(new PairValue(5, 3));
+        a.add(new PairValue(7, 2));
+
+        byte[] bytes = irysc.gachesefid.Controllers.Quiz.Utility.getByteArr(a);
+
+        double d = 65.43;
+        byte[] output = new byte[8];
+        long lng = Double.doubleToLongBits(d);
+        for(int i = 0; i < 8; i++) output[i] = (byte)((lng >> ((7 - i) * 8)) & 0xff);
+
+        double d2 = 5434.2;
+        byte[] output2 = new byte[8];
+        long lng2 = Double.doubleToLongBits(d2);
+        for(int i = 0; i < 8; i++) output2[i] = (byte)((lng2 >> ((7 - i) * 8)) & 0xff);
+
+        ArrayList<PairValue> b = new ArrayList<>();
+        b.add(new PairValue(4, 4));
+        b.add(new PairValue(3, 2));
+        b.add(new PairValue(6, 1));
+
+        byte[] bytes2 = irysc.gachesefid.Controllers.Quiz.Utility.getByteArr(b);
+
+        String s = "10110001110";
+        byte[] c = irysc.gachesefid.Controllers.Quiz.Utility.getByteArrFromCharArr(
+                s.toCharArray()
+        );
+
+        double d3 = 54.2;
+        byte[] output3 = new byte[8];
+        long lng3 = Double.doubleToLongBits(d3);
+        for(int i = 0; i < 8; i++) output3[i] = (byte)((lng3 >> ((7 - i) * 8)) & 0xff);
+
+        byte[] allByteArray = new byte[bytes.length + bytes2.length + c.length +
+                output.length + output2.length + output3.length + 6 + 2
+        ];
+
+        ByteBuffer buff = ByteBuffer.wrap(allByteArray);
+        buff.put((byte) 0x00);
+        buff.put(bytes);
+        buff.put((byte) 0xff);
+        buff.put((byte) 0x01);
+        buff.put(output);
+        buff.put((byte) 0x00);
+        buff.put(bytes2);
+        buff.put((byte) 0xff);
+        buff.put((byte) 0x01);
+        buff.put(output2);
+        buff.put((byte) 0x02);
+        buff.put(c);
+        buff.put((byte) 0x01);
+        buff.put(output3);
+
+        ArrayList<PairValue> pairValues = irysc.gachesefid.Controllers.Quiz.Utility.getAnswers(buff.array());
+        for(PairValue p : pairValues) {
+            if(p.getKey().toString().equalsIgnoreCase("test")) {
+                PairValue pp = (PairValue) p.getValue();
+                System.out.println("test " + pp.getKey() + " " + pp.getValue());
+            }
+            else
+                System.out.println(p.getKey() + " " + p.getValue());
+        }
 
         return "s";
     }

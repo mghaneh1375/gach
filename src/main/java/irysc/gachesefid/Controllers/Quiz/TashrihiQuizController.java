@@ -293,7 +293,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     )
                     .put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getQuestions(
                             true, true,
-                            quiz.getList("questions", Document.class),
+                            quiz.get("questions", Document.class),
                             student.getList("answers", Document.class),
                             db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
                     ))

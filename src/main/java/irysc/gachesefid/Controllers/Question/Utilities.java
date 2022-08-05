@@ -100,7 +100,7 @@ public class Utilities {
 
         JSONArray jsonArray = new JSONArray();
         HashMap<ObjectId, String> subjects = new HashMap<>();
-        HashMap<ObjectId, String> authors = new HashMap<>();
+//        HashMap<ObjectId, String> authors = new HashMap<>();
 
         for(Document doc : docs) {
 
