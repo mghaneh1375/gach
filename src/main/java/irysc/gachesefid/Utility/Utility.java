@@ -266,7 +266,11 @@ public class Utility {
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                if(str.charAt(0) == '0')
+                if(str.charAt(0) == '0' || key.toLowerCase().contains("password") ||
+                        key.equalsIgnoreCase("phone") ||
+                        key.equalsIgnoreCase("tel") ||
+                        key.equals("NID")
+                )
                     jsonObject.put(key, str);
                 else {
                     try {

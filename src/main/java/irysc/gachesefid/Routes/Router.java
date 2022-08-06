@@ -99,6 +99,11 @@ public class Router {
         return isWantedAccess(request, Access.TEACHER.getName());
     }
 
+    protected Document getAgentUser(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return isWantedAccess(request, Access.AGENT.getName());
+    }
+
     protected void getPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         isPrivilegeUser(request);

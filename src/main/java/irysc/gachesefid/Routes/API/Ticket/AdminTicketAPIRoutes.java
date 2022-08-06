@@ -72,9 +72,12 @@ public class AdminTicketAPIRoutes extends Router {
     @ResponseBody
     public String getRequest(HttpServletRequest request,
                              @PathVariable @ObjectIdConstraint ObjectId ticketId
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
-        return TicketController.getRequest(ticketId);
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
+        return TicketController.getRequest(ticketId,
+                Authorization.isAdmin(user.getList("accesses", String.class)) ? null
+                        : user.getObjectId("_id")
+        );
     }
 
     @DeleteMapping(value = "/remove")

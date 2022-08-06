@@ -1,6 +1,8 @@
 package irysc.gachesefid.Validator;
 
+import irysc.gachesefid.Utility.Digit;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
@@ -32,7 +34,9 @@ public class StrongJSONValidator implements
             return true;
 
         try {
-            JSONObject jsonObject = new JSONObject(s);
+            JSONObject jsonObject = Utility.convertPersian(
+                    new JSONObject(s)
+            );
 
             if (jsonObject.keySet().size() < valueList.length ||
                     jsonObject.keySet().size() > valueList.length + optionalValueList.length)
@@ -88,6 +92,9 @@ public class StrongJSONValidator implements
             return EnumValidatorImp.isValid(value.toString(), a);
 
         Class b = value.getClass();
+
+        if(a.equals(Digit.class))
+            return Digit.validate(value);
 
         if(a.equals(Number.class) && (b.equals(Integer.class) || b.equals(Double.class) || b.equals(Float.class))) {
 //            || b.equals(String.class)

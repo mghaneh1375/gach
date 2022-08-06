@@ -30,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -1416,7 +1417,7 @@ public class QuizController {
                 for (PairValue p : pairValues) {
 
                     idx++;
-                    String stdAns = answers.getString(idx);
+                    String stdAns = answers.get(idx).toString();
                     Object stdAnsAfterFilter;
 
                     if (stdAns.isEmpty()) {
@@ -1427,10 +1428,13 @@ public class QuizController {
                     String type = p.getKey().toString();
                     if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
                         int s = Integer.parseInt(stdAns);
-                        if(s > 4 || s < 0)
+
+                        PairValue pp = (PairValue) p.getValue();
+                        if(s > (int)pp.getKey() || s < 0)
                             return JSON_NOT_VALID_PARAMS;
+
                         stdAnsAfterFilter = new PairValue(
-                                ((PairValue)p.getValue()).getKey(),
+                                pp.getKey(),
                                 s
                         );
                     }
@@ -1455,6 +1459,8 @@ public class QuizController {
                 }
             }
             catch (Exception x) {
+                System.out.println(x.getMessage());
+                x.printStackTrace();
                 return JSON_NOT_VALID_PARAMS;
             }
 
@@ -1487,13 +1493,23 @@ public class QuizController {
 //                return JSON_NOT_UNKNOWN;
 
             for(int i = 0; i < marks.size(); i++) {
-
-                jsonArray.put(new JSONObject()
-                        .put("type", answers.get(i).getKey())
-                        .put("answer", answers.get(i).getValue())
-                        .put("choicesCount", 4)
-                        .put("mark", marks.get(i))
-                );
+                if(answers.get(i).getKey().toString().equalsIgnoreCase(
+                        QuestionType.TEST.getName()
+                )) {
+                    PairValue pp = (PairValue) answers.get(i).getValue();
+                    jsonArray.put(new JSONObject()
+                            .put("type", answers.get(i).getKey())
+                            .put("answer", pp.getValue())
+                            .put("choicesCount", pp.getKey())
+                            .put("mark", marks.get(i))
+                    );
+                }
+                else
+                    jsonArray.put(new JSONObject()
+                            .put("type", answers.get(i).getKey())
+                            .put("answer", answers.get(i).getValue())
+                            .put("mark", marks.get(i))
+                    );
             }
 
             return generateSuccessMsg("data", jsonArray);

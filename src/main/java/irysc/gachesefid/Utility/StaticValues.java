@@ -43,7 +43,7 @@ public class StaticValues {
 
     public final static int ITEMS_PER_PAGE = 20;
 
-    public final static boolean LOCAL = false;
+    public final static boolean LOCAL = true;
     public final static boolean DEV_MODE = true;
 
 
@@ -51,7 +51,7 @@ public class StaticValues {
     public static final String ANSI_GREEN = "\u001B[32m";
 
     public final static String SERVER = (StaticValues.DEV_MODE) ?
-            (StaticValues.LOCAL) ? "http://localhost:8080/api/" :
+            (StaticValues.LOCAL) ? "http://localhost:3000/" :
                     "http://185.239.106.26:8080/" : "https://okft.org/";
 
     public final static int MAX_OBJECT_ID_SIZE = 100;

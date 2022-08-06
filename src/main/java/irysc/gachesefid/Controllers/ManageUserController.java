@@ -1,10 +1,13 @@
 package irysc.gachesefid.Controllers;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Models.*;
+import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Validator.EnumValidatorImp;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -17,9 +20,9 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class ManageUserController {
 
@@ -242,5 +245,235 @@ public class ManageUserController {
         userRepository.updateOne(advisorId, set("percent", percent));
 
         return JSON_OK;
+    }
+
+    public static String checkDuplicate(String phone, String NID) {
+        return generateSuccessMsg("exist",
+                userRepository.exist(or(
+                        eq("phone", phone),
+                        eq("NID", NID)
+                ))
+        );
+    }
+
+    public static String getMySchools(ObjectId agentId) {
+
+        ArrayList<Document> docs = userRepository.find(and(
+                exists("form_list"),
+                eq("form_list.role", "school"),
+                eq("form_list.agent_id", agentId)
+        ), new BasicDBObject("form_list", 1)
+                .append("NID", 1)
+                .append("phone", 1)
+                .append("_id", 1)
+                .append("first_name", 1)
+                .append("last_name", 1)
+                .append("students_no", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        for(Document doc : docs) {
+
+            List<Document> formList = doc.getList("form_list", Document.class);
+            Document form = searchInDocumentsKeyVal(
+                    formList, "role", "school"
+            );
+
+            if(form == null)
+                continue;
+
+            jsonArray.put(
+                    new JSONObject()
+                            .put("phone", doc.getString("phone"))
+                            .put("NID", doc.getString("NID"))
+                            .put("id", doc.getObjectId("_id").toString())
+                            .put("studentsNo", doc.getOrDefault("students_no", 0))
+                            .put("firstName", doc.getString("first_name"))
+                            .put("lastName", doc.getString("last_name"))
+                            .put("name", form.getString("name"))
+                            .put("schoolSex", form.getString("school_sex"))
+                            .put("kindSchool", form.getString("kind_school"))
+                            .put("kindSchoolFa",
+                                    form.getString("kind_school").equalsIgnoreCase(GradeSchool.DABESTAN.getName()) ?
+                                            "دبستان" :
+                                    form.getString("kind_school").equalsIgnoreCase(GradeSchool.MOTEVASETEAVAL.getName()) ?
+                                            "متوسطه اول" : "متوسطه دوم"
+                                    )
+                            .put("schoolSexFa", form.getString("school_sex").equalsIgnoreCase(Sex.MALE.getName()) ? "آقا" : "خانم")
+                            .put("ManagerName", form.getString("manager_name"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+//
+//    public static String getMySchoolInfo(ObjectId agentId) {
+//
+//    }
+
+    public static String addSchool(JSONObject jsonObject,
+                                   ObjectId agentId,
+                                   String agentName) {
+
+        String phone = jsonObject.getString("phone");
+        String NID = jsonObject.getString("NID");
+
+        if(!PhoneValidator.isValid(phone) ||
+            !Utility.validationNationalCode(NID)
+        )
+            return generateErr("کد ملی و یا شماره همراه وارد شده نامعتبر است.");
+
+        ArrayList<Document> users = userRepository.find(
+                or(
+                        eq("phone", phone),
+                        eq("NID", phone)
+                ), null
+        );
+
+        if(users.size() > 1)
+            return generateErr("کد ملی و یا شماره همراه وارد شده نامعتبر است.");
+
+        Document user = users.size() == 1 ? users.get(0) : null;
+
+        long curr = System.currentTimeMillis();
+
+        if(user == null) {
+
+            if(!jsonObject.has("firstName") ||
+                    !jsonObject.has("lastName") ||
+                    !jsonObject.has("password") ||
+                    !jsonObject.has("rPassword") ||
+                    !jsonObject.has("city"))
+                return JSON_NOT_VALID_PARAMS;
+
+            Document config = Utility.getConfig();
+            Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+
+            user = new Document("NID", NID)
+                    .append("phone", phone)
+                    .append("status", "active")
+                    .append("level", true)
+                    .append("money", config.getInteger("init_money"))
+                    .append("coin", config.getDouble("init_coin"))
+                    .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
+                    .append("events", new ArrayList<>())
+                    .append("avatar_id", avatar.getObjectId("_id"))
+                    .append("pic", avatar.getString("file"))
+                    .append("invitation_code", Utility.randomString(8))
+                    .append("created_at", curr)
+                    .append("accesses", new ArrayList<>() {
+                        {add(Access.SCHOOL.getName());}
+                    })
+                    .append("password", jsonObject.getString("password"))
+                    .append("first_name", jsonObject.getString("firstName"))
+                    .append("last_name", jsonObject.getString("lastName"));
+
+            ArrayList<Document> forms = new ArrayList<>();
+
+            Document form = new Document("role", "school")
+                    .append("tel", jsonObject.getString("tel"))
+                    .append("address", jsonObject.getString("address"))
+                    .append("name", jsonObject.getString("name"))
+                    .append("manager_name", jsonObject.getString("managerName"))
+                    .append("school_sex", jsonObject.getString("schoolSex"))
+                    .append("agent_id", agentId)
+                    .append("kind_school", jsonObject.getString("kindSchool"));
+
+            forms.add(form);
+            user.append("form_list", forms);
+
+            return userRepository.insertOneWithReturn(user);
+        }
+
+        ObjectId reqId = accessRequestRepository.insertOneWithReturnId(
+                new Document("sender_id", agentId)
+                        .append("target_id", user.getObjectId("_id"))
+                        .append("phone", phone)
+                        .append("role", "school")
+                        .append("created_at", curr)
+                        .append("tel", jsonObject.getString("tel"))
+                        .append("address", jsonObject.getString("address"))
+                        .append("name", jsonObject.getString("name"))
+                        .append("manager_name", jsonObject.getString("managerName"))
+                        .append("school_sex", jsonObject.getString("schoolSex"))
+                        .append("kind_school", jsonObject.getString("kindSchool"))
+        );
+
+        ArrayList<Document> chats = new ArrayList<>();
+        chats.add(new Document("msg",
+                "<p>" + agentName + " از شما دعوت کرده است تا زیرمجموعه نمایندگی ایشان قرار گیرید. در صورت تمایل بر روی " +
+                "<a href='" + SERVER + "acceptInvite/" + reqId + "'>" + "لینک" + "</a>" +
+                        " کلیک کنید. " + "</p>"
+                )
+                .append("created_at", curr)
+                .append("is_for_user", true)
+                .append("files", new ArrayList<>())
+        );
+
+        ticketRepository.insertOne(
+                new Document("title", "درخواست اتصال به نمایندگی")
+                        .append("created_at", curr)
+                        .append("send_date", curr)
+                        .append("answer_date", curr)
+                        .append("is_for_teacher", false)
+                        .append("chats", chats)
+                        .append("status", "finish")
+                        .append("priority", TicketPriority.HIGH.getName())
+                        .append("section", TicketSection.ACCESS.getName())
+                        .append("user_id", user.getObjectId("_id"))
+        );
+
+        return generateSuccessMsg("id", -1);
+    }
+
+    public static String acceptInvite(Document user,
+                                      ObjectId reqId) {
+
+        Document doc = accessRequestRepository.findOne(
+                and(
+                        eq("_id", reqId),
+                        eq("target_id", user.getObjectId("_id"))
+                ), null
+        );
+
+        if(doc == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if(doc.containsKey("response_at"))
+            return generateErr("شما قبلا این دعوت را پذیرفته اید.");
+
+        doc.put("response_at", System.currentTimeMillis());
+
+        if(!user.containsKey("phone"))
+            user.put("phone", doc.getString("phone"));
+
+        List<Document> forms = user.containsKey("form_list") ?
+                user.getList("form_list", Document.class) :
+                new ArrayList<>();
+
+        Document form = new Document("role", doc.getString("role"));
+
+        if(doc.getString("role").equalsIgnoreCase("school")) {
+            form = new Document("role", "school")
+                    .append("tel", doc.getString("tel"))
+                    .append("address", doc.getString("address"))
+                    .append("name", doc.getString("name"))
+                    .append("manager_name", doc.getString("manager_name"))
+                    .append("school_sex", doc.getString("school_sex"))
+                    .append("agent_id", doc.getObjectId("sender_id"))
+                    .append("kind_school", doc.getString("kind_school"));
+        }
+
+        int idx = searchInDocumentsKeyValIdx(forms, "role", doc.getString("role"));
+        if(idx == -1)
+            forms.add(form);
+        else
+            forms.set(idx, form);
+
+        user.put("form_list", forms);
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+        accessRequestRepository.replaceOne(reqId, doc);
+        return generateSuccessMsg("msg", "انتقال شما به نمایندگی مورد نظر با موفقیت انجام شد.");
     }
 }

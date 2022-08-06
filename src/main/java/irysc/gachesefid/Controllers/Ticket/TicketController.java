@@ -137,12 +137,18 @@ public class TicketController {
     }
 
 
-    public static String getRequest(ObjectId ticketId) {
+    public static String getRequest(ObjectId ticketId, ObjectId userId) {
+
+        Bson filter = userId == null ? eq("_id", ticketId) :
+                and(
+                        eq("user_id", userId),
+                        eq("_id", ticketId)
+                );
 
         try {
             AggregateIterable<Document> docs =
                     ticketRepository.findWithJoinUser("user_id", "student",
-                            match(eq("_id", ticketId)), null, null
+                            match(filter), null, null
                     );
 
             if (!docs.iterator().hasNext())

@@ -53,6 +53,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static Map<String, Integer> commonVals = new HashMap<>();
     public static MongoDatabase mongoDatabase;
 
+    public static AccessRequestRepository accessRequestRepository;
     public static ActivationRepository activationRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
     public static AlertsRepository alertsRepository;
@@ -97,6 +98,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             MongoClient mongoClient = MongoClients.create(settings);
             mongoDatabase = mongoClient.getDatabase("gachesefid");
 
+            accessRequestRepository = new AccessRequestRepository();
             activationRepository = new ActivationRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
             alertsRepository = new AlertsRepository();

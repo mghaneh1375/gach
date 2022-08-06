@@ -3,11 +3,17 @@ package irysc.gachesefid.Routes.API.Admin;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Models.GradeSchool;
+import irysc.gachesefid.Models.KindSchool;
+import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Digit;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -28,6 +34,7 @@ import javax.validation.constraints.NotBlank;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 @Controller
@@ -149,5 +156,91 @@ public class ManageUserAPIRoutes extends Router {
         } catch (Exception x) {
             return JSON_NOT_VALID_PARAMS;
         }
+    }
+
+    @PostMapping(value = "/checkDuplicate")
+    @ResponseBody
+    public String checkDuplicate(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {
+                                                 "NID", "phone"
+                                         },
+                                         paramsType = {
+                                                 Digit.class, Digit.class
+                                         }
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getPrivilegeUser(request);
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        return ManageUserController.checkDuplicate(
+                jsonObject.getString("phone"),
+                jsonObject.getString("NID")
+        );
+    }
+
+    @PostMapping(value = "/acceptInvite/{reqId}")
+    @ResponseBody
+    public String acceptInvite(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId reqId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
+        return ManageUserController.acceptInvite(user, reqId);
+    }
+
+    @PostMapping(value = "/addSchool")
+    @ResponseBody
+    public String addSchool(HttpServletRequest request,
+                            @RequestBody @StrongJSONConstraint(
+                                    params = {
+                                            "NID", "phone",
+                                            "name", "tel",
+                                            "address", "managerName",
+                                            "schoolSex", "kindSchool"
+                                    },
+                                    paramsType = {
+                                            Digit.class, Digit.class,
+                                            String.class, Digit.class,
+                                            String.class, String.class,
+                                            Sex.class, GradeSchool.class
+                                    },
+                                    optionals = {
+                                            "firstName", "lastName",
+                                            "password", "rPassword",
+                                            "city"
+                                    },
+                                    optionalsType = {
+                                            String.class, String.class,
+                                            String.class, String.class,
+                                            ObjectId.class,
+                                    }
+                            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getAgentUser(request);
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
+
+        if (jsonObject.has("password")) {
+            if (!jsonObject.getString("password").equals(
+                    jsonObject.getString("rPassword"))
+            )
+                return generateErr("رمزعبور و تکرار آن یکسان نیست.");
+
+            jsonObject.put("password", userService.getEncPass(
+                    jsonObject.getString("password"))
+            );
+        }
+
+        return ManageUserController.addSchool(
+                jsonObject,
+                user.getObjectId("_id"),
+                user.getString("first_name") + " " + user.getString("last_name")
+        );
+    }
+
+    @GetMapping(value = "/getMySchools")
+    @ResponseBody
+    public String getMySchools(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getAgentUser(request);
+        return ManageUserController.getMySchools(user.getObjectId("_id"));
     }
 }
