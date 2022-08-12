@@ -47,22 +47,23 @@ public class ManageUserAPIRoutes extends Router {
 
     @PutMapping(path = "/setCoins/{userId}/{newCoins}")
     @ResponseBody
-    public String edit(HttpServletRequest request,
-                       @PathVariable @ObjectIdConstraint ObjectId userId,
-                       @PathVariable @Min(0) int newCoins
+    public String setCoins(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId userId,
+                           @PathVariable @Min(0) int newCoins
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ManageUserController.setCoins(userId, newCoins);
     }
 
-    @PutMapping(value = "/addAccess/{userId}/{newRole}")
+    @PutMapping(value = {"/addAccess/{userId}/{newRole}", "/addAccess/{userId}/{newRole}/{schoolId}"})
     @ResponseBody
     public String addAccess(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId userId,
-                            @PathVariable @EnumValidator(enumClazz = Access.class) String newRole)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
+                            @PathVariable @EnumValidator(enumClazz = Access.class) String newRole,
+                            @PathVariable(required = false) String schoolId
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ManageUserController.addAccess(userId, newRole);
+        return ManageUserController.addAccess(userId, newRole, schoolId);
     }
 
     @DeleteMapping(value = "/removeAccess/{userId}/{role}")
@@ -236,11 +237,115 @@ public class ManageUserAPIRoutes extends Router {
         );
     }
 
+    @PostMapping(value = "/addStudent")
+    @ResponseBody
+    public String addStudent(HttpServletRequest request,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {
+                                             "firstName", "lastName",
+                                             "NID",
+                                             "password", "rPassword",
+                                     },
+                                     paramsType = {
+                                             String.class, String.class,
+                                             Digit.class,
+                                             String.class, String.class
+                                     },
+                                     optionals = {
+                                             "phone", "schoolId"
+                                     },
+                                     optionalsType = {
+                                             Digit.class, ObjectId.class
+                                     }
+                             ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (!jsonObject.getString("password").equals(
+                jsonObject.getString("rPassword"))
+        )
+            return generateErr("رمزعبور و تکرار آن یکسان نیست.");
+
+        if (jsonObject.has("schoolId") && !Authorization.isAgent(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+        else if (!jsonObject.has("schoolId") && !Authorization.isSchool(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+
+        Document school;
+
+        if (jsonObject.has("schoolId")) {
+
+            school = userRepository.findById(
+                    new ObjectId(jsonObject.getString("schoolId"))
+            );
+
+            if (school == null)
+                return JSON_NOT_VALID_ID;
+
+            if (!isAdmin && !Authorization.hasAccessToThisSchool(school, user.getObjectId("_id")))
+                return JSON_NOT_ACCESS;
+
+        } else
+            school = user;
+
+
+        jsonObject.put("password", userService.getEncPass(
+                jsonObject.getString("password"))
+        );
+
+        return ManageUserController.addStudent(
+                jsonObject,
+                school
+        );
+    }
+
     @GetMapping(value = "/getMySchools")
     @ResponseBody
     public String getMySchools(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getAgentUser(request);
         return ManageUserController.getMySchools(user.getObjectId("_id"));
+    }
+
+    @GetMapping(value = {"/getStudents", "/getStudents/{schoolId"})
+    @ResponseBody
+    public String getStudents(HttpServletRequest request,
+                              @PathVariable(required = false) String schoolId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+        else if (schoolId == null && !Authorization.isSchool(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+
+        Document school;
+
+        if (schoolId != null) {
+
+            if(!ObjectId.isValid(schoolId))
+                return JSON_NOT_VALID_PARAMS;
+
+            school = userRepository.findById(new ObjectId(schoolId));
+
+            if (school == null)
+                return JSON_NOT_VALID_ID;
+
+            if (!isAdmin &&
+                    !Authorization.hasAccessToThisSchool(school, user.getObjectId("_id"))
+            )
+                return JSON_NOT_ACCESS;
+
+        } else
+            school = user;
+
+        return ManageUserController.getMyStudents(school.getList("students", ObjectId.class));
     }
 }
