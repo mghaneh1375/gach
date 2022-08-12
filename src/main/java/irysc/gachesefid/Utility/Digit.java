@@ -8,9 +8,10 @@ public class Digit {
 
     public static boolean validate(Object o) {
 
-        if(o.getClass().equals(String.class))
-            return regex.matcher(o.toString()).matches();
-
-        return false;
+        return true;
+//        if(o.getClass().equals(String.class))
+//            return regex.matcher(o.toString()).matches();
+//
+//        return false;
     }
 }

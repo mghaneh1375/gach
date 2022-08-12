@@ -367,7 +367,7 @@ public class Utility {
         return (byte) (((byte) (short) ans) | firstSection);
     }
 
-    static byte[] getAnswersByteArr(List<ObjectId> ids) {
+    public static byte[] getAnswersByteArr(List<ObjectId> ids) {
 
         ArrayList<byte[]> bytes = new ArrayList<>();
         ArrayList<Document> questions = new ArrayList<>();
@@ -485,7 +485,7 @@ public class Utility {
     }
     
     
-    static byte[] getStdAnswersByteArr(ArrayList<PairValue> pairValues) {
+    public static byte[] getStdAnswersByteArr(ArrayList<PairValue> pairValues) {
 
         ArrayList<byte[]> bytes = new ArrayList<>();
 

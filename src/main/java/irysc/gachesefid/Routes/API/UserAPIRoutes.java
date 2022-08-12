@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.Question.Utilities;
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.DB.UserRepository;
@@ -37,11 +38,14 @@ import javax.validation.Path;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.inc;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
@@ -56,6 +60,16 @@ public class UserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
+    private void addByteToBitset(BitSet b1, byte[] b,
+                                 int fromIdx, int formIdxByte,
+                                 int endIdxByte
+    ) {
+        BitSet bitSet = BitSet.valueOf(b);
+        int k = fromIdx;
+        for(int i = formIdxByte; i < endIdxByte; i++)
+            b1.set(k++, bitSet.get(i));
+    }
+
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
@@ -68,6 +82,35 @@ public class UserAPIRoutes extends Router {
 //
 //            questionRepository.replaceOne(doc.getObjectId("_id"), doc);
 //        }
+
+        int taraz = 10930; // 2
+        int correct = 20; // 1
+        int whites = 65; // 1
+        int incorrect = 17; // 1
+        double percent = 23.442; // 2
+
+        byte[] decode = new byte[7];
+
+        byte[] bb = ByteBuffer.allocate(4).putInt(taraz).array();
+        decode[0] = bb[2];
+        decode[1] = bb[3];
+        decode[2] = (byte) whites;
+        decode[3] = (byte) correct;
+        decode[4] = (byte) incorrect;
+
+        DecimalFormat df_obj = new DecimalFormat("#.##");
+        String[] splited = df_obj.format(percent).split("\\.");
+        decode[5] = (byte) Integer.parseInt(splited[0]);
+        decode[6] = (byte) Integer.parseInt(splited[1]);
+
+        Object[] decodes = QuizAbstract.decode(decode);
+
+        for(Object o : decodes) {
+            System.out.println(o);
+        }
+
+        if(1 == 1)
+            return "Sa";
 
         ArrayList<PairValue> a = new ArrayList<>();
         a.add(new PairValue(4, 1));

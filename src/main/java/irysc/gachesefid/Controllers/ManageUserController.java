@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
@@ -282,26 +283,7 @@ public class ManageUserController {
             if(form == null)
                 continue;
 
-            jsonArray.put(
-                    new JSONObject()
-                            .put("phone", doc.getString("phone"))
-                            .put("NID", doc.getString("NID"))
-                            .put("id", doc.getObjectId("_id").toString())
-                            .put("studentsNo", doc.getOrDefault("students_no", 0))
-                            .put("firstName", doc.getString("first_name"))
-                            .put("lastName", doc.getString("last_name"))
-                            .put("name", form.getString("name"))
-                            .put("schoolSex", form.getString("school_sex"))
-                            .put("kindSchool", form.getString("kind_school"))
-                            .put("kindSchoolFa",
-                                    form.getString("kind_school").equalsIgnoreCase(GradeSchool.DABESTAN.getName()) ?
-                                            "دبستان" :
-                                    form.getString("kind_school").equalsIgnoreCase(GradeSchool.MOTEVASETEAVAL.getName()) ?
-                                            "متوسطه اول" : "متوسطه دوم"
-                                    )
-                            .put("schoolSexFa", form.getString("school_sex").equalsIgnoreCase(Sex.MALE.getName()) ? "آقا" : "خانم")
-                            .put("ManagerName", form.getString("manager_name"))
-            );
+            jsonArray.put(convertSchoolToJSON(doc, form));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -310,6 +292,28 @@ public class ManageUserController {
 //    public static String getMySchoolInfo(ObjectId agentId) {
 //
 //    }
+
+    private static JSONObject convertSchoolToJSON(Document doc, Document form) {
+        return new JSONObject()
+                .put("phone", doc.getString("phone"))
+                .put("NID", doc.getString("NID"))
+                .put("id", doc.getObjectId("_id").toString())
+                .put("studentsNo", doc.getOrDefault("students_no", 0))
+                .put("firstName", doc.getString("first_name"))
+                .put("lastName", doc.getString("last_name"))
+                .put("name", form.getString("name"))
+                .put("schoolSex", form.getString("school_sex"))
+                .put("kindSchool", form.getString("kind_school"))
+                .put("kindSchoolFa",
+                        form.getString("kind_school").equalsIgnoreCase(GradeSchool.DABESTAN.getName()) ?
+                                "دبستان" :
+                                form.getString("kind_school").equalsIgnoreCase(GradeSchool.MOTEVASETEAVAL.getName()) ?
+                                        "متوسطه اول" : "متوسطه دوم"
+                )
+                .put("schoolSexFa", form.getString("school_sex").equalsIgnoreCase(Sex.MALE.getName()) ? "آقا" : "خانم")
+                .put("ManagerName", form.getString("manager_name"));
+
+    }
 
     public static String addSchool(JSONObject jsonObject,
                                    ObjectId agentId,
@@ -326,7 +330,7 @@ public class ManageUserController {
         ArrayList<Document> users = userRepository.find(
                 or(
                         eq("phone", phone),
-                        eq("NID", phone)
+                        eq("NID", NID)
                 ), null
         );
 
@@ -382,7 +386,12 @@ public class ManageUserController {
             forms.add(form);
             user.append("form_list", forms);
 
-            return userRepository.insertOneWithReturn(user);
+            ObjectId oId = userRepository.insertOneWithReturnId(user);
+            return generateSuccessMsg("id", oId.toString(),
+                    new PairValue("school", convertSchoolToJSON(
+                            user, form
+                    ))
+            );
         }
 
         ObjectId reqId = accessRequestRepository.insertOneWithReturnId(

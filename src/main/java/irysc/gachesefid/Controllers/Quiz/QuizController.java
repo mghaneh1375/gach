@@ -1,7 +1,6 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Question.QuestionController;
@@ -10,7 +9,6 @@ import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
-import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
@@ -30,11 +28,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.swing.*;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import java.text.DecimalFormat;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
@@ -56,6 +52,39 @@ public class QuizController {
             throw new InvalidFieldsException(JSON_NOT_VALID_ID);
 
         if (userId != null && !quiz.getObjectId("created_by").equals(userId))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        return quiz;
+    }
+
+    static Document hasPublicAccess(Common db, Object user, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null)
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        if (db instanceof IRYSCQuizRepository || user == null) {
+            if(user != null && !quiz.getBoolean("visibility"))
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+            return quiz;
+        }
+
+        if(user.toString().isEmpty())
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        ObjectId userId = (ObjectId) user;
+
+        if (quiz.getObjectId("created_by").equals(userId))
+            return quiz;
+
+        if(!quiz.getBoolean("visibility"))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        if (searchInDocumentsKeyValIdx(
+                quiz.getList("students", Document.class),
+                "_id", userId
+        ) == -1)
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
         return quiz;
@@ -353,7 +382,7 @@ public class QuizController {
         Document newDoc = new Document();
 
         for (String key : data.keySet()) {
-            if(key.equalsIgnoreCase("tags"))
+            if (key.equalsIgnoreCase("tags"))
                 continue;
             newDoc.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
@@ -363,11 +392,11 @@ public class QuizController {
 
         ArrayList<String> tagsArr = new ArrayList<>();
 
-        if(data.has("tags")) {
+        if (data.has("tags")) {
 
             JSONArray tags = data.getJSONArray("tags");
 
-            for(int i = 0; i < tags.length(); i++)
+            for (int i = 0; i < tags.length(); i++)
                 tagsArr.add(tags.getString(i));
         }
 
@@ -516,8 +545,8 @@ public class QuizController {
                     );
             }
 
-            if(addedItems.length() > 0) {
-                quiz.put("registered", (int)quiz.getOrDefault("registered", 0) + addedItems.length());
+            if (addedItems.length() > 0) {
+                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + addedItems.length());
                 db.replaceOne(quizId, quiz);
             }
             return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, addedItems);
@@ -568,8 +597,8 @@ public class QuizController {
                 removedIds.put(studentId.toString());
             }
 
-            if(removedIds.length() > 0) {
-                quiz.put("registered", Math.max(0, (int)quiz.getOrDefault("registered", 0) - removedIds.length()));
+            if (removedIds.length() > 0) {
+                quiz.put("registered", Math.max(0, (int) quiz.getOrDefault("registered", 0) - removedIds.length()));
                 db.replaceOne(quizId, quiz);
             }
 
@@ -584,11 +613,11 @@ public class QuizController {
 
     }
 
-    public static String get(Common db, ObjectId userId, ObjectId quizId) {
+    public static String get(Common db, Object user, ObjectId quizId) {
 
         try {
 
-            Document quiz = hasAccess(db, userId, quizId);
+            Document quiz = hasPublicAccess(db, user, quizId);
             QuizAbstract quizAbstract = null;
 
             if (quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
@@ -624,7 +653,7 @@ public class QuizController {
                     "marks", new ArrayList<Double>()
             );
 
-            if(questionsMark.size() != questions.size())
+            if (questionsMark.size() != questions.size())
                 return JSON_NOT_UNKNOWN;
 
             int i = 0;
@@ -1404,10 +1433,10 @@ public class QuizController {
 
             Document questions = doc.get("questions", Document.class);
             ArrayList<PairValue> pairValues = Utility.getAnswers(
-                    ((Binary)questions.getOrDefault("answers", new byte[0])).getData()
+                    ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
             );
 
-            if(pairValues.size() != answers.length())
+            if (pairValues.size() != answers.length())
                 return JSON_NOT_VALID_PARAMS;
 
             int idx = -1;
@@ -1430,35 +1459,32 @@ public class QuizController {
                         int s = Integer.parseInt(stdAns);
 
                         PairValue pp = (PairValue) p.getValue();
-                        if(s > (int)pp.getKey() || s < 0)
+                        if (s > (int) pp.getKey() || s < 0)
                             return JSON_NOT_VALID_PARAMS;
 
                         stdAnsAfterFilter = new PairValue(
                                 pp.getKey(),
                                 s
                         );
-                    }
-                    else if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                    } else if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
                         stdAnsAfterFilter = Double.parseDouble(stdAns);
-                    else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                    else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
 
                         String ans = p.getValue().toString();
 
-                        if(ans.length() != stdAns.length())
+                        if (ans.length() != stdAns.length())
                             return JSON_NOT_VALID_PARAMS;
 
-                        if(!stdAns.matches("^[01_]+$"))
+                        if (!stdAns.matches("^[01_]+$"))
                             return JSON_NOT_VALID_PARAMS;
 
                         stdAnsAfterFilter = stdAns.toCharArray();
-                    }
-                    else
+                    } else
                         stdAnsAfterFilter = stdAns;
 
                     stdAnswers.add(new PairValue(p.getKey(), stdAnsAfterFilter));
                 }
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 System.out.println(x.getMessage());
                 x.printStackTrace();
                 return JSON_NOT_VALID_PARAMS;
@@ -1492,8 +1518,8 @@ public class QuizController {
 //            if(answers.size() != marks.size())
 //                return JSON_NOT_UNKNOWN;
 
-            for(int i = 0; i < marks.size(); i++) {
-                if(answers.get(i).getKey().toString().equalsIgnoreCase(
+            for (int i = 0; i < marks.size(); i++) {
+                if (answers.get(i).getKey().toString().equalsIgnoreCase(
                         QuestionType.TEST.getName()
                 )) {
                     PairValue pp = (PairValue) answers.get(i).getValue();
@@ -1503,8 +1529,7 @@ public class QuizController {
                             .put("choicesCount", pp.getKey())
                             .put("mark", marks.get(i))
                     );
-                }
-                else
+                } else
                     jsonArray.put(new JSONObject()
                             .put("type", answers.get(i).getKey())
                             .put("answer", answers.get(i).getValue())
@@ -1537,11 +1562,11 @@ public class QuizController {
 
             Document questions = doc.get("questions", Document.class);
             List<Double> marks = questions.getList("marks", Double.class);
-            ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary)questions.getOrDefault("answers", new byte[0])).getData());
+            ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
 
-            for(int i = 0; i < pairValues.size(); i++) {
+            for (int i = 0; i < pairValues.size(); i++) {
 
-                if(pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName())) {
+                if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName())) {
                     PairValue p = (PairValue) pairValues.get(i).getValue();
                     answersJsonArray.put(new JSONObject()
                             .put("type", pairValues.get(i).getKey())
@@ -1549,8 +1574,7 @@ public class QuizController {
                             .put("answer", p.getValue())
                             .put("mark", marks.get(i))
                     );
-                }
-                else
+                } else
                     answersJsonArray.put(new JSONObject()
                             .put("type", pairValues.get(i).getKey())
                             .put("answer", pairValues.get(i).getValue())
@@ -1571,17 +1595,17 @@ public class QuizController {
                 String answerSheet = (String) student.getOrDefault("answer_sheet", "");
                 String answerSheetAfterCorrection = (String) student.getOrDefault("answer_sheet_after_correction", "");
 
-                ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary)student.getOrDefault("answers", new byte[0])).getData());
+                ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new byte[0])).getData());
 
                 JSONArray stdAnswersJSON = new JSONArray();
 
-                for(int i = 0; i < pairValues.size(); i++) {
+                for (int i = 0; i < pairValues.size(); i++) {
 
-                    if(i >= stdAnswers.size())
+                    if (i >= stdAnswers.size())
                         stdAnswersJSON.put("");
                     else {
-                        if(pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
-                            stdAnswersJSON.put(((PairValue)stdAnswers.get(i).getValue()).getValue());
+                        if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
+                            stdAnswersJSON.put(((PairValue) stdAnswers.get(i).getValue()).getValue());
                         else
                             stdAnswersJSON.put(stdAnswers.get(i).getValue());
                     }
@@ -1641,4 +1665,578 @@ public class QuizController {
             return null;
         }
     }
+
+    public static String createTaraz(Common db, ObjectId userId,
+                                     ObjectId quizId) {
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+            long curr = System.currentTimeMillis();
+
+            if (quiz.getLong("end") > curr)
+                return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
+
+            new RegularQuizController().createTaraz(quiz);
+
+            return JSON_OK;
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            x.printStackTrace();
+            return JSON_NOT_ACCESS;
+        }
+    }
+
+    public static String getRanking(Common db, boolean isAdmin,
+                                    ObjectId userId, ObjectId quizId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (
+                    !quiz.containsKey("report_status") ||
+                            !quiz.containsKey("ranking_list") ||
+                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            if (!isAdmin &&
+                    !quiz.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            JSONArray jsonArray = new JSONArray();
+
+            ArrayList<ObjectId> userIds = new ArrayList<>();
+
+            for (Document doc : quiz.getList("ranking_list", Document.class))
+                userIds.add(doc.getObjectId("_id"));
+
+            ArrayList<Document> studentsInfo = userRepository.findByIds(
+                    userIds, true
+            );
+
+            HashMap<ObjectId, String> stateNames = new HashMap<>();
+            int k = 0;
+
+            for (Document doc : quiz.getList("ranking_list", Document.class)) {
+
+                ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
+                Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", doc.getObjectId("_id").toString())
+                        .put("name", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
+                        .put("taraz", stat[0])
+                        .put("cityRank", stat[3])
+                        .put("stateRank", stat[2])
+                        .put("rank", stat[1]);
+
+                if (stateNames.containsKey(cityId))
+                    jsonObject.put("state", stateNames.get(cityId));
+                else {
+                    Document city = cityRepository.findById(cityId);
+                    Document state = stateRepository.findById(city.getObjectId("state_id"));
+                    stateNames.put(cityId, state.getString("name"));
+                    jsonObject.put("state", stateNames.get(cityId));
+                }
+
+                jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+                jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+
+                jsonArray.put(jsonObject);
+                k++;
+            }
+
+            return generateSuccessMsg(
+                    "data", jsonArray
+            );
+
+        } catch (InvalidFieldsException e) {
+            return JSON_NOT_ACCESS;
+        }
+
+
+    }
+
+    public static String getStudentStat(Common db, Object user,
+                                        ObjectId quizId, ObjectId studentId) {
+
+        try {
+
+            Document studentDoc = userRepository.findById(studentId);
+
+            if (studentDoc == null)
+                return JSON_NOT_VALID_ID;
+
+            Document quiz = hasPublicAccess(db, user, quizId);
+
+//            if (
+//                    !quiz.containsKey("report_status") ||
+//                            !quiz.containsKey("ranking_list") ||
+//                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+//            )
+//                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+//
+//            if(!isAdmin &&
+//                    !quiz.getBoolean("show_results_after_correction"))
+//                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            List<Document> students = quiz.getList("students", Document.class);
+
+            Document student = searchInDocumentsKeyVal(
+                    students, "_id", studentId
+            );
+
+            if (student == null)
+                return JSON_NOT_VALID_ID;
+
+            Document studentGeneralStat = searchInDocumentsKeyVal(
+                    quiz.getList("ranking_list", Document.class),
+                    "_id", studentId
+            );
+
+            if (studentGeneralStat == null)
+                return JSON_NOT_UNKNOWN;
+
+            DecimalFormat df_obj = new DecimalFormat("#.##");
+
+            JSONObject data = new JSONObject();
+            JSONArray lessons = new JSONArray();
+
+            Document generalStats = quiz.get("general_stat", Document.class);
+
+            List<Document> subjectsGeneralStats = generalStats.getList("subjects", Document.class);
+            List<Document> lessonsGeneralStats = generalStats.getList("lessons", Document.class);
+
+
+            for (Document doc : student.getList("lessons", Document.class)) {
+
+                Document generalStat = searchInDocumentsKeyVal(
+                        lessonsGeneralStats, "_id", doc.getObjectId("_id")
+                );
+
+                Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("name", doc.getString("name"))
+                        .put("taraz", stats[0])
+                        .put("whites", stats[1])
+                        .put("corrects", stats[2])
+                        .put("incorrects", stats[3])
+                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
+                        .put("percent", stats[4])
+                        .put("avg", df_obj.format(generalStat.getDouble("avg")))
+                        .put("max", df_obj.format(generalStat.getDouble("max")))
+                        .put("min", df_obj.format(generalStat.getDouble("min")));
+
+                lessons.put(jsonObject);
+            }
+
+            JSONArray subjects = new JSONArray();
+
+            for (Document doc : student.getList("subjects", Document.class)) {
+
+                Document generalStat = searchInDocumentsKeyVal(
+                        subjectsGeneralStats, "_id", doc.getObjectId("_id")
+                );
+
+                Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("name", doc.getString("name"))
+                        .put("taraz", stats[0])
+                        .put("whites", stats[1])
+                        .put("corrects", stats[2])
+                        .put("incorrects", stats[3])
+                        .put("percent", stats[4])
+                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
+                        .put("avg", df_obj.format(generalStat.getDouble("avg")))
+                        .put("max", df_obj.format(generalStat.getDouble("max")))
+                        .put("min", df_obj.format(generalStat.getDouble("min")));
+
+                subjects.put(jsonObject);
+            }
+
+            data.put("lessons", lessons);
+            data.put("subjects", subjects);
+
+            Object[] stat = QuizAbstract.decodeFormatGeneral(studentGeneralStat.get("stat", Binary.class).getData());
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("taraz", stat[0])
+                    .put("cityRank", stat[3])
+                    .put("stateRank", stat[2])
+                    .put("rank", stat[1]);
+
+            data.put("rank", jsonObject);
+
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
+
+            return generateSuccessMsg(
+                    "data", data
+            );
+
+        } catch (InvalidFieldsException e) {
+            return JSON_NOT_ACCESS;
+        }
+
+
+    }
+
+    //todo : other accesses
+    public static String getStateReport(ObjectId quizId) {
+
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+
+        HashMap<ObjectId, ArrayList<Integer>> stateTaraz = new HashMap<>();
+        HashMap<ObjectId, ObjectId> citiesState = new HashMap<>();
+
+        List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+        ArrayList<ObjectId> studentIds = new ArrayList<>();
+
+        for(Document itr : rankingList) {
+            studentIds.add(itr.getObjectId("_id"));
+        }
+
+        ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
+
+        int k = 0;
+
+        for(Document itr : rankingList) {
+
+            Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+            ObjectId cityId = studentsInfo.get(k)
+                    .get("city", Document.class).getObjectId("_id");
+
+            ObjectId stateId;
+
+            if(citiesState.containsKey(cityId))
+                stateId = citiesState.get(cityId);
+            else {
+                Document city = cityRepository.findById(cityId);
+                stateId = city.getObjectId("state_id");
+                citiesState.put(cityId, stateId);
+            }
+
+            ArrayList<Integer> tmp;
+            if(stateTaraz.containsKey(stateId))
+                tmp = stateTaraz.get(stateId);
+            else
+                tmp = new ArrayList<>();
+
+            tmp.add((Integer) stats[0]);
+            stateTaraz.put(stateId, tmp);
+            k++;
+        }
+
+        List<JSONObject> list = new ArrayList<>();
+        for(ObjectId stateId : stateTaraz.keySet()) {
+
+            Document state = stateRepository.findById(stateId);
+            ArrayList<Integer> allTaraz = stateTaraz.get(stateId);
+
+            int sum = 0;
+            for(int itr : allTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", state.getString("name"))
+                    .put("count", allTaraz.size())
+                    .put("avg", sum / allTaraz.size())
+            );
+        }
+
+        list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
+
+        k = 1;
+        for(int i = list.size() - 1; i >= 0; i--)
+            data.put(list.get(i).put("rank", k++));
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
+
+    public static String getCityReport(ObjectId quizId) {
+
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+
+        HashMap<ObjectId, ArrayList<Integer>> cityTaraz = new HashMap<>();
+        HashMap<ObjectId, String> cities = new HashMap<>();
+
+        List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+        ArrayList<ObjectId> studentIds = new ArrayList<>();
+
+        for(Document itr : rankingList)
+            studentIds.add(itr.getObjectId("_id"));
+
+        ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
+
+        int k = 0;
+
+        for(Document itr : rankingList) {
+
+            Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+            Document city = studentsInfo.get(k)
+                    .get("city", Document.class);
+
+            ObjectId cityId = city.getObjectId("_id");
+
+            if(!cities.containsKey(cityId))
+                cities.put(cityId, city.getString("name"));
+
+            ArrayList<Integer> tmp;
+            if(cityTaraz.containsKey(cityId))
+                tmp = cityTaraz.get(cityId);
+            else
+                tmp = new ArrayList<>();
+
+            tmp.add((Integer) stats[0]);
+            cityTaraz.put(cityId, tmp);
+            k++;
+        }
+
+        List<JSONObject> list = new ArrayList<>();
+        for(ObjectId cityId : cityTaraz.keySet()) {
+
+            ArrayList<Integer> allTaraz = cityTaraz.get(cityId);
+
+            int sum = 0;
+            for(int itr : allTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", cities.get(cityId))
+                    .put("count", allTaraz.size())
+                    .put("avg", sum / allTaraz.size())
+            );
+        }
+
+        list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
+
+        k = 1;
+        for(int i = list.size() - 1; i >= 0; i--)
+            data.put(list.get(i).put("rank", k++));
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
+
+    public static String getSchoolReport(ObjectId quizId) {
+
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+
+        HashMap<ObjectId, ArrayList<Integer>> schoolTaraz = new HashMap<>();
+        HashMap<ObjectId, String> schools = new HashMap<>();
+
+        List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+        ArrayList<ObjectId> studentIds = new ArrayList<>();
+
+        for(Document itr : rankingList) {
+            studentIds.add(itr.getObjectId("_id"));
+        }
+
+        ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
+
+        int k = 0;
+
+        for(Document itr : rankingList) {
+
+            Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+            Document school = studentsInfo.get(k)
+                    .get("school", Document.class);
+
+            ObjectId schoolId = school.getObjectId("_id");
+
+            if(!schools.containsKey(schoolId))
+                schools.put(schoolId, school.getString("name"));
+
+            ArrayList<Integer> tmp;
+            if(schoolTaraz.containsKey(schoolId))
+                tmp = schoolTaraz.get(schoolId);
+            else
+                tmp = new ArrayList<>();
+
+            tmp.add((Integer) stats[0]);
+            schoolTaraz.put(schoolId, tmp);
+            k++;
+        }
+
+        List<JSONObject> list = new ArrayList<>();
+        for(ObjectId schoolId : schoolTaraz.keySet()) {
+
+            ArrayList<Integer> allTaraz = schoolTaraz.get(schoolId);
+
+            int sum = 0;
+            for(int itr : allTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", schools.get(schoolId))
+                    .put("count", allTaraz.size())
+                    .put("avg", sum / allTaraz.size())
+            );
+        }
+
+        list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
+
+        k = 1;
+        for(int i = list.size() - 1; i >= 0; i--)
+            data.put(list.get(i).put("rank", k++));
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
+
+    public static String getGenderReport(ObjectId quizId) {
+
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+
+        ArrayList<Integer> maleTaraz = new ArrayList<>();
+        ArrayList<Integer> femaleTaraz = new ArrayList<>();
+
+        List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+        ArrayList<ObjectId> studentIds = new ArrayList<>();
+
+        for(Document itr : rankingList)
+            studentIds.add(itr.getObjectId("_id"));
+
+        ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
+
+        int k = 0;
+
+        for(Document itr : rankingList) {
+
+            Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+
+            if(studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
+                maleTaraz.add((int)stats[0]);
+            else
+                femaleTaraz.add((int)stats[0]);
+
+            k++;
+        }
+
+        List<JSONObject> list = new ArrayList<>();
+
+        int sum = 0;
+        for(int itr : maleTaraz)
+            sum += itr;
+
+        list.add(new JSONObject()
+                .put("label", "آقا")
+                .put("count", maleTaraz.size())
+                .put("avg", maleTaraz.size() == 0 ? 0 : sum / maleTaraz.size())
+        );
+
+        sum = 0;
+        for(int itr : femaleTaraz)
+            sum += itr;
+
+        list.add(new JSONObject()
+                .put("label", "خانم")
+                .put("count", femaleTaraz.size())
+                .put("avg", femaleTaraz.size() == 0 ? 0 : sum / femaleTaraz.size())
+        );
+
+        list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
+
+        k = 1;
+        for(int i = list.size() - 1; i >= 0; i--)
+            data.put(list.get(i).put("rank", k++));
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
+
+    public static String getAuthorReport(ObjectId quizId) {
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+
+        HashMap<String, ArrayList<Integer>> authorPercents = new HashMap<>();
+
+        List<ObjectId> questionIds = quiz.get("questions", Document.class).getList("_ids", ObjectId.class);
+
+        ArrayList<Document> questions = questionRepository.findByIds(questionIds, true);
+
+        if(questions == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<Binary> questionStats = quiz.getList("question_stat", Binary.class);
+
+        if(questionStats.size() != questions.size())
+            return JSON_NOT_UNKNOWN;
+
+        int k = 0;
+
+        for(Document itr : questions) {
+
+            String author = itr.getString("author");
+            byte[] stats = questionStats.get(k).getData();
+            int percent = (stats[1] * 100) / (stats[0] + stats[1] + stats[2]);
+
+            ArrayList<Integer> tmp;
+            if(authorPercents.containsKey(author))
+                tmp = authorPercents.get(author);
+            else
+                tmp = new ArrayList<>();
+
+            tmp.add(percent);
+            authorPercents.put(author, tmp);
+            k++;
+        }
+
+        for(String author : authorPercents.keySet()) {
+
+            ArrayList<Integer> allPercent = authorPercents.get(author);
+
+            int sum = 0;
+            for(int itr : allPercent) {
+                sum += itr;
+            }
+
+            data.put(new JSONObject()
+                    .put("label", author)
+                    .put("count", allPercent.size())
+                    .put("avg", sum / allPercent.size())
+            );
+        }
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
+
 }

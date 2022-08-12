@@ -40,7 +40,9 @@ import java.io.File;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
 //import irysc.gachesefid.Controllers.Python.CVController;
 
@@ -168,8 +170,7 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "getAll/{mode}")
     @ResponseBody
     public String getAll(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class
-                         ) @NotBlank String mode
+                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class) @NotBlank String mode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -187,13 +188,16 @@ public class QuizAPIRoutes extends Router {
     public String get(HttpServletRequest request,
                       @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                       @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) {
 
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.get(iryscQuizRepository, null, quizId);
+        if (mode.equals(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.get(iryscQuizRepository, isAdmin ? null : "", quizId);
+
+        if(user == null)
+            return JSON_NOT_ACCESS;
 
         return QuizController.get(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
@@ -839,6 +843,106 @@ public class QuizAPIRoutes extends Router {
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, userId, new JSONObject(jsonStr).getJSONArray("answers")
         );
+    }
+
+    @PutMapping(value = "/createTaraz/{mode}/{quizId}")
+    @ResponseBody
+    public String createTaraz(HttpServletRequest request,
+                               @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+//        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.createTaraz(
+                    iryscQuizRepository, null, quizId
+            );
+
+    }
+
+    @GetMapping(value = "/showRanking/{mode}/{quizId}")
+    @ResponseBody
+    public String showRanking(HttpServletRequest request,
+                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                              @PathVariable @ObjectIdConstraint ObjectId quizId) {
+
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getRanking(iryscQuizRepository, isAdmin, null, quizId);
+
+        if(user == null)
+            return JSON_NOT_ACCESS;
+
+        return QuizController.getRanking(
+                schoolQuizRepository,
+                isAdmin,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId
+        );
+    }
+
+    @GetMapping(value = "/getStudentStat/{mode}/{quizId}/{userId}")
+    @ResponseBody
+    public String getStudentStat(HttpServletRequest request,
+                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                              @PathVariable @ObjectIdConstraint ObjectId quizId,
+                              @PathVariable @ObjectIdConstraint ObjectId userId) {
+
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getStudentStat(iryscQuizRepository, isAdmin ? null : "", quizId, userId);
+
+        if(user == null)
+            return JSON_NOT_ACCESS;
+
+        return QuizController.getStudentStat(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId,
+                userId
+        );
+    }
+
+    @GetMapping(value = "/stateReport/{quizId}")
+    @ResponseBody
+    public String getStateReport(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return QuizController.getStateReport(quizId);
+    }
+
+    @GetMapping(value = "/cityReport/{quizId}")
+    @ResponseBody
+    public String cityReport(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return QuizController.getCityReport(quizId);
+    }
+
+    @GetMapping(value = "/schoolReport/{quizId}")
+    @ResponseBody
+    public String getSchoolReport(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return QuizController.getSchoolReport(quizId);
+    }
+
+    @GetMapping(value = "/genderReport/{quizId}")
+    @ResponseBody
+    public String genderReport(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return QuizController.getGenderReport(quizId);
+    }
+
+    @GetMapping(value = "/authorReport/{quizId}")
+    @ResponseBody
+    public String authorReport(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return QuizController.getAuthorReport(quizId);
     }
 
 }

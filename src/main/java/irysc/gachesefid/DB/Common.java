@@ -21,6 +21,8 @@ import java.util.List;
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.expr;
+import static com.mongodb.client.model.Filters.in;
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public abstract class Common extends Repository {
@@ -287,6 +289,40 @@ public abstract class Common extends Repository {
             filters.add(sort(sortFilter));
 
         return documentMongoCollection.aggregate(filters);
+    }
+
+
+    // read only
+    public ArrayList<Document> findByIds(List<ObjectId> objectIds, boolean preserveOrder) {
+
+        ArrayList<Document> infos = new ArrayList<>();
+        if(preserveOrder) {
+            for(int i = 0; i < objectIds.size(); i++)
+                infos.add(null);
+        }
+
+        FindIterable<Document> cursor =
+                documentMongoCollection.find(in("_id", objectIds));
+
+        if(preserveOrder) {
+            int idx, counter = 0;
+            for (Document doc : cursor) {
+                idx = objectIds.indexOf(doc.getObjectId("_id"));
+                infos.set(idx, doc);
+                counter++;
+            }
+            if(counter != objectIds.size())
+                return null;
+        }
+        else {
+            for (Document doc : cursor)
+                infos.add(doc);
+        }
+
+        if (infos.size() != objectIds.size())
+            return null;
+
+        return infos;
     }
 
     public void cleanRemove(Document doc) {

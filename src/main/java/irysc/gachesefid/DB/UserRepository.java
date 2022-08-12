@@ -6,8 +6,10 @@ import com.mongodb.client.FindIterable;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.Quiz;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdValidator;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -16,12 +18,14 @@ import org.json.JSONObject;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.convertPersianDigits;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 public class UserRepository extends Common {
@@ -121,36 +125,6 @@ public class UserRepository extends Common {
         return token;
     }
 
-    public static JSONArray covertDocToJsonArr(ArrayList<Document> docs) {
-
-        JSONArray users = new JSONArray();
-        for (Document doc : docs) {
-            JSONObject jsonObject = new JSONObject();
-            for (String key : doc.keySet()) {
-
-                if (
-                        doc.get(key).getClass().getName().equals("java.util.ArrayList") ||
-                                key.equals("password")
-                )
-                    continue;
-
-                jsonObject.put(key, doc.get(key));
-            }
-
-            if (doc.containsKey("_id")) {
-                jsonObject.put("id", doc.getObjectId("_id").toString());
-                jsonObject.remove("_id");
-            }
-
-            if (doc.containsKey("pic"))
-                jsonObject.put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + doc.getString("pic"));
-
-            users.put(jsonObject);
-        }
-
-        return users;
-    }
-
     public static JSONObject convertUserDigestDocumentToJSON(Document user) {
         return new JSONObject()
                 .put("id", user.getObjectId("_id").toString())
@@ -163,30 +137,6 @@ public class UserRepository extends Common {
                         user.getString("NID") : (user.containsKey("passport_no")) ?
                         user.getString("passport_no") : "")
                 .put("username", user.getString("username"));
-    }
-
-    public synchronized FindIterable<Document> findByUniques(String name, String lastname,
-                                                             String phone, String mail, String NID
-    ) {
-
-        ArrayList<Bson> constraints = new ArrayList<>();
-
-        if (mail != null && Utility.isValidMail(mail))
-            constraints.add(and(
-                    exists("mail"),
-                    eq("mail", mail)
-            ));
-
-        if (phone != null && Utility.isValidNum(phone))
-            constraints.add(eq("phone", phone));
-
-        if (NID != null && Utility.validationNationalCode(NID))
-            constraints.add(eq("NID", NID));
-
-        if (constraints.size() == 0)
-            return null;
-
-        return documentMongoCollection.find(or(constraints));
     }
 
     public synchronized Document findByUnique(String unique, boolean searchInAll) {
@@ -253,6 +203,7 @@ public class UserRepository extends Common {
         return null;
     }
 
+
     @Override
     void init() {
         table = "user";
@@ -285,6 +236,57 @@ public class UserRepository extends Common {
         removeFromCache(table, newDoc.getObjectId("_id"));
     }
 
+    // todo : after all transfer from mysql to mongo it should be delete
+    public static ArrayList<Quiz> findAllMysql() {
+
+        ArrayList<Quiz> users = new ArrayList<>();
+
+        try {
+            String sql = "select u.*, r.cityId, r.email, s.id as schooId from users u, redundantinfo1 r, schoolstudent ss, school s where s.uId = ss.sId and ss.uId = u.id and r.uId = u.id and u.level = 1 and u.NID is not null and u.phoneNum is not null";
+            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+
+                ResultSetMetaData rsmd = rs.getMetaData();
+                Quiz user = new Quiz();
+
+                boolean firstId = true;
+
+                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                    String key = rsmd.getColumnName(i);
+                    if(key.equalsIgnoreCase("id")) {
+                        if(firstId)
+                            firstId = false;
+                        else
+                          key = "sId";
+                    }
+
+                    if (rs.getObject(i) instanceof String)
+                        user.cols.put(key, convertPersianDigits(rs.getObject(i).toString()));
+                    else
+                        user.cols.put(key, rs.getObject(i));
+                }
+
+                user.cols.put("NID", user.cols.get("NID").toString().replace("-", "").replace(" ", ""));
+                if(!Utility.validationNationalCode(user.cols.get("NID").toString()))
+                    continue;
+
+                if(!PhoneValidator.isValid(user.cols.get("phoneNum").toString()))
+                    continue;
+
+                if(user.cols.get("firstName").toString().isEmpty() ||
+                    user.cols.get("lastName").toString().isEmpty()
+                )
+                    continue;
+
+                users.add(user);
+            }
+        } catch (Exception x) {
+            x.printStackTrace();
+        }
+
+        return users;
+    }
 
     public static ArrayList<Document> fetchAuthorsFromMySQL() {
 

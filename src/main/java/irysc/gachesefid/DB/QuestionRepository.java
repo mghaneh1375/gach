@@ -5,6 +5,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import irysc.gachesefid.Digests.Question;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.FileUtils;
@@ -126,6 +127,35 @@ public class QuestionRepository extends Common {
         }
 
         return output;
+    }
+
+    // todo : after all transfer from mysql to mongo it should be delete
+    public static PairValue findOrganizationIdByQuiz(int quizId) {
+
+        ArrayList<String> output = new ArrayList<>();
+        ArrayList<Double> marks = new ArrayList<>();
+
+        try {
+            String sql = "select q.organizationId, rq.mark from question q, regularqoq rq where rq.questionId = q.id and rq.quizId = ? order by qNo asc";
+            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
+            ps.setInt(1, quizId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                try {
+                    output.add(rs.getString("organizationId"));
+                    marks.add(rs.getInt("mark") * 1.0);
+                }
+                catch (Exception ignore) {
+                    ignore.printStackTrace();
+                }
+            }
+        }
+        catch (Exception x) {
+            x.printStackTrace();
+        }
+
+        return new PairValue(output, marks);
     }
 
     // todo : after all transfer from mysql to mongo it should be delete
