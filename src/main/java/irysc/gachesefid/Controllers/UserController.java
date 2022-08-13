@@ -315,18 +315,25 @@ public class UserController {
         List<Document> forms;
         int idx = -1;
 
+        System.out.println(role);
+
         if (user.containsKey("form_list")) {
             forms = user.getList("form_list", Document.class);
             idx = Utility.searchInDocumentsKeyValIdx(forms, "role", role);
         } else
             forms = new ArrayList<>();
 
+        System.out.println(forms.size());
+        System.out.println(idx);
+
         if (idx == -1)
             forms.add(form);
         else
             forms.set(idx, form);
 
-        user.put("forms", forms);
+        System.out.println(forms.size());
+
+        user.put("form_list", forms);
         userRepository.replaceOne(
                 user.getObjectId("_id"),
                 user
@@ -457,10 +464,10 @@ public class UserController {
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
 
-        if (user.containsKey("forms")) {
+        if (user.containsKey("form_list")) {
 
             JSONArray formsJSON = new JSONArray();
-            List<Document> forms = user.getList("forms", Document.class);
+            List<Document> forms = user.getList("form_list", Document.class);
 
             for (Document form : forms) {
                 JSONObject jsonObject1 = new JSONObject();
@@ -476,14 +483,27 @@ public class UserController {
                 JSONArray data = new JSONArray();
 
                 for (FormField field : wantedList) {
-                    data.put(
-                            new JSONObject()
-                                    .put("key", field.key)
-                                    .put("value", form.getOrDefault(field.key, ""))
-                                    .put("help", field.help)
-                                    .put("title", field.title)
-                                    .put("isJustNum", field.isJustNum)
-                    );
+
+                    JSONObject jsonObject2 = new JSONObject()
+                            .put("key", field.key)
+                            .put("value", form.getOrDefault(field.key, ""))
+                            .put("help", field.help)
+                            .put("title", field.title)
+                            .put("isJustNum", field.isJustNum);
+
+                    if(field.pairValues != null) {
+                        JSONArray jsonArray1 = new JSONArray();
+                        for(PairValue p : field.pairValues)
+                            jsonArray1.put(
+                                    new JSONObject()
+                                            .put("id", p.getKey())
+                                            .put("item", p.getValue())
+                            );
+
+                        jsonObject2.put("keyVals", jsonArray1);
+                    }
+
+                    data.put(jsonObject2);
                 }
 
                 jsonObject1.put("data", data);
