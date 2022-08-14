@@ -36,6 +36,9 @@ public abstract class QuizAbstract {
         List<Double> marks;
 
         HashMap<ObjectId, Integer> subjectStateRanking = new HashMap<>();
+        HashMap<ObjectId, Integer> subjectCountryRanking = new HashMap<>();
+        HashMap<ObjectId, Integer> subjectCityRanking = new HashMap<>();
+        HashMap<ObjectId, Integer> subjectSchoolRanking = new HashMap<>();
 
         HashMap<ObjectId, Integer> subjectWhites;
         HashMap<ObjectId, Integer> subjectCorrects;
@@ -301,7 +304,7 @@ public abstract class QuizAbstract {
 
         byte[] encode(ObjectId oId, boolean isForSubject) {
 
-            byte[] out = new byte[8];
+            byte[] out = new byte[10];
 
             double t = isForSubject ? subjectTaraz.get(oId) : lessonTaraz.get(oId);
             int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
@@ -334,10 +337,15 @@ public abstract class QuizAbstract {
                 out[6] = (byte) Integer.parseInt(splited[1]);
 
             if(isForSubject) {
-                out[7] = (byte) ((int) subjectStateRanking.get(oId));
+                out[7] = (byte) ((int) subjectCountryRanking.get(oId));
+                out[8] = (byte) ((int) subjectStateRanking.get(oId));
+                out[9] = (byte) ((int) subjectCityRanking.get(oId));
             }
-            else
+            else {
                 out[7] = (byte) 0;
+                out[8] = (byte) 0;
+                out[9] = (byte) 0;
+            }
 
             return out;
         }
@@ -347,24 +355,22 @@ public abstract class QuizAbstract {
     class TarazRanking {
 
         ObjectId schoolId;
-
         ObjectId cityId;
         ObjectId stateId;
-        ObjectId userId;
+
         int schoolRank = -1;
         int stateRank = -1;
+        int countryRank = -1;
         int cityRank = -1;
 
         int taraz;
 
         public TarazRanking(ObjectId schoolId, ObjectId cityId,
-                            ObjectId stateId, ObjectId userId,
-                            double taraz
+                            ObjectId stateId, double taraz
         ) {
             this.schoolId = schoolId;
             this.cityId = cityId;
             this.stateId = stateId;
-            this.userId = userId;
             this.taraz = (int) taraz;
         }
     }
@@ -393,15 +399,20 @@ public abstract class QuizAbstract {
             percent = -percent;
 
         int stateRank = 0;
+        int cityRank = 0;
+        int countryRank = 0;
 
         if(in.length > 7)
-            stateRank = in[7] & 0xff;
-        System.out.println("whites " + whites);
-        System.out.println("corrects " + corrects);
-        System.out.println("incorrects " + incorrects);
+            countryRank = in[7] & 0xff;
+
+        if(in.length > 8)
+            stateRank = in[8] & 0xff;
+
+        if(in.length > 9)
+            cityRank = in[9] & 0xff;
 
         return new Object[] {
-                taraz, whites, corrects, incorrects, Math.round(percent), stateRank
+                taraz, whites, corrects, incorrects, Math.round(percent), countryRank, stateRank, cityRank
         };
     }
 

@@ -488,11 +488,12 @@ public class RegularQuizController extends QuizAbstract {
 
         private void saveStudentsStats() {
 
-            int k = 0;
-
             for (QuestionStat aStudentsStat : studentsStat) {
 
-                Document student = students.get(k);
+                Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        students, "_id", aStudentsStat.id
+                );
+
                 ArrayList<Document> lessonsStats = new ArrayList<>();
 
                 for (QuestionStat itr : lessonsStat) {
@@ -520,7 +521,6 @@ public class RegularQuizController extends QuizAbstract {
                 }
 
                 student.put("subjects", subjectStats);
-                k++;
             }
 
         }
@@ -550,14 +550,16 @@ public class RegularQuizController extends QuizAbstract {
 
                 if(statesDic.containsKey(cityId))
                     stateId = statesDic.get(cityId);
-                else
+                else {
                     stateId = cityRepository.findById(cityId).getObjectId("state_id");
+                    statesDic.put(cityId, stateId);
+                }
 
                 for(ObjectId oId : itr.subjectTaraz.keySet()) {
 
                     TarazRanking t = new TarazRanking(
                             schoolId, cityId, stateId,
-                            itr.id, itr.subjectTaraz.get(oId)
+                            itr.subjectTaraz.get(oId)
                     );
 
                     if(subjectsTarazRanking.containsKey(oId))
@@ -572,30 +574,142 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             for(ObjectId subjectId : subjectsTarazRanking.keySet()) {
-
                 List<TarazRanking> allTarazRanking = subjectsTarazRanking.get(subjectId);
-                for(TarazRanking t : allTarazRanking) {
+                calcStateRanking(allTarazRanking, true, subjectId);
+                calcCountryRanking(allTarazRanking, true, subjectId);
+                calcCityRanking(allTarazRanking, true, subjectId);
+            }
 
-                    if(t.stateRank != -1)
+
+        }
+
+        private void calcStateRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for(TarazRanking t : allTarazRanking) {
+
+                if(t.stateRank != -1)
+                    continue;
+
+                ObjectId wantedStateId = t.stateId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for(TarazRanking ii : allTarazRanking) {
+                    if(!ii.stateId.equals(wantedStateId))
+                        continue;
+                    filterSorted.add(ii);
+                }
+
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).stateRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for(QuestionStat itr : studentsStat) {
+                if(isForSubject)
+                    itr.subjectStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
+//                else
+//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
+            }
+
+        }
+
+        private void calcCityRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for(TarazRanking t : allTarazRanking) {
+
+                if(t.cityRank != -1)
+                    continue;
+
+                ObjectId wantedStateId = t.cityId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for(TarazRanking ii : allTarazRanking) {
+
+                    if(!ii.cityId.equals(wantedStateId))
                         continue;
 
-                    List<TarazRanking> filterSortedProdycts =
-                            allTarazRanking.stream()
-                                    .filter(p -> p.stateRank == t.stateRank)
-                                    .sorted(Comparator.comparingInt(t2 -> t2.taraz))
-                                    .collect(Collectors.toList());
-
-                    int rank = 1;
-                    for(int i = filterSortedProdycts.size() - 1; i >= 0; i--)
-                        filterSortedProdycts.get(i).stateRank = rank++;
-
+                    filterSorted.add(ii);
                 }
 
-                k = 0;
-                for(QuestionStat itr : studentsStat) {
-                    itr.subjectStateRanking.put(subjectId, allTarazRanking.get(k).stateRank);
-                    k++;
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).cityRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
                 }
+            }
+
+            int k = 0;
+            for(QuestionStat itr : studentsStat) {
+                if(isForSubject)
+                    itr.subjectCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
+//                else
+//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
+            }
+
+        }
+
+        private void calcCountryRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for(TarazRanking t : allTarazRanking) {
+
+                if(t.countryRank != -1)
+                    continue;
+
+                List<TarazRanking> filterSorted =
+                        allTarazRanking.stream()
+                                .sorted(Comparator.comparingInt(t2 -> t2.taraz))
+                                .collect(Collectors.toList());
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).countryRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for(QuestionStat itr : studentsStat) {
+                if(isForSubject)
+                    itr.subjectCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
+//                else
+//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
             }
 
         }
