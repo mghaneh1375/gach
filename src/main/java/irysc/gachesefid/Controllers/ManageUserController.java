@@ -2,16 +2,21 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Excel;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
+import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +25,7 @@ import java.util.regex.Pattern;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Service.UserService.getEncPassStatic;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -143,16 +149,16 @@ public class ManageUserController {
 
         Document school = null;
 
-        if(newAccess.equalsIgnoreCase(Access.SCHOOL.getName())) {
+        if (newAccess.equalsIgnoreCase(Access.SCHOOL.getName())) {
 
-            if(schoolId == null || !ObjectId.isValid(schoolId))
+            if (schoolId == null || !ObjectId.isValid(schoolId))
                 return JSON_NOT_VALID_PARAMS;
 
             school = schoolRepository.findById(new ObjectId(schoolId));
-            if(school == null)
+            if (school == null)
                 return JSON_NOT_VALID_ID;
 
-            if(school.containsKey("user_id"))
+            if (school.containsKey("user_id"))
                 return generateErr("متولی این مدرسه شخص دیگری است.");
         }
 
@@ -180,29 +186,43 @@ public class ManageUserController {
             else
                 accesses = new ArrayList<>();
 
-            if(school != null) {
+            accesses.remove(Access.STUDENT.getName());
 
-                if(!user.containsKey("form_list"))
-                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم این مدرسه را پر نمایید.");
+            if (school != null) {
+
+                if (!user.containsKey("form_list"))
+                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
 
                 List<Document> forms = user.getList("form_list", Document.class);
                 Document form = Utility.searchInDocumentsKeyVal(
                         forms, "role", "school"
                 );
 
-                if(form == null)
-                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم این مدرسه را پر نمایید.");
+                if (form == null)
+                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
 
                 form.put("school_id", school.getObjectId("_id"));
-                user.put("accesses", accesses);
-                user.put("students", new ArrayList<>());
+                if (!accesses.contains(newAccess))
+                    accesses.add(newAccess);
 
+                user.put("accesses", accesses);
+                ArrayList<ObjectId> students = new ArrayList<>();
+                ArrayList<Document> stds = userRepository.find(and(
+                            eq("school._id", school.getObjectId("_id")),
+                            eq("level", false)
+                    ), new BasicDBObject("_id", 1)
+                );
+
+                for(Document std : stds)
+                    students.add(std.getObjectId("_id"));
+
+                user.put("students", students);
                 school.put("user_id", userId);
+
                 schoolRepository.updateOne(school.getObjectId("_id"), set("user_id", userId));
 
                 change = true;
-            }
-            else if (!accesses.contains(newAccess)) {
+            } else if (!accesses.contains(newAccess)) {
                 accesses.add(newAccess);
                 user.put("accesses", accesses);
                 change = true;
@@ -227,23 +247,26 @@ public class ManageUserController {
         if (!accesses.contains(role))
             return JSON_NOT_VALID_PARAMS;
 
-        if(role.equalsIgnoreCase(Access.SCHOOL.getName())) {
+        if (role.equalsIgnoreCase(Access.SCHOOL.getName())) {
 
             user.remove("students");
 
-            if(user.containsKey("form_list")) {
+            if (user.containsKey("form_list")) {
                 List<Document> forms = user.getList("form_list", Document.class);
                 Document form = Utility.searchInDocumentsKeyVal(
                         forms, "role", "school"
                 );
-                if(form != null && form.containsKey("school_id")) {
-                    Document school = schoolRepository.findById(form.getObjectId("school_id"));
+                if (form != null && form.containsKey("school_id")) {
+
+                    ObjectId schoolId = form.getObjectId("school_id");
                     form.remove("school_id");
                     form.remove("agent_id");
 
-                    if(school != null) {
+                    Document school = schoolRepository.findById(schoolId);
+
+                    if (school != null) {
                         school.remove("user_id");
-                        schoolRepository.replaceOne(form.getObjectId("school_id"), school);
+                        schoolRepository.replaceOne(schoolId, school);
                     }
                 }
             }
@@ -319,10 +342,10 @@ public class ManageUserController {
     public static String getMySchools(ObjectId agentId) {
 
         ArrayList<Document> docs = userRepository.find(and(
-                in("accesses", Access.SCHOOL.getName()),
-                exists("form_list"),
-                eq("form_list.role", "school"),
-                eq("form_list.agent_id", agentId)
+                        in("accesses", Access.SCHOOL.getName()),
+                        exists("form_list"),
+                        eq("form_list.role", "school"),
+                        eq("form_list.agent_id", agentId)
                 ), new BasicDBObject("form_list", 1)
                         .append("NID", 1)
                         .append("phone", 1)
@@ -359,7 +382,7 @@ public class ManageUserController {
         List<Document> studentsInfo = userRepository.findByIds(students, false);
         JSONArray data = new JSONArray();
 
-        for(Document itr : studentsInfo) {
+        for (Document itr : studentsInfo) {
             JSONObject jsonObject = new JSONObject();
             Utility.fillJSONWithUser(jsonObject, itr);
             data.put(jsonObject);
@@ -466,7 +489,7 @@ public class ManageUserController {
             ObjectId oId = userRepository.insertOneWithReturnId(user);
             ticketUpgradeRequest(oId);
 
-            return generateSuccessMsg("id", -1);
+            return JSON_OK;
 //            return generateSuccessMsg("id", oId.toString(),
 //                    new PairValue("school", convertSchoolToJSON(
 //                            user, form
@@ -512,7 +535,7 @@ public class ManageUserController {
                         .append("user_id", user.getObjectId("_id"))
         );
 
-        return generateSuccessMsg("id", -1);
+        return JSON_OK;
     }
 
 
@@ -541,35 +564,73 @@ public class ManageUserController {
 
     }
 
-    public static String addStudent(JSONObject jsonObject,
-                                    Document school) {
-
-        String NID = jsonObject.getString("NID");
-
-        if (!Utility.validationNationalCode(NID))
-            return generateErr("کد ملی وارد شده نامعتبر است.");
-
-        String phone = null;
-        if (jsonObject.has("phone")) {
-            phone = jsonObject.getString("phone");
-            if (!PhoneValidator.isValid(phone))
-                return generateErr("شماره همراه وارد شده نامعتبر است.");
-        }
+    private static Document validateSchoolForAddStudent(
+            Document school
+    ) throws InvalidFieldsException {
 
         Document form = Utility.searchInDocumentsKeyVal(
                 school.getList("form_list", Document.class),
                 "role", "school"
         );
 
-        if(form == null)
-            return JSON_NOT_ACCESS;
+        if (form == null)
+            throw new InvalidFieldsException("not access");
 
-        if(!form.containsKey("school_id"))
-            return JSON_NOT_UNKNOWN;
+        if (!form.containsKey("school_id"))
+            throw new InvalidFieldsException("unknown1 err");
 
         Document validSchool = schoolRepository.findById(form.getObjectId("schoold_id"));
-        if(validSchool == null)
-            return JSON_NOT_UNKNOWN;
+        if (validSchool == null)
+            throw new InvalidFieldsException("unknown2 err");
+
+        return validSchool;
+    }
+
+    public static String addStudent(JSONObject jsonObject,
+                                    Document school) {
+
+        try {
+
+            Document validSchool = validateSchoolForAddStudent(school);
+
+            Document config = Utility.getConfig();
+            Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+
+            ObjectId oId = doAddStudent(jsonObject, avatar, System.currentTimeMillis(),
+                    config.getInteger("init_money"),
+                    config.getDouble("init_coin"),
+                    validSchool
+            );
+
+            List<ObjectId> students = school.containsKey("students") ?
+                    school.getList("students", ObjectId.class) : new ArrayList<>();
+
+            students.add(oId);
+            userRepository.updateOne(school.getObjectId("_id"), set("students", students));
+
+            return generateSuccessMsg("id", oId.toString());
+        }
+        catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+    }
+
+    private static ObjectId doAddStudent(
+            JSONObject jsonObject, Document avatar, long curr,
+            int initMoney, double initCoin, Document school
+    ) throws InvalidFieldsException {
+
+        String NID = jsonObject.getString("NID");
+
+        if (!Utility.validationNationalCode(NID))
+            throw new InvalidFieldsException("کد ملی وارد شده نامعتبر است.");
+
+        String phone = null;
+        if (jsonObject.has("phone")) {
+            phone = jsonObject.getString("phone");
+            if (!PhoneValidator.isValid(phone))
+                throw new InvalidFieldsException("شماره همراه وارد شده نامعتبر است.");
+        }
 
         boolean isExist = phone != null ? userRepository.exist(
                 or(
@@ -579,18 +640,14 @@ public class ManageUserController {
         ) : userRepository.exist(eq("NID", NID));
 
         if (isExist)
-            return generateErr("دانش آموزی با کدملی/شماره همراه وارد شده در سامانه موجود است.");
+            throw new InvalidFieldsException("دانش آموزی با کدملی/شماره همراه وارد شده در سامانه موجود است.");
 
-        long curr = System.currentTimeMillis();
-
-        Document config = Utility.getConfig();
-        Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
 
         Document student = new Document("NID", NID)
                 .append("status", "active")
                 .append("level", false)
-                .append("money", config.getInteger("init_money"))
-                .append("coin", config.getDouble("init_coin"))
+                .append("money", initMoney)
+                .append("coin", initCoin)
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())
                 .append("avatar_id", avatar.getObjectId("_id"))
@@ -606,22 +663,106 @@ public class ManageUserController {
                 .append("first_name", jsonObject.getString("firstName"))
                 .append("last_name", jsonObject.getString("lastName"))
                 .append("school",
-                        new Document("_id", validSchool.getObjectId("_id"))
-                        .append("name", validSchool.getString("name"))
+                        new Document("_id", school.getObjectId("_id"))
+                                .append("name", school.getString("name"))
                 );
 
         if (phone != null)
             student.append("phone", phone);
 
-        ObjectId oId = userRepository.insertOneWithReturnId(student);
+        return userRepository.insertOneWithReturnId(student);
+    }
 
-        List<ObjectId> students = school.containsKey("students") ?
-                school.getList("students", ObjectId.class) : new ArrayList<>();
 
-        students.add(oId);
-        userRepository.updateOne(school.getObjectId("_id"), set("students", students));
+    public static String addBatchStudents(Document school,
+                                          MultipartFile file,
+                                          String passwordPolicy) {
 
-        return generateSuccessMsg("id", oId.toString());
+        Document validSchool;
+        try {
+            validSchool = validateSchoolForAddStudent(school);
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+        String filename = FileUtils.uploadTempFile(file);
+        ArrayList<Row> rows = Excel.read(filename);
+        FileUtils.removeTempFile(filename);
+
+        if (rows == null)
+            return generateErr("File is not valid");
+
+        rows.remove(0);
+
+        JSONArray excepts = new JSONArray();
+
+        Document config = Utility.getConfig();
+        Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+
+        long curr = System.currentTimeMillis();
+        int neededCols = passwordPolicy.equalsIgnoreCase(
+                PasswordMode.CUSTOM.getName()
+        ) ? 4 : 3;
+
+        int rowIdx = 0;
+        JSONArray passwords = new JSONArray();
+
+        for (Row row : rows) {
+
+            rowIdx++;
+
+            try {
+
+                if (row.getLastCellNum() < neededCols) {
+                    excepts.put(rowIdx);
+                    continue;
+                }
+
+                String NID = String.valueOf(row.getCell(3).getNumericCellValue());
+                String firstName = row.getCell(1).getStringCellValue();
+                String lastName = row.getCell(2).getStringCellValue();
+
+                JSONObject jsonObject1 =
+                        new JSONObject()
+                                .put("NID", NID)
+                                .put("firstName", firstName)
+                                .put("lastName", lastName);
+
+                if (row.getLastCellNum() >= 4)
+                    jsonObject1.put("phone", row.getCell(4).getNumericCellValue());
+
+                String password =
+                        passwordPolicy.equalsIgnoreCase(PasswordMode.SIMPLE.getName()) ?
+                                "123456" :
+                            passwordPolicy.equalsIgnoreCase(PasswordMode.NID.getName()) ?
+                                NID :
+                            passwordPolicy.equalsIgnoreCase(PasswordMode.LAST_4_DIGIT_NID.getName()) ?
+                                    NID.substring(6) :
+                            passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()) ?
+                                    Utility.randomPhone(6) :
+                                    row.getCell(row.getLastCellNum()).getStringCellValue();
+
+                jsonObject1.put("password", getEncPassStatic(password));
+
+                doAddStudent(jsonObject1,
+                        avatar, curr,
+                        config.getInteger("init_money"),
+                        config.getDouble("init_coin"),
+                        validSchool
+                );
+
+                if(passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()))
+                    passwords.put(new JSONObject()
+                            .put("name", firstName + " " + lastName)
+                            .put("password", password)
+                    );
+
+            } catch (Exception x) {
+                excepts.put(rowIdx);
+            }
+        }
+
+        return generateSuccessMsg("password", passwords);
     }
 
     public static String acceptInvite(Document user,

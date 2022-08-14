@@ -28,7 +28,7 @@ public class IRYSCQuizRepository extends Common {
         ArrayList<Quiz> quizzes = new ArrayList<>();
 
         try {
-            String sql = "select r.*, (select count(*) from regularqoq where quizId = r.id) as qNos from regularQuiz r where 1";
+            String sql = "select r.*, (select count(*) from regularqoq where quizId = r.id) as qNos from regularquiz r where 1";
             PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
@@ -108,7 +108,7 @@ public class IRYSCQuizRepository extends Common {
         ArrayList<Document> docs2 = new ArrayList<>();
 
         try {
-            String sql = "select timeEntry, uId from quizRegistry where qId = ?";
+            String sql = "select timeEntry, uId from quizregistry where qId = ?";
             PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
             ps.setInt(1, quizId);
             ResultSet rs = ps.executeQuery();

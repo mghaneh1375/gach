@@ -30,8 +30,10 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/fetchSchoolsDigest")
     @ResponseBody
-    public String fetchSchoolsDigest() {
-        return UserController.fetchSchoolsDigest();
+    public String fetchSchoolsDigest(
+            @RequestParam(required = false) Boolean justUnsets
+    ) {
+        return UserController.fetchSchoolsDigest(justUnsets);
     }
 
     @GetMapping(value = "/getNewAlerts")

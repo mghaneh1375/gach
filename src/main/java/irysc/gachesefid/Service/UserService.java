@@ -34,6 +34,8 @@ public class UserService {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    private static PasswordEncoder staticPasswordEncoder;
+
     public boolean isOldPassCorrect(String password, String dbPassword) {
         return passwordEncoder.matches(password, dbPassword);
     }
@@ -41,6 +43,10 @@ public class UserService {
     public String getEncPass(String username, String pass) {
         deleteFromCache(username);
         return passwordEncoder.encode(pass);
+    }
+
+    public static String getEncPassStatic(String pass) {
+        return staticPasswordEncoder.encode(pass);
     }
 
     public String getEncPass(String pass) {

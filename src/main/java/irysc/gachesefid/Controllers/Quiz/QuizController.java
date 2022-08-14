@@ -1515,26 +1515,49 @@ public class QuizController {
 
             List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
 
+            List<Binary> questionStat = null;
+
+            if(doc.containsKey("question_stat")) {
+                questionStat = doc.getList("question_stat", Binary.class);
+                if(questionStat.size() != answers.size())
+                    questionStat = null;
+            }
 //            if(answers.size() != marks.size())
 //                return JSON_NOT_UNKNOWN;
 
             for (int i = 0; i < marks.size(); i++) {
+
+                int percent = -1;
+
+                if(questionStat != null) {
+                    byte[] bytes = questionStat.get(i).getData();
+                    percent = (bytes[1] & 0xff) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
+                }
+
+                int choicesCount = -1;
+                Object answer;
+
                 if (answers.get(i).getKey().toString().equalsIgnoreCase(
                         QuestionType.TEST.getName()
                 )) {
                     PairValue pp = (PairValue) answers.get(i).getValue();
-                    jsonArray.put(new JSONObject()
-                            .put("type", answers.get(i).getKey())
-                            .put("answer", pp.getValue())
-                            .put("choicesCount", pp.getKey())
-                            .put("mark", marks.get(i))
-                    );
+                    choicesCount = (int) pp.getKey();
+                    answer = pp.getValue();
                 } else
-                    jsonArray.put(new JSONObject()
-                            .put("type", answers.get(i).getKey())
-                            .put("answer", answers.get(i).getValue())
-                            .put("mark", marks.get(i))
-                    );
+                    answer = answers.get(i).getValue();
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("type", answers.get(i).getKey())
+                        .put("answer", answer)
+                        .put("mark", marks.get(i));
+
+                if(choicesCount != -1)
+                    jsonObject.put("choicesCount", choicesCount);
+
+                if(percent != -1)
+                    jsonObject.put("percent", percent);
+
+                jsonArray.put(jsonObject);
             }
 
             return generateSuccessMsg("data", jsonArray);

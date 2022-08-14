@@ -5,10 +5,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Models.Access;
-import irysc.gachesefid.Models.GradeSchool;
-import irysc.gachesefid.Models.KindSchool;
-import irysc.gachesefid.Models.Sex;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
@@ -25,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Max;
@@ -303,6 +301,50 @@ public class ManageUserAPIRoutes extends Router {
         );
     }
 
+    @PostMapping(value = {"/addStudent/{mode}", "/addStudent/{schoolId}/{mode}"})
+    @ResponseBody
+    public String addStudent(HttpServletRequest request,
+                             @PathVariable(required = false) String schoolId,
+                             @PathVariable @EnumValidator(enumClazz = PasswordMode.class) @NotBlank String mode,
+                             @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if(file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(schoolId != null && !ObjectId.isValid(schoolId))
+            return JSON_NOT_VALID_PARAMS;
+
+        if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+        else if (schoolId == null && !Authorization.isSchool(user.getList("accesses", String.class)))
+            return JSON_NOT_ACCESS;
+
+        Document school;
+
+        if (schoolId != null) {
+
+            school = userRepository.findById(
+                    new ObjectId(schoolId)
+            );
+
+            if (school == null)
+                return JSON_NOT_VALID_ID;
+
+            if (!isAdmin && !Authorization.hasAccessToThisSchool(school, user.getObjectId("_id")))
+                return JSON_NOT_ACCESS;
+
+        } else
+            school = user;
+
+        return ManageUserController.addBatchStudents(
+                school, file, mode
+        );
+    }
+
     @GetMapping(value = "/getMySchools")
     @ResponseBody
     public String getMySchools(HttpServletRequest request
@@ -330,7 +372,7 @@ public class ManageUserAPIRoutes extends Router {
 
         if (schoolId != null) {
 
-            if(!ObjectId.isValid(schoolId))
+            if (!ObjectId.isValid(schoolId))
                 return JSON_NOT_VALID_PARAMS;
 
             school = userRepository.findById(new ObjectId(schoolId));

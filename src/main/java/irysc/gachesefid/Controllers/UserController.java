@@ -326,7 +326,7 @@ public class UserController {
         else
             forms.set(idx, form);
 
-        user.put("forms", forms);
+        user.put("form_list", forms);
         userRepository.replaceOne(
                 user.getObjectId("_id"),
                 user
@@ -457,10 +457,10 @@ public class UserController {
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
 
-        if (user.containsKey("forms")) {
+        if (user.containsKey("form_list")) {
 
             JSONArray formsJSON = new JSONArray();
-            List<Document> forms = user.getList("forms", Document.class);
+            List<Document> forms = user.getList("form_list", Document.class);
 
             for (Document form : forms) {
                 JSONObject jsonObject1 = new JSONObject();
@@ -476,14 +476,27 @@ public class UserController {
                 JSONArray data = new JSONArray();
 
                 for (FormField field : wantedList) {
-                    data.put(
-                            new JSONObject()
-                                    .put("key", field.key)
-                                    .put("value", form.getOrDefault(field.key, ""))
-                                    .put("help", field.help)
-                                    .put("title", field.title)
-                                    .put("isJustNum", field.isJustNum)
-                    );
+
+                    JSONObject jsonObject2 = new JSONObject()
+                            .put("key", field.key)
+                            .put("value", form.getOrDefault(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field.key), ""))
+                            .put("help", field.help)
+                            .put("title", field.title)
+                            .put("isJustNum", field.isJustNum);
+
+                    if(field.pairValues != null) {
+                        JSONArray jsonArray1 = new JSONArray();
+                        for(PairValue p : field.pairValues)
+                            jsonArray1.put(
+                                    new JSONObject()
+                                            .put("id", p.getKey())
+                                            .put("item", p.getValue())
+                            );
+
+                        jsonObject2.put("keyVals", jsonArray1);
+                    }
+
+                    data.put(jsonObject2);
                 }
 
                 jsonObject1.put("data", data);
@@ -820,9 +833,11 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String fetchSchoolsDigest() {
+    public static String fetchSchoolsDigest(Boolean justUnsets) {
 
-        ArrayList<Document> docs = schoolRepository.find(null,
+        ArrayList<Document> docs = schoolRepository.find(
+                justUnsets == null || !justUnsets ? null :
+                        exists("user_id", false),
                 new BasicDBObject("_id", 1).append("name", 1)
                         .append("city_name", 1).append("kind", 1)
                         .append("grade", 1)
