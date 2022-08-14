@@ -65,12 +65,12 @@ public class QuizController {
             throw new InvalidFieldsException(JSON_NOT_VALID_ID);
 
         if (db instanceof IRYSCQuizRepository || user == null) {
-            if(user != null && !quiz.getBoolean("visibility"))
+            if (user != null && !quiz.getBoolean("visibility"))
                 throw new InvalidFieldsException(JSON_NOT_ACCESS);
             return quiz;
         }
 
-        if(user.toString().isEmpty())
+        if (user.toString().isEmpty())
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
         ObjectId userId = (ObjectId) user;
@@ -78,7 +78,7 @@ public class QuizController {
         if (quiz.getObjectId("created_by").equals(userId))
             return quiz;
 
-        if(!quiz.getBoolean("visibility"))
+        if (!quiz.getBoolean("visibility"))
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
         if (searchInDocumentsKeyValIdx(
@@ -1517,55 +1517,62 @@ public class QuizController {
 
             List<Binary> questionStat = null;
 
-            if(doc.containsKey("question_stat")) {
+            if (doc.containsKey("question_stat")) {
                 questionStat = doc.getList("question_stat", Binary.class);
-                if(questionStat.size() != answers.size())
+                if (questionStat.size() != answers.size())
                     questionStat = null;
             }
 //            if(answers.size() != marks.size())
 //                return JSON_NOT_UNKNOWN;
-
-            for (int i = 0; i < marks.size(); i++) {
-
-                int percent = -1;
-
-                if(questionStat != null) {
-                    byte[] bytes = questionStat.get(i).getData();
-                    percent = (bytes[1] & 0xff) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
-                }
-
-                int choicesCount = -1;
-                Object answer;
-
-                if (answers.get(i).getKey().toString().equalsIgnoreCase(
-                        QuestionType.TEST.getName()
-                )) {
-                    PairValue pp = (PairValue) answers.get(i).getValue();
-                    choicesCount = (int) pp.getKey();
-                    answer = pp.getValue();
-                } else
-                    answer = answers.get(i).getValue();
-
-                JSONObject jsonObject = new JSONObject()
-                        .put("type", answers.get(i).getKey())
-                        .put("answer", answer)
-                        .put("mark", marks.get(i));
-
-                if(choicesCount != -1)
-                    jsonObject.put("choicesCount", choicesCount);
-
-                if(percent != -1)
-                    jsonObject.put("percent", percent);
-
-                jsonArray.put(jsonObject);
-            }
-
+            fillWithAnswerSheetData(jsonArray, questionStat, answers, marks);
             return generateSuccessMsg("data", jsonArray);
 
         } catch (Exception x) {
             System.out.println(x.getMessage());
             return null;
         }
+    }
+
+    private static void fillWithAnswerSheetData(JSONArray jsonArray,
+                                                List<Binary> questionStat,
+                                                List<PairValue> answers,
+                                                List<Double> marks) {
+
+        for (int i = 0; i < answers.size(); i++) {
+
+            int percent = -1;
+
+            if (questionStat != null) {
+                byte[] bytes = questionStat.get(i).getData();
+                percent = ((bytes[1] & 0xff) * 100) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
+            }
+
+            int choicesCount = -1;
+            Object answer;
+
+            if (answers.get(i).getKey().toString().equalsIgnoreCase(
+                    QuestionType.TEST.getName()
+            )) {
+                PairValue pp = (PairValue) answers.get(i).getValue();
+                choicesCount = (int) pp.getKey();
+                answer = pp.getValue();
+            } else
+                answer = answers.get(i).getValue();
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("type", answers.get(i).getKey())
+                    .put("answer", answer)
+                    .put("mark", marks.get(i));
+
+            if (choicesCount != -1)
+                jsonObject.put("choicesCount", choicesCount);
+
+            if (percent != -1)
+                jsonObject.put("percent", percent);
+
+            jsonArray.put(jsonObject);
+        }
+
     }
 
     public static String getQuizAnswerSheets(Common db, ObjectId userId,
@@ -1586,25 +1593,7 @@ public class QuizController {
             Document questions = doc.get("questions", Document.class);
             List<Double> marks = questions.getList("marks", Double.class);
             ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
-
-            for (int i = 0; i < pairValues.size(); i++) {
-
-                if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName())) {
-                    PairValue p = (PairValue) pairValues.get(i).getValue();
-                    answersJsonArray.put(new JSONObject()
-                            .put("type", pairValues.get(i).getKey())
-                            .put("choicesCount", p.getKey())
-                            .put("answer", p.getValue())
-                            .put("mark", marks.get(i))
-                    );
-                } else
-                    answersJsonArray.put(new JSONObject()
-                            .put("type", pairValues.get(i).getKey())
-                            .put("answer", pairValues.get(i).getValue())
-                            .put("mark", marks.get(i))
-                    );
-            }
-
+            fillWithAnswerSheetData(answersJsonArray, null, pairValues, marks);
             jsonObject.put("answers", answersJsonArray);
 
             JSONArray jsonArray = new JSONArray();
@@ -1647,6 +1636,52 @@ public class QuizController {
 
             jsonObject.put("students", jsonArray);
             return generateSuccessMsg("data", jsonObject);
+
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            return null;
+        }
+    }
+
+    public static String getStudentAnswerSheet(Common db, ObjectId userId,
+                                               ObjectId quizId, ObjectId studentId) {
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+            List<Document> students = doc.getList("students", Document.class);
+
+            Document student = searchInDocumentsKeyVal(
+                    students, "_id", studentId
+            );
+            if (student == null)
+                return JSON_NOT_VALID_ID;
+
+            Document questions = doc.get("questions", Document.class);
+            List<Double> marks = questions.getList("marks", Double.class);
+            ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
+            List<Binary> questionStats = null;
+            if (doc.containsKey("question_stat")) {
+                questionStats = doc.getList("question_stat", Binary.class);
+                if (questionStats.size() != pairValues.size())
+                    questionStats = null;
+            }
+
+            JSONArray answersJsonArray = new JSONArray();
+            fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
+            ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new byte[0])).getData());
+
+            for (int i = 0; i < pairValues.size(); i++) {
+
+                if (i >= stdAnswers.size())
+                    answersJsonArray.getJSONObject(i).put("studentAns", "");
+                else {
+                    if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
+                        answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                    else
+                        answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+                }
+            }
+
+            return generateSuccessMsg("data", answersJsonArray);
 
         } catch (Exception x) {
             System.out.println(x.getMessage());
@@ -1792,6 +1827,7 @@ public class QuizController {
                 return JSON_NOT_VALID_ID;
 
             Document quiz = hasPublicAccess(db, user, quizId);
+            long curr = System.currentTimeMillis();
 
 //            if (
 //                    !quiz.containsKey("report_status") ||
@@ -1831,7 +1867,7 @@ public class QuizController {
             List<Document> subjectsGeneralStats = generalStats.getList("subjects", Document.class);
             List<Document> lessonsGeneralStats = generalStats.getList("lessons", Document.class);
 
-
+            int totalCorrect = 0;
             for (Document doc : student.getList("lessons", Document.class)) {
 
                 Document generalStat = searchInDocumentsKeyVal(
@@ -1839,6 +1875,7 @@ public class QuizController {
                 );
 
                 Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
+                totalCorrect += (int)stats[2];
 
                 JSONObject jsonObject = new JSONObject()
                         .put("name", doc.getString("name"))
@@ -1856,7 +1893,6 @@ public class QuizController {
             }
 
             JSONArray subjects = new JSONArray();
-
             for (Document doc : student.getList("subjects", Document.class)) {
 
                 Document generalStat = searchInDocumentsKeyVal(
@@ -1872,6 +1908,7 @@ public class QuizController {
                         .put("corrects", stats[2])
                         .put("incorrects", stats[3])
                         .put("percent", stats[4])
+                        .put("stateRank", stats[5])
                         .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
                         .put("avg", df_obj.format(generalStat.getDouble("avg")))
                         .put("max", df_obj.format(generalStat.getDouble("max")))
@@ -1882,6 +1919,13 @@ public class QuizController {
 
             data.put("lessons", lessons);
             data.put("subjects", subjects);
+            data.put("totalCorrects", totalCorrect);
+            data.put("totalQuizzes", iryscQuizRepository.count(
+                    and(
+                            in("students", studentId),
+                            lt("start", curr)
+                    )
+            ));
 
             Object[] stat = QuizAbstract.decodeFormatGeneral(studentGeneralStat.get("stat", Binary.class).getData());
 
@@ -1892,6 +1936,7 @@ public class QuizController {
                     .put("rank", stat[1]);
 
             data.put("rank", jsonObject);
+            data.put("quizName", quiz.getString("title"));
 
             irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
 
@@ -1922,7 +1967,7 @@ public class QuizController {
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
             studentIds.add(itr.getObjectId("_id"));
         }
 
@@ -1930,7 +1975,7 @@ public class QuizController {
 
         int k = 0;
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
             ObjectId cityId = studentsInfo.get(k)
@@ -1938,7 +1983,7 @@ public class QuizController {
 
             ObjectId stateId;
 
-            if(citiesState.containsKey(cityId))
+            if (citiesState.containsKey(cityId))
                 stateId = citiesState.get(cityId);
             else {
                 Document city = cityRepository.findById(cityId);
@@ -1947,7 +1992,7 @@ public class QuizController {
             }
 
             ArrayList<Integer> tmp;
-            if(stateTaraz.containsKey(stateId))
+            if (stateTaraz.containsKey(stateId))
                 tmp = stateTaraz.get(stateId);
             else
                 tmp = new ArrayList<>();
@@ -1958,13 +2003,13 @@ public class QuizController {
         }
 
         List<JSONObject> list = new ArrayList<>();
-        for(ObjectId stateId : stateTaraz.keySet()) {
+        for (ObjectId stateId : stateTaraz.keySet()) {
 
             Document state = stateRepository.findById(stateId);
             ArrayList<Integer> allTaraz = stateTaraz.get(stateId);
 
             int sum = 0;
-            for(int itr : allTaraz)
+            for (int itr : allTaraz)
                 sum += itr;
 
             list.add(new JSONObject()
@@ -1977,7 +2022,7 @@ public class QuizController {
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
-        for(int i = list.size() - 1; i >= 0; i--)
+        for (int i = list.size() - 1; i >= 0; i--)
             data.put(list.get(i).put("rank", k++));
 
         return generateSuccessMsg(
@@ -2001,14 +2046,14 @@ public class QuizController {
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
 
-        for(Document itr : rankingList)
+        for (Document itr : rankingList)
             studentIds.add(itr.getObjectId("_id"));
 
         ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
 
         int k = 0;
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
             Document city = studentsInfo.get(k)
@@ -2016,11 +2061,11 @@ public class QuizController {
 
             ObjectId cityId = city.getObjectId("_id");
 
-            if(!cities.containsKey(cityId))
+            if (!cities.containsKey(cityId))
                 cities.put(cityId, city.getString("name"));
 
             ArrayList<Integer> tmp;
-            if(cityTaraz.containsKey(cityId))
+            if (cityTaraz.containsKey(cityId))
                 tmp = cityTaraz.get(cityId);
             else
                 tmp = new ArrayList<>();
@@ -2031,12 +2076,12 @@ public class QuizController {
         }
 
         List<JSONObject> list = new ArrayList<>();
-        for(ObjectId cityId : cityTaraz.keySet()) {
+        for (ObjectId cityId : cityTaraz.keySet()) {
 
             ArrayList<Integer> allTaraz = cityTaraz.get(cityId);
 
             int sum = 0;
-            for(int itr : allTaraz)
+            for (int itr : allTaraz)
                 sum += itr;
 
             list.add(new JSONObject()
@@ -2049,7 +2094,7 @@ public class QuizController {
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
-        for(int i = list.size() - 1; i >= 0; i--)
+        for (int i = list.size() - 1; i >= 0; i--)
             data.put(list.get(i).put("rank", k++));
 
         return generateSuccessMsg(
@@ -2073,7 +2118,7 @@ public class QuizController {
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
             studentIds.add(itr.getObjectId("_id"));
         }
 
@@ -2081,7 +2126,7 @@ public class QuizController {
 
         int k = 0;
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
             Document school = studentsInfo.get(k)
@@ -2089,11 +2134,11 @@ public class QuizController {
 
             ObjectId schoolId = school.getObjectId("_id");
 
-            if(!schools.containsKey(schoolId))
+            if (!schools.containsKey(schoolId))
                 schools.put(schoolId, school.getString("name"));
 
             ArrayList<Integer> tmp;
-            if(schoolTaraz.containsKey(schoolId))
+            if (schoolTaraz.containsKey(schoolId))
                 tmp = schoolTaraz.get(schoolId);
             else
                 tmp = new ArrayList<>();
@@ -2104,12 +2149,12 @@ public class QuizController {
         }
 
         List<JSONObject> list = new ArrayList<>();
-        for(ObjectId schoolId : schoolTaraz.keySet()) {
+        for (ObjectId schoolId : schoolTaraz.keySet()) {
 
             ArrayList<Integer> allTaraz = schoolTaraz.get(schoolId);
 
             int sum = 0;
-            for(int itr : allTaraz)
+            for (int itr : allTaraz)
                 sum += itr;
 
             list.add(new JSONObject()
@@ -2122,7 +2167,7 @@ public class QuizController {
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
-        for(int i = list.size() - 1; i >= 0; i--)
+        for (int i = list.size() - 1; i >= 0; i--)
             data.put(list.get(i).put("rank", k++));
 
         return generateSuccessMsg(
@@ -2146,21 +2191,21 @@ public class QuizController {
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
 
-        for(Document itr : rankingList)
+        for (Document itr : rankingList)
             studentIds.add(itr.getObjectId("_id"));
 
         ArrayList<Document> studentsInfo = userRepository.findByIds(studentIds, true);
 
         int k = 0;
 
-        for(Document itr : rankingList) {
+        for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
 
-            if(studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
-                maleTaraz.add((int)stats[0]);
+            if (studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
+                maleTaraz.add((int) stats[0]);
             else
-                femaleTaraz.add((int)stats[0]);
+                femaleTaraz.add((int) stats[0]);
 
             k++;
         }
@@ -2168,7 +2213,7 @@ public class QuizController {
         List<JSONObject> list = new ArrayList<>();
 
         int sum = 0;
-        for(int itr : maleTaraz)
+        for (int itr : maleTaraz)
             sum += itr;
 
         list.add(new JSONObject()
@@ -2178,7 +2223,7 @@ public class QuizController {
         );
 
         sum = 0;
-        for(int itr : femaleTaraz)
+        for (int itr : femaleTaraz)
             sum += itr;
 
         list.add(new JSONObject()
@@ -2190,7 +2235,7 @@ public class QuizController {
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
-        for(int i = list.size() - 1; i >= 0; i--)
+        for (int i = list.size() - 1; i >= 0; i--)
             data.put(list.get(i).put("rank", k++));
 
         return generateSuccessMsg(
@@ -2213,24 +2258,24 @@ public class QuizController {
 
         ArrayList<Document> questions = questionRepository.findByIds(questionIds, true);
 
-        if(questions == null)
+        if (questions == null)
             return JSON_NOT_UNKNOWN;
 
         List<Binary> questionStats = quiz.getList("question_stat", Binary.class);
 
-        if(questionStats.size() != questions.size())
+        if (questionStats.size() != questions.size())
             return JSON_NOT_UNKNOWN;
 
         int k = 0;
 
-        for(Document itr : questions) {
+        for (Document itr : questions) {
 
             String author = itr.getString("author");
             byte[] stats = questionStats.get(k).getData();
             int percent = (stats[1] * 100) / (stats[0] + stats[1] + stats[2]);
 
             ArrayList<Integer> tmp;
-            if(authorPercents.containsKey(author))
+            if (authorPercents.containsKey(author))
                 tmp = authorPercents.get(author);
             else
                 tmp = new ArrayList<>();
@@ -2240,12 +2285,12 @@ public class QuizController {
             k++;
         }
 
-        for(String author : authorPercents.keySet()) {
+        for (String author : authorPercents.keySet()) {
 
             ArrayList<Integer> allPercent = authorPercents.get(author);
 
             int sum = 0;
-            for(int itr : allPercent) {
+            for (int itr : allPercent) {
                 sum += itr;
             }
 

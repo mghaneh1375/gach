@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -9,6 +10,7 @@ import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -29,8 +31,11 @@ public abstract class QuizAbstract {
         String name;
         ObjectId id;
         ObjectId additionalId;
+
         List<PairValue> studentAnswers;
         List<Double> marks;
+
+        HashMap<ObjectId, Integer> subjectStateRanking = new HashMap<>();
 
         HashMap<ObjectId, Integer> subjectWhites;
         HashMap<ObjectId, Integer> subjectCorrects;
@@ -66,11 +71,12 @@ public abstract class QuizAbstract {
         }
 
         QuestionStat(ObjectId id, String name,
-                     List<PairValue> studentAnswers
-        ) {
+                     List<PairValue> studentAnswers)
+        {
             totalMark = 0;
             this.id = id;
             this.name = name;
+
             this.studentAnswers = studentAnswers;
 
             subjectWhites = new HashMap<>();
@@ -255,11 +261,6 @@ public abstract class QuizAbstract {
         void calculateTaraz(double mean, double sd,
                             ObjectId oId, boolean isForSubject) {
 
-//            double sum = 0.0;
-//            for(double d : marks)
-//                sum += d;
-
-//            double percent = sum / totalMark;
             double percent =
                     isForSubject ?
                             subjectMark.get(oId) / subjectTotalMark.get(oId) :
@@ -287,11 +288,6 @@ public abstract class QuizAbstract {
 
             taraz = sum / lessonTaraz.size();
 
-            Document user =  userRepository.findById(id);
-            System.out.println(user.getString("first_name") + " " +
-                    user.getString("last_name") + " " + taraz);
-            System.out.println("########");
-
         }
 
         @Override
@@ -305,7 +301,7 @@ public abstract class QuizAbstract {
 
         byte[] encode(ObjectId oId, boolean isForSubject) {
 
-            byte[] out = new byte[7];
+            byte[] out = new byte[8];
 
             double t = isForSubject ? subjectTaraz.get(oId) : lessonTaraz.get(oId);
             int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
@@ -337,9 +333,40 @@ public abstract class QuizAbstract {
             else
                 out[6] = (byte) Integer.parseInt(splited[1]);
 
+            if(isForSubject) {
+                out[7] = (byte) ((int) subjectStateRanking.get(oId));
+            }
+            else
+                out[7] = (byte) 0;
+
             return out;
         }
 
+    }
+
+    class TarazRanking {
+
+        ObjectId schoolId;
+
+        ObjectId cityId;
+        ObjectId stateId;
+        ObjectId userId;
+        int schoolRank = -1;
+        int stateRank = -1;
+        int cityRank = -1;
+
+        int taraz;
+
+        public TarazRanking(ObjectId schoolId, ObjectId cityId,
+                            ObjectId stateId, ObjectId userId,
+                            double taraz
+        ) {
+            this.schoolId = schoolId;
+            this.cityId = cityId;
+            this.stateId = stateId;
+            this.userId = userId;
+            this.taraz = (int) taraz;
+        }
     }
 
     public static Object[] decode(byte[] in) {
@@ -365,8 +392,16 @@ public abstract class QuizAbstract {
         if(minus)
             percent = -percent;
 
+        int stateRank = 0;
+
+        if(in.length > 7)
+            stateRank = in[7] & 0xff;
+        System.out.println("whites " + whites);
+        System.out.println("corrects " + corrects);
+        System.out.println("incorrects " + incorrects);
+
         return new Object[] {
-                taraz, whites, corrects, incorrects, Math.round(percent)
+                taraz, whites, corrects, incorrects, Math.round(percent), stateRank
         };
     }
 

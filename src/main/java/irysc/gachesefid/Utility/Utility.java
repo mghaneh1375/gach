@@ -828,15 +828,34 @@ public class Utility {
     public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
 
         //todo: customize with common user info
-        jsonObject.put("student", new JSONObject()
+        JSONObject jsonObject1 = new JSONObject()
                 .put("id", user.getObjectId("_id").toString())
                 .put("name", user.getString("first_name") + " " + user.getString("last_name"))
                 .put("phone", user.getOrDefault("phone", ""))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-                .put("NID", user.getString("NID"))
-        );
+                .put("NID", user.getString("NID"));
 
+        if(user.containsKey("city")) {
+            Document city = (Document) user.get("city");
+            if(city != null && city.containsKey("name"))
+                jsonObject1.put("city", city.getString("name"));
+        }
+
+        if(!jsonObject1.has("city"))
+            jsonObject1.put("city", "");
+
+        if(user.containsKey("school")) {
+            Document school = (Document) user.get("school");
+            if(school != null && school.containsKey("name"))
+                jsonObject1.put("school", school.getString("name"));
+        }
+
+        if(!jsonObject1.has("school"))
+            jsonObject1.put("school", "");
+
+        jsonObject1.put("rank", 1);
+        jsonObject.put("student", jsonObject1);
     }
 
     public static boolean validationNationalCode(String code) {
@@ -893,4 +912,5 @@ public class Utility {
                 new PairValue("doneIds", j2)
         );
     }
+
 }

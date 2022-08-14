@@ -742,6 +742,30 @@ public class QuizAPIRoutes extends Router {
         return QuizController.getDistinctTags();
     }
 
+    @GetMapping(value = "/getStudentAnswerSheet/{mode}/{quizId}/{studentId}")
+    @ResponseBody
+    public String getStudentAnswerSheet(HttpServletRequest request,
+                                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                      @PathVariable @ObjectIdConstraint ObjectId studentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getStudentAnswerSheet(
+                    iryscQuizRepository, null, quizId, studentId
+            );
+
+        return QuizController.getStudentAnswerSheet(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, studentId
+        );
+    }
+
     @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")
     @ResponseBody
     public String getQuizAnswerSheets(HttpServletRequest request,
