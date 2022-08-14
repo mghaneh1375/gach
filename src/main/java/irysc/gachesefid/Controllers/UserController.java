@@ -315,6 +315,8 @@ public class UserController {
         List<Document> forms;
         int idx = -1;
 
+        System.out.println(role);
+
         if (user.containsKey("form_list")) {
             forms = user.getList("form_list", Document.class);
             idx = Utility.searchInDocumentsKeyValIdx(forms, "role", role);
