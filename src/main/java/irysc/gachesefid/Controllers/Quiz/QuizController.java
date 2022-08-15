@@ -1665,6 +1665,9 @@ public class QuizController {
                     questionStats = null;
             }
 
+            System.out.println(marks.size());
+            System.out.println(pairValues.size());
+
             JSONArray answersJsonArray = new JSONArray();
             fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
             ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new byte[0])).getData());
@@ -1828,6 +1831,7 @@ public class QuizController {
 
             Document quiz = hasPublicAccess(db, user, quizId);
             long curr = System.currentTimeMillis();
+            Document config = getConfig();
 
 //            if (
 //                    !quiz.containsKey("report_status") ||
@@ -1885,6 +1889,10 @@ public class QuizController {
                         .put("incorrects", stats[3])
                         .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
                         .put("percent", stats[4])
+                        .put("countryRank", stats[5])
+                        .put("stateRank", stats[6])
+                        .put("cityRank", stats[7])
+                        .put("schoolRank", stats[8])
                         .put("avg", df_obj.format(generalStat.getDouble("avg")))
                         .put("max", df_obj.format(generalStat.getDouble("max")))
                         .put("min", df_obj.format(generalStat.getDouble("min")));
@@ -1911,6 +1919,7 @@ public class QuizController {
                         .put("countryRank", stats[5])
                         .put("stateRank", stats[6])
                         .put("cityRank", stats[7])
+                        .put("schoolRank", stats[8])
                         .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
                         .put("avg", df_obj.format(generalStat.getDouble("avg")))
                         .put("max", df_obj.format(generalStat.getDouble("max")))
@@ -1935,10 +1944,25 @@ public class QuizController {
                     .put("taraz", stat[0])
                     .put("cityRank", stat[3])
                     .put("stateRank", stat[2])
-                    .put("rank", stat[1]);
+                    .put("countryRank", stat[1]);
 
             data.put("rank", jsonObject);
             data.put("quizName", quiz.getString("title"));
+
+            if(config.containsKey("taraz_levels")) {
+                List<Document> levels = config.getList("taraz_levels", Document.class);
+                levels.sort(Comparator.comparing(o -> o.getInteger("priority")));
+
+                JSONArray conditions = new JSONArray();
+                for(int i = levels.size() - 1; i >= 0; i--) {
+                    Document level = levels.get(i);
+                    conditions.put(new JSONObject()
+                            .put("min", level.getInteger("min"))
+                            .put("max", level.getInteger("max"))
+                            .put("color", level.getString("color")));
+                }
+                data.put("conditions", conditions);
+            }
 
             irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
 

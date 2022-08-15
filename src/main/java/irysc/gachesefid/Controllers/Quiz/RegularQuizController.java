@@ -287,6 +287,10 @@ public class RegularQuizController extends QuizAbstract {
         private final List<Document> subjectsGeneralStat;
         private final List<Document> lessonsGeneralStat;
 
+        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
+
         Taraz(Document quiz) {
 
             this.quiz = quiz;
@@ -525,10 +529,6 @@ public class RegularQuizController extends QuizAbstract {
 
         }
 
-        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
-
         private void fetchUsersData() {
 
             ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -539,6 +539,28 @@ public class RegularQuizController extends QuizAbstract {
             studentsData = userRepository.findByIds(
                     studentIds, true
             );
+
+            initTarazRankingLists();
+
+            for(ObjectId subjectId : subjectsTarazRanking.keySet()) {
+                List<TarazRanking> allTarazRanking = subjectsTarazRanking.get(subjectId);
+                calcStateRanking(allTarazRanking, true, subjectId);
+                calcCountryRanking(allTarazRanking, true, subjectId);
+                calcCityRanking(allTarazRanking, true, subjectId);
+                calcSchoolRanking(allTarazRanking, true, subjectId);
+            }
+
+            for(ObjectId lessonId : lessonsTarazRanking.keySet()) {
+                List<TarazRanking> allTarazRanking = lessonsTarazRanking.get(lessonId);
+                calcStateRanking(allTarazRanking, false, lessonId);
+                calcCountryRanking(allTarazRanking, false, lessonId);
+                calcCityRanking(allTarazRanking, false, lessonId);
+                calcSchoolRanking(allTarazRanking, false, lessonId);
+            }
+
+        }
+
+        private void initTarazRankingLists() {
 
             int k = 0;
 
@@ -570,16 +592,67 @@ public class RegularQuizController extends QuizAbstract {
                         }});
                 }
 
+                for(ObjectId oId : itr.lessonTaraz.keySet()) {
+
+                    TarazRanking t = new TarazRanking(
+                            schoolId, cityId, stateId,
+                            itr.lessonTaraz.get(oId)
+                    );
+
+                    if(lessonsTarazRanking.containsKey(oId))
+                        lessonsTarazRanking.get(oId).add(t);
+                    else
+                        lessonsTarazRanking.put(oId, new ArrayList<>() {{
+                            add(t);
+                        }});
+                }
+
                 k++;
             }
+        }
 
-            for(ObjectId subjectId : subjectsTarazRanking.keySet()) {
-                List<TarazRanking> allTarazRanking = subjectsTarazRanking.get(subjectId);
-                calcStateRanking(allTarazRanking, true, subjectId);
-                calcCountryRanking(allTarazRanking, true, subjectId);
-                calcCityRanking(allTarazRanking, true, subjectId);
+        private void calcSchoolRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for(TarazRanking t : allTarazRanking) {
+
+                if(t.schoolRank != -1)
+                    continue;
+
+                ObjectId wantedSchoolId = t.schoolId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for(TarazRanking ii : allTarazRanking) {
+                    if(!ii.schoolId.equals(wantedSchoolId))
+                        continue;
+                    filterSorted.add(ii);
+                }
+
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).schoolRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
             }
 
+            int k = 0;
+            for(QuestionStat itr : studentsStat) {
+                if(isForSubject)
+                    itr.subjectSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
+                else
+                    itr.lessonSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
+            }
 
         }
 
@@ -622,8 +695,8 @@ public class RegularQuizController extends QuizAbstract {
             for(QuestionStat itr : studentsStat) {
                 if(isForSubject)
                     itr.subjectStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
-//                else
-//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
+                else
+                    itr.lessonStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
             }
 
         }
@@ -669,8 +742,8 @@ public class RegularQuizController extends QuizAbstract {
             for(QuestionStat itr : studentsStat) {
                 if(isForSubject)
                     itr.subjectCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
-//                else
-//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
+                else
+                    itr.lessonCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
             }
 
         }
@@ -708,8 +781,8 @@ public class RegularQuizController extends QuizAbstract {
             for(QuestionStat itr : studentsStat) {
                 if(isForSubject)
                     itr.subjectCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
-//                else
-//                    itr.les.put(oId, allTarazRanking.get(k).stateRank);
+                else
+                    itr.lessonCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
             }
 
         }

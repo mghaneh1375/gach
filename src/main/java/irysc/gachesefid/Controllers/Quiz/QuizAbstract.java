@@ -35,10 +35,15 @@ public abstract class QuizAbstract {
         List<PairValue> studentAnswers;
         List<Double> marks;
 
-        HashMap<ObjectId, Integer> subjectStateRanking = new HashMap<>();
-        HashMap<ObjectId, Integer> subjectCountryRanking = new HashMap<>();
-        HashMap<ObjectId, Integer> subjectCityRanking = new HashMap<>();
-        HashMap<ObjectId, Integer> subjectSchoolRanking = new HashMap<>();
+        HashMap<ObjectId, Integer> subjectStateRanking;
+        HashMap<ObjectId, Integer> subjectCountryRanking;
+        HashMap<ObjectId, Integer> subjectCityRanking;
+        HashMap<ObjectId, Integer> subjectSchoolRanking;
+
+        HashMap<ObjectId, Integer> lessonStateRanking;
+        HashMap<ObjectId, Integer> lessonCountryRanking;
+        HashMap<ObjectId, Integer> lessonCityRanking;
+        HashMap<ObjectId, Integer> lessonSchoolRanking;
 
         HashMap<ObjectId, Integer> subjectWhites;
         HashMap<ObjectId, Integer> subjectCorrects;
@@ -102,6 +107,16 @@ public abstract class QuizAbstract {
 
             subjectPercent = new HashMap<>();
             lessonPercent = new HashMap<>();
+
+            subjectStateRanking = new HashMap<>();
+            subjectCountryRanking = new HashMap<>();
+            subjectCityRanking = new HashMap<>();
+            subjectSchoolRanking = new HashMap<>();
+
+            lessonStateRanking = new HashMap<>();
+            lessonCountryRanking = new HashMap<>();
+            lessonCityRanking = new HashMap<>();
+            lessonSchoolRanking = new HashMap<>();
 
             marks = new ArrayList<>();
         }
@@ -304,7 +319,7 @@ public abstract class QuizAbstract {
 
         byte[] encode(ObjectId oId, boolean isForSubject) {
 
-            byte[] out = new byte[10];
+            byte[] out = new byte[11];
 
             double t = isForSubject ? subjectTaraz.get(oId) : lessonTaraz.get(oId);
             int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
@@ -340,11 +355,13 @@ public abstract class QuizAbstract {
                 out[7] = (byte) ((int) subjectCountryRanking.get(oId));
                 out[8] = (byte) ((int) subjectStateRanking.get(oId));
                 out[9] = (byte) ((int) subjectCityRanking.get(oId));
+                out[10] = (byte) ((int) subjectSchoolRanking.get(oId));
             }
             else {
-                out[7] = (byte) 0;
-                out[8] = (byte) 0;
-                out[9] = (byte) 0;
+                out[7] = (byte) ((int) lessonCountryRanking.get(oId));
+                out[8] = (byte) ((int) lessonStateRanking.get(oId));
+                out[9] = (byte) ((int) lessonCityRanking.get(oId));
+                out[10] = (byte) ((int) lessonSchoolRanking.get(oId));
             }
 
             return out;
@@ -398,21 +415,13 @@ public abstract class QuizAbstract {
         if(minus)
             percent = -percent;
 
-        int stateRank = 0;
-        int cityRank = 0;
-        int countryRank = 0;
-
-        if(in.length > 7)
-            countryRank = in[7] & 0xff;
-
-        if(in.length > 8)
-            stateRank = in[8] & 0xff;
-
-        if(in.length > 9)
-            cityRank = in[9] & 0xff;
+        int countryRank = in[7] & 0xff;
+        int stateRank = in[8] & 0xff;
+        int cityRank = in[9] & 0xff;
+        int schoolRank = in[10] & 0xff;
 
         return new Object[] {
-                taraz, whites, corrects, incorrects, Math.round(percent), countryRank, stateRank, cityRank
+                taraz, whites, corrects, incorrects, Math.round(percent), countryRank, stateRank, cityRank, schoolRank
         };
     }
 
