@@ -315,8 +315,6 @@ public class UserController {
         List<Document> forms;
         int idx = -1;
 
-        System.out.println(role);
-
         if (user.containsKey("form_list")) {
             forms = user.getList("form_list", Document.class);
             idx = Utility.searchInDocumentsKeyValIdx(forms, "role", role);
@@ -903,7 +901,7 @@ public class UserController {
                 new BasicDBObject("_id", 1).append("name", 1)
                         .append("city_name", 1).append("kind", 1)
                         .append("city_id", 1).append("grade", 1)
-                        .append("address", 1)
+                        .append("address", 1).append("user_id", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -940,6 +938,19 @@ public class UserController {
                     .put("grade", grade)
                     .put("kind", kind)
                     .put("address", doc.getOrDefault("address", ""));
+
+            if(doc.containsKey("user_id")) {
+
+                Document user = userRepository.findById(doc.getObjectId("user_id"));
+
+                jsonObject.put("manager",
+                        user.getString("first_name") + " " +
+                        user.getString("last_name")
+                );
+                jsonObject.put("managerPhone", user.getOrDefault("phone", ""));
+            }
+            else
+                jsonObject.put("manager", "").put("managerPhone", "");
 
             if (grade.equals(GradeSchool.DABESTAN.getName()))
                 gradeStr = "دبستان";

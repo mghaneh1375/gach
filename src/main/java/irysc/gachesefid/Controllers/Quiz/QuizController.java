@@ -1663,10 +1663,7 @@ public class QuizController {
                 questionStats = doc.getList("question_stat", Binary.class);
                 if (questionStats.size() != pairValues.size())
                     questionStats = null;
-            }
-
-            System.out.println(marks.size());
-            System.out.println(pairValues.size());
+            };
 
             JSONArray answersJsonArray = new JSONArray();
             fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);

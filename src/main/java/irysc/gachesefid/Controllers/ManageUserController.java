@@ -162,6 +162,22 @@ public class ManageUserController {
                 return generateErr("متولی این مدرسه شخص دیگری است.");
         }
 
+        Document schoolRoleForm = null;
+
+        if (school != null) {
+
+            if (!user.containsKey("form_list"))
+                return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
+
+            schoolRoleForm = Utility.searchInDocumentsKeyVal(
+                    user.getList("form_list", Document.class),
+                    "role", "school"
+            );
+
+            if (schoolRoleForm == null)
+                return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
+        }
+
         boolean change = false;
 
         if (!newAccess.equals(Access.STUDENT.getName()) && !user.getBoolean("level")) {
@@ -188,20 +204,9 @@ public class ManageUserController {
 
             accesses.remove(Access.STUDENT.getName());
 
-            if (school != null) {
+            if (schoolRoleForm != null) {
 
-                if (!user.containsKey("form_list"))
-                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
-
-                List<Document> forms = user.getList("form_list", Document.class);
-                Document form = Utility.searchInDocumentsKeyVal(
-                        forms, "role", "school"
-                );
-
-                if (form == null)
-                    return generateErr("لطفا ابتدا اطلاعات مربوط به فرم مدرسه این اکانت را پر نمایید.");
-
-                form.put("school_id", school.getObjectId("_id"));
+                schoolRoleForm.put("school_id", school.getObjectId("_id"));
                 if (!accesses.contains(newAccess))
                     accesses.add(newAccess);
 
