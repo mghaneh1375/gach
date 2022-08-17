@@ -262,11 +262,13 @@ public class Utility {
     public static JSONObject convertPersian(JSONObject jsonObject) {
 
         for (String key : jsonObject.keySet()) {
-            if (jsonObject.get(key) instanceof Integer)
+            if(key.toLowerCase().contains("password"))
+                jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
+            else if (jsonObject.get(key) instanceof Integer)
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                if(str.charAt(0) == '0' || key.toLowerCase().contains("password") ||
+                if(str.charAt(0) == '0' ||
                         key.equalsIgnoreCase("phone") ||
                         key.equalsIgnoreCase("tel") ||
                         key.equals("NID")

@@ -584,7 +584,7 @@ public class ManageUserController {
         if (!form.containsKey("school_id"))
             throw new InvalidFieldsException("unknown1 err");
 
-        Document validSchool = schoolRepository.findById(form.getObjectId("schoold_id"));
+        Document validSchool = schoolRepository.findById(form.getObjectId("school_id"));
         if (validSchool == null)
             throw new InvalidFieldsException("unknown2 err");
 

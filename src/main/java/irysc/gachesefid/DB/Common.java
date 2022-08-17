@@ -3,6 +3,7 @@ package irysc.gachesefid.DB;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UnwindOptions;
@@ -11,6 +12,7 @@ import com.mongodb.client.model.Variable;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -331,4 +333,13 @@ public abstract class Common extends Repository {
     public void cleanReject(Document doc) {
     }
 
+    public JSONArray distinctTags(String key) {
+        DistinctIterable<String> cursor = documentMongoCollection.distinct(key, String.class);
+
+        JSONArray jsonArray = new JSONArray();
+        for (String itr : cursor)
+            jsonArray.put(itr);
+
+        return jsonArray;
+    }
 }

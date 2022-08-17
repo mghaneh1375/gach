@@ -622,7 +622,7 @@ public class QuizAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.createPackage(new JSONObject(jsonStr));
+        return QuizController.createPackage(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PutMapping(value = "/updatePackage/{packageId}")
@@ -645,7 +645,7 @@ public class QuizAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.editPackage(packageId, new JSONObject(jsonStr));
+        return QuizController.editPackage(packageId, Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PutMapping(value = "/addQuizzesToPackage/{packageId}")

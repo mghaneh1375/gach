@@ -196,6 +196,7 @@ public class QuizController {
             return JSON_NOT_VALID_ID;
 
         List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+        long curr = System.currentTimeMillis();
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
@@ -213,7 +214,7 @@ public class QuizController {
             long endRegistry = quiz.containsKey("end_registry") ?
                     quiz.getLong("end_registry") : quiz.getLong("end");
 
-            if (endRegistry < System.currentTimeMillis())
+            if (endRegistry < curr)
                 continue;
 //                return generateErr("زمان ثبت نام آزمون موردنظر به اتمام رسیده است.");
 
@@ -367,13 +368,9 @@ public class QuizController {
 
 
     public static String getDistinctTags() {
-
-        DistinctIterable<String> cursor = iryscQuizRepository.distinctTags();
-        JSONArray jsonArray = new JSONArray();
-        for (String itr : cursor)
-            jsonArray.put(itr);
-
-        return generateSuccessMsg("data", jsonArray);
+        return generateSuccessMsg("data",
+                iryscQuizRepository.distinctTags("tags")
+        );
     }
 
     public static Document store(ObjectId userId, JSONObject data
@@ -1413,7 +1410,10 @@ public class QuizController {
             jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin));
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        return generateSuccessMsg("data", new JSONObject()
+                .put("items", jsonArray)
+                .put("tags", db.distinctTags("tags"))
+        );
     }
 
     public static String storeAnswers(Common db, ObjectId userId,
