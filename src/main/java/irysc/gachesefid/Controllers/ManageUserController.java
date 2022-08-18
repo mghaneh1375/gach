@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -105,7 +106,7 @@ public class ManageUserController {
 
                 JSONObject jsonObject = new JSONObject()
                         .put("id", user.getObjectId("_id").toString())
-                        .put("name", user.getString("first_name") + user.getString("last_name"))
+                        .put("name", user.getString("first_name") + " " + user.getString("last_name"))
                         .put("mail", user.getOrDefault("mail", ""))
                         .put("phone", user.getOrDefault("phone", ""))
                         .put("NID", user.getString("NID"))
@@ -346,18 +347,20 @@ public class ManageUserController {
 
     public static String getMySchools(ObjectId agentId) {
 
-        ArrayList<Document> docs = userRepository.find(and(
-                        in("accesses", Access.SCHOOL.getName()),
-                        exists("form_list"),
-                        eq("form_list.role", "school"),
-                        eq("form_list.agent_id", agentId)
-                ), new BasicDBObject("form_list", 1)
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(in("accesses", Access.SCHOOL.getName()));
+        filters.add(exists("form_list"));
+        filters.add(eq("form_list.role", "school"));
+        if(agentId != null)
+            filters.add(eq("form_list.agent_id", agentId));
+
+        ArrayList<Document> docs = userRepository.find(and(filters), new BasicDBObject("form_list", 1)
                         .append("NID", 1)
                         .append("phone", 1)
                         .append("_id", 1)
                         .append("first_name", 1)
                         .append("last_name", 1)
-                        .append("students_no", 1)
+                        .append("students", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -371,7 +374,7 @@ public class ManageUserController {
             if (form == null)
                 continue;
 
-            jsonArray.put(convertSchoolToJSON(doc, form));
+            jsonArray.put(convertSchoolToJSON(doc, form, agentId == null));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -396,15 +399,31 @@ public class ManageUserController {
         return generateSuccessMsg("data", data);
     }
 
-    private static JSONObject convertSchoolToJSON(Document doc, Document form) {
-        return new JSONObject()
+    private static JSONObject convertSchoolToJSON(Document doc, Document form, boolean isAgentInfoNeeded) {
+
+        String schoolName = "";
+        if(form.containsKey("school_id")) {
+            Document school = schoolRepository.findById(form.getObjectId("school_id"));
+            if(school != null)
+                schoolName = school.getString("name") + " " + school.getString("city_name");
+        }
+
+        String agentName = "";
+
+        if(isAgentInfoNeeded && form.containsKey("agent_id")) {
+            Document user = userRepository.findById(form.getObjectId("agent_id"));
+            if(user != null)
+                agentName = user.getString("first_name") + " " + user.getString("last_name");
+        }
+
+        JSONObject jsonObject = new JSONObject()
                 .put("phone", doc.getString("phone"))
                 .put("NID", doc.getString("NID"))
                 .put("id", doc.getObjectId("_id").toString())
-                .put("studentsNo", doc.getOrDefault("students_no", 0))
+                .put("studentsNo", doc.containsKey("students") ? doc.getList("students", ObjectId.class).size() : 0)
                 .put("firstName", doc.getString("first_name"))
                 .put("lastName", doc.getString("last_name"))
-                .put("name", form.getString("name"))
+                .put("schoolName", schoolName)
                 .put("schoolSex", form.getString("school_sex"))
                 .put("kindSchool", form.getString("kind_school"))
                 .put("kindSchoolFa",
@@ -414,7 +433,12 @@ public class ManageUserController {
                                         "متوسطه اول" : "متوسطه دوم"
                 )
                 .put("schoolSexFa", form.getString("school_sex").equalsIgnoreCase(Sex.MALE.getName()) ? "آقا" : "خانم")
-                .put("ManagerName", form.getString("manager_name"));
+                .put("managerName", form.getString("manager_name"));
+
+        if(isAgentInfoNeeded)
+            jsonObject.put("agent", agentName);
+
+        return jsonObject;
 
     }
 
@@ -543,6 +567,159 @@ public class ManageUserController {
         return JSON_OK;
     }
 
+    public static String removeStudents(ObjectId wantedId, boolean isAgent,
+                                        Document schoolUser, JSONArray jsonArray) {
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        HashMap<ObjectId, List<ObjectId>> checked = isAgent ? new HashMap<>() : null;
+        HashMap<ObjectId, ObjectId> schoolUserIds = isAgent ? new HashMap<>() : null;
+
+        ArrayList<Bson> filter = schoolUser == null ? new ArrayList<>() : null;
+        List<ObjectId> students = schoolUser != null ? schoolUser.getList("students", ObjectId.class) : null;
+
+        if(filter != null) {
+            filter.add(eq("level", true));
+            filter.add(exists("form_list"));
+            filter.add(eq("form_list.role", "school"));
+            filter.add(exists("form_list.school_id"));
+            filter.add(exists("students"));
+        }
+
+        if(isAgent && filter != null) {
+            filter.add(exists("form_list.agent_id"));
+            filter.add(eq("form_list.agent_id", wantedId));
+        }
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if (!ObjectId.isValid(id)) {
+                excepts.put(i);
+                continue;
+            }
+
+            Document user = userRepository.findById(new ObjectId(id));
+            if(user == null || !user.containsKey("form_list")) {
+                excepts.put(i);
+                continue;
+            }
+
+            ObjectId schoolId = user.get("school", Document.class)
+                    .getObjectId("_id");
+
+            if(!isAgent && wantedId != null && !schoolId.equals(wantedId)) {
+                excepts.put(i);
+                continue;
+            }
+
+            if(students != null && !students.contains(user.getObjectId("_id"))) {
+                excepts.put(i);
+                continue;
+            }
+
+            if(students != null) {
+                students.remove(user.getObjectId("_id"));
+                user.remove("school");
+                userRepository.replaceOne(user.getObjectId("_id"), user);
+                doneIds.put(user.getObjectId("_id"));
+                continue;
+            }
+
+            if(isAgent && checked.containsKey(schoolId) && checked.get(schoolId) == null) {
+                excepts.put(i);
+                continue;
+            }
+            if(checked != null && checked.containsKey(schoolId) && checked.get(schoolId) != null) {
+                checked.get(schoolId).remove(user.getObjectId("_id"));
+                user.remove("school");
+                userRepository.replaceOne(user.getObjectId("_id"), user);
+                doneIds.put(user.getObjectId("_id"));
+                continue;
+            }
+            if(checked != null && filter != null && !checked.containsKey(schoolId)) {
+
+                Document schoolAccount = userRepository.findOne(
+                        and(and(filter), eq("form_list.school_id", schoolId)), null
+                );
+
+                if(schoolAccount == null) {
+                    checked.put(schoolId, null);
+                    excepts.put(i);
+                    continue;
+                }
+
+                List<ObjectId> tmp =
+                        userRepository.findById(schoolAccount.getObjectId("_id"))
+                    .getList("students", ObjectId.class);
+
+                checked.put(schoolId, tmp);
+                schoolUserIds.put(schoolId, schoolAccount.getObjectId("_id"));
+
+                checked.get(schoolId).remove(user.getObjectId("_id"));
+                user.remove("school");
+                userRepository.replaceOne(user.getObjectId("_id"), user);
+                doneIds.put(user.getObjectId("_id"));
+            }
+        }
+
+        if(doneIds.length() > 0) {
+
+            if(students != null)
+                userRepository.replaceOne(wantedId, schoolUser);
+            else if(checked != null) {
+                for(ObjectId oId : schoolUserIds.keySet()) {
+                    userRepository.updateOne(schoolUserIds.get(oId),
+                            set("students", checked.get(oId)));
+                }
+            }
+        }
+
+        return Utility.returnRemoveResponse(excepts, doneIds);
+    }
+
+    public static String removeSchools(ObjectId agentId, JSONArray jsonArray) {
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i);
+                continue;
+            }
+
+            Document user = userRepository.findById(new ObjectId(id));
+            if(user == null || !user.containsKey("form_list")) {
+                excepts.put(i);
+                continue;
+            }
+
+            Document form = searchInDocumentsKeyVal(
+                    user.getList("form_list", Document.class),
+                    "role", "school"
+            );
+
+            if(form == null || !form.containsKey("agent_id")) {
+                excepts.put(i);
+                continue;
+            }
+
+            if(agentId != null && !form.getObjectId("agent_id").equals(agentId)) {
+                excepts.put(i);
+                continue;
+            }
+
+            form.remove("agent_id");
+            doneIds.put(user.getObjectId("_id"));
+            userRepository.replaceOne(user.getObjectId("_id"), user);
+        }
+
+        return Utility.returnRemoveResponse(excepts, doneIds);
+    }
 
     private static void ticketUpgradeRequest(ObjectId oId) {
 

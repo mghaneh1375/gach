@@ -5,18 +5,20 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Models.*;
+import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Models.GradeSchool;
+import irysc.gachesefid.Models.PasswordMode;
+import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Digit;
-import irysc.gachesefid.Utility.Positive;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -29,11 +31,11 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
-import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 @Controller
 @RequestMapping(path = "/api/admin/user")
@@ -235,6 +237,65 @@ public class ManageUserAPIRoutes extends Router {
         );
     }
 
+    @DeleteMapping(value = "/removeSchools")
+    @ResponseBody
+    public String removeSchools(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {
+                                                "items"
+                                        },
+                                        paramsType = {
+                                                JSONArray.class
+                                        }
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getAgentUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        return ManageUserController.removeSchools(isAdmin ? null : user.getObjectId("_id"),
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
+
+    @DeleteMapping(value = "/removeStudents")
+    @ResponseBody
+    public String removeStudents(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {
+                                                "items"
+                                        },
+                                        paramsType = {
+                                                JSONArray.class
+                                        }
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getSchoolUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAgent = Authorization.isAgent(user.getList("accesses", String.class));
+
+        ObjectId id = user.getObjectId("_id");
+
+        if(!isAdmin && !isAgent) {
+            if(!user.containsKey("form_list"))
+                return JSON_NOT_ACCESS;
+
+            Document form = searchInDocumentsKeyVal(
+                    user.getList("form_list", Document.class),
+                    "role", "school"
+            );
+
+            if(form == null || !form.containsKey("school_id"))
+                return JSON_NOT_ACCESS;
+
+            id = form.getObjectId("school_id");
+        }
+
+        return ManageUserController.removeStudents(
+                isAdmin ? null : id,
+                isAgent, !isAdmin & !isAgent ? user : null,
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
+
     @PostMapping(value = "/addStudent")
     @ResponseBody
     public String addStudent(HttpServletRequest request,
@@ -309,13 +370,13 @@ public class ManageUserAPIRoutes extends Router {
                              @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(schoolId != null && !ObjectId.isValid(schoolId))
+        if (schoolId != null && !ObjectId.isValid(schoolId))
             return JSON_NOT_VALID_PARAMS;
 
         if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))
@@ -350,7 +411,8 @@ public class ManageUserAPIRoutes extends Router {
     public String getMySchools(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getAgentUser(request);
-        return ManageUserController.getMySchools(user.getObjectId("_id"));
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        return ManageUserController.getMySchools(isAdmin ? null : user.getObjectId("_id"));
     }
 
     @GetMapping(value = {"/getStudents", "/getStudents/{schoolId"})
