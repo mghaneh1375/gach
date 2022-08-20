@@ -440,6 +440,9 @@ public class QuizController {
             for (String key : data.keySet())
                 quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
 
+            if(!data.has("tags"))
+                quiz.put("tags", new ArrayList<>());
+
             db.replaceOne(quizId, quiz);
 
         } catch (InvalidFieldsException e) {
