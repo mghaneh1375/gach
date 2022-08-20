@@ -437,9 +437,8 @@ public class QuizController {
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
-            for (String key : data.keySet()) {
-                quiz.put(key, data.get(key));
-            }
+            for (String key : data.keySet())
+                quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
 
             db.replaceOne(quizId, quiz);
 
@@ -620,10 +619,11 @@ public class QuizController {
             if (quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
                 quizAbstract = new RegularQuizController();
 
-            if (quizAbstract != null)
+            if (quizAbstract != null) {
                 return generateSuccessMsg("data",
                         quizAbstract.convertDocToJSON(quiz, false, true)
                 );
+            }
 
             return JSON_OK;
         } catch (InvalidFieldsException x) {
