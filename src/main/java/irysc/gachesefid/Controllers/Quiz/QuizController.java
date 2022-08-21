@@ -302,6 +302,11 @@ public class QuizController {
         );
 
         JSONArray jsonArray = new JSONArray();
+        long curr = System.currentTimeMillis();
+
+        HashMap<String, ArrayList<String>> tags = isAdmin ? null : new HashMap<>();
+        ArrayList<ObjectId> fetched = isAdmin ? null : new ArrayList<>();
+        JSONObject data = new JSONObject();
 
         for (Document packageDoc : packages) {
 
@@ -314,12 +319,11 @@ public class QuizController {
                     "_id", packageDoc.getObjectId("lesson_id")
             );
 
-            jsonArray.put(new JSONObject()
+            JSONObject jsonObject = new JSONObject()
                     .put("id", packageDoc.getObjectId("_id").toString())
                     .put("title", packageDoc.getString("title"))
                     .put("description", packageDoc.getOrDefault("description", ""))
                     .put("buyers", isAdmin ? packageDoc.getInteger("buyers") : 0)
-                    .put("quizzes", packageDoc.getList("quizzes", ObjectId.class).size())
                     .put("grade", new JSONObject()
                             .put("id", grade.getObjectId("_id").toString())
                             .put("name", grade.getString("name"))
@@ -329,11 +333,115 @@ public class QuizController {
                             .put("name", lesson.getString("name"))
                     )
                     .put("offPercent", packageDoc.getInteger("off_percent"))
-                    .put("minSelect", packageDoc.getInteger("min_select"))
-            );
+                    .put("minSelect", packageDoc.getInteger("min_select"));
+
+            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+
+            if (!isAdmin) {
+
+                ArrayList<String> subTags;
+                if (tags.containsKey(grade.getString("name")))
+                    subTags = tags.get(grade.getString("name"));
+                else
+                    subTags = new ArrayList<>();
+
+                if (!subTags.contains(lesson.getString("name")))
+                    subTags.add(lesson.getString("name"));
+
+                tags.put(grade.getString("name"), subTags);
+                jsonObject.put("tags", new ArrayList<>(){{add(lesson.getString("name"));}});
+
+                JSONArray quizzesDoc = new JSONArray();
+                int totalPrice = 0;
+                int registrable = 0;
+
+                for (ObjectId quizId : quizzes) {
+
+                    Document quiz = iryscQuizRepository.findById(quizId);
+
+                    if (quiz == null)
+                        continue;
+
+                    fetched.add(quizId);
+                    QuizAbstract quizAbstract;
+
+                    if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+                        quizAbstract = new RegularQuizController();
+                    else
+                        quizAbstract = new TashrihiQuizController();
+
+                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false);
+                    if ((quiz.containsKey("end_registry") &&
+                            quiz.getLong("end_registry") > curr) ||
+                            (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
+                    ) {
+                        quizDoc.put("registrable", true);
+                        totalPrice += quiz.getInteger("price");
+                        registrable++;
+                    }
+                    else
+                        quizDoc.put("registrable", false);
+
+                    quizzesDoc.put(quizDoc);
+                }
+                jsonObject
+                        .put("quizzes", quizzesDoc.length())
+                        .put("registrable", registrable)
+                        .put("totalPrice", totalPrice)
+                        .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
+                        .put("quizzesDoc", quizzesDoc);
+            } else {
+                jsonObject
+                        .put("quizzes", quizzes.size());
+            }
+
+            jsonArray.put(jsonObject.put("type", "package"));
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        if(!isAdmin) {
+            ArrayList<Document> docs = iryscQuizRepository.find(
+                    and(
+                            nin("_id", fetched),
+                            eq("visibility", true),
+                            lte("start_registry", curr),
+                            or(
+                                    exists("end_registry", false),
+                                    gt("end_registry", curr)
+                            ),
+                            gt("end", curr)
+
+                    ), null
+            );
+
+            RegularQuizController quizController = new RegularQuizController();
+            for(Document doc : docs) {
+                if(doc.containsKey("tags")) {
+                    List<String> t = doc.getList("tags", String.class);
+                    if(t.size() > 0) {
+                        ArrayList<String> subTags;
+                        if(tags.containsKey("المپیاد"))
+                            subTags = tags.get("المپیاد");
+                        else
+                            subTags = new ArrayList<>();
+
+                        for(String itr : t) {
+                            if (!subTags.contains(itr))
+                                subTags.add(itr);
+                        }
+
+                        tags.put("المپیاد", subTags);
+                    }
+                }
+                jsonArray.put(quizController.convertDocToJSON(
+                        doc, true, false
+                ).put("type", "quiz"));
+            }
+            data.put("tags", tags);
+        }
+
+
+        data.put("items", jsonArray);
+        return generateSuccessMsg("data", data);
     }
 
     public static String getPackageQuizzes(ObjectId packageId, boolean isAdmin) {
@@ -440,7 +548,7 @@ public class QuizController {
             for (String key : data.keySet())
                 quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
 
-            if(!data.has("tags"))
+            if (!data.has("tags"))
                 quiz.put("tags", new ArrayList<>());
 
             db.replaceOne(quizId, quiz);
@@ -1666,7 +1774,8 @@ public class QuizController {
                 questionStats = doc.getList("question_stat", Binary.class);
                 if (questionStats.size() != pairValues.size())
                     questionStats = null;
-            };
+            }
+            ;
 
             JSONArray answersJsonArray = new JSONArray();
             fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
@@ -1879,7 +1988,7 @@ public class QuizController {
                 );
 
                 Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
-                totalCorrect += (int)stats[2];
+                totalCorrect += (int) stats[2];
 
                 JSONObject jsonObject = new JSONObject()
                         .put("name", doc.getString("name"))
@@ -1949,12 +2058,12 @@ public class QuizController {
             data.put("rank", jsonObject);
             data.put("quizName", quiz.getString("title"));
 
-            if(config.containsKey("taraz_levels")) {
+            if (config.containsKey("taraz_levels")) {
                 List<Document> levels = config.getList("taraz_levels", Document.class);
                 levels.sort(Comparator.comparing(o -> o.getInteger("priority")));
 
                 JSONArray conditions = new JSONArray();
-                for(int i = levels.size() - 1; i >= 0; i--) {
+                for (int i = levels.size() - 1; i >= 0; i--) {
                     Document level = levels.get(i);
                     conditions.put(new JSONObject()
                             .put("min", level.getInteger("min"))
