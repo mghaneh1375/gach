@@ -84,94 +84,6 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    public String buy(Document user, Document quiz) {
-
-        if (quiz.containsKey("end_registry") &&
-                quiz.getLong("end_registry") < System.currentTimeMillis())
-            return irysc.gachesefid.Utility.Utility.generateErr(
-                    "زمان ثبت نام در آزمون موردنظر گذشته است."
-            );
-
-        ObjectId userId = user.getObjectId("_id");
-
-        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                quiz.getList("students", Document.class), "_id", userId
-        ) != -1)
-            return irysc.gachesefid.Utility.Utility.generateErr(
-                    "شما در آزمون موردنظر ثبت نام کرده اید."
-            );
-
-        PairValue p = Utilities.calcPrice(quiz.getInteger("price"),
-                user.getInteger("money"), userId, OffCodeSections.GACH_EXAM.getName()
-        );
-
-        int price = (int) p.getKey();
-
-        if (price <= 100) {
-
-            new Thread(() -> {
-
-                registry(user, quiz, 0);
-
-                if (p.getValue() != null) {
-
-                    PairValue offcode = (PairValue) p.getValue();
-                    int finalAmount = (int) offcode.getValue();
-
-                    BasicDBObject update = new BasicDBObject("used", true)
-                            .append("used_at", System.currentTimeMillis())
-                            .append("used_section", OffCodeSections.GACH_EXAM.getName())
-                            .append("used_for", quiz.getObjectId("_id"))
-                            .append("amount", finalAmount);
-
-                    Document off = offcodeRepository.findOneAndUpdate(
-                            (ObjectId) offcode.getKey(),
-                            new BasicDBObject("$set", update)
-                    );
-
-                    if (off.getInteger("amount") != finalAmount) {
-
-                        Document newDoc = new Document("type", off.getString("type"))
-                                .append("amount", off.getInteger("amount") - finalAmount)
-                                .append("expire_at", off.getInteger("expire_at"))
-                                .append("section", off.getString("section"))
-                                .append("used", false)
-                                .append("created_at", System.currentTimeMillis())
-                                .append("user_id", userId);
-
-                        offcodeRepository.insertOne(newDoc);
-                    }
-                }
-
-                transactionRepository.insertOne(
-                        new Document("user_id", userId)
-                                .append("amount", 0)
-                                .append("created_at", System.currentTimeMillis())
-                                .append("status", "success")
-                                .append("for", OffCodeSections.GACH_EXAM.getName())
-                                .append("off_code", p.getValue() == null ? null : ((PairValue) p.getValue()).getKey())
-                );
-
-            }).start();
-
-            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                    "action", "success"
-            );
-        }
-
-        ObjectId transactionId = transactionRepository.insertOneWithReturnObjectId(
-                new Document("user_id", userId)
-                        .append("amount", price)
-                        .append("created_at", System.currentTimeMillis())
-                        .append("status", "init")
-                        .append("for", OffCodeSections.GACH_EXAM.getName())
-                        .append("off_code", p.getValue() == null ? null : ((PairValue) p.getValue()).getKey())
-        );
-
-        return Utilities.goToPayment(price, userId, transactionId);
-    }
-
-    @Override
     JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin) {
 
         JSONObject jsonObject = new JSONObject()
@@ -215,16 +127,18 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    Document registry(Document student, Document quiz, int paid) {
+    Document registry(ObjectId studentId, String phone, String mail,
+                      Document quiz, int paid
+    ) {
 
         List<Document> students = quiz.getList("students", Document.class);
 
         if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                students, "_id", student.getObjectId("_id")
+                students, "_id", studentId
         ) != -1)
             return null;
 
-        Document stdDoc = new Document("_id", student.getObjectId("_id"))
+        Document stdDoc = new Document("_id", studentId)
                 .append("paid", paid)
                 .append("register_at", System.currentTimeMillis())
                 .append("finish_at", null)
