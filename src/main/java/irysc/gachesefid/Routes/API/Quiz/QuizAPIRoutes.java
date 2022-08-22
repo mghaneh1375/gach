@@ -703,7 +703,11 @@ public class QuizAPIRoutes extends Router {
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return QuizController.getPackages(isAdmin, gradeId, lessonId);
+        return QuizController.getPackages(
+                isAdmin,
+                user == null ? null : user.getObjectId("_id"),
+                gradeId, lessonId
+        );
     }
 
     @GetMapping(value = "/getPackageQuizzes/{packageId}")

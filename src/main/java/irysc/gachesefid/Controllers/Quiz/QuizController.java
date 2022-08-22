@@ -12,6 +12,7 @@ import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
@@ -284,7 +285,9 @@ public class QuizController {
         return getPackageQuizzes(packageId, true);
     }
 
-    public static String getPackages(boolean isAdmin, ObjectId gradeId, ObjectId lessonId) {
+    public static String getPackages(boolean isAdmin, ObjectId userId,
+                                     ObjectId gradeId, ObjectId lessonId
+    ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
@@ -384,12 +387,29 @@ public class QuizController {
 
                     quizzesDoc.put(quizDoc);
                 }
+
+                Document off = offcodeRepository.findOne(and(
+                        exists("code", false),
+                        eq("user_id", userId),
+                        eq("used", false),
+                        gt("expire_at", curr),
+                        or(
+                                eq("section", OffCodeSections.ALL.getName()),
+                                eq("section", OffCodeSections.GACH_EXAM.getName())
+                        )
+                ), null, Sorts.descending("amount"));
+
                 jsonObject
                         .put("quizzes", quizzesDoc.length())
                         .put("registrable", registrable)
                         .put("totalPrice", totalPrice)
                         .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
                         .put("quizzesDoc", quizzesDoc);
+
+                if(off != null)
+                    data.put("off", new JSONObject()
+                            .put("type", off.getString("type"))
+                    );
             } else {
                 jsonObject
                         .put("quizzes", quizzes.size());

@@ -42,7 +42,7 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
-    @PostMapping(path = "buy/{quizId}")
+    @PostMapping(path = "buy")
     @ResponseBody
     public String buy(HttpServletRequest request,
                       @PathVariable @ObjectIdConstraint ObjectId quizId

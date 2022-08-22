@@ -123,6 +123,20 @@ public abstract class Common extends Repository {
         return null;
     }
 
+    public Document findOne(Bson filter, Bson project, Bson orderBy) {
+
+        FindIterable<Document> cursor;
+        if (project == null)
+            cursor = documentMongoCollection.find(filter).sort(orderBy);
+        else
+            cursor = documentMongoCollection.find(filter).projection(project).sort(orderBy);
+
+        if (cursor.iterator().hasNext())
+            return cursor.iterator().next();
+
+        return null;
+    }
+
     public Document findOneAndDelete(Bson filter) {
 
         Document deleted = documentMongoCollection.findOneAndDelete(filter);

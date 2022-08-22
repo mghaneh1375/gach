@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance.Off;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.AlertController;
+import irysc.gachesefid.DB.OffcodeRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
@@ -289,5 +290,37 @@ public class OffCodeController {
                     eq("user_id", userId),
                     ne("used", true)
             ));
+    }
+
+    public static String check(ObjectId userId, String code,
+                               String section
+    ) {
+
+        Document off = offcodeRepository.findOne(and(
+                exists("code"),
+                eq("code", code),
+                eq("user_id", userId)
+        ), null);
+
+        if(off == null)
+            return generateErr("کد تخفیف موردنظر اشتباه است.");
+
+        if(off.getBoolean("used"))
+            return generateErr("شما قبلا از این کد استفاده کرده اید.");
+
+        if(off.getLong("expire_at") < System.currentTimeMillis())
+            return generateErr("کد مدنظر منقضی شده است.");
+
+        if(!off.getString("section").equalsIgnoreCase(
+                OffCodeSections.ALL.getName())
+        ) {
+            if(!section.equalsIgnoreCase(off.getString("section")))
+                return generateErr("شما اجازه استفاده از این کد در این قسمت را ندارید.");
+        }
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("type", off.getString("type"))
+                .put("amount", off.get("amount"))
+        );
     }
 }
