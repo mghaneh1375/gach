@@ -49,7 +49,7 @@ public class RegularQuizController extends QuizAbstract {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "quiz", new RegularQuizController()
-                            .convertDocToJSON(newDoc, false, true)
+                            .convertDocToJSON(newDoc, false, true, false)
             );
 
         } catch (InvalidFieldsException e) {
@@ -75,42 +75,83 @@ public class RegularQuizController extends QuizAbstract {
         return JSON_OK;
     }
 
-    public static String myQuizes(ObjectId userId) {
-        return null;
-    }
+    @Override
+    public int calcLen(Document quiz) {
 
-    public static String myPassedQuizes(ObjectId userId) {
-        return null;
+        if(quiz.containsKey("duration"))
+            return quiz.getInteger("duration") * 60;
+
+        if(!quiz.containsKey("questions"))
+            return 0;
+
+        Document questions = quiz.get("questions", Document.class);
+
+        if(!questions.containsKey("_ids"))
+            return 0;
+
+        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
+        ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
+
+        int total = 0;
+        for(Document question : questionsDoc)
+            total += question.getInteger("needed_time");
+
+        return total;
     }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin) {
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest,
+                                boolean isAdmin, boolean afterBuy) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
-                .put("startRegistry", quiz.getLong("start_registry"))
-                .put("endRegistry", quiz.getOrDefault("end_registry", ""))
-                .put("price", quiz.getInteger("price"))
                 .put("generalMode", "IRYSC")
                 .put("mode", quiz.getString("mode"))
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
                 .put("id", quiz.getObjectId("_id").toString());
 
-        if (isAdmin)
+        int questionsCount = 0;
+        try {
+            questionsCount = quiz.get("questions", Document.class)
+                    .getList("_ids", ObjectId.class).size();
+        } catch (Exception ignore) {
+        }
+
+        if (afterBuy) {
+            long curr = System.currentTimeMillis();
+
+            if (quiz.getLong("end") < curr)
+                jsonObject.put("status", "finished")
+                        .put("questionsCount", questionsCount)
+                        .put("canSeeResults",
+                                quiz.getBoolean("show_results_after_correction") &&
+                                        quiz.containsKey("report_status") &&
+                                        quiz.getString("report_status").equalsIgnoreCase("ready")
+                        );
+            else if (quiz.getLong("start") <= curr &&
+                    quiz.getLong("end") > curr
+            ) {
+                jsonObject.put("status", "inProgress")
+                        .put("duration", calcLen(quiz))
+                        .put("questionsCount", questionsCount);
+            }
+            else
+                jsonObject.put("status", "notStart");
+
+        } else
+            jsonObject.put("startRegistry", quiz.getLong("start_registry"))
+                    .put("endRegistry", quiz.getOrDefault("end_registry", ""))
+                    .put("price", quiz.getInteger("price"));
+
+        if (isAdmin) {
             jsonObject
                     .put("studentsCount", quiz.getInteger("registered"))
                     .put("visibility", quiz.getBoolean("visibility"))
+                    .put("questionsCount", questionsCount)
                     .put("capacity", quiz.getInteger("capacity"));
-
-        try {
-            jsonObject
-                    .put("questionsCount", quiz.get("questions", Document.class)
-                            .getList("_ids", ObjectId.class).size());
-        } catch (Exception x) {
-            jsonObject.put("questionsCount", 0);
         }
 
         if (quiz.containsKey("capacity"))
@@ -127,31 +168,41 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    Document registry(ObjectId studentId, String phone, String mail,
-                      Document quiz, int paid
+    void registry(ObjectId studentId, String phone,
+                  String mail, ArrayList<ObjectId> quizIds,
+                  int paid
     ) {
 
-        List<Document> students = quiz.getList("students", Document.class);
+        for (ObjectId quizId : quizIds) {
 
-        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                students, "_id", studentId
-        ) != -1)
-            return null;
+            try {
+                Document quiz = iryscQuizRepository.findById(quizId);
+                List<Document> students = quiz.getList("students", Document.class);
 
-        Document stdDoc = new Document("_id", studentId)
-                .append("paid", paid)
-                .append("register_at", System.currentTimeMillis())
-                .append("finish_at", null)
-                .append("start_at", null)
-                .append("answers", new byte[0]);
+                if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                        students, "_id", studentId
+                ) != -1)
+                    continue;
 
-        if ((boolean) quiz.getOrDefault("permute", false))
-            stdDoc.put("question_indices", new ArrayList<>());
+                Document stdDoc = new Document("_id", studentId)
+                        .append("paid", paid)
+                        .append("register_at", System.currentTimeMillis())
+                        .append("finish_at", null)
+                        .append("start_at", null)
+                        .append("answers", new byte[0]);
 
-        students.add(stdDoc);
+                if ((boolean) quiz.getOrDefault("permute", false))
+                    stdDoc.put("question_indices", new ArrayList<>());
 
-        return stdDoc;
-        //todo : send notif
+                students.add(stdDoc);
+                iryscQuizRepository.replaceOne(
+                        quizId, quiz
+                );
+
+                //todo : send notif
+            } catch (Exception ignore) {
+            }
+        }
     }
 
     @Override
@@ -346,9 +397,9 @@ public class RegularQuizController extends QuizAbstract {
 
                 for (QuestionStat aStudentsStat : studentsStat) {
                     status = aStudentsStat.doCorrect(question, idx);
-                    if(status == 0)
+                    if (status == 0)
                         whites++;
-                    else if(status == 1)
+                    else if (status == 1)
                         corrects++;
                     else
                         incorrects++;
@@ -447,7 +498,7 @@ public class RegularQuizController extends QuizAbstract {
 
             ArrayList<ObjectId> studentIds = new ArrayList<>();
 
-            for(QuestionStat itr : studentsStat)
+            for (QuestionStat itr : studentsStat)
                 studentIds.add(itr.id);
 
             studentsData = userRepository.findByIds(
@@ -456,7 +507,7 @@ public class RegularQuizController extends QuizAbstract {
 
             initTarazRankingLists();
 
-            for(ObjectId subjectId : subjectsTarazRanking.keySet()) {
+            for (ObjectId subjectId : subjectsTarazRanking.keySet()) {
                 List<TarazRanking> allTarazRanking = subjectsTarazRanking.get(subjectId);
                 calcStateRanking(allTarazRanking, true, subjectId);
                 calcCountryRanking(allTarazRanking, true, subjectId);
@@ -464,7 +515,7 @@ public class RegularQuizController extends QuizAbstract {
                 calcSchoolRanking(allTarazRanking, true, subjectId);
             }
 
-            for(ObjectId lessonId : lessonsTarazRanking.keySet()) {
+            for (ObjectId lessonId : lessonsTarazRanking.keySet()) {
                 List<TarazRanking> allTarazRanking = lessonsTarazRanking.get(lessonId);
                 calcStateRanking(allTarazRanking, false, lessonId);
                 calcCountryRanking(allTarazRanking, false, lessonId);
@@ -478,27 +529,27 @@ public class RegularQuizController extends QuizAbstract {
 
             int k = 0;
 
-            for(QuestionStat itr : studentsStat) {
+            for (QuestionStat itr : studentsStat) {
 
                 ObjectId cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
                 ObjectId schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
                 ObjectId stateId;
 
-                if(statesDic.containsKey(cityId))
+                if (statesDic.containsKey(cityId))
                     stateId = statesDic.get(cityId);
                 else {
                     stateId = cityRepository.findById(cityId).getObjectId("state_id");
                     statesDic.put(cityId, stateId);
                 }
 
-                for(ObjectId oId : itr.subjectTaraz.keySet()) {
+                for (ObjectId oId : itr.subjectTaraz.keySet()) {
 
                     TarazRanking t = new TarazRanking(
                             schoolId, cityId, stateId,
                             itr.subjectTaraz.get(oId)
                     );
 
-                    if(subjectsTarazRanking.containsKey(oId))
+                    if (subjectsTarazRanking.containsKey(oId))
                         subjectsTarazRanking.get(oId).add(t);
                     else
                         subjectsTarazRanking.put(oId, new ArrayList<>() {{
@@ -506,14 +557,14 @@ public class RegularQuizController extends QuizAbstract {
                         }});
                 }
 
-                for(ObjectId oId : itr.lessonTaraz.keySet()) {
+                for (ObjectId oId : itr.lessonTaraz.keySet()) {
 
                     TarazRanking t = new TarazRanking(
                             schoolId, cityId, stateId,
                             itr.lessonTaraz.get(oId)
                     );
 
-                    if(lessonsTarazRanking.containsKey(oId))
+                    if (lessonsTarazRanking.containsKey(oId))
                         lessonsTarazRanking.get(oId).add(t);
                     else
                         lessonsTarazRanking.put(oId, new ArrayList<>() {{
@@ -527,16 +578,16 @@ public class RegularQuizController extends QuizAbstract {
 
         private void calcSchoolRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
 
-            for(TarazRanking t : allTarazRanking) {
+            for (TarazRanking t : allTarazRanking) {
 
-                if(t.schoolRank != -1)
+                if (t.schoolRank != -1)
                     continue;
 
                 ObjectId wantedSchoolId = t.schoolId;
 
                 List<TarazRanking> filterSorted = new ArrayList<>();
-                for(TarazRanking ii : allTarazRanking) {
-                    if(!ii.schoolId.equals(wantedSchoolId))
+                for (TarazRanking ii : allTarazRanking) {
+                    if (!ii.schoolId.equals(wantedSchoolId))
                         continue;
                     filterSorted.add(ii);
                 }
@@ -547,7 +598,7 @@ public class RegularQuizController extends QuizAbstract {
                 int oldTaraz = -1;
                 int skip = 1;
 
-                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
 
                     if (oldTaraz != filterSorted.get(i).taraz) {
                         rank += skip;
@@ -561,8 +612,8 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             int k = 0;
-            for(QuestionStat itr : studentsStat) {
-                if(isForSubject)
+            for (QuestionStat itr : studentsStat) {
+                if (isForSubject)
                     itr.subjectSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
                 else
                     itr.lessonSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
@@ -572,16 +623,16 @@ public class RegularQuizController extends QuizAbstract {
 
         private void calcStateRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
 
-            for(TarazRanking t : allTarazRanking) {
+            for (TarazRanking t : allTarazRanking) {
 
-                if(t.stateRank != -1)
+                if (t.stateRank != -1)
                     continue;
 
                 ObjectId wantedStateId = t.stateId;
 
                 List<TarazRanking> filterSorted = new ArrayList<>();
-                for(TarazRanking ii : allTarazRanking) {
-                    if(!ii.stateId.equals(wantedStateId))
+                for (TarazRanking ii : allTarazRanking) {
+                    if (!ii.stateId.equals(wantedStateId))
                         continue;
                     filterSorted.add(ii);
                 }
@@ -592,7 +643,7 @@ public class RegularQuizController extends QuizAbstract {
                 int oldTaraz = -1;
                 int skip = 1;
 
-                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
 
                     if (oldTaraz != filterSorted.get(i).taraz) {
                         rank += skip;
@@ -606,8 +657,8 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             int k = 0;
-            for(QuestionStat itr : studentsStat) {
-                if(isForSubject)
+            for (QuestionStat itr : studentsStat) {
+                if (isForSubject)
                     itr.subjectStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
                 else
                     itr.lessonStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
@@ -617,17 +668,17 @@ public class RegularQuizController extends QuizAbstract {
 
         private void calcCityRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
 
-            for(TarazRanking t : allTarazRanking) {
+            for (TarazRanking t : allTarazRanking) {
 
-                if(t.cityRank != -1)
+                if (t.cityRank != -1)
                     continue;
 
                 ObjectId wantedStateId = t.cityId;
 
                 List<TarazRanking> filterSorted = new ArrayList<>();
-                for(TarazRanking ii : allTarazRanking) {
+                for (TarazRanking ii : allTarazRanking) {
 
-                    if(!ii.cityId.equals(wantedStateId))
+                    if (!ii.cityId.equals(wantedStateId))
                         continue;
 
                     filterSorted.add(ii);
@@ -639,7 +690,7 @@ public class RegularQuizController extends QuizAbstract {
                 int oldTaraz = -1;
                 int skip = 1;
 
-                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
 
                     if (oldTaraz != filterSorted.get(i).taraz) {
                         rank += skip;
@@ -653,8 +704,8 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             int k = 0;
-            for(QuestionStat itr : studentsStat) {
-                if(isForSubject)
+            for (QuestionStat itr : studentsStat) {
+                if (isForSubject)
                     itr.subjectCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
                 else
                     itr.lessonCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
@@ -664,9 +715,9 @@ public class RegularQuizController extends QuizAbstract {
 
         private void calcCountryRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
 
-            for(TarazRanking t : allTarazRanking) {
+            for (TarazRanking t : allTarazRanking) {
 
-                if(t.countryRank != -1)
+                if (t.countryRank != -1)
                     continue;
 
                 List<TarazRanking> filterSorted =
@@ -678,7 +729,7 @@ public class RegularQuizController extends QuizAbstract {
                 int oldTaraz = -1;
                 int skip = 1;
 
-                for(int i = filterSorted.size() - 1; i >= 0; i--) {
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
 
                     if (oldTaraz != filterSorted.get(i).taraz) {
                         rank += skip;
@@ -692,8 +743,8 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             int k = 0;
-            for(QuestionStat itr : studentsStat) {
-                if(isForSubject)
+            for (QuestionStat itr : studentsStat) {
+                if (isForSubject)
                     itr.subjectCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
                 else
                     itr.lessonCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
@@ -703,12 +754,12 @@ public class RegularQuizController extends QuizAbstract {
 
         private void prepareForCityRanking() {
 
-            for(Document itr : studentsData) {
+            for (Document itr : studentsData) {
 
                 ObjectId cityId = itr.get("city", Document.class).getObjectId("_id");
                 ObjectId stateId;
 
-                if(states.containsKey(cityId))
+                if (states.containsKey(cityId))
                     stateId = states.get(cityId);
                 else {
                     Document city = cityRepository.findById(cityId);
@@ -716,7 +767,7 @@ public class RegularQuizController extends QuizAbstract {
                     states.put(cityId, stateId);
                 }
 
-                if(
+                if (
                         !stateRanking.containsKey(stateId)
                 ) {
                     stateRanking.put(stateId, 0);
@@ -724,7 +775,7 @@ public class RegularQuizController extends QuizAbstract {
                     stateSkip.put(stateId, 1);
                 }
 
-                if(
+                if (
                         !cityRanking.containsKey(cityId)
                 ) {
                     cityRanking.put(cityId, 0);
@@ -759,24 +810,22 @@ public class RegularQuizController extends QuizAbstract {
                 } else
                     skip++;
 
-                if(stateOldT.get(stateId) != currTaraz) {
+                if (stateOldT.get(stateId) != currTaraz) {
                     stateRanking.put(stateId, stateRanking.get(stateId) + stateSkip.get(stateId));
                     stateSkip.put(stateId, 1);
-                }
-                else
+                } else
                     stateSkip.put(stateId, stateSkip.get(stateId) + 1);
 
-                if(cityOldT.get(cityId) != currTaraz) {
+                if (cityOldT.get(cityId) != currTaraz) {
                     cityRanking.put(cityId, cityRanking.get(cityId) + citySkip.get(cityId));
                     citySkip.put(cityId, 1);
-                }
-                else
+                } else
                     citySkip.put(cityId, citySkip.get(cityId) + 1);
 
                 rankingList.add(
                         new Document("_id", aStudentsStat.id)
                                 .append("stat", encodeFormatGeneral(
-                                        (int)currTaraz, rank, stateRanking.get(stateId), cityRanking.get(cityId)
+                                        (int) currTaraz, rank, stateRanking.get(stateId), cityRanking.get(cityId)
                                 ))
                 );
                 stateRanking.put(stateId, stateRanking.get(stateId) + 1);
@@ -789,7 +838,7 @@ public class RegularQuizController extends QuizAbstract {
         }
 
         private void calcSubjectsStats() {
-            for(QuestionStat itr : subjectsStat) {
+            for (QuestionStat itr : subjectsStat) {
                 subjectsGeneralStat.add(
                         new Document("avg", itr.mean)
                                 .append("max", itr.max)
@@ -801,7 +850,7 @@ public class RegularQuizController extends QuizAbstract {
         }
 
         private void calcLessonsStats() {
-            for(QuestionStat itr : lessonsStat) {
+            for (QuestionStat itr : lessonsStat) {
                 lessonsGeneralStat.add(
                         new Document("avg", itr.mean)
                                 .append("max", itr.max)

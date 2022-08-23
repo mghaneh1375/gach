@@ -430,6 +430,7 @@ public class UserController {
 
         JSONObject jsonObject = new JSONObject()
                 .put("id", userId.toString())
+                .put("money", user.getInteger("money"))
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
                 .put("NID", user.getString("NID"))

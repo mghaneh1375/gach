@@ -38,6 +38,9 @@ public class TashrihiQuizController extends QuizAbstract {
             "paperTheme", "database", "minusMark"
     };
 
+    public int calcLen(Document quiz) {
+        return 0;
+    }
 
     public static String create(ObjectId userId, JSONObject jsonObject) {
 
@@ -463,29 +466,30 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     @Override
-    Document registry(Document student, Document quiz, int paid) {
+    void registry(ObjectId studentId, String phone, String mail,
+                  ArrayList<ObjectId> quizIds, int paid) {
 
-        List<Document> students = quiz.getList("students", Document.class);
-
-        if (searchInDocumentsKeyValIdx(
-                students, "_id", student.getObjectId("_id")
-        ) != -1)
-            return null;
-
-        Document stdDoc = new Document("_id", student.getObjectId("_id"))
-                .append("paid", paid)
-                .append("register_at", System.currentTimeMillis())
-                .append("finish_at", null)
-                .append("start_at", null)
-                .append("answers", new ArrayList<>())
-                .append("all_marked", false);
-
-        if ((boolean) quiz.getOrDefault("permute", false))
-            stdDoc.put("question_indices", new ArrayList<>());
-
-        students.add(stdDoc);
-
-        return stdDoc;
+//        List<Document> students = quiz.getList("students", Document.class);
+//
+//        if (searchInDocumentsKeyValIdx(
+//                students, "_id", studentId
+//        ) != -1)
+//            return null;
+//
+//        Document stdDoc = new Document("_id", studentId)
+//                .append("paid", paid)
+//                .append("register_at", System.currentTimeMillis())
+//                .append("finish_at", null)
+//                .append("start_at", null)
+//                .append("answers", new ArrayList<>())
+//                .append("all_marked", false);
+//
+//        if ((boolean) quiz.getOrDefault("permute", false))
+//            stdDoc.put("question_indices", new ArrayList<>());
+//
+//        students.add(stdDoc);
+//
+//        return stdDoc;
     }
 
     @Override
@@ -493,13 +497,13 @@ public class TashrihiQuizController extends QuizAbstract {
 
     }
 
-    @Override
-    String buy(Document student, Document quiz) {
-        return null;
-    }
+//    @Override
+//    String buy(Document student, Document quiz) {
+//        return null;
+//    }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin) {
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy) {
         return null;
     }
 

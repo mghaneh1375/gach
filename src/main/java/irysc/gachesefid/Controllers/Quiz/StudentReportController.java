@@ -1,15 +1,25 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import irysc.gachesefid.Models.GeneralKindQuiz;
+import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.EnumValidatorImp;
+import org.bson.BSON;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class StudentReportController {
 
@@ -64,5 +74,50 @@ public class StudentReportController {
         return jsonObject.put("status", "ok").put("questions", jsonArray).toString();
     }
 
+    public static String myQuizzes(ObjectId userId, String generalMode,
+                                   String status) {
+
+        if(generalMode != null &&
+                !EnumValidatorImp.isValid(generalMode, GeneralKindQuiz.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        JSONArray data = new JSONArray();
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(in("students._id", userId));
+        if(status != null) {
+
+            long curr = System.currentTimeMillis();
+
+            if(status.equalsIgnoreCase("finished"))
+                filters.add(lt("end", curr));
+            else if(status.equalsIgnoreCase("inProgress"))
+                filters.add(
+                        and(
+                                lte("start", curr),
+                                gt("end", curr)
+                        )
+                );
+            else
+                filters.add(gt("start", curr));
+        }
+
+        if(generalMode == null ||
+                generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
+        ) {
+            ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
+            QuizAbstract quizAbstract = new RegularQuizController();
+
+            for(Document quiz : quizzes) {
+                data.put(
+                        quizAbstract.convertDocToJSON(
+                                quiz, true, false, true
+                        )
+                );
+            }
+
+        }
+
+        return generateSuccessMsg("data", data);
+    }
 
 }

@@ -13,6 +13,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
@@ -378,7 +379,7 @@ public class QuizController {
                     else
                         quizAbstract = new TashrihiQuizController();
 
-                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false);
+                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false, false);
                     if ((quiz.containsKey("end_registry") &&
                             quiz.getLong("end_registry") > curr) ||
                             (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
@@ -392,28 +393,12 @@ public class QuizController {
                     quizzesDoc.put(quizDoc);
                 }
 
-                Document off = offcodeRepository.findOne(and(
-                        exists("code", false),
-                        eq("user_id", userId),
-                        eq("used", false),
-                        gt("expire_at", curr),
-                        or(
-                                eq("section", OffCodeSections.ALL.getName()),
-                                eq("section", OffCodeSections.GACH_EXAM.getName())
-                        )
-                ), null, Sorts.descending("amount"));
-
                 jsonObject
                         .put("quizzes", quizzesDoc.length())
                         .put("registrable", registrable)
                         .put("totalPrice", totalPrice)
                         .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
                         .put("quizzesDoc", quizzesDoc);
-
-                if (off != null)
-                    data.put("off", new JSONObject()
-                            .put("type", off.getString("type"))
-                    );
             } else {
                 jsonObject
                         .put("quizzes", quizzes.size());
@@ -423,6 +408,24 @@ public class QuizController {
         }
 
         if (!isAdmin) {
+
+            Document off = offcodeRepository.findOne(and(
+                    exists("code", false),
+                    eq("user_id", userId),
+                    eq("used", false),
+                    gt("expire_at", curr),
+                    or(
+                            eq("section", OffCodeSections.ALL.getName()),
+                            eq("section", OffCodeSections.GACH_EXAM.getName())
+                    )
+            ), null, Sorts.descending("amount"));
+
+            if (off != null)
+                data.put("off", new JSONObject()
+                        .put("type", off.getString("type"))
+                        .put("amount", off.getInteger("amount"))
+                );
+
             ArrayList<Document> docs = iryscQuizRepository.find(
                     and(
                             nin("_id", fetched),
@@ -457,7 +460,7 @@ public class QuizController {
                     }
                 }
                 jsonArray.put(quizController.convertDocToJSON(
-                        doc, true, false
+                        doc, true, false, false
                 ).put("type", "quiz"));
             }
             data.put("tags", tags);
@@ -489,7 +492,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin, false));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -621,7 +624,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -669,11 +672,11 @@ public class QuizController {
                     continue;
                 }
 
-                Document stdDoc = quizAbstract.registry(student, quiz, paid);
-                if (stdDoc != null)
-                    addedItems.put(convertStudentDocToJSON(stdDoc, student,
-                            null, null, null, null)
-                    );
+//                Document stdDoc = quizAbstract.registry(student, quiz, paid);
+//                if (stdDoc != null)
+//                    addedItems.put(convertStudentDocToJSON(stdDoc, student,
+//                            null, null, null, null)
+//                    );
             }
 
             if (addedItems.length() > 0) {
@@ -756,7 +759,7 @@ public class QuizController {
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
-                        quizAbstract.convertDocToJSON(quiz, false, true)
+                        quizAbstract.convertDocToJSON(quiz, false, true, false)
                 );
             }
 
@@ -870,14 +873,36 @@ public class QuizController {
 
     public static String buy(ObjectId userId, ObjectId packageId,
                              JSONArray ids, int money,
-                             String phone, String mail) {
+                             String phone, String mail,
+                             String offcode) {
 
         Document quizPackage = null;
+        Document off = null;
         long curr = System.currentTimeMillis();
 
         if(packageId != null) {
             quizPackage = packageRepository.findById(packageId);
             if(quizPackage == null || quizPackage.getLong("expire_at") < curr)
+                return JSON_NOT_VALID_PARAMS;
+        }
+
+        if(offcode != null) {
+
+            off = offcodeRepository.findOne(
+                    and(
+                            exists("code"),
+                            eq("code", offcode),
+                            eq("user_id", userId),
+                            eq("used", false),
+                            or(
+                                    eq("section", OffCodeSections.ALL.getName()),
+                                    eq("section", OffCodeSections.GACH_EXAM.getName())
+                            ),
+                            gt("expire_at", curr)
+                    ), null
+            );
+
+            if(off == null)
                 return JSON_NOT_VALID_PARAMS;
         }
 
@@ -887,12 +912,17 @@ public class QuizController {
             if (!ObjectId.isValid(ids.getString(i)))
                 return JSON_NOT_VALID_PARAMS;
 
-            quizIds.add(new ObjectId(ids.getString(i)));
+            ObjectId quizId = new ObjectId(ids.getString(i));
+            if(quizPackage != null &&
+                    !quizPackage.getList("quizzes", ObjectId.class).contains(quizId))
+                return JSON_NOT_VALID_PARAMS;
+
+            quizIds.add(quizId);
         }
 
         ArrayList<Document> quizzes = iryscQuizRepository.find(
                 and(
-                        in("_id", ids),
+                        in("_id", quizIds),
                         eq("visibility", true),
                         lt("start_registry", curr),
                         nin("students._id", userId),
@@ -906,103 +936,137 @@ public class QuizController {
         if (quizzes.size() != quizIds.size())
             return JSON_NOT_VALID_PARAMS;
 
-
-        return buy(userId, phone, mail, money, quizzes);
+        return buy(userId, phone, mail, money,
+                quizPackage, off, quizzes
+        );
     }
 
 
-    private static String buy(ObjectId studentId, String phone, String mail,
-                              int money, ArrayList<Document> quizzes
+    private static String buy(ObjectId studentId, String phone,
+                              String mail, int money,
+                              Document quizPackage,
+                              Document off, ArrayList<Document> quizzes
     ) {
 
-//        if (quiz.containsKey("end_registry") &&
-//                quiz.getLong("end_registry") < System.currentTimeMillis())
-//            return irysc.gachesefid.Utility.Utility.generateErr(
-//                    "زمان ثبت نام در آزمون موردنظر گذشته است."
-//            );
-
-//        ObjectId userId = user.getObjectId("_id");
-//
-//        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-//                quiz.getList("students", Document.class), "_id", userId
-//        ) != -1)
-//            return irysc.gachesefid.Utility.Utility.generateErr(
-//                    "شما در آزمون موردنظر ثبت نام کرده اید."
-//            );
-
+        long curr = System.currentTimeMillis();
         int totalPrice = 0;
 
         for(Document quiz : quizzes)
+            totalPrice += quiz.getInteger("price");
 
-
-        PairValue p = irysc.gachesefid.Controllers.Finance.Utilities.calcPrice(quiz.getInteger("price"),
-                money, studentId, OffCodeSections.GACH_EXAM.getName()
-        );
-
-        int price = (int) p.getKey();
-
-        if (price <= 100) {
-
-            new Thread(() -> {
-
-                registry(studentId, phone, mail, quiz, 0);
-
-                if (p.getValue() != null) {
-
-                    PairValue offcode = (PairValue) p.getValue();
-                    int finalAmount = (int) offcode.getValue();
-
-                    BasicDBObject update = new BasicDBObject("used", true)
-                            .append("used_at", System.currentTimeMillis())
-                            .append("used_section", OffCodeSections.GACH_EXAM.getName())
-                            .append("used_for", quiz.getObjectId("_id"))
-                            .append("amount", finalAmount);
-
-                    Document off = offcodeRepository.findOneAndUpdate(
-                            (ObjectId) offcode.getKey(),
-                            new BasicDBObject("$set", update)
-                    );
-
-                    if (off.getInteger("amount") != finalAmount) {
-
-                        Document newDoc = new Document("type", off.getString("type"))
-                                .append("amount", off.getInteger("amount") - finalAmount)
-                                .append("expire_at", off.getInteger("expire_at"))
-                                .append("section", off.getString("section"))
-                                .append("used", false)
-                                .append("created_at", System.currentTimeMillis())
-                                .append("user_id", studentId);
-
-                        offcodeRepository.insertOne(newDoc);
-                    }
-                }
-
-                transactionRepository.insertOne(
-                        new Document("user_id", studentId)
-                                .append("amount", 0)
-                                .append("created_at", System.currentTimeMillis())
-                                .append("status", "success")
-                                .append("for", OffCodeSections.GACH_EXAM.getName())
-                                .append("off_code", p.getValue() == null ? null : ((PairValue) p.getValue()).getKey())
-                );
-
-            }).start();
-
-            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                    "action", "success"
+        if(off == null) {
+            off = offcodeRepository.findOne(
+                    and(
+                            exists("code", false),
+                            eq("user_id", studentId),
+                            eq("used", false),
+                            or(
+                                    eq("section", OffCodeSections.ALL.getName()),
+                                    eq("section", OffCodeSections.GACH_EXAM.getName())
+                            ),
+                            gt("expire_at", curr)
+                    ), null
             );
         }
 
-        ObjectId transactionId = transactionRepository.insertOneWithReturnObjectId(
-                new Document("user_id", studentId)
-                        .append("amount", price)
-                        .append("created_at", System.currentTimeMillis())
-                        .append("status", "init")
-                        .append("for", OffCodeSections.GACH_EXAM.getName())
-                        .append("off_code", p.getValue() == null ? null : ((PairValue) p.getValue()).getKey())
-        );
+        int packageOff = 0;
+        boolean usePackageOff = false;
 
-        return irysc.gachesefid.Controllers.Finance.Utilities.goToPayment(price, studentId, transactionId);
+        if(quizPackage != null) {
+            if(quizzes.size() >= quizPackage.getInteger("min_select")) {
+                packageOff = quizPackage.getInteger("off_percent");
+                usePackageOff = true;
+            }
+        }
+
+        double offAmount = totalPrice * packageOff / 100.0;
+        double shouldPayDouble = totalPrice - offAmount;
+
+        if(off != null) {
+            offAmount +=
+                    off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
+                            shouldPayDouble * off.getInteger("amount") / 100.0 :
+                            off.getInteger("amount")
+            ;
+            shouldPayDouble = totalPrice - offAmount;
+        }
+
+        int shouldPay = (int) shouldPayDouble;
+
+        ArrayList<ObjectId> quizIds = new ArrayList<>();
+        for(Document quiz : quizzes)
+            quizIds.add(quiz.getObjectId("_id"));
+
+        if (shouldPay - money <= 100) {
+
+            int newUserMoney = money;
+
+            if(shouldPay > 100) {
+                newUserMoney -= Math.min(shouldPay, money);
+                Document user = userRepository.findById(studentId);
+                user.put("money", newUserMoney);
+                userRepository.replaceOne(studentId, user);
+            }
+
+            Document finalOff = off;
+            boolean finalUsePackageOff = usePackageOff;
+            new Thread(() -> {
+
+                new RegularQuizController()
+                        .registry(studentId, phone, mail, quizIds, 0);
+
+                if (finalOff != null) {
+                    BasicDBObject update = new BasicDBObject("used", true)
+                            .append("used_at", curr)
+                            .append("used_section", OffCodeSections.GACH_EXAM.getName())
+                            .append("used_for", quizIds);
+
+                    offcodeRepository.updateOne(
+                            finalOff.getObjectId("_id"),
+                            new BasicDBObject("$set", update)
+                    );
+                }
+
+                if(finalUsePackageOff) {
+                    quizPackage.put("buyers", quizPackage.getInteger("buyers") + 1);
+                    packageRepository.replaceOne(
+                            quizPackage.getObjectId("_id"), quizPackage
+                    );
+                }
+
+                Document doc = new Document("user_id", studentId)
+                        .append("amount", 0)
+                        .append("created_at", curr)
+                        .append("status", "success")
+                        .append("section", OffCodeSections.GACH_EXAM.getName())
+                        .append("products", quizIds);
+
+                if(finalOff != null)
+                    doc.append("off_code", finalOff.getObjectId("_id"));
+
+                transactionRepository.insertOne(doc);
+            }).start();
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "action", "success",
+                    new PairValue("url", newUserMoney)
+            );
+        }
+
+        Document doc =
+                new Document("user_id", studentId)
+                        .append("amount", shouldPay - money)
+                        .append("created_at", curr)
+                        .append("status", "init")
+                        .append("products", quizIds)
+                        .append("section", OffCodeSections.GACH_EXAM.getName())
+                        .append("off_code", off == null ? null : off.getObjectId("_id"));
+
+        if(quizPackage != null)
+            doc.put("package_id", quizPackage.getObjectId("_id"));
+
+        ObjectId transactionId = transactionRepository.insertOneWithReturnObjectId(doc);
+        return irysc.gachesefid.Controllers.Finance.Utilities.goToPayment(shouldPay - money, studentId, transactionId);
     }
 
 
@@ -1662,7 +1726,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin));
+            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false));
         }
 
         return generateSuccessMsg("data", new JSONObject()

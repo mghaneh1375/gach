@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Quiz.QuizController;
+import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -47,29 +48,46 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
-    @PostMapping(path = {"buy", "buy/{packageId}"})
+    @GetMapping(value = "myQuizzes")
+    @ResponseBody
+    public String myQuizzes(HttpServletRequest request,
+                      @RequestParam(required = false) String mode,
+                      @RequestParam(required = false) String status
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentReportController.myQuizzes(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                mode, status
+        );
+    }
+
+    @PostMapping(path = "buy")
     @ResponseBody
     public String buy(HttpServletRequest request,
-                      @PathVariable(required = false) String packageId,
                       @RequestBody @StrongJSONConstraint(
                               params = {"ids"},
-                              paramsType = JSONArray.class)
+                              paramsType = {JSONArray.class},
+                              optionals = {"packageId", "offcode"},
+                              optionalsType = {ObjectId.class, String.class}
+                      )
                       @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
         Document user = getUser(request);
 
-        if(packageId != null && !ObjectId.isValid(packageId))
-            return JSON_NOT_VALID_ID;
+        JSONObject jsonObject = new JSONObject(jsonStr);
 
         return QuizController.buy(
                 user.getObjectId("_id"),
-                packageId != null ? new ObjectId(packageId) : null,
-                new JSONObject(jsonStr).getJSONArray("ids"),
+                jsonObject.has("packageId") ?
+                        new ObjectId(jsonObject.getString("packageId")) : null,
+                jsonObject.getJSONArray("ids"),
                 user.getInteger("money"),
                 user.getString("phone"),
-                user.getString("mail")
+                user.getString("mail"),
+                jsonObject.has("offcode") ?
+                        jsonObject.getString("offcode") : null
         );
     }
+
 
 
 }

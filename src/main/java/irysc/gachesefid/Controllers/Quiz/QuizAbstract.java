@@ -18,12 +18,15 @@ import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
 public abstract class QuizAbstract {
 
-    abstract Document registry(ObjectId studentId, String phone, String mail,
-                               Document quiz, int paid);
+    abstract void registry(ObjectId studentId, String phone,
+                               String mail, ArrayList<ObjectId> quizIds,
+                               int paid);
+
+    abstract int calcLen(Document quiz);
 
     abstract void quit(Document student, Document quiz);
 
-    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin);
+    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy);
 
     class QuestionStat {
 
