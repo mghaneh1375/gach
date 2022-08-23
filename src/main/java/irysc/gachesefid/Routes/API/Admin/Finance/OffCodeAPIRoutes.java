@@ -9,6 +9,7 @@ import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -32,26 +33,6 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @RequestMapping(path = "/api/admin/off")
 @Validated
 public class OffCodeAPIRoutes extends Router {
-
-    @PostMapping(value = "/store")
-    @ResponseBody
-    public String store(HttpServletRequest request,
-                        @RequestBody @StrongJSONConstraint(
-                                params = {
-                                        "type", "expireAt",
-                                        "section", "amount"
-                                },
-                                paramsType = {
-                                        String.class, String.class,
-                                        String.class, Positive.class
-                                },
-                                optionals = {"userId"},
-                                optionalsType = {String.class}
-                        ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
-        return OffCodeController.store(new JSONObject(json));
-    }
 
     @PutMapping(value = "/update/{id}")
     @ResponseBody
@@ -82,10 +63,10 @@ public class OffCodeAPIRoutes extends Router {
                                         Positive.class
                                 },
                                 optionals = {
-                                        "section"
+                                        "section", "code"
                                 },
                                 optionalsType = {
-                                        String.class
+                                        String.class, String.class
                                 }
 
                         ) @NotBlank String json
@@ -98,6 +79,7 @@ public class OffCodeAPIRoutes extends Router {
 
         getAdminPrivilegeUserVoid(request);
         return OffCodeController.store(file,
+                jsonObject.getString("code"),
                 jsonObject.getString("type"),
                 jsonObject.getInt("amount"),
                 jsonObject.getLong("expireAt"),
@@ -110,32 +92,36 @@ public class OffCodeAPIRoutes extends Router {
     @ResponseBody
     public String storeJSONArr(HttpServletRequest request,
                                @RequestBody @StrongJSONConstraint(
-                                       params = {"items", "expireAt",
+                                       params = {"expireAt",
                                                "type", "amount"
                                        },
-                                       paramsType = {JSONArray.class, Long.class,
+                                       paramsType = {Long.class,
                                                String.class, Positive.class
                                        },
                                        optionals = {
-                                               "section"
+                                               "items", "section", "code",
+                                               "counter", "isPublic"
                                        },
                                        optionalsType = {
-                                               String.class
+                                               JSONArray.class,
+                                               String.class, String.class,
+                                               Positive.class, Boolean.class
                                        }
 
                                ) @NotBlank String json
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        JSONObject jsonObject = new JSONObject(json);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
-        return OffCodeController.store(
-                jsonObject.getJSONArray("items"),
-                jsonObject.getString("type"),
-                jsonObject.getInt("amount"),
-                jsonObject.getLong("expireAt"),
-                jsonObject.has("section") ?
-                        jsonObject.getString("section") :
-                        OffCodeSections.ALL.getName()
+        return OffCodeController.store(jsonObject
+//                jsonObject.getJSONArray("items"),
+//                jsonObject.getString("code"),
+//                jsonObject.getString("type"),
+//                jsonObject.getInt("amount"),
+//                jsonObject.getLong("expireAt"),
+//                jsonObject.has("section") ?
+//                        jsonObject.getString("section") :
+//                        OffCodeSections.ALL.getName()
         );
     }
 

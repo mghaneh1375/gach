@@ -84,71 +84,9 @@ public class OffCodeController {
         return JSON_OK;
     }
 
-    public static String store(JSONObject jsonObject) {
-
-        if (!DateValidator.isValid(jsonObject.getString("expireAt")))
-            return JSON_NOT_VALID_PARAMS;
-
-        String type = jsonObject.getString("type");
-        if (!EnumValidatorImp.isValid(type, OffCodeTypes.class))
-            return JSON_NOT_VALID_PARAMS;
-
-        int amount = jsonObject.getInt("amount");
-        if (type.equals("percent") && amount > 100)
-            return JSON_NOT_VALID_PARAMS;
-
-        String section = jsonObject.getString("section");
-
-        if (!EnumValidatorImp.isValid(section, OffCodeSections.class))
-            return JSON_NOT_VALID_PARAMS;
-
-        int d = Utility.convertStringToDate(jsonObject.getString("expireAt"));
-        if (Utility.getToday() > d)
-            return JSON_NOT_VALID_PARAMS;
-
-        Document newDoc = new Document("type", type)
-                .append("amount", amount)
-                .append("expire_at", d)
-                .append("section", section)
-                .append("used", false)
-                .append("created_at", System.currentTimeMillis());
-
-        Document user = null;
-
-        if (jsonObject.has("userId")) {
-
-            if (!ObjectIdValidator.isValid(jsonObject.getString("userId")))
-                return JSON_NOT_VALID_PARAMS;
-
-            ObjectId userId = new ObjectId(jsonObject.getString("userId"));
-            user = userRepository.findById(userId);
-            if (user == null)
-                return JSON_NOT_VALID_PARAMS;
-
-            newDoc.append("user_id", userId);
-
-        }
-
-        offcodeRepository.insertOne(newDoc);
-
-        if (user != null) {
-            AlertController.store(
-                    newDoc.getObjectId("user_id"),
-                    createOffCode(amount, type, section,
-                            jsonObject.getString("expireAt")), false,
-                    new PairValue("createOffCode", user.getString("mail")),
-                    Utility.formatPrice(amount) + "__" + jsonObject.getString("expireAt"),
-                    user.getString("name_fa") + " " + user.getString("last_name_fa"),
-                    "کد تخفیف"
-            );
-        }
-
-        return JSON_OK;
-    }
-
 
     public static String store(MultipartFile file,
-                               String type, int amount,
+                               String code, String type, int amount,
                                long expireAt, String section) {
 
         String err = preStoreCheck(type, amount, expireAt, section);
@@ -190,13 +128,44 @@ public class OffCodeController {
         return addAll(jsonArray, type, amount, expireAt, section, excepts);
     }
 
-    public static String store(JSONArray jsonArray,
-                               String type, int amount,
-                               long expireAt, String section) {
+    public static String store(JSONObject jsonObject) {
+
+        String type = jsonObject.getString("type");
+        int amount = jsonObject.getInt("amount");
+        long expireAt = jsonObject.getLong("expireAt");
+        String section = jsonObject.has("section") ?
+                jsonObject.getString("section") :
+                OffCodeSections.ALL.getName();
+
+        String code = jsonObject.has("code") ? jsonObject.getString("code") : null;
+
+        boolean isPublic = jsonObject.has("isPublic") &&
+                jsonObject.getBoolean("isPublic") &&
+                !jsonObject.has("items") &&
+                !jsonObject.has("counter");
+
+        if(isPublic && code == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        int counter = jsonObject.has("counter") && !jsonObject.has("items") ? jsonObject.getInt("counter") : -1;
+
+        JSONArray jsonArray = jsonObject.getJSONArray("items");
 
         String err = preStoreCheck(type, amount, expireAt, section);
         if(err != null)
             return err;
+
+        if(isPublic) {
+            offcodeRepository.insertOne(
+                    new Document("type", type)
+                        .append("amount", amount)
+                        .append("expire_at", expireAt)
+                        .append("section", section)
+                        .append("code", code)
+                        .append("is_public", true)
+                        .append("created_at", System.currentTimeMillis())
+            );
+        }
 
         return addAll(jsonArray, type, amount, expireAt, section, new JSONArray());
     }

@@ -24,8 +24,8 @@ public class Utility {
         if (!EnumValidatorImp.isValid(type, OffCodeTypes.class))
             return JSON_NOT_VALID_PARAMS;
 
-        if (type.equals("percent") && amount > 100)
-            return generateErr("مقدار تخفیف باید کمتر از ۱۰۰ درصد باشد.");
+        if (type.equals("percent") && (amount > 100 || amount < 5))
+            return generateErr("مقدار تخفیف باید کمتر از ۱۰۰ و بیشتر از 5 درصد باشد.");
 
         if (!EnumValidatorImp.isValid(section, OffCodeSections.class))
             return JSON_NOT_VALID_PARAMS;
@@ -42,6 +42,7 @@ public class Utility {
                          JSONArray excepts) {
 
         JSONArray added = new JSONArray();
+        long curr = System.currentTimeMillis();
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
@@ -65,7 +66,7 @@ public class Utility {
                     .append("section", section)
                     .append("user_id", user.getObjectId("_id"))
                     .append("used", false)
-                    .append("created_at", System.currentTimeMillis());
+                    .append("created_at", curr);
 
             offcodeRepository.insertOne(newDoc);
             added.put(convertDocToJSON(Document.parse(newDoc.toJson()).append("user", user)));
