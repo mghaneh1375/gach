@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance.Off;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.AlertController;
+import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.DB.OffcodeRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Excel;
@@ -75,13 +76,17 @@ public class OffCodeController {
         else
             d = off.getLong("expireAt");
 
+        if(jsonObject.has("code"))
+            off.put("code", jsonObject.getString("code"));
+
         off.put("amount", amount);
         off.put("type", type);
         off.put("expire_at", d);
         off.put("section", section);
 
         offcodeRepository.replaceOne(id, off);
-        return JSON_OK;
+
+        return generateSuccessMsg("data", convertDocToJSON(off));
     }
 
 
@@ -147,26 +152,28 @@ public class OffCodeController {
         if(isPublic && code == null)
             return JSON_NOT_VALID_PARAMS;
 
-        int counter = jsonObject.has("counter") && !jsonObject.has("items") ? jsonObject.getInt("counter") : -1;
-
-        JSONArray jsonArray = jsonObject.getJSONArray("items");
-
         String err = preStoreCheck(type, amount, expireAt, section);
         if(err != null)
             return err;
 
         if(isPublic) {
-            offcodeRepository.insertOne(
-                    new Document("type", type)
-                        .append("amount", amount)
-                        .append("expire_at", expireAt)
-                        .append("section", section)
-                        .append("code", code)
-                        .append("is_public", true)
-                        .append("created_at", System.currentTimeMillis())
-            );
+            Document newDoc = new Document("type", type)
+                    .append("amount", amount)
+                    .append("expire_at", expireAt)
+                    .append("section", section)
+                    .append("code", code)
+                    .append("students", new ArrayList<>())
+                    .append("is_public", true)
+                    .append("created_at", System.currentTimeMillis());
+
+            offcodeRepository.insertOne(newDoc);
+            return returnAddResponse(null, new JSONArray().put(convertDocToJSON(newDoc)));
         }
 
+        if(!jsonObject.has("items"))
+            return JSON_NOT_VALID_PARAMS;
+
+        JSONArray jsonArray = jsonObject.getJSONArray("items");
         return addAll(jsonArray, type, amount, expireAt, section, new JSONArray());
     }
 
@@ -178,12 +185,39 @@ public class OffCodeController {
                               String dateEndLimit,
                               Integer minValue,
                               Integer maxValue,
-                              String type) {
+                              String type,
+                              Boolean isPublic,
+                              String code,
+                              String withCode) {
 
         ArrayList<Bson> constraints = new ArrayList<>();
 
         if (userId != null)
             constraints.add(eq("user_id", userId));
+
+        if (code != null)
+            constraints.add(and(
+                    exists("code"),
+                    eq("code", code)
+            ));
+
+        if(withCode != null) {
+            constraints.add(
+                    exists("code", withCode.equalsIgnoreCase("withCode"))
+            );
+        }
+
+        if (isPublic != null)
+            constraints.add(isPublic ?
+                    and(
+                            exists("is_public"),
+                            eq("is_public", true)
+                    ) :
+                    or(
+                            exists("is_public", false),
+                            eq("is_public", false)
+                    )
+        );
 
         if (section != null)
             constraints.add(eq("section", section));
@@ -237,13 +271,8 @@ public class OffCodeController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document off : offs) {
-
-            if (!off.containsKey("user") || off.get("user") == null)
-                continue;
-
+        for (Document off : offs)
             jsonArray.put(convertDocToJSON(off));
-        }
 
         return Utility.generateSuccessMsg("data", jsonArray);
     }
@@ -268,23 +297,37 @@ public class OffCodeController {
         Document off = offcodeRepository.findOne(and(
                 exists("code"),
                 eq("code", code),
-                eq("user_id", userId)
+                or(
+                        and(
+                                exists("user_id"),
+                                eq("user_id", userId)
+                        ),
+                        and(
+                                exists("is_public"),
+                                eq("is_public", true)
+                        )
+                )
         ), null);
 
         if(off == null)
             return generateErr("کد تخفیف موردنظر اشتباه است.");
 
-        if(off.getBoolean("used"))
+        if(off.containsKey("used") && off.getBoolean("used"))
             return generateErr("شما قبلا از این کد استفاده کرده اید.");
 
         if(off.getLong("expire_at") < System.currentTimeMillis())
             return generateErr("کد مدنظر منقضی شده است.");
 
+        if(off.containsKey("students") &&
+            off.getList("students", ObjectId.class).contains(userId)
+        )
+            return generateErr("شما قبلا از این کد استفاده کرده اید.");
+
         if(!off.getString("section").equalsIgnoreCase(
                 OffCodeSections.ALL.getName())
         ) {
             if(!section.equalsIgnoreCase(off.getString("section")))
-                return generateErr("شما اجازه استفاده از این کد در این قسمت را ندارید.");
+                return generateErr("این کد تنها در قسمت " + GiftController.translateUseFor(off.getString("section")) + " قابل استفاده است.");
         }
 
         return generateSuccessMsg("data", new JSONObject()

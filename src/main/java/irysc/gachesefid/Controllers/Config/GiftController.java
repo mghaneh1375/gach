@@ -34,7 +34,7 @@ public class GiftController {
         return "کد تخفیف";
     }
 
-    private static String translateUseFor(String useFor) {
+    public static String translateUseFor(String useFor) {
 
         if (useFor.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()))
             return "آزمون های آیریسک";

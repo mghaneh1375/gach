@@ -262,7 +262,7 @@ public class Utility {
     public static JSONObject convertPersian(JSONObject jsonObject) {
 
         for (String key : jsonObject.keySet()) {
-            if(key.toLowerCase().contains("password"))
+            if(key.toLowerCase().contains("password") || key.equalsIgnoreCase("code"))
                 jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
             else if (jsonObject.get(key) instanceof Integer)
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
@@ -902,7 +902,7 @@ public class Utility {
 
     public static String returnBatchResponse(JSONArray j1, JSONArray j2, String doneFa) {
 
-        if (j1.length() == 0)
+        if (j1 == null || j1.length() == 0)
             return generateSuccessMsg(
                     "excepts", "تمامی موارد به درستی " + doneFa + " گردیدند",
                     new PairValue("doneIds", j2)

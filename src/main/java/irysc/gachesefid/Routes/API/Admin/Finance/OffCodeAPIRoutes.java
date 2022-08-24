@@ -34,24 +34,6 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @Validated
 public class OffCodeAPIRoutes extends Router {
 
-    @PutMapping(value = "/update/{id}")
-    @ResponseBody
-    public String update(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId id,
-                         @RequestBody @StrongJSONConstraint(
-                                 params = {}, paramsType = {},
-                                 optionals = {
-                                         "type", "expireAt", "amount"
-                                 },
-                                 optionalsType = {
-                                         String.class, Long.class, Positive.class
-                                 }
-                         ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
-        return OffCodeController.update(id, new JSONObject(json));
-    }
-
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody
     public String store(HttpServletRequest request,
@@ -88,6 +70,28 @@ public class OffCodeAPIRoutes extends Router {
                         OffCodeSections.ALL.getName());
     }
 
+
+    @PutMapping(value = "/update/{id}")
+    @ResponseBody
+    public String update(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId id,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {}, paramsType = {},
+                                 optionals = {
+                                         "type", "expireAt", "amount",
+                                         "section", "code",
+                                 },
+                                 optionalsType = {
+                                         String.class, Long.class, Positive.class,
+                                         String.class, String.class
+                                 }
+                         ) String json
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return OffCodeController.update(id, new JSONObject(json));
+    }
+
+
     @PutMapping(value = "/store")
     @ResponseBody
     public String storeJSONArr(HttpServletRequest request,
@@ -99,29 +103,19 @@ public class OffCodeAPIRoutes extends Router {
                                                String.class, Positive.class
                                        },
                                        optionals = {
-                                               "items", "section", "code",
-                                               "counter", "isPublic"
+                                               "items", "section",
+                                               "code", "isPublic"
                                        },
                                        optionalsType = {
-                                               JSONArray.class,
-                                               String.class, String.class,
-                                               Positive.class, Boolean.class
+                                               JSONArray.class, String.class,
+                                               String.class, Boolean.class
                                        }
 
                                ) @NotBlank String json
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
-
-        return OffCodeController.store(jsonObject
-//                jsonObject.getJSONArray("items"),
-//                jsonObject.getString("code"),
-//                jsonObject.getString("type"),
-//                jsonObject.getInt("amount"),
-//                jsonObject.getLong("expireAt"),
-//                jsonObject.has("section") ?
-//                        jsonObject.getString("section") :
-//                        OffCodeSections.ALL.getName()
+        return OffCodeController.store(
+                Utility.convertPersian(new JSONObject(json))
         );
     }
 
@@ -137,6 +131,9 @@ public class OffCodeAPIRoutes extends Router {
                           @RequestParam(value = "minValue", required = false) Integer minValue,
                           @RequestParam(value = "maxValue", required = false) Integer maxValue,
                           @RequestParam(value = "type", required = false) String type,
+                          @RequestParam(value = "withCode", required = false) String withCode,
+                          @RequestParam(value = "code", required = false) String code,
+                          @RequestParam(value = "isPublic", required = false) Boolean isPublic,
                           @RequestParam(value = "expired", required = false) Boolean expired,
                           @RequestParam(value = "section", required = false) String section
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -172,7 +169,8 @@ public class OffCodeAPIRoutes extends Router {
         return OffCodeController.offs(userId,
                 section, used, expired,
                 dates.get(0), dates.get(1),
-                minValue, maxValue, type
+                minValue, maxValue, type, isPublic,
+                code, withCode
         );
     }
 

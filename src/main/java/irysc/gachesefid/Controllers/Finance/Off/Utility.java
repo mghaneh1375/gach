@@ -6,9 +6,11 @@ import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import static irysc.gachesefid.Controllers.Config.GiftController.translateUseFor;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Statics.Alerts.createOffCode;
@@ -81,26 +83,34 @@ public class Utility {
             )).start();
         }
 
-        return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, added);
+        return returnAddResponse(excepts, added);
     }
 
     static JSONObject convertDocToJSON(Document off) {
-
-        Document user = (Document) off.get("user");
 
         JSONObject jsonObject = new JSONObject()
                 .put("amount", off.getInteger("amount"))
                 .put("type", off.getString("type"))
                 .put("section", off.getString("section"))
+                .put("sectionFa", translateUseFor(off.getString("section")))
                 .put("used", off.getBoolean("used"))
-                .put("user", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("isPublic", off.getOrDefault("is_public", false))
+                .put("code", off.getOrDefault("code", ""))
                 .put("id", off.getObjectId("_id").toString())
                 .put("expireAtTs",off.getLong("expire_at"))
                 .put("createdAtTs",off.getLong("created_at"))
                 .put("expireAt", getSolarDate(off.getLong("expire_at")))
                 .put("createdAt", getSolarDate(off.getLong("created_at")));
 
-        if (off.getBoolean("used")) {
+        if(off.containsKey("user")) {
+            Document user = (Document) off.get("user");
+            jsonObject.put("user", user.getString("first_name") + " " + user.getString("last_name"));
+        }
+
+        if(off.containsKey("students"))
+            jsonObject.put("usedCount", off.getList("students", ObjectId.class).size());
+
+        if (off.containsKey("used") && off.getBoolean("used")) {
             jsonObject.put("description", off.getString("description"));
             jsonObject.put("usedSection", off.getString("used_section"));
             jsonObject.put("usedAt", irysc.gachesefid.Utility.Utility.getSolarDate(off.getLong("used_at")));

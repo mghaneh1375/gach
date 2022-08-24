@@ -107,6 +107,7 @@ public class Utilities {
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("answer", doc.get("answer"))
+                    .put("no", doc.getInteger("no"))
                     .put("used", doc.getOrDefault("used", 0))
                     .put("neededTime", doc.getInteger("needed_time"))
                     .put("organizationId", doc.getString("organization_id"))

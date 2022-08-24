@@ -9,6 +9,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -66,14 +67,16 @@ public class StudentQuizAPIRoutes extends Router {
                       @RequestBody @StrongJSONConstraint(
                               params = {"ids"},
                               paramsType = {JSONArray.class},
-                              optionals = {"packageId", "offcode"},
+                              optionals = {"packageId", "code"},
                               optionalsType = {ObjectId.class, String.class}
                       )
                       @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
         Document user = getUser(request);
 
-        JSONObject jsonObject = new JSONObject(jsonStr);
+        JSONObject jsonObject = Utility.convertPersian(
+                new JSONObject(jsonStr)
+        );
 
         return QuizController.buy(
                 user.getObjectId("_id"),
@@ -83,8 +86,8 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getInteger("money"),
                 user.getString("phone"),
                 user.getString("mail"),
-                jsonObject.has("offcode") ?
-                        jsonObject.getString("offcode") : null
+                jsonObject.has("code") ?
+                        jsonObject.getString("code") : null
         );
     }
 

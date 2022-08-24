@@ -48,7 +48,7 @@ public class GeneralAPIRoutes extends Router {
         return AlertController.newAlerts();
     }
 
-    @GetMapping(value = "/checkOffCode")
+    @PostMapping(value = "/checkOffCode")
     @ResponseBody
     public String checkOffCode(HttpServletRequest request,
                                @RequestBody @StrongJSONConstraint(

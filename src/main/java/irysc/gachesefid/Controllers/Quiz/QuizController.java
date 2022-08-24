@@ -367,11 +367,24 @@ public class QuizController {
                 for (ObjectId quizId : quizzes) {
 
                     Document quiz = iryscQuizRepository.findById(quizId);
+                    fetched.add(quizId);
 
-                    if (quiz == null)
+                    if (quiz == null || quiz.getLong("start_registry") > curr ||
+                            (quiz.containsKey("end_registry") &&
+                                    quiz.getLong("end_registry") < curr
+                            ) ||
+                            (!quiz.containsKey("end_registry") &&
+                                    quiz.getLong("end") < curr
+                            )
+                    )
                         continue;
 
-                    fetched.add(quizId);
+                    if(userId != null && searchInDocumentsKeyValIdx(
+                            quiz.getList("students", Document.class),
+                            "_id", userId
+                    ) != -1)
+                        continue;
+
                     QuizAbstract quizAbstract;
 
                     if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
@@ -404,7 +417,8 @@ public class QuizController {
                         .put("quizzes", quizzes.size());
             }
 
-            jsonArray.put(jsonObject.put("type", "package"));
+            if(jsonObject.getInt("registrable") > 0)
+                jsonArray.put(jsonObject.put("type", "package"));
         }
 
         if (!isAdmin) {
@@ -426,6 +440,8 @@ public class QuizController {
                         .put("amount", off.getInteger("amount"))
                 );
 
+            System.out.println(fetched.size());
+            System.out.println(fetched.get(0));
             ArrayList<Document> docs = iryscQuizRepository.find(
                     and(
                             nin("_id", fetched),
@@ -439,6 +455,7 @@ public class QuizController {
 
                     ), null
             );
+            System.out.println(docs.size());
 
             RegularQuizController quizController = new RegularQuizController();
             for (Document doc : docs) {
@@ -779,7 +796,6 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             Document questionsDoc = quiz.get("questions", Document.class);
 
-            System.out.println(questionsDoc);
             ArrayList<Document> questionsList = new ArrayList<>();
             List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
                     "_ids", new ArrayList<ObjectId>()
@@ -801,7 +817,7 @@ public class QuizController {
                     continue;
                 }
 
-                questionsList.add(Document.parse(question.toJson()).append("mark", questionsMark.get(i)));
+                questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
                 i++;
             }
 
@@ -892,12 +908,28 @@ public class QuizController {
                     and(
                             exists("code"),
                             eq("code", offcode),
-                            eq("user_id", userId),
-                            eq("used", false),
+                            or(
+                                    and(
+                                            exists("user_id"),
+                                            eq("user_id", userId)
+                                    ),
+                                    and(
+                                            exists("is_public"),
+                                            eq("is_public", true)
+                                    )
+                            ),
+                            or(
+                                    exists("used", false),
+                                    and(
+                                            exists("used"),
+                                            eq("used", false)
+                                    )
+                            ),
                             or(
                                     eq("section", OffCodeSections.ALL.getName()),
                                     eq("section", OffCodeSections.GACH_EXAM.getName())
                             ),
+                            nin("students", userId),
                             gt("expire_at", curr)
                     ), null
             );
@@ -936,13 +968,13 @@ public class QuizController {
         if (quizzes.size() != quizIds.size())
             return JSON_NOT_VALID_PARAMS;
 
-        return buy(userId, phone, mail, money,
+        return doBuy(userId, phone, mail, money,
                 quizPackage, off, quizzes
         );
     }
 
 
-    private static String buy(ObjectId studentId, String phone,
+    private static String doBuy(ObjectId studentId, String phone,
                               String mail, int money,
                               Document quizPackage,
                               Document off, ArrayList<Document> quizzes
@@ -958,6 +990,8 @@ public class QuizController {
             off = offcodeRepository.findOne(
                     and(
                             exists("code", false),
+                            exists("used"),
+                            exists("user_id"),
                             eq("user_id", studentId),
                             eq("used", false),
                             or(
@@ -1016,7 +1050,18 @@ public class QuizController {
                         .registry(studentId, phone, mail, quizIds, 0);
 
                 if (finalOff != null) {
-                    BasicDBObject update = new BasicDBObject("used", true)
+
+                    BasicDBObject update;
+
+                    if(finalOff.containsKey("is_public") &&
+                            finalOff.getBoolean("is_public")
+                    ) {
+                        List<ObjectId> students = finalOff.getList("students", ObjectId.class);
+                        students.add(studentId);
+                        update = new BasicDBObject("students", students);
+                    }
+                    else
+                        update = new BasicDBObject("used", true)
                             .append("used_at", curr)
                             .append("used_section", OffCodeSections.GACH_EXAM.getName())
                             .append("used_for", quizIds);
