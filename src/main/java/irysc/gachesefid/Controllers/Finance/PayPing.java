@@ -39,10 +39,11 @@ public class PayPing {
         if (useOffCode != null)
             filters.add(exists("off_code", useOffCode));
 
-        ArrayList<Document> transactions = transactionRepository.findWithJoin(match(
-                and(filters)
-                ), null, null, null, null, null, null,
-                null, null, null, null, null);
+        ArrayList<Document> transactions = new ArrayList<>();
+//        ArrayList<Document> transactions = transactionRepository.findWithJoin(match(
+//                and(filters)
+//                ), null, null, null, null, null, null,
+//                null, null, null, null, null);
 
         JSONArray jsonArray = new JSONArray();
 
@@ -67,48 +68,6 @@ public class PayPing {
         }
 
         return new JSONObject().put("status", "ok").put("data", jsonArray).toString();
-    }
-
-    public static String myTransaction(ObjectId userId, ObjectId referenceId) {
-
-        ArrayList<Document> transactions = transactionRepository.findWithJoin(match(
-                and(
-                        eq("user_id", userId),
-                        or(
-                                eq("class_id", referenceId),
-                                eq("pay_link_id", referenceId)
-                        ),
-                        eq("status", "success")
-                )
-                ), referenceId, referenceId, null, null,
-                null, null,
-                null, null,
-                null, null, null);
-
-        JSONObject data = new JSONObject();
-
-        if (transactions.size() > 0) {
-
-            Document transaction = transactions.get(0);
-
-            List<Document> offCodes = (transaction.containsKey("offCode")) ?
-                    transaction.getList("offCode", Document.class) : null;
-
-            Document offCode = (offCodes != null && offCodes.size() > 0) ? offCodes.get(0) : null;
-
-            if (offCode != null)
-                offCode.remove("_id");
-
-            data
-                    .put("offCode", offCode)
-                    .put("amount", transaction.getInteger("amount"))
-                    .put("refId", transaction.get("ref_id"))
-                    .put("createdAt", getSolarDate(transaction.getLong("created_at")));
-
-//            addRightObjectToTransactionJSON(transaction, data);
-        }
-
-        return new JSONObject().put("status", "ok").put("data", data).toString();
     }
 
 }

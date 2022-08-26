@@ -440,8 +440,6 @@ public class QuizController {
                         .put("amount", off.getInteger("amount"))
                 );
 
-            System.out.println(fetched.size());
-            System.out.println(fetched.get(0));
             ArrayList<Document> docs = iryscQuizRepository.find(
                     and(
                             nin("_id", fetched),
@@ -1110,7 +1108,7 @@ public class QuizController {
         if(quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));
 
-        ObjectId transactionId = transactionRepository.insertOneWithReturnObjectId(doc);
+        ObjectId transactionId = transactionRepository.insertOneWithReturnId(doc);
         return irysc.gachesefid.Controllers.Finance.Utilities.goToPayment(shouldPay - money, studentId, transactionId);
     }
 

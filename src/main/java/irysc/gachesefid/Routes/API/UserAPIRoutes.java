@@ -719,12 +719,12 @@ public class UserAPIRoutes extends Router {
         return PayPing.myTransactions(getStudentUser(request).getObjectId("_id"), usedFor, useOffCode);
     }
 
-    @GetMapping(value = "/myTransaction/{referenceId}")
-    @ResponseBody
-    public String myTransaction(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId referenceId
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException, NotCompleteAccountException {
-        return PayPing.myTransaction(getStudentUser(request).getObjectId("_id"), referenceId);
-    }
+//    @GetMapping(value = "/myTransaction/{referenceId}")
+//    @ResponseBody
+//    public String myTransaction(HttpServletRequest request,
+//                                @PathVariable @ObjectIdConstraint ObjectId referenceId
+//    ) throws UnAuthException, NotActivateAccountException, NotAccessException, NotCompleteAccountException {
+//        return PayPing.myTransaction(getStudentUser(request).getObjectId("_id"), referenceId);
+//    }
 
 }
