@@ -3,12 +3,10 @@ package irysc.gachesefid.Controllers.Quiz;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
-import irysc.gachesefid.DB.Common;
-import irysc.gachesefid.DB.IRYSCQuizRepository;
-import irysc.gachesefid.DB.QuestionRepository;
-import irysc.gachesefid.DB.SchoolQuizRepository;
+import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
@@ -417,7 +415,8 @@ public class QuizController {
                         .put("quizzes", quizzes.size());
             }
 
-            if(jsonObject.getInt("registrable") > 0)
+            if(jsonObject.has("registrable") &&
+                    jsonObject.getInt("registrable") > 0)
                 jsonArray.put(jsonObject.put("type", "package"));
         }
 
@@ -687,17 +686,20 @@ public class QuizController {
                     continue;
                 }
 
-//                Document stdDoc = quizAbstract.registry(student, quiz, paid);
-//                if (stdDoc != null)
-//                    addedItems.put(convertStudentDocToJSON(stdDoc, student,
-//                            null, null, null, null)
-//                    );
+                ArrayList<ObjectId> quizIds = new ArrayList<>();
+                quizIds.add(quizId);
+
+                ArrayList<Document> added = quizAbstract.registry(
+                        student.getObjectId("_id"), student.getString("phone"),
+                        student.getString("mail"), quizIds, paid
+                );
+
+                if (added.size() > 0)
+                    addedItems.put(convertStudentDocToJSON(added.get(0), student,
+                            null, null, null, null)
+                    );
             }
 
-            if (addedItems.length() > 0) {
-                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + addedItems.length());
-                db.replaceOne(quizId, quiz);
-            }
             return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, addedItems);
 
         } catch (InvalidFieldsException x) {
@@ -2015,7 +2017,7 @@ public class QuizController {
                     students, "_id", studentId
             );
             if (student == null)
-                return JSON_NOT_VALID_ID;
+                return JSON_NOT_ACCESS;
 
             Document questions = doc.get("questions", Document.class);
             List<Double> marks = questions.getList("marks", Double.class);
@@ -2026,7 +2028,6 @@ public class QuizController {
                 if (questionStats.size() != pairValues.size())
                     questionStats = null;
             }
-            ;
 
             JSONArray answersJsonArray = new JSONArray();
             fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
@@ -2293,7 +2294,7 @@ public class QuizController {
             data.put("totalCorrects", totalCorrect);
             data.put("totalQuizzes", iryscQuizRepository.count(
                     and(
-                            in("students", studentId),
+                            in("students._id", studentId),
                             lt("start", curr)
                     )
             ));
@@ -2693,4 +2694,43 @@ public class QuizController {
 
     }
 
+    public static String getMyRecp(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+            Document quiz = hasAccess(db, null, quizId);
+            Document std = searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            );
+
+            if(std == null)
+                return JSON_NOT_ACCESS;
+
+            Document transaction = transactionRepository.findOne(
+                    and(
+                            eq("status", "success"),
+                            eq("section", OffCodeSections.GACH_EXAM.getName()),
+                            eq("user_id", userId),
+                            in("products", quizId),
+                            exists("ref_id")
+                    ), new BasicDBObject("ref_id", 1)
+            );
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("paid", std.getInteger("paid"))
+                    .put("createdAt", getSolarDate(std.getLong("register_at")))
+                    .put("for", GiftController.translateUseFor(OffCodeSections.GACH_EXAM.getName()));
+
+            if(transaction != null)
+                jsonObject.put("refId", transaction.get("ref_id"));
+
+            return generateSuccessMsg("data",jsonObject);
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+
+    }
 }

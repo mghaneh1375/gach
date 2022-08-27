@@ -7,6 +7,7 @@ import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
@@ -196,7 +197,7 @@ public class QuizAPIRoutes extends Router {
         if (mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.get(iryscQuizRepository, isAdmin ? null : "", quizId);
 
-        if(user == null)
+        if (user == null)
             return JSON_NOT_ACCESS;
 
         return QuizController.get(schoolQuizRepository,
@@ -749,9 +750,9 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getStudentAnswerSheet/{mode}/{quizId}/{studentId}")
     @ResponseBody
     public String getStudentAnswerSheet(HttpServletRequest request,
-                                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                      @PathVariable @ObjectIdConstraint ObjectId studentId
+                                        @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                        @PathVariable @ObjectIdConstraint ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -876,8 +877,8 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(value = "/createTaraz/{mode}/{quizId}")
     @ResponseBody
     public String createTaraz(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId
+                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                              @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -885,9 +886,9 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
 //        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.createTaraz(
-                    iryscQuizRepository, null, quizId
-            );
+        return QuizController.createTaraz(
+                iryscQuizRepository, null, quizId
+        );
 
     }
 
@@ -900,10 +901,10 @@ public class QuizAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.getRanking(iryscQuizRepository, isAdmin, null, quizId);
 
-        if(user == null)
+        if (user == null)
             return JSON_NOT_ACCESS;
 
         return QuizController.getRanking(
@@ -917,17 +918,18 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getStudentStat/{mode}/{quizId}/{userId}")
     @ResponseBody
     public String getStudentStat(HttpServletRequest request,
-                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                              @PathVariable @ObjectIdConstraint ObjectId quizId,
-                              @PathVariable @ObjectIdConstraint ObjectId userId) {
+                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                 @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
 
-        Document user = getUserIfLogin(request);
+        Document user = getUser(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.getStudentStat(iryscQuizRepository, isAdmin ? null : "", quizId, userId);
 
-        if(user == null)
+        if (user == null)
             return JSON_NOT_ACCESS;
 
         return QuizController.getStudentStat(
@@ -948,21 +950,21 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/cityReport/{quizId}")
     @ResponseBody
     public String cityReport(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+                             @PathVariable @ObjectIdConstraint ObjectId quizId) {
         return QuizController.getCityReport(quizId);
     }
 
     @GetMapping(value = "/schoolReport/{quizId}")
     @ResponseBody
     public String getSchoolReport(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
         return QuizController.getSchoolReport(quizId);
     }
 
     @GetMapping(value = "/genderReport/{quizId}")
     @ResponseBody
     public String genderReport(HttpServletRequest request,
-                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
+                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
         return QuizController.getGenderReport(quizId);
     }
 

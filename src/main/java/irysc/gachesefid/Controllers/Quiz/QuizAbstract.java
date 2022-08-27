@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
-import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -10,17 +9,14 @@ import org.json.JSONObject;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
-
 public abstract class QuizAbstract {
 
-    abstract void registry(ObjectId studentId, String phone,
-                               String mail, ArrayList<ObjectId> quizIds,
-                               int paid);
+    abstract ArrayList<Document> registry(ObjectId studentId, String phone,
+                                          String mail, ArrayList<ObjectId> quizIds,
+                                          int paid);
 
     abstract int calcLen(Document quiz);
 

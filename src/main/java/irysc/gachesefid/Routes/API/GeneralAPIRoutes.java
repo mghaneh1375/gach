@@ -4,6 +4,7 @@ package irysc.gachesefid.Routes.API;
 import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
+import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -11,6 +12,7 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.json.JSONObject;
@@ -62,5 +64,14 @@ public class GeneralAPIRoutes extends Router {
                 jsonObject.getString("code"),
                 jsonObject.getString("for")
         );
+    }
+
+    @GetMapping(value = "/getRecp")
+    @ResponseBody
+    public String getRecp(HttpServletRequest request,
+                          @RequestParam(required = false) @NotBlank @EnumValidator(enumClazz = OffCodeSections.class) String payFor,
+                          @RequestParam(required = false) @NotBlank String refId
+                          ) {
+        return "Ad";
     }
 }

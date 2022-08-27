@@ -35,10 +35,10 @@ public class TransactionController {
             filters.add(exists("off_code", useOffCode));
 
         if(start != null)
-            filters.add(lte("created_at", start));
+            filters.add(gte("created_at", start));
 
         if(end != null)
-            filters.add(gte("created_at", end));
+            filters.add(lte("created_at", end));
 
         AggregateIterable<Document> docs = transactionRepository.all(
                 match(and(filters))
@@ -67,6 +67,11 @@ public class TransactionController {
         }
 
         return generateSuccessMsg("data", data);
+    }
+
+    public static String getMyRecp(ObjectId userId,
+                                   String section) {
+        return "";
     }
 
 }

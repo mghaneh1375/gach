@@ -165,8 +165,8 @@ public class MongoRoutes extends Router {
 
             }
 
-            System.out.println("students.size " + students.size());
             quiz.put("students", students);
+            quiz.put("registered", students.size());
             iryscQuizRepository.replaceOne(
                     quiz.getObjectId("_id"),
                     quiz

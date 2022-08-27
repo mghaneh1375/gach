@@ -124,51 +124,29 @@ public class OffCodeAPIRoutes extends Router {
     public String getOffs(HttpServletRequest request,
                           @RequestParam(value = "userId", required = false) ObjectId userId,
                           @RequestParam(value = "used", required = false) Boolean used,
-                          @RequestParam(value = "dateUsedSolar", required = false) String dateSolar,
-                          @RequestParam(value = "dateUsedGregorian", required = false) String dateGregorian,
-                          @RequestParam(value = "dateUsedSolarEndLimit", required = false) String dateSolarEndLimit,
-                          @RequestParam(value = "dateUsedGregorianEndLimit", required = false) String dateGregorianEndLimit,
+                          @RequestParam(value = "createdAt", required = false) Long createdAt,
+                          @RequestParam(value = "createdAtEndLimit", required = false) Long createdAtEndLimit,
+                          @RequestParam(value = "usedAt", required = false) Long usedAt,
+                          @RequestParam(value = "usedAtEndLimit", required = false) Long usedAtEndLimit,
+                          @RequestParam(value = "expiredAt", required = false) Long expiredAt,
+                          @RequestParam(value = "expiredAtEndLimit", required = false) Long expiredAtEndLimit,
                           @RequestParam(value = "minValue", required = false) Integer minValue,
                           @RequestParam(value = "maxValue", required = false) Integer maxValue,
                           @RequestParam(value = "type", required = false) String type,
                           @RequestParam(value = "withCode", required = false) String withCode,
                           @RequestParam(value = "code", required = false) String code,
                           @RequestParam(value = "isPublic", required = false) Boolean isPublic,
-                          @RequestParam(value = "expired", required = false) Boolean expired,
+                          @RequestParam(value = "hasExpired", required = false) Boolean expired,
                           @RequestParam(value = "section", required = false) String section
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         getAdminPrivilegeUserVoid(request);
 
-        if (
-                (dateSolar != null && !DateValidator.isValid2(dateSolar)) ||
-                        (dateGregorian != null && !DateValidator.isValid2(dateGregorian)) ||
-                        (dateSolarEndLimit != null && !DateValidator.isValid2(dateSolarEndLimit)) ||
-                        (dateGregorianEndLimit != null && !DateValidator.isValid2(dateGregorianEndLimit))
-        )
-            return null;
-
-        ArrayList<String> dates = new ArrayList<>();
-
-        if (dateSolar != null && dateGregorian == null) {
-            String[] splited = dateSolar.split("-");
-            dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
-                    .format("-"));
-        } else
-            dates.add(dateGregorian);
-
-        if (dateSolarEndLimit != null && dateGregorianEndLimit == null) {
-            String[] splited = dateSolarEndLimit.split("-");
-            dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
-                    .format("-"));
-        } else
-            dates.add(dateGregorianEndLimit);
-
         return OffCodeController.offs(userId,
                 section, used, expired,
-                dates.get(0), dates.get(1),
+                createdAt, createdAtEndLimit,
+                expiredAt, expiredAtEndLimit,
+                usedAt, usedAtEndLimit,
                 minValue, maxValue, type, isPublic,
                 code, withCode
         );

@@ -1,15 +1,11 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import com.mongodb.BasicDBObject;
-import irysc.gachesefid.Controllers.Finance.Utilities;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
-import irysc.gachesefid.Models.OffCodeSections;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
@@ -123,14 +119,18 @@ public class RegularQuizController extends QuizAbstract {
         if (afterBuy) {
             long curr = System.currentTimeMillis();
 
-            if (quiz.getLong("end") < curr)
-                jsonObject.put("status", "finished")
-                        .put("questionsCount", questionsCount)
-                        .put("canSeeResults",
-                                quiz.getBoolean("show_results_after_correction") &&
-                                        quiz.containsKey("report_status") &&
-                                        quiz.getString("report_status").equalsIgnoreCase("ready")
-                        );
+            if (quiz.getLong("end") < curr) {
+                boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
+                        quiz.containsKey("report_status") &&
+                        quiz.getString("report_status").equalsIgnoreCase("ready");
+
+                if(canSeeResult)
+                    jsonObject.put("status", "finished")
+                            .put("questionsCount", questionsCount);
+                else
+                    jsonObject.put("status", "waitForResult")
+                            .put("questionsCount", questionsCount);
+            }
             else if (quiz.getLong("start") <= curr &&
                     quiz.getLong("end") > curr
             ) {
@@ -168,10 +168,12 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    void registry(ObjectId studentId, String phone,
+    ArrayList<Document> registry(ObjectId studentId, String phone,
                   String mail, ArrayList<ObjectId> quizIds,
                   int paid
     ) {
+
+        ArrayList<Document> added = new ArrayList<>();
 
         for (ObjectId quizId : quizIds) {
 
@@ -195,14 +197,18 @@ public class RegularQuizController extends QuizAbstract {
                     stdDoc.put("question_indices", new ArrayList<>());
 
                 students.add(stdDoc);
+                added.add(stdDoc);
+                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
                 iryscQuizRepository.replaceOne(
                         quizId, quiz
                 );
 
                 //todo : send notif
-            } catch (Exception ignore) {
-            }
+            } catch (Exception ignore) {}
         }
+
+        return added;
     }
 
     @Override

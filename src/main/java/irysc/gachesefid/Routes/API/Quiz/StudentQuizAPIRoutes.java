@@ -3,6 +3,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
+import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -49,6 +50,19 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getRecpForQuiz/{mode}/{quizId}")
+    @ResponseBody
+    public String getRecpForQuiz(HttpServletRequest request,
+                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return QuizController.getMyRecp(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                quizId, getUser(request).getObjectId("_id")
+        );
+
+    }
+
     @GetMapping(value = "myQuizzes")
     @ResponseBody
     public String myQuizzes(HttpServletRequest request,
@@ -58,6 +72,29 @@ public class StudentQuizAPIRoutes extends Router {
         return StudentReportController.myQuizzes(
                 getUserWithOutCheckCompleteness(request).getObjectId("_id"),
                 mode, status
+        );
+    }
+
+    @GetMapping(value = "/getMyAnswerSheet/{mode}/{quizId}")
+    @ResponseBody
+    public String getMyAnswerSheet(HttpServletRequest request,
+                                        @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.getStudentAnswerSheet(
+                    iryscQuizRepository,
+                    null,
+                    quizId, user.getObjectId("_id")
+            );
+
+        return QuizController.getStudentAnswerSheet(
+                schoolQuizRepository,
+                null,
+                quizId, user.getObjectId("_id")
         );
     }
 

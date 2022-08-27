@@ -466,7 +466,7 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     @Override
-    void registry(ObjectId studentId, String phone, String mail,
+    ArrayList<Document> registry(ObjectId studentId, String phone, String mail,
                   ArrayList<ObjectId> quizIds, int paid) {
 
 //        List<Document> students = quiz.getList("students", Document.class);
@@ -490,6 +490,7 @@ public class TashrihiQuizController extends QuizAbstract {
 //        students.add(stdDoc);
 //
 //        return stdDoc;
+        return null;
     }
 
     @Override

@@ -181,8 +181,12 @@ public class OffCodeController {
                               String section,
                               Boolean used,
                               Boolean expired,
-                              String date,
-                              String dateEndLimit,
+                              Long createdAt,
+                              Long createdAtEndLimit,
+                              Long expiredAt,
+                              Long expiredAtEndLimit,
+                              Long usedAt,
+                              Long usedAtEndLimit,
                               Integer minValue,
                               Integer maxValue,
                               String type,
@@ -241,17 +245,41 @@ public class OffCodeController {
             constraints.add(eq("used", used));
         }
 
-        if (date != null) {
-            long ts = Utility.getTimestamp(date);
-            if (ts != -1)
-                constraints.add(gte("used_at", ts));
-        }
+        if (usedAt != null)
+            constraints.add(and(
+                    exists("used_at"),
+                    gte("used_at", usedAt)
+            ));
 
-        if (dateEndLimit != null) {
-            long ts = Utility.getTimestamp(dateEndLimit);
-            if (ts != -1)
-                constraints.add(lte("used_at", ts));
-        }
+        if (usedAtEndLimit != null)
+            constraints.add(and(
+                    exists("used_at"),
+                    lte("used_at", usedAtEndLimit)
+            ));
+
+        if (expiredAt != null)
+            constraints.add(and(
+                    exists("expire_at"),
+                    gte("expire_at", expiredAt)
+            ));
+
+        if (expiredAtEndLimit != null)
+            constraints.add(and(
+                    exists("expire_at"),
+                    lte("expire_at", expiredAtEndLimit)
+            ));
+
+        if (createdAt != null)
+            constraints.add(and(
+                    exists("created_at"),
+                    gte("created_at", createdAt)
+            ));
+
+        if (createdAtEndLimit != null)
+            constraints.add(and(
+                    exists("created_at"),
+                    lte("created_at", createdAtEndLimit)
+            ));
 
         if (expired != null) {
             int today = Utility.getToday();
