@@ -53,8 +53,8 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "getRecpForQuiz/{mode}/{quizId}")
     @ResponseBody
     public String getRecpForQuiz(HttpServletRequest request,
-                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                            @PathVariable @ObjectIdConstraint ObjectId quizId
+                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return QuizController.getMyRecp(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
@@ -63,11 +63,28 @@ public class StudentQuizAPIRoutes extends Router {
 
     }
 
+
+    @GetMapping(value = "reviewQuiz/{mode}/{quizId}")
+    @ResponseBody
+    public String reviewQuiz(HttpServletRequest request,
+                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                             @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
+        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
+
+        return QuizController.reviewQuiz(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                quizId, user.getObjectId("_id"), isStudent
+        );
+
+    }
+
     @GetMapping(value = "myQuizzes")
     @ResponseBody
     public String myQuizzes(HttpServletRequest request,
-                      @RequestParam(required = false) String mode,
-                      @RequestParam(required = false) String status
+                            @RequestParam(required = false) String mode,
+                            @RequestParam(required = false) String status
     ) throws UnAuthException, NotActivateAccountException {
         return StudentReportController.myQuizzes(
                 getUserWithOutCheckCompleteness(request).getObjectId("_id"),
@@ -78,8 +95,8 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "/getMyAnswerSheet/{mode}/{quizId}")
     @ResponseBody
     public String getMyAnswerSheet(HttpServletRequest request,
-                                        @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                        @PathVariable @ObjectIdConstraint ObjectId quizId
+                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
@@ -127,7 +144,6 @@ public class StudentQuizAPIRoutes extends Router {
                         jsonObject.getString("code") : null
         );
     }
-
 
 
 }

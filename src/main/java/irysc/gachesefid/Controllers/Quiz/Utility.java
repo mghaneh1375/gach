@@ -251,12 +251,17 @@ public class Utility {
 
         while (currIdx < bytes.length) {
 
+//            System.out.println(currIdx);
+
             // TEST
             if (bytes[currIdx] == 0x00) {
 
+//                System.out.println(bytes.length);
                 int i = currIdx + 1;
                 while (i < bytes.length && bytes[i] != (byte) 0xff)
                     i++;
+
+//                System.out.println(i);
 
                 for (int j = currIdx + 1; j < i; j++) {
                     int choicesCount = (bytes[j] & 0xf0) >> 4;
@@ -311,6 +316,8 @@ public class Utility {
 
             currIdx = next;
         }
+
+//        System.out.println(numbers.size());
 
         return numbers;
     }
@@ -531,13 +538,20 @@ public class Utility {
         }
 
         int neededSize = 0;
-        for (byte[] itr : bytes)
+        for (byte[] itr : bytes) {
+//            if(itr == null)
+//                continue;
+            System.out.println(itr);
             neededSize += itr.length;
+        }
 
         ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
 
-        for (byte[] itr : bytes)
+        for (byte[] itr : bytes) {
+//            if(itr == null)
+//                continue;
             buff.put(itr);
+        }
 
         return buff.array();
     }

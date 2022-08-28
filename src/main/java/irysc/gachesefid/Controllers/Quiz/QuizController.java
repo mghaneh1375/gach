@@ -93,6 +93,42 @@ public class QuizController {
         return quiz;
     }
 
+    static Document hasProtectedAccess(Common db, ObjectId userId, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null)
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        if (db instanceof IRYSCQuizRepository || userId == null) {
+
+            if (userId != null && !quiz.getBoolean("visibility"))
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+            if(searchInDocumentsKeyValIdx(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            ) == -1)
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+            return quiz;
+        }
+
+        if (quiz.getObjectId("created_by").equals(userId))
+            return quiz;
+
+        if (!quiz.getBoolean("visibility"))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        if (searchInDocumentsKeyValIdx(
+                quiz.getList("students", Document.class),
+                "_id", userId
+        ) == -1)
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        return quiz;
+    }
+
     static PairValue hasCorrectorAccess(Common db, ObjectId userId, ObjectId quizId
     ) throws InvalidFieldsException {
 
@@ -821,7 +857,7 @@ public class QuizController {
                 i++;
             }
 
-            JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true);
+            JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true, true);
 
             return generateSuccessMsg("data", jsonArray);
         } catch (InvalidFieldsException x) {
@@ -1616,7 +1652,7 @@ public class QuizController {
             db.replaceOne(quiz.getObjectId("_id"), quiz);
 
             PairValue p = new PairValue("doneIds", Utilities.convertList(
-                    addedItems, true, true, true, true
+                    addedItems, true, true, true, true, true
             ));
 
             if (excepts.length() == 0)
@@ -1811,14 +1847,23 @@ public class QuizController {
 
                     idx++;
                     String stdAns = answers.get(idx).toString();
+
                     Object stdAnsAfterFilter;
+                    String type = p.getKey().toString();
 
                     if (stdAns.isEmpty()) {
-                        stdAnswers.add(new PairValue(p.getKey(), null));
+                        if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+                            stdAnswers.add( new PairValue(
+                                    p.getKey(),
+                                    new PairValue(((PairValue) p.getValue()).getKey(),
+                                            0)
+                            ));
+                        }
+                        else
+                            stdAnswers.add(new PairValue(p.getKey(), null));
                         continue;
                     }
 
-                    String type = p.getKey().toString();
                     if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
                         int s = Integer.parseInt(stdAns);
 
@@ -1850,7 +1895,6 @@ public class QuizController {
                 }
             } catch (Exception x) {
                 System.out.println(x.getMessage());
-                x.printStackTrace();
                 return JSON_NOT_VALID_PARAMS;
             }
 
@@ -1861,6 +1905,7 @@ public class QuizController {
             return JSON_OK;
 
         } catch (Exception x) {
+            x.printStackTrace();
             System.out.println(x.getMessage());
             return null;
         }
@@ -2697,14 +2742,12 @@ public class QuizController {
     public static String getMyRecp(Common db, ObjectId quizId, ObjectId userId) {
 
         try {
-            Document quiz = hasAccess(db, null, quizId);
+            Document quiz = hasProtectedAccess(db, userId, quizId);
+
             Document std = searchInDocumentsKeyVal(
                     quiz.getList("students", Document.class),
                     "_id", userId
             );
-
-            if(std == null)
-                return JSON_NOT_ACCESS;
 
             Document transaction = transactionRepository.findOne(
                     and(
@@ -2732,5 +2775,94 @@ public class QuizController {
             return generateErr(x.getMessage());
         }
 
+    }
+
+    public static String reviewQuiz(Common db, ObjectId quizId,
+                                    ObjectId userId, boolean isStudent
+    ) {
+        try {
+            Document quiz = hasProtectedAccess(db, userId, quizId);
+            long curr = System.currentTimeMillis();
+
+            if(isStudent && quiz.getLong("end") > curr)
+                return JSON_NOT_ACCESS;
+
+            Document stdDoc = null;
+
+            if(isStudent) {
+                stdDoc = searchInDocumentsKeyVal(
+                        quiz.getList("students", Document.class),
+                        "_id", userId
+                );
+            }
+
+            Document questionsDoc = quiz.get("questions", Document.class);
+
+            ArrayList<Document> questionsList = new ArrayList<>();
+            List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                    "_ids", new ArrayList<ObjectId>()
+            );
+            List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+                    "marks", new ArrayList<Double>()
+            );
+
+            if (questionsMark.size() != questions.size())
+                return JSON_NOT_UNKNOWN;
+
+            int i = 0;
+            for (ObjectId itr : questions) {
+
+                Document question = questionRepository.findById(itr);
+
+                if (question == null) {
+                    i++;
+                    continue;
+                }
+
+                questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+                i++;
+            }
+
+            List<Binary> questionStats = null;
+            if (quiz.containsKey("question_stat")) {
+                questionStats = quiz.getList("question_stat", Binary.class);
+                if (questionStats.size() != questionsMark.size())
+                    questionStats = null;
+            }
+
+            ArrayList<PairValue> stdAnswers =
+                    stdDoc == null ? new ArrayList<>() :
+                            Utility.getAnswers(((Binary) stdDoc.getOrDefault("answers", new byte[0])).getData());
+
+            i = 0;
+
+            for (Document question : questionsList) {
+
+                if (i >= stdAnswers.size())
+                    question.put("stdAns", "");
+                else {
+                    if (question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                        question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                    else
+                        question.put("stdAns", stdAnswers.get(i).getValue());
+                }
+                i++;
+            }
+
+            JSONArray questionsJSONArr = Utilities.convertList(
+                    questionsList, true, true, true, true, false
+            );
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("questions", questionsJSONArr);
+            jsonObject.put("quizInfo", new JSONObject()
+                    .put("title", quiz.getString("title")));
+
+            return generateSuccessMsg("data", jsonObject);
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
     }
 }

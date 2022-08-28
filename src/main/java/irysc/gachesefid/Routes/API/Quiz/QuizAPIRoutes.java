@@ -590,7 +590,6 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(value = "/fetchQuestions/{mode}/{quizId}")
     @ResponseBody
-
     public String fetchQuestions(HttpServletRequest request,
                                  @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
