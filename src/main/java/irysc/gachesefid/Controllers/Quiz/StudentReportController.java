@@ -1,20 +1,26 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
+import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.stateRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
@@ -23,101 +29,75 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class StudentReportController {
 
-    public static String generalQuizReport(String mode, ObjectId userId, ObjectId quizId, String quizMode) {
+    public static String getRanking(Common db, boolean isAdmin,
+                                    ObjectId userId, ObjectId quizId) {
 
-//        Document quiz = regularQuizRepository.findById(quizId);
-//        if(quiz == null)
-//            return JSON_NOT_VALID_ID;
-//
-//        List<Document> students = quiz.getList("students", Document.class);
-//        String result = null;
-//
-//        for(Document student : students) {
-//            if(student.getObjectId("_id").equals(userId)) {
-//                result = student.getString("result");
-//                break;
-//            }
-//        }
-//
-//        if(result == null)
-//            return JSON_NOT_ACCESS;
-//
-//        switch (mode) {
-//            case "question":
-//                return questionReport(quiz, result);
-//            case "general":
-//                break;
-//        }
-//
-        return JSON_NOT_VALID_PARAMS;
-    }
+        try {
 
-    private static String questionReport(Document quiz, String result) {
+            Document quiz = hasAccess(db, userId, quizId);
 
-        String[] splitedResult = result.split("-");
-        String quizAnswers = quiz.getString("quizAnswers");
-        String[] splitedQuizAnswers = quizAnswers.split("-");
-        JSONObject jsonObject = new JSONObject();
+            if (
+                    !quiz.containsKey("report_status") ||
+                            !quiz.containsKey("ranking_list") ||
+                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
-        if(splitedQuizAnswers.length != splitedResult.length)
-            return jsonObject.put("status", "nok").put("msg", "student result size is not equal to quiz result size").toString();
+            if (!isAdmin &&
+                    !quiz.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
-        JSONArray jsonArray = new JSONArray();
+            JSONArray jsonArray = new JSONArray();
 
-        for(int i = 0; i < splitedQuizAnswers.length; i++) {
-            JSONObject tmp = new JSONObject();
-            tmp.put("student_answer", splitedResult[i]);
-            tmp.put("question_answer", splitedQuizAnswers[i]);
-            jsonArray.put(tmp);
-        }
+            ArrayList<ObjectId> userIds = new ArrayList<>();
 
-        return jsonObject.put("status", "ok").put("questions", jsonArray).toString();
-    }
+            for (Document doc : quiz.getList("ranking_list", Document.class))
+                userIds.add(doc.getObjectId("_id"));
 
-    public static String myQuizzes(ObjectId userId, String generalMode,
-                                   String status) {
+            ArrayList<Document> studentsInfo = userRepository.findByIds(
+                    userIds, true
+            );
 
-        if(generalMode != null &&
-                !EnumValidatorImp.isValid(generalMode, GeneralKindQuiz.class))
-            return JSON_NOT_VALID_PARAMS;
+            HashMap<ObjectId, String> stateNames = new HashMap<>();
+            int k = 0;
 
-        JSONArray data = new JSONArray();
-        ArrayList<Bson> filters = new ArrayList<>();
-        filters.add(in("students._id", userId));
-        if(status != null) {
+            for (Document doc : quiz.getList("ranking_list", Document.class)) {
 
-            long curr = System.currentTimeMillis();
+                ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
+                Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
-            if(status.equalsIgnoreCase("finished"))
-                filters.add(lt("end", curr));
-            else if(status.equalsIgnoreCase("inProgress"))
-                filters.add(
-                        and(
-                                lte("start", curr),
-                                gt("end", curr)
-                        )
-                );
-            else
-                filters.add(gt("start", curr));
-        }
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", doc.getObjectId("_id").toString())
+                        .put("name", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
+                        .put("taraz", stat[0])
+                        .put("cityRank", stat[3])
+                        .put("stateRank", stat[2])
+                        .put("rank", stat[1]);
 
-        if(generalMode == null ||
-                generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
-        ) {
-            ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
-            QuizAbstract quizAbstract = new RegularQuizController();
+                if (stateNames.containsKey(cityId))
+                    jsonObject.put("state", stateNames.get(cityId));
+                else {
+                    Document city = cityRepository.findById(cityId);
+                    Document state = stateRepository.findById(city.getObjectId("state_id"));
+                    stateNames.put(cityId, state.getString("name"));
+                    jsonObject.put("state", stateNames.get(cityId));
+                }
 
-            for(Document quiz : quizzes) {
-                data.put(
-                        quizAbstract.convertDocToJSON(
-                                quiz, true, false, true
-                        )
-                );
+                jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+                jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+
+                jsonArray.put(jsonObject);
+                k++;
             }
 
+            return generateSuccessMsg(
+                    "data", jsonArray
+            );
+
+        } catch (InvalidFieldsException e) {
+            return JSON_NOT_ACCESS;
         }
 
-        return generateSuccessMsg("data", data);
-    }
 
+    }
 }

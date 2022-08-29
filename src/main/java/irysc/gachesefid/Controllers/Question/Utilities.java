@@ -101,20 +101,25 @@ public class Utilities {
 
         JSONArray jsonArray = new JSONArray();
         HashMap<ObjectId, String> subjects = new HashMap<>();
-//        HashMap<ObjectId, String> authors = new HashMap<>();
 
         for (Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
-                    .put("answer", doc.get("answer"))
                     .put("no", doc.getInteger("no"))
                     .put("level", doc.getString("level"));
 
-            if(doc.containsKey("stdAns"))
+            if (doc.containsKey("stdAns"))
                 jsonObject.put("stdAns", doc.get("stdAns"));
 
-            if(isDetailNeeded) {
+            if (isDetailNeeded || isAnswerFileNeeded) {
+                jsonObject.put("answer", doc.get("answer"))
+                        .put("oldCorrect", doc.getInteger("old_correct"))
+                        .put("oldIncorrect", doc.getInteger("old_incorrect"))
+                        .put("oldWhite", doc.getInteger("old_white"));
+            }
+
+            if (isDetailNeeded) {
                 jsonObject
                         .put("used", doc.getOrDefault("used", 0))
                         .put("neededTime", doc.getInteger("needed_time"))
@@ -170,9 +175,6 @@ public class Utilities {
                 jsonObject.put("author", doc.getString("author"));
 
             jsonObject
-                    .put("oldCorrect", doc.getInteger("old_correct"))
-                    .put("oldIncorrect", doc.getInteger("old_incorrect"))
-                    .put("oldWhite", doc.getInteger("old_white"))
                     .put("kindQuestion", doc.getString("kind_question"));
 
             jsonArray.put(jsonObject);

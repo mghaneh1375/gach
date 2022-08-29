@@ -1,10 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.CommonController;
-import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
-import irysc.gachesefid.Controllers.Quiz.QuizController;
-import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
-import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
+import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -622,7 +619,7 @@ public class QuizAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.createPackage(Utility.convertPersian(new JSONObject(jsonStr)));
+        return PackageController.createPackage(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PutMapping(value = "/updatePackage/{packageId}")
@@ -645,7 +642,7 @@ public class QuizAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.editPackage(packageId, Utility.convertPersian(new JSONObject(jsonStr)));
+        return PackageController.editPackage(packageId, Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PutMapping(value = "/addQuizzesToPackage/{packageId}")
@@ -658,7 +655,7 @@ public class QuizAPIRoutes extends Router {
                                       ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.addQuizzesToPackage(
+        return PackageController.addQuizzesToPackage(
                 packageId,
                 new JSONObject(jsonStr).getJSONArray("ids")
         );
@@ -674,7 +671,7 @@ public class QuizAPIRoutes extends Router {
                                            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.removeQuizzesFromPackage(
+        return PackageController.removeQuizzesFromPackage(
                 packageId,
                 new JSONObject(jsonStr).getJSONArray("ids")
         );
@@ -703,7 +700,7 @@ public class QuizAPIRoutes extends Router {
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return QuizController.getPackages(
+        return PackageController.getPackages(
                 isAdmin,
                 user == null ? null : user.getObjectId("_id"),
                 gradeId, lessonId
@@ -716,7 +713,7 @@ public class QuizAPIRoutes extends Router {
                                     @PathVariable @ObjectIdConstraint ObjectId packageId
     ) {
         Document user = getUserIfLogin(request);
-        return QuizController.getPackageQuizzes(
+        return PackageController.getPackageQuizzes(
                 packageId,
                 user != null && Authorization.isAdmin(user.getList("accesses", String.class))
         );
@@ -759,11 +756,11 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.getStudentAnswerSheet(
+            return AdminReportController.getStudentAnswerSheet(
                     iryscQuizRepository, null, quizId, studentId
             );
 
-        return QuizController.getStudentAnswerSheet(
+        return AdminReportController.getStudentAnswerSheet(
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, studentId
@@ -782,11 +779,11 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.getQuizAnswerSheets(
+            return AdminReportController.getQuizAnswerSheets(
                     iryscQuizRepository, null, quizId
             );
 
-        return QuizController.getQuizAnswerSheets(
+        return AdminReportController.getQuizAnswerSheets(
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId
@@ -889,89 +886,6 @@ public class QuizAPIRoutes extends Router {
                 iryscQuizRepository, null, quizId
         );
 
-    }
-
-    @GetMapping(value = "/showRanking/{mode}/{quizId}")
-    @ResponseBody
-    public String showRanking(HttpServletRequest request,
-                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                              @PathVariable @ObjectIdConstraint ObjectId quizId) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-
-        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.getRanking(iryscQuizRepository, isAdmin, null, quizId);
-
-        if (user == null)
-            return JSON_NOT_ACCESS;
-
-        return QuizController.getRanking(
-                schoolQuizRepository,
-                isAdmin,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId
-        );
-    }
-
-    @GetMapping(value = "/getStudentStat/{mode}/{quizId}/{userId}")
-    @ResponseBody
-    public String getStudentStat(HttpServletRequest request,
-                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                 @PathVariable @ObjectIdConstraint ObjectId userId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-
-        Document user = getUser(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-
-        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.getStudentStat(iryscQuizRepository, isAdmin ? null : "", quizId, userId);
-
-        if (user == null)
-            return JSON_NOT_ACCESS;
-
-        return QuizController.getStudentStat(
-                schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId,
-                userId
-        );
-    }
-
-    @GetMapping(value = "/stateReport/{quizId}")
-    @ResponseBody
-    public String getStateReport(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return QuizController.getStateReport(quizId);
-    }
-
-    @GetMapping(value = "/cityReport/{quizId}")
-    @ResponseBody
-    public String cityReport(HttpServletRequest request,
-                             @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return QuizController.getCityReport(quizId);
-    }
-
-    @GetMapping(value = "/schoolReport/{quizId}")
-    @ResponseBody
-    public String getSchoolReport(HttpServletRequest request,
-                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return QuizController.getSchoolReport(quizId);
-    }
-
-    @GetMapping(value = "/genderReport/{quizId}")
-    @ResponseBody
-    public String genderReport(HttpServletRequest request,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return QuizController.getGenderReport(quizId);
-    }
-
-    @GetMapping(value = "/authorReport/{quizId}")
-    @ResponseBody
-    public String authorReport(HttpServletRequest request,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return QuizController.getAuthorReport(quizId);
     }
 
 }

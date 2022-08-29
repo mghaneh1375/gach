@@ -77,6 +77,9 @@ public class RegularQuizController extends QuizAbstract {
         if(quiz.containsKey("duration"))
             return quiz.getInteger("duration") * 60;
 
+        if(quiz.containsKey("duration_sum"))
+            return quiz.getInteger("duration_sum");
+
         if(!quiz.containsKey("questions"))
             return 0;
 
@@ -92,6 +95,7 @@ public class RegularQuizController extends QuizAbstract {
         for(Document question : questionsDoc)
             total += question.getInteger("needed_time");
 
+        quiz.put("duration_sum", total);
         return total;
     }
 

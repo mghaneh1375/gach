@@ -2,13 +2,17 @@ package irysc.gachesefid.Controllers.Quiz;
 
 
 import irysc.gachesefid.Controllers.Question.Utilities;
+import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindAnswer;
+import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -17,7 +21,9 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
 
 
 public class Utility {
@@ -350,8 +356,7 @@ public class Utility {
                 for (Object num : (ArrayList) o)
                     output[idx++] = convertPairValueToByte((PairValue) num);
             }
-        }
-        else if(o instanceof char[])
+        } else if (o instanceof char[])
             return getByteArrFromCharArr((char[]) o);
 
         return output;
@@ -490,8 +495,8 @@ public class Utility {
         }
         return answers;
     }
-    
-    
+
+
     public static byte[] getStdAnswersByteArr(ArrayList<PairValue> pairValues) {
 
         ArrayList<byte[]> bytes = new ArrayList<>();
@@ -557,4 +562,226 @@ public class Utility {
     }
 
 
+    static void fillWithAnswerSheetData(JSONArray jsonArray,
+                                        List<Binary> questionStat,
+                                        List<PairValue> answers,
+                                        List<Double> marks) {
+
+        for (int i = 0; i < answers.size(); i++) {
+
+            int percent = -1;
+
+            if (questionStat != null) {
+                byte[] bytes = questionStat.get(i).getData();
+                percent = ((bytes[1] & 0xff) * 100) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
+            }
+
+            int choicesCount = -1;
+            Object answer;
+
+            if (answers.get(i).getKey().toString().equalsIgnoreCase(
+                    QuestionType.TEST.getName()
+            )) {
+                PairValue pp = (PairValue) answers.get(i).getValue();
+                choicesCount = (int) pp.getKey();
+                answer = pp.getValue();
+            } else
+                answer = answers.get(i).getValue();
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("type", answers.get(i).getKey())
+                    .put("answer", answer)
+                    .put("mark", marks.get(i));
+
+            if (choicesCount != -1)
+                jsonObject.put("choicesCount", choicesCount);
+
+            if (percent != -1)
+                jsonObject.put("percent", percent);
+
+            jsonArray.put(jsonObject);
+        }
+
+    }
+
+    static Document hasAccess(Common db, ObjectId userId, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null)
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        if (userId != null && !quiz.getObjectId("created_by").equals(userId))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        return quiz;
+    }
+
+    static Document hasPublicAccess(Common db, Object user, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null)
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        if (db instanceof IRYSCQuizRepository || user == null) {
+            if (user != null && !quiz.getBoolean("visibility"))
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+            return quiz;
+        }
+
+        if (user.toString().isEmpty())
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        ObjectId userId = (ObjectId) user;
+
+        if (quiz.getObjectId("created_by").equals(userId))
+            return quiz;
+
+        if (!quiz.getBoolean("visibility"))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        if (searchInDocumentsKeyValIdx(
+                quiz.getList("students", Document.class),
+                "_id", userId
+        ) == -1)
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        return quiz;
+    }
+
+    static Document hasProtectedAccess(Common db, ObjectId userId, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null)
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        if (db instanceof IRYSCQuizRepository || userId == null) {
+
+            if (userId != null && !quiz.getBoolean("visibility"))
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+            if(searchInDocumentsKeyValIdx(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            ) == -1)
+                throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+            return quiz;
+        }
+
+        if (quiz.getObjectId("created_by").equals(userId))
+            return quiz;
+
+        if (!quiz.getBoolean("visibility"))
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        if (searchInDocumentsKeyValIdx(
+                quiz.getList("students", Document.class),
+                "_id", userId
+        ) == -1)
+            throw new InvalidFieldsException(JSON_NOT_ACCESS);
+
+        return quiz;
+    }
+
+    static PairValue hasCorrectorAccess(Common db, ObjectId userId, ObjectId quizId
+    ) throws InvalidFieldsException {
+
+        Document quiz = db.findById(quizId);
+        if (quiz == null || !quiz.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+            throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+
+        int idx = -1;
+
+        if (userId != null && !quiz.getObjectId("created_by").equals(userId)) {
+
+            List<Document> correctors = quiz.getList("correctors", Document.class);
+            idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    correctors, "_id", userId);
+
+            if (idx == -1)
+                throw new InvalidFieldsException(JSON_NOT_VALID_ID);
+        }
+
+        return new PairValue(quiz, idx);
+    }
+
+    static String saveStudentAnswers(Document doc, JSONArray answers,
+                                     Document student, Common db) {
+
+        Document questions = doc.get("questions", Document.class);
+        ArrayList<PairValue> pairValues = Utility.getAnswers(
+                ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
+        );
+
+        if (pairValues.size() != answers.length())
+            return JSON_NOT_VALID_PARAMS;
+
+        int idx = -1;
+        ArrayList<PairValue> stdAnswers = new ArrayList<>();
+
+        try {
+            for (PairValue p : pairValues) {
+
+                idx++;
+                String stdAns = answers.get(idx).toString();
+
+                Object stdAnsAfterFilter;
+                String type = p.getKey().toString();
+
+                if (stdAns.isEmpty()) {
+                    if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+                        stdAnswers.add( new PairValue(
+                                p.getKey(),
+                                new PairValue(((PairValue) p.getValue()).getKey(),
+                                        0)
+                        ));
+                    }
+                    else
+                        stdAnswers.add(new PairValue(p.getKey(), null));
+                    continue;
+                }
+
+                if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+                    int s = Integer.parseInt(stdAns);
+
+                    PairValue pp = (PairValue) p.getValue();
+                    if (s > (int) pp.getKey() || s < 0)
+                        return JSON_NOT_VALID_PARAMS;
+
+                    stdAnsAfterFilter = new PairValue(
+                            pp.getKey(),
+                            s
+                    );
+                } else if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                    stdAnsAfterFilter = Double.parseDouble(stdAns);
+                else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+
+                    String ans = p.getValue().toString();
+
+                    if (ans.length() != stdAns.length())
+                        return JSON_NOT_VALID_PARAMS;
+
+                    if (!stdAns.matches("^[01_]+$"))
+                        return JSON_NOT_VALID_PARAMS;
+
+                    stdAnsAfterFilter = stdAns.toCharArray();
+                } else
+                    stdAnsAfterFilter = stdAns;
+
+                stdAnswers.add(new PairValue(p.getKey(), stdAnsAfterFilter));
+            }
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            return JSON_NOT_VALID_PARAMS;
+        }
+
+        student.put("answers", Utility.getStdAnswersByteArr(stdAnswers));
+
+        db.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+
+    }
 }

@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Controllers.Quiz.Utility.convertTashrihiQuizToJSONDigestForTeachers;
+import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
@@ -66,7 +66,7 @@ public class TashrihiQuizController extends QuizAbstract {
                                        ObjectId quizId, JSONArray jsonArray) {
 
         try {
-            Document quiz = QuizController.hasAccess(db, userId, quizId);
+            Document quiz = hasAccess(db, userId, quizId);
 
             if (!quiz.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
                 return JSON_NOT_ACCESS;
@@ -154,7 +154,7 @@ public class TashrihiQuizController extends QuizAbstract {
             return JSON_NOT_VALID_PARAMS;
 
         try {
-            PairValue p = QuizController.hasCorrectorAccess(db, userId, quizId);
+            PairValue p = hasCorrectorAccess(db, userId, quizId);
             Document quiz = (Document) p.getKey();
             int idx = (int) p.getValue();
 
@@ -234,7 +234,7 @@ public class TashrihiQuizController extends QuizAbstract {
                                                          ObjectId quizId, ObjectId studentId) {
 
         try {
-            PairValue p = QuizController.hasCorrectorAccess(db, userId, quizId);
+            PairValue p = hasCorrectorAccess(db, userId, quizId);
             Document quiz = (Document) p.getKey();
             int idx = (int) p.getValue();
 
@@ -373,7 +373,7 @@ public class TashrihiQuizController extends QuizAbstract {
                                  ObjectId studentId, JSONObject markData) {
         try {
 
-            PairValue p = QuizController.hasCorrectorAccess(db, userId, quizId);
+            PairValue p = hasCorrectorAccess(db, userId, quizId);
 
             Document quiz = (Document) p.getKey();
             int correctorIdx = (int) p.getValue();
