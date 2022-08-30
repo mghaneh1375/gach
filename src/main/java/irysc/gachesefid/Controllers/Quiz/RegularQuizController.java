@@ -16,6 +16,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 
 public class RegularQuizController extends QuizAbstract {
 
@@ -138,7 +139,8 @@ public class RegularQuizController extends QuizAbstract {
             else if (quiz.getLong("start") <= curr &&
                     quiz.getLong("end") > curr
             ) {
-                jsonObject.put("status", "inProgress")
+                jsonObject
+                        .put("status", "inProgress")
                         .put("duration", calcLen(quiz))
                         .put("questionsCount", questionsCount);
             }

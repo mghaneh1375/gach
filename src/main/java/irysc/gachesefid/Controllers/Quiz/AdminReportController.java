@@ -651,4 +651,43 @@ public class AdminReportController {
         );
 
     }
+
+    public static String getParticipantReport(ObjectId quizId) {
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray data = new JSONArray();
+        List<Document> students = quiz.getList("students", Document.class);
+        ArrayList<ObjectId> studentsId = new ArrayList<>();
+
+        for (Document student : students)
+            studentsId.add(student.getObjectId("_id"));
+
+        ArrayList<Document> studentsInfo = userRepository.findByIds(
+                studentsId, true
+        );
+
+        if(studentsInfo == null)
+            return JSON_NOT_UNKNOWN;
+
+        int i = 0;
+        for (Document student : students) {
+            JSONObject jsonObject = new JSONObject()
+                    .put("startAt", student.containsKey("start_at") && student.get("start_at") != null ?
+                            getSolarDate(student.getLong("start_at")) : "")
+                    .put("finishAt", student.containsKey("finish_at") && student.get("finish_at") != null ?
+                            getSolarDate(student.getLong("finish_at")) : "");
+
+            fillJSONWithUser(jsonObject, studentsInfo.get(i));
+            data.put(jsonObject);
+            i++;
+        }
+
+        return generateSuccessMsg(
+                "data", data
+        );
+
+    }
 }

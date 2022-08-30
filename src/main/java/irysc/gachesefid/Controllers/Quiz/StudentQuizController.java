@@ -99,7 +99,8 @@ public class StudentQuizController {
     }
 
 
-    public static String myQuizzes(ObjectId userId, String generalMode,
+    public static String myQuizzes(ObjectId userId,
+                                   String generalMode,
                                    String status) {
 
         if(generalMode != null &&
@@ -109,9 +110,10 @@ public class StudentQuizController {
         JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(in("students._id", userId));
-        if(status != null) {
 
-            long curr = System.currentTimeMillis();
+        long curr = System.currentTimeMillis();
+
+        if(status != null) {
 
             if(status.equalsIgnoreCase("finished"))
                 filters.add(lt("end", curr));
@@ -133,11 +135,33 @@ public class StudentQuizController {
             QuizAbstract quizAbstract = new RegularQuizController();
 
             for(Document quiz : quizzes) {
-                data.put(
-                        quizAbstract.convertDocToJSON(
-                                quiz, true, false, true
-                        )
+
+                Document studentDoc = searchInDocumentsKeyVal(
+                        quiz.getList("students", Document.class),
+                        "_id", userId
                 );
+
+                if(studentDoc == null)
+                    continue;
+
+                JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                        quiz, true, false, true
+                );
+
+                if(jsonObject.getString("status")
+                        .equalsIgnoreCase("inProgress") &&
+                        studentDoc.containsKey("start_at") &&
+                        studentDoc.get("start_at") != null
+                ) {
+                    int neededTime = quizAbstract.calcLen(quiz);
+                    int untilYetInSecondFormat =
+                            (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+                    if (untilYetInSecondFormat > neededTime)
+                        jsonObject.put("status", "waitForResult");
+                }
+
+                data.put(jsonObject);
+
             }
 
         }

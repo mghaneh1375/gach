@@ -1,7 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
-import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -11,8 +10,6 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
-import irysc.gachesefid.Models.KindKarname;
-import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;
@@ -23,16 +20,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_TOKEN;
 
 @Controller
-@RequestMapping(path="/api/report")
+@RequestMapping(path = "/api/quiz/report")
 @Validated
 public class ReportAPIRoutes extends Router {
 
@@ -72,7 +66,12 @@ public class ReportAPIRoutes extends Router {
         return AdminReportController.getAuthorReport(quizId);
     }
 
-
+    @GetMapping(value = "/participantReport/{quizId}")
+    @ResponseBody
+    public String participantReport(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return AdminReportController.getParticipantReport(quizId);
+    }
 
     @GetMapping(value = "/showRanking/{mode}/{quizId}")
     @ResponseBody
