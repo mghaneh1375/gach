@@ -12,9 +12,11 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -73,5 +75,20 @@ public class GeneralAPIRoutes extends Router {
                           @RequestParam(required = false) @NotBlank String refId
                           ) {
         return "Ad";
+    }
+
+    @GetMapping(value = "/myOffs")
+    @ResponseBody
+    public String myOffs(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException {
+        return OffCodeController.offs(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                null, null, false,
+                null, null,
+                null, null,
+                null, null,
+                null, null, null, null,
+                null, null
+        );
     }
 }

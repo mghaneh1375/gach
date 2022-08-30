@@ -606,18 +606,20 @@ public class AdminReportController {
         if (questions == null)
             return JSON_NOT_UNKNOWN;
 
-        List<Binary> questionStats = quiz.getList("question_stat", Binary.class);
+        List<Binary> questionStats = null;
 
-        if (questionStats.size() != questions.size())
-            return JSON_NOT_UNKNOWN;
+        if(quiz.containsKey("question_stat")) {
+            questionStats = quiz.getList("question_stat", Binary.class);
+
+            if (questionStats.size() != questions.size())
+                questionStats = null;
+        }
 
         int k = 0;
 
         for (Document itr : questions) {
 
             String author = itr.getString("author");
-            byte[] stats = questionStats.get(k).getData();
-            int percent = (stats[1] * 100) / (stats[0] + stats[1] + stats[2]);
 
             ArrayList<Integer> tmp;
             if (authorPercents.containsKey(author))
@@ -625,7 +627,14 @@ public class AdminReportController {
             else
                 tmp = new ArrayList<>();
 
-            tmp.add(percent);
+            if(questionStats != null) {
+                byte[] stats = questionStats.get(k).getData();
+                int percent = (stats[1] * 100) / (stats[0] + stats[1] + stats[2]);
+                tmp.add(percent);
+            }
+            else
+                tmp.add(0);
+
             authorPercents.put(author, tmp);
             k++;
         }
@@ -678,9 +687,10 @@ public class AdminReportController {
                     .put("startAt", student.containsKey("start_at") && student.get("start_at") != null ?
                             getSolarDate(student.getLong("start_at")) : "")
                     .put("finishAt", student.containsKey("finish_at") && student.get("finish_at") != null ?
-                            getSolarDate(student.getLong("finish_at")) : "");
+                            getSolarDate(student.getLong("finish_at")) : "")
+                    .put("name", studentsInfo.get(i).getString("first_name") + " " + studentsInfo.get(i).getString("last_name"))
+                    .put("id", studentsInfo.get(i).getObjectId("_id"));
 
-            fillJSONWithUser(jsonObject, studentsInfo.get(i));
             data.put(jsonObject);
             i++;
         }

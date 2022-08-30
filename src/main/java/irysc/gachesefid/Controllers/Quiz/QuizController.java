@@ -1192,5 +1192,27 @@ public class QuizController {
         }
     }
 
+    public static String resetStudentQuizEntryTime(Common db, ObjectId userId,
+                                                   ObjectId quizId, ObjectId studentId) {
+        try {
+            Document quiz = hasAccess(db, userId, quizId);
 
+            Document student = searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class),
+                    "_id", studentId
+            );
+
+            if(student == null)
+                return JSON_NOT_VALID_ID;
+
+            student.put("start_at", null);
+            student.put("finish_at", null);
+
+            db.replaceOne(quizId, quiz);
+            return JSON_OK;
+        }
+        catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+    }
 }

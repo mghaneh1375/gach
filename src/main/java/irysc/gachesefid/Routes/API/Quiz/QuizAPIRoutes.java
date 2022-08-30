@@ -888,5 +888,31 @@ public class QuizAPIRoutes extends Router {
 
     }
 
+
+    @PutMapping(value = "/resetStudentQuizEntryTime/{mode}/{quizId}/{userId}")
+    @ResponseBody
+    public String resetStudentQuizEntryTime(HttpServletRequest request,
+                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                            @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                            @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return QuizController.resetStudentQuizEntryTime(
+                    iryscQuizRepository, null, quizId,
+                    userId
+            );
+
+        return QuizController.resetStudentQuizEntryTime(
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, userId
+        );
+    }
+
 }
 
