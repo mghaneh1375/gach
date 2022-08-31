@@ -370,24 +370,7 @@ public class QuizAPIRoutes extends Router {
                 isAdmin ? null : user.getObjectId("_id"), quizId, attachId);
     }
 
-    @PutMapping(value = "/extend/{mode}/{quizId}")
-    @ResponseBody
-    public String extend(HttpServletRequest request,
-                         @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                         @PathVariable @ObjectIdConstraint ObjectId quizId,
-                         @RequestParam(value = "start", required = false) Long start,
-                         @RequestParam(value = "end", required = false) Long end
-    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-
-        return QuizController.extend(
-                mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, start, end);
-    }
-
-    @PostMapping(value = "/arrangeQuestions/{mode}/{quizId}")
+    @PutMapping(value = "/arrangeQuestions/{mode}/{quizId}")
     @ResponseBody
     public String arrangeQuestions(HttpServletRequest request,
                                    @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
@@ -400,7 +383,7 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.arrangeQuestions(
-                mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
         );
     }

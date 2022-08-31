@@ -638,65 +638,6 @@ public class QuizController {
         }
     }
 
-    public static String extend(Common db, ObjectId userId,
-                                ObjectId quizId,
-                                Long start, Long end) {
-
-        try {
-
-            Document quiz = hasAccess(db, userId, quizId);
-
-            if (start != null && end != null && start >= end)
-                return JSON_NOT_VALID_PARAMS;
-
-            long curr = System.currentTimeMillis();
-
-            if (!DEV_MODE && (
-                    (start != null && start < curr) ||
-                            (end != null && end < curr)
-            ))
-                return generateErr(
-                        "زمان ها باید از اکنون بزرگ تر باشند."
-                );
-
-            long endAt = quiz.getLong("end");
-
-            if (!DEV_MODE && endAt < curr)
-                return generateErr("زمان آزمون/تمرین موردنظر به پایان رسیده است.");
-
-            long startAt = quiz.getLong("start");
-
-            if (!DEV_MODE && startAt < curr && start != null)
-                return generateErr("به دلیل شروع شدن آزمون/تمرین، شما نمی توانید زمان شروع را تغییر دهید.");
-
-            startAt = start != null ? start : startAt;
-            endAt = end != null ? end : endAt;
-
-            if (quiz.containsKey("duration")) {
-
-                long diff = (endAt - startAt) / 1000;
-                int duration = quiz.getInteger("duration") * 60;
-
-                if (duration > diff)
-                    return generateErr("فاصله بین زمان شروع آزمون/تمرین و پایان آن باید حداقل " + (int) Math.ceil(duration / 60.0) + " دقیقه باشد.");
-            }
-
-            if (end != null)
-                quiz.put("end", end);
-
-            if (start != null)
-                quiz.put("start", start);
-
-            db.replaceOne(quizId, quiz);
-            return JSON_OK;
-
-        } catch (InvalidFieldsException e) {
-            return generateErr(
-                    e.getMessage()
-            );
-        }
-    }
-
     public static String arrangeQuestions(Common db, ObjectId userId,
                                           ObjectId quizId, JSONObject jsonObject
     ) {
@@ -714,13 +655,18 @@ public class QuizController {
                 return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
 
             JSONArray questionIds = jsonObject.getJSONArray("questionIds");
-            List<Document> questions = doc.getList("questions", Document.class);
-            int totalQuestions = questions.size();
+            Document questions = doc.get("questions", Document.class);
+            List<ObjectId> questionOIds = questions.getList("_ids", ObjectId.class);
 
-            if (totalQuestions != questionIds.length())
+            if (questionOIds.size() != questionIds.length())
                 return JSON_NOT_VALID_PARAMS;
 
-            ArrayList<Document> newArrange = new ArrayList<>();
+            List<Double> questionMarks = questions.getList(
+                    "marks", Double.class
+            );
+
+            ArrayList<ObjectId> newArrange = new ArrayList<>();
+            ArrayList<Double> marks = new ArrayList<>();
 
             for (int i = 0; i < questionIds.length(); i++) {
 
@@ -732,18 +678,22 @@ public class QuizController {
                 if (!ObjectIdValidator.isValid(questionIds.getString(i)))
                     return JSON_NOT_VALID_PARAMS;
 
-                Document question = searchInDocumentsKeyVal(questions, "_id",
-                        new ObjectId(questionIds.getString(i)));
-
-                if (question == null)
+                int idx = questionOIds.indexOf(new ObjectId(questionIds.getString(i)));
+                if (idx == -1)
                     return JSON_NOT_VALID_PARAMS;
 
-                newArrange.add(question);
+                newArrange.add(questionOIds.get(idx));
+                marks.add(questionMarks.get(idx));
             }
 
-            doc.put("questions", newArrange);
-
+            questions.put("marks", marks);
+            questions.put("_ids", newArrange);
+            questions.put("answers",
+                    Utility.getAnswersByteArr(newArrange)
+            );
+            doc.put("questions", questions);
             db.replaceOne(quizId, doc);
+
             return JSON_OK;
 
         } catch (InvalidFieldsException e) {
