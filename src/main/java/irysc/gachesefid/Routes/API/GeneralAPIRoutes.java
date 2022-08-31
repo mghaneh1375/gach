@@ -37,6 +37,15 @@ public class GeneralAPIRoutes extends Router {
         return PayPing.pay();
     }
 
+    @GetMapping(value = "/getMySummary")
+    @ResponseBody
+    public String getMySummary(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException {
+        return UserController.getMySummary(
+                getUserWithOutCheckCompleteness(request)
+        );
+    }
+
     @GetMapping(value = "/fetchStates")
     @ResponseBody
     public String fetchStates() {
@@ -90,7 +99,7 @@ public class GeneralAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException {
         return OffCodeController.offs(
                 getUserWithOutCheckCompleteness(request).getObjectId("_id"),
-                null, null, false,
+                null, false, false,
                 null, null,
                 null, null,
                 null, null,

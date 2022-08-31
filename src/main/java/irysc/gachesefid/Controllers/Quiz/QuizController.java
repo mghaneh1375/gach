@@ -180,7 +180,6 @@ public class QuizController {
 
         try {
             Document quiz = hasAccess(db, userId, quizId);
-
             QuizAbstract quizAbstract;
 
             // todo : complete this section
@@ -203,7 +202,10 @@ public class QuizController {
 
                 Document student = userRepository.findBySecKey(NID);
 
-                if (student == null) {
+                if (student == null || !student.containsKey("city") ||
+                        student.get("city") == null || !student.containsKey("school") ||
+                        student.get("school") == null
+                ) {
                     excepts.put(i + 1);
                     continue;
                 }

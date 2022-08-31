@@ -982,6 +982,22 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String getMySummary(Document user) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("money", user.getInteger("money"))
+                .put("rank", 1)
+                .put("activeQuizzes", 2)
+                .put("coin", user.get("coin"));
+
+        int totalQuizzes = iryscQuizRepository.count(
+                in("students._id", user.getObjectId("_id"))
+        );
+
+        jsonObject.put("totalQuizzes", totalQuizzes);
+
+        return generateSuccessMsg("data", jsonObject);
+    }
 
     public static String updateInfo(JSONObject jsonObject, Document user) {
 

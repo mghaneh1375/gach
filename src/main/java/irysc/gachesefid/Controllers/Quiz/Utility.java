@@ -662,7 +662,7 @@ public class Utility {
             if (userId != null && !quiz.getBoolean("visibility"))
                 throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
-            if(searchInDocumentsKeyValIdx(
+            if(userId != null && searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class),
                     "_id", userId
             ) == -1)

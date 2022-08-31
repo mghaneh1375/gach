@@ -75,6 +75,7 @@ public class StaticValues {
                     .append("start", 1).append("end", 1)
                     .append("start_registry", 1)
                     .append("end_registry", 1)
+                    .append("visibility", 1)
                     .append("tags", 1).append("mode", 1)
                     .append("price", 1).append("launch_mode", 1)
                     .append("capacity", 1).append("registered", 1)

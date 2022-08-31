@@ -393,7 +393,7 @@ public class ManageUserController {
         for (Document itr : studentsInfo) {
             JSONObject jsonObject = new JSONObject();
             Utility.fillJSONWithUser(jsonObject, itr);
-            data.put(jsonObject);
+            data.put(jsonObject.getJSONObject("student"));
         }
 
         return generateSuccessMsg("data", data);
@@ -596,13 +596,13 @@ public class ManageUserController {
 
             String id = jsonArray.getString(i);
             if (!ObjectId.isValid(id)) {
-                excepts.put(i);
+                excepts.put(i + 1);
                 continue;
             }
 
             Document user = userRepository.findById(new ObjectId(id));
-            if(user == null || !user.containsKey("form_list")) {
-                excepts.put(i);
+            if(user == null) {
+                excepts.put(i + 1);
                 continue;
             }
 
@@ -610,12 +610,12 @@ public class ManageUserController {
                     .getObjectId("_id");
 
             if(!isAgent && wantedId != null && !schoolId.equals(wantedId)) {
-                excepts.put(i);
+                excepts.put(i + 1);
                 continue;
             }
 
             if(students != null && !students.contains(user.getObjectId("_id"))) {
-                excepts.put(i);
+                excepts.put(i + 1);
                 continue;
             }
 
@@ -628,7 +628,7 @@ public class ManageUserController {
             }
 
             if(isAgent && checked.containsKey(schoolId) && checked.get(schoolId) == null) {
-                excepts.put(i);
+                excepts.put(i + 1);
                 continue;
             }
             if(checked != null && checked.containsKey(schoolId) && checked.get(schoolId) != null) {
@@ -638,6 +638,7 @@ public class ManageUserController {
                 doneIds.put(user.getObjectId("_id"));
                 continue;
             }
+
             if(checked != null && filter != null && !checked.containsKey(schoolId)) {
 
                 Document schoolAccount = userRepository.findOne(
@@ -646,7 +647,7 @@ public class ManageUserController {
 
                 if(schoolAccount == null) {
                     checked.put(schoolId, null);
-                    excepts.put(i);
+                    excepts.put(i + 1);
                     continue;
                 }
 
