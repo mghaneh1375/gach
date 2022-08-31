@@ -4,6 +4,7 @@ package irysc.gachesefid.Routes.API;
 import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
+import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -29,6 +30,12 @@ import javax.validation.constraints.NotBlank;
 @RequestMapping(path = "/api/general")
 @Validated
 public class GeneralAPIRoutes extends Router {
+
+    @GetMapping(value = "/preparePay")
+    @ResponseBody
+    public String preparePay() {
+        return PayPing.pay();
+    }
 
     @GetMapping(value = "/fetchStates")
     @ResponseBody
