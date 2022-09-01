@@ -24,7 +24,7 @@ public class PayPing {
 
         try {
             String line;
-            Process p = Runtime.getRuntime().exec("php " + scriptName + " " + param);
+            Process p = Runtime.getRuntime().exec("php /var/www/scripts/" + scriptName + " " + param);
             BufferedReader input =
                     new BufferedReader
                             (new InputStreamReader(p.getInputStream()));
