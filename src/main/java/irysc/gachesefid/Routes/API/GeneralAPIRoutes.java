@@ -37,6 +37,15 @@ public class GeneralAPIRoutes extends Router {
         return PayPing.pay();
     }
 
+    @PostMapping(value = "/callBackBank")
+    public void callBackBank(@RequestPart @NotBlank String refId,
+                               @RequestPart @NotBlank String refCode,
+                               @RequestPart @NotBlank Long saleOrderId,
+                               @RequestPart @NotBlank Long saleRefId
+                               ) {
+        PayPing.checkPay(refId, refCode, saleOrderId, saleRefId);
+    }
+
     @GetMapping(value = "/getMySummary")
     @ResponseBody
     public String getMySummary(HttpServletRequest request

@@ -13,7 +13,10 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.eq;
+import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_UNKNOWN;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
 public class PayPing {
@@ -33,17 +36,59 @@ public class PayPing {
                 output.append(line);
             }
             input.close();
-        }
-        catch (Exception err) {
+        } catch (Exception err) {
             err.printStackTrace();
         }
 
         return output.toString();
     }
 
+    public static void checkPay(
+            String refId,
+            String refCode,
+            Long saleOrderId,
+            Long saleRefId
+    ) {
+        if(refCode.equalsIgnoreCase("0")) {
+
+            Document transaction = transactionRepository.findOne(
+                    eq("ref_id", refId), null
+            );
+
+            if(transaction == null)
+                return;
+
+            transaction.put("sale_ref_id", saleRefId);
+            String res = execPHP("verify.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+            System.out.println(res);
+//            if(res.startsWith("0"))
+//                execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+        }
+
+    }
+
+
     public static String pay() {
-        String output = execPHP("pay.php", "20000 123 ''");
-        return output;
+
+        if (1 == 1)
+            return generateSuccessMsg("data", "D2DA7137D0EAF22B");
+
+        ObjectId orderId = new ObjectId();
+
+        Document doc = new Document()
+                .append("_id", orderId)
+                .append("amount", 10000)
+                .append("created_at", System.currentTimeMillis());
+
+        String output = execPHP("pay.php", "10000 " + orderId);
+        if (output.startsWith("0,")) {
+            System.out.println("good");
+            doc.append("ref_id", output.substring(2));
+            transactionRepository.insertOne(doc);
+            return generateSuccessMsg("data", output.substring(2));
+        }
+
+        return JSON_NOT_UNKNOWN;
     }
 
     public static String myTransactions(ObjectId userId,
