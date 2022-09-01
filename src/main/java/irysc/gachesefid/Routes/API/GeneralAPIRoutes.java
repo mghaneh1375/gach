@@ -25,11 +25,30 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+import org.springframework.http.MediaType;
+import java.util.Map;
+
 
 @Controller
 @RequestMapping(path = "/api/general")
 @Validated
 public class GeneralAPIRoutes extends Router {
+
+
+	public class A {
+		public String RefId;
+		public String ResCode;
+		public Long SaleOrderId;
+		public Long SaleReferenceId;
+
+		public void print() {
+
+			System.out.println(RefId);
+			System.out.println(ResCode);
+			System.out.println(SaleOrderId);
+			System.out.println(SaleReferenceId);
+		};
+	}
 
     @GetMapping(value = "/preparePay")
     @ResponseBody
@@ -37,14 +56,74 @@ public class GeneralAPIRoutes extends Router {
         return PayPing.pay();
     }
 
-    @PostMapping(value = "/callBackBank")
-    public void callBackBank(@RequestPart @NotBlank String refId,
-                               @RequestPart @NotBlank String refCode,
-                               @RequestPart @NotBlank Long saleOrderId,
-                               @RequestPart @NotBlank Long saleRefId
-                               ) {
-        PayPing.checkPay(refId, refCode, saleOrderId, saleRefId);
+
+    @PostMapping(value = "/callBackBank",
+		consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE}
+    )
+    @ResponseBody
+    public String callBackBank(
+	@RequestParam Map<String, Object> name
+    ) {
+	String refId = null, resCode = null;
+	Long saleOrderId = null, saleReferenceId = null;
+
+	for(String key : name.keySet()) {
+
+		if(key.equalsIgnoreCase("RefId"))
+			refId = name.get(key).toString();
+		else if(key.equalsIgnoreCase("ResCode"))
+			resCode = name.get(key).toString();
+		else if(key.equalsIgnoreCase("saleOrderId"))
+			saleOrderId = Long.parseLong(name.get(key).toString());
+		else if(key.equalsIgnoreCase("saleReferenceId"))
+			saleReferenceId = Long.parseLong(name.get(key).toString());
+
+
+	}
+	System.out.println("Salam");
+	System.out.println(refId);
+	System.out.println(resCode);
+	System.out.println(saleOrderId);
+	System.out.println(name.keySet().size());
+
+        PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+
+	return "ok";
     }
+
+/*
+    @PostMapping(value = "/callBackBank")
+    public void callBackBank(@RequestBody Map<String, Object> paramMap) {
+	System.out.println("Salam");
+	System.out.println(paramMap.keySet().size());
+
+//        PayPing.checkPay(a.refId, a.refCode, a.saleOrderId, a.saleReferenceId);
+    }
+
+*/
+
+/*
+    @PostMapping(value = "/callBackBank")
+    public void callBackBank(@RequestBody A a) {
+	System.out.println("Salam");
+	a.print();
+        PayPing.checkPay(a.refId, a.refCode, a.saleOrderId, a.saleReferenceId);
+    }
+*/
+
+
+/*
+    @PostMapping(value = "/callBackBank")
+    public void callBackBank(
+				@RequestBody String RefId,
+				@RequestBody String ResCode,
+				@RequestBody Long SaleOrderId,
+				@RequestBody(required=false) Long SaleReferenceId
+    ) {
+	System.out.println("Salam");
+        PayPing.checkPay(RefId, ResCode, SaleOrderId, SaleReferenceId);
+    }
+*/
 
     @GetMapping(value = "/getMySummary")
     @ResponseBody

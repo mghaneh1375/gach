@@ -49,6 +49,9 @@ public class PayPing {
             Long saleOrderId,
             Long saleRefId
     ) {
+
+	System.out.println("ref code is " + refCode);
+
         if(refCode.equalsIgnoreCase("0")) {
 
             Document transaction = transactionRepository.findOne(
@@ -70,8 +73,8 @@ public class PayPing {
 
     public static String pay() {
 
-        if (1 == 1)
-            return generateSuccessMsg("data", "D2DA7137D0EAF22B");
+//        if (1 == 1)
+//            return generateSuccessMsg("data", "D2DA7137D0EAF22B");
 
         ObjectId orderId = new ObjectId();
 
@@ -80,7 +83,7 @@ public class PayPing {
                 .append("amount", 10000)
                 .append("created_at", System.currentTimeMillis());
 
-        String output = execPHP("pay.php", "10000 " + orderId);
+        String output = execPHP("pay.php", "50000 " + orderId);
         if (output.startsWith("0,")) {
             System.out.println("good");
             doc.append("ref_id", output.substring(2));
