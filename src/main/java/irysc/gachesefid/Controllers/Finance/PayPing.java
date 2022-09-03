@@ -92,6 +92,8 @@ public class PayPing {
                 .append("created_at", System.currentTimeMillis());
 
         String output = execPHP("pay.php", "50000 " + orderId);
+        System.out.println(output);
+        
         if (output.startsWith("0,")) {
             System.out.println("good");
             doc.append("ref_id", output.substring(2));
