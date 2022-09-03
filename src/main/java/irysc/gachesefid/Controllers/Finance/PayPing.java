@@ -149,9 +149,10 @@ public class PayPing {
 
                 res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
 
-                new Thread(() -> {
-                    completePay(transaction);
-                }).start();
+                transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
+
+                new Thread(() -> completePay(transaction)).start();
+
                 System.out.println(res);
                 return refId;
             }
