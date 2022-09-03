@@ -13,7 +13,8 @@
 <body>
 <p>
     <span>وضعیت پرداخت</span>
-    <span data-status="[[${status}]]" id="payStatus"></span>
+    <span id="payStatus" class="hidden">[[${status}]]</span>
+    <span id="payStatusText"></span>
 </p>
 
 <p class="hidden" id="refDiv">
@@ -29,13 +30,13 @@
 
 <script>
     $(document).ready(function () {
-        const status = $("#payStatus").attr('data-status');
+        const status = $("#payStatus").text();
         if(status === "success") {
             $("#refDiv").removeClass('hidden');
-            $("#payStatus").text("موفق");
+            $("#payStatusText").text("موفق");
         }
         else {
-            $("#payStatus").text("ناموفق");
+            $("#payStatusText").text("ناموفق");
         }
     });
 </script>
