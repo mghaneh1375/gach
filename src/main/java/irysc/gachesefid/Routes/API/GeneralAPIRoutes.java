@@ -37,7 +37,7 @@ import java.util.Map;
 public class GeneralAPIRoutes extends Router {
 
 
-    @GetMapping(value = "/chargeAccount")
+    @PostMapping(value = "/chargeAccount")
     @ResponseBody
     public String chargeAccount(HttpServletRequest request,
                                 @RequestBody @StrongJSONConstraint(
