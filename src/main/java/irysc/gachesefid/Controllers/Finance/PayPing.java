@@ -52,48 +52,54 @@ public class PayPing {
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
         if(user != null) {
-            user.put("money", 0);
+            if(!transaction.getString("section").equalsIgnoreCase("charge"))
+                user.put("money", 0);
+
             userRepository.replaceOne(
                     user.getObjectId("_id"), user
             );
 
-            List<ObjectId> products = transaction.getList("products", ObjectId.class);
+            if(transaction.containsKey("products")) {
+                List<ObjectId> products = transaction.getList("products", ObjectId.class);
 
-            new RegularQuizController()
-                    .registry(studentId,
-                            user.getString("phone"),
-                            user.getString("mail"),
-                            products,
-                            transaction.getInteger("amount"));
+                new RegularQuizController()
+                        .registry(studentId,
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                products,
+                                transaction.getInteger("amount"));
 
-            if(transaction.containsKey("off_code")) {
-                Document off = offcodeRepository.findById(
-                        transaction.getObjectId("off_code")
-                );
-                if(off != null) {
-
-                    BasicDBObject update;
-
-                    if(off.containsKey("is_public") &&
-                            off.getBoolean("is_public")
-                    ) {
-                        List<ObjectId> students = off.getList("students", ObjectId.class);
-                        students.add(studentId);
-                        update = new BasicDBObject("students", students);
-                    }
-                    else
-                        update = new BasicDBObject("used", true)
-                                .append("used_at", System.currentTimeMillis())
-                                .append("used_section", transaction.getString("section"))
-                                .append("used_for", products);
-
-                    offcodeRepository.updateOne(
-                            off.getObjectId("_id"),
-                            new BasicDBObject("$set", update)
+                if(transaction.containsKey("off_code") &&
+                        transaction.get("off_code") != null) {
+                    Document off = offcodeRepository.findById(
+                            transaction.getObjectId("off_code")
                     );
+                    if(off != null) {
+
+                        BasicDBObject update;
+
+                        if(off.containsKey("is_public") &&
+                                off.getBoolean("is_public")
+                        ) {
+                            List<ObjectId> students = off.getList("students", ObjectId.class);
+                            students.add(studentId);
+                            update = new BasicDBObject("students", students);
+                        }
+                        else
+                            update = new BasicDBObject("used", true)
+                                    .append("used_at", System.currentTimeMillis())
+                                    .append("used_section", transaction.getString("section"))
+                                    .append("used_for", products);
+
+                        offcodeRepository.updateOne(
+                                off.getObjectId("_id"),
+                                new BasicDBObject("$set", update)
+                        );
 
 
+                    }
                 }
+
             }
 
         }
@@ -123,9 +129,9 @@ public class PayPing {
                     transaction
             );
 
-            new Thread(() -> {
-                completePay(transaction);
-            }).start();
+            if(!transaction.getString("section").equalsIgnoreCase("charge")) {
+                new Thread(() -> completePay(transaction)).start();
+            }
 
             return refId;
         }
@@ -151,7 +157,9 @@ public class PayPing {
 
                 transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
 
-                new Thread(() -> completePay(transaction)).start();
+                if(!transaction.getString("section").equalsIgnoreCase("charge")) {
+                    new Thread(() -> completePay(transaction)).start();
+                }
 
                 System.out.println(res);
                 return refId;
@@ -168,6 +176,27 @@ public class PayPing {
         return null;
     }
 
+    public static String chargeAccount(ObjectId userId, int amount) {
+
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        )) {
+            orderId = Math.abs(new Random().nextLong());
+        }
+
+        Document doc =
+                new Document("user_id", userId)
+                        .append("amount", amount)
+                        .append("created_at", System.currentTimeMillis())
+                        .append("status", "init")
+                        .append("order_id", orderId)
+                        .append("section", "charge")
+                        .append("off_code", null);
+
+        return goToPayment(amount, doc);
+    }
+
     public static String goToPayment(int price, Document transaction) {
 
         String output = execPHP("pay.php", price + " " + transaction.getLong("order_id"));
@@ -179,35 +208,6 @@ public class PayPing {
             return generateSuccessMsg("refId", output.substring(2),
                     new PairValue("action", "pay")
             );
-        }
-
-        return JSON_NOT_UNKNOWN;
-    }
-
-    public static String pay() {
-
-        long orderId = Math.abs(new Random().nextLong());
-        while (transactionRepository.exist(
-                eq("order_id", orderId)
-        )) {
-            orderId = Math.abs(new Random().nextLong());
-        }
-
-        Document doc = new Document()
-                .append("order_id", orderId)
-                .append("amount", 10000)
-                .append("status", "init")
-                .append("created_at", System.currentTimeMillis());
-
-        System.out.println(orderId);
-        String output = execPHP("pay.php", "50000 " + orderId);
-        System.out.println(output);
-
-        if (output.startsWith("0,")) {
-            System.out.println("good");
-            doc.append("ref_id", output.substring(2));
-            transactionRepository.insertOne(doc);
-            return generateSuccessMsg("data", output.substring(2));
         }
 
         return JSON_NOT_UNKNOWN;

@@ -37,10 +37,18 @@ import java.util.Map;
 public class GeneralAPIRoutes extends Router {
 
 
-    @GetMapping(value = "/preparePay")
+    @GetMapping(value = "/chargeAccount")
     @ResponseBody
-    public String preparePay() {
-        return PayPing.pay();
+    public String chargeAccount(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"amount"},
+                                        paramsType = {Integer.class}
+                                ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return PayPing.chargeAccount(
+                getUser(request).getObjectId("_id"),
+                new JSONObject(jsonStr).getInt("amount")
+        );
     }
 
 

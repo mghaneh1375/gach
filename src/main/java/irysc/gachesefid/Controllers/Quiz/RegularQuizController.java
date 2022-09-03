@@ -193,7 +193,7 @@ public class RegularQuizController extends QuizAbstract {
                     continue;
 
                 Document stdDoc = new Document("_id", studentId)
-                        .append("paid", paid)
+                        .append("paid", paid / quizIds.size())
                         .append("register_at", System.currentTimeMillis())
                         .append("finish_at", null)
                         .append("start_at", null)

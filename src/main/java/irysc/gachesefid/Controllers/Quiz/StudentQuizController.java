@@ -502,8 +502,7 @@ public class StudentQuizController {
         if(quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));
 
-//        return goToPayment(shouldPay - money, doc);
-        return goToPayment(50000, doc);
+        return goToPayment(shouldPay - money, doc);
     }
 
     private static String returnQuiz(Document quiz, Document stdDoc,
