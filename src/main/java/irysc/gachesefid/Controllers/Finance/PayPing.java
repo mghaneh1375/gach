@@ -71,6 +71,8 @@ public class PayPing {
                 System.out.println(res);
                 return refId;
             }
+            else if(res.startsWith("43"))
+                return refId;
             else
                 return null;
         }
