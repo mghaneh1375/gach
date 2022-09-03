@@ -119,7 +119,7 @@ public class IRYSCQuizRepository extends Common {
                 newDoc.put("answers", findAllROQ(quizId, rs.getInt("uId")));
                 newDoc.put("_id", user.getObjectId("_id"));
                 newDoc.put("paid", 0);
-                newDoc.put("register_at", rs.getLong("timeEntry"));
+                newDoc.put("register_at", System.currentTimeMillis());
                 newDoc.put("start_at", rs.getLong("timeEntry"));
                 newDoc.put("finish_at", rs.getLong("timeEntry"));
 
