@@ -174,9 +174,9 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    ArrayList<Document> registry(ObjectId studentId, String phone,
-                  String mail, ArrayList<ObjectId> quizIds,
-                  int paid
+    public List<Document> registry(ObjectId studentId, String phone,
+                                   String mail, List<ObjectId> quizIds,
+                                   int paid
     ) {
 
         ArrayList<Document> added = new ArrayList<>();

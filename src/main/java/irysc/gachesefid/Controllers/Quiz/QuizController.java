@@ -220,7 +220,7 @@ public class QuizController {
                 ArrayList<ObjectId> quizIds = new ArrayList<>();
                 quizIds.add(quizId);
 
-                ArrayList<Document> added = quizAbstract.registry(
+                List<Document> added = quizAbstract.registry(
                         student.getObjectId("_id"), student.getString("phone"),
                         student.getString("mail"), quizIds, paid
                 );

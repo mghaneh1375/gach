@@ -14,8 +14,8 @@ import java.util.List;
 
 public abstract class QuizAbstract {
 
-    abstract ArrayList<Document> registry(ObjectId studentId, String phone,
-                                          String mail, ArrayList<ObjectId> quizIds,
+    abstract List<Document> registry(ObjectId studentId, String phone,
+                                          String mail, List<ObjectId> quizIds,
                                           int paid);
 
     abstract int calcLen(Document quiz);

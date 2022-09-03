@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -14,7 +15,9 @@ import java.util.ArrayList;
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
 public class TransactionController {
 
@@ -67,6 +70,30 @@ public class TransactionController {
         }
 
         return generateSuccessMsg("data", data);
+    }
+
+    public static String fetchInvoice(ObjectId userId, String refId) {
+
+        Document doc = transactionRepository.findOne(
+                and(
+                        eq("ref_id", refId),
+                        eq("user_id", userId),
+                        eq("status", "success")
+                ), null
+        );
+
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONObject jsonObject = new JSONObject()
+                .put("paid", doc.get("amount"))
+                .put("createdAt", getSolarDate(doc.getLong("created_at")))
+                .put("for", GiftController.translateUseFor(doc.getString("section")));
+
+        if(doc.containsKey("ref_id"))
+            jsonObject.put("refId", doc.get("sale_ref_id"));
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
     public static String getMyRecp(ObjectId userId,

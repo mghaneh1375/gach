@@ -19,9 +19,11 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.exists;
+import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -476,8 +478,15 @@ public class StudentQuizController {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "action", "success",
-                    new PairValue("url", newUserMoney)
+                    new PairValue("refId", newUserMoney)
             );
+        }
+
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        )) {
+            orderId = Math.abs(new Random().nextLong());
         }
 
         Document doc =
@@ -485,6 +494,7 @@ public class StudentQuizController {
                         .append("amount", shouldPay - money)
                         .append("created_at", curr)
                         .append("status", "init")
+                        .append("order_id", orderId)
                         .append("products", quizIds)
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("off_code", off == null ? null : off.getObjectId("_id"));
@@ -492,8 +502,8 @@ public class StudentQuizController {
         if(quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));
 
-        ObjectId transactionId = transactionRepository.insertOneWithReturnId(doc);
-        return irysc.gachesefid.Controllers.Finance.Utilities.goToPayment(shouldPay - money, studentId, transactionId);
+//        return goToPayment(shouldPay - money, doc);
+        return goToPayment(50000, doc);
     }
 
     private static String returnQuiz(Document quiz, Document stdDoc,

@@ -11,10 +11,14 @@ import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_UNKNOWN;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 public class Utilities {
@@ -81,39 +85,6 @@ public class Utilities {
         }
 
         return new PairValue(pay, offCode);
-    }
-
-    public static String goToPayment(int price, ObjectId userId, ObjectId transactionId) {
-
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("amount", price);
-        jsonObject.put("payerIdentity", userId);
-        jsonObject.put("returnUrl", RETURN_URL);
-        jsonObject.put("clientRefId", transactionId);
-
-        try {
-
-            HttpResponse<JsonNode> response = Unirest.post(BASE_URL + "pay")
-                    .header("Content-type", "application/json")
-                    .header("Accept", "application/json")
-                    .header("Authorization", "Bearer " + token)
-                    .body(jsonObject).asJson();
-
-
-            if (response.getStatus() == 200) {
-                String payUrl = BASE_URL + "pay/gotoipg/" + response.getBody().getObject().get("code");
-
-                return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                        "action", "pay", new PairValue("url", payUrl)
-                );
-
-            }
-
-        } catch (UnirestException e) {
-            printException(e);
-        }
-
-        return JSON_NOT_VALID;
     }
 
 }

@@ -19,24 +19,29 @@
 
 <p class="hidden" id="refDiv">
     <span>کد رهگیری</span>
-    <span>[[${refId}]]</span>
+    <span id="refId">[[${refId}]]</span>
 </p>
 
 <p>
 <span>برای بازگشت به برنامه</span>
-<a href="https://e.irysc.com">کلیک</a>
+<a id="link" href="">کلیک</a>
 <span>کنید</span>
 </p>
 
 <script>
+    // var host = 'https://e.irysc.com';
+    const host = 'http://localhost:3000';
+
     $(document).ready(function () {
         const status = $("#payStatus").text();
         if(status === "success") {
             $("#refDiv").removeClass('hidden');
             $("#payStatusText").text("موفق");
+            $("#link").attr('href', host + '/payStatus/' + $("#refId").text());
         }
         else {
             $("#payStatusText").text("ناموفق");
+            $("#link").attr('href', host);
         }
     });
 </script>

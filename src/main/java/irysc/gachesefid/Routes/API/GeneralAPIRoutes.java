@@ -5,6 +5,7 @@ import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
+import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -13,6 +14,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -42,47 +45,39 @@ public class GeneralAPIRoutes extends Router {
 
 
     @PostMapping(value = "/callBackBank",
-		consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE}
+            consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE}
     )
     @ResponseBody
     public ModelAndView callBackBank(
-	@RequestParam Map<String, Object> name
+            @RequestParam Map<String, Object> name
     ) {
         String refId = null, resCode = null;
         Long saleOrderId = null, saleReferenceId = null;
 
-        for(String key : name.keySet()) {
+        for (String key : name.keySet()) {
 
-            if(key.equalsIgnoreCase("RefId"))
+            if (key.equalsIgnoreCase("RefId"))
                 refId = name.get(key).toString();
-            else if(key.equalsIgnoreCase("ResCode"))
+            else if (key.equalsIgnoreCase("ResCode"))
                 resCode = name.get(key).toString();
-            else if(key.equalsIgnoreCase("saleOrderId"))
+            else if (key.equalsIgnoreCase("saleOrderId"))
                 saleOrderId = Long.parseLong(name.get(key).toString());
-            else if(key.equalsIgnoreCase("saleReferenceId"))
+            else if (key.equalsIgnoreCase("saleReferenceId"))
                 saleReferenceId = Long.parseLong(name.get(key).toString());
-
-
         }
 
         ModelAndView modelAndView = new ModelAndView();
 
-        if(refId == null || resCode == null) {
+        if (refId == null || resCode == null) {
             modelAndView.addObject("status", "fail");
-        }
-        else {
-            System.out.println("Salam");
-            System.out.println("refId " + refId);
-            System.out.println("resCode " + resCode);
-            System.out.println("saleOrderId " + saleOrderId);
-            System.out.println("size is " + name.keySet().size());
+        } else {
 
             String referenceId = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
-            if(referenceId == null)
+            if (referenceId == null)
                 modelAndView.addObject("status", "fail");
             else {
                 modelAndView.addObject("status", "success");
-                modelAndView.addObject("refId", "referenceId");
+                modelAndView.addObject("refId", referenceId);
             }
         }
 
@@ -90,39 +85,15 @@ public class GeneralAPIRoutes extends Router {
         return modelAndView;
     }
 
-/*
-    @PostMapping(value = "/callBackBank")
-    public void callBackBank(@RequestBody Map<String, Object> paramMap) {
-	System.out.println("Salam");
-	System.out.println(paramMap.keySet().size());
-
-//        PayPing.checkPay(a.refId, a.refCode, a.saleOrderId, a.saleReferenceId);
+    @GetMapping(value = "/fetchInvoice/{refId}")
+    @ResponseBody
+    public String fetchInvoice(HttpServletRequest request,
+                               @PathVariable @NotBlank String refId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return TransactionController.fetchInvoice(
+                getUser(request).getObjectId("_id"), refId
+        );
     }
-
-*/
-
-/*
-    @PostMapping(value = "/callBackBank")
-    public void callBackBank(@RequestBody A a) {
-	System.out.println("Salam");
-	a.print();
-        PayPing.checkPay(a.refId, a.refCode, a.saleOrderId, a.saleReferenceId);
-    }
-*/
-
-
-/*
-    @PostMapping(value = "/callBackBank")
-    public void callBackBank(
-				@RequestBody String RefId,
-				@RequestBody String ResCode,
-				@RequestBody Long SaleOrderId,
-				@RequestBody(required=false) Long SaleReferenceId
-    ) {
-	System.out.println("Salam");
-        PayPing.checkPay(RefId, ResCode, SaleOrderId, SaleReferenceId);
-    }
-*/
 
     @GetMapping(value = "/getMySummary")
     @ResponseBody
@@ -176,7 +147,7 @@ public class GeneralAPIRoutes extends Router {
     public String getRecp(HttpServletRequest request,
                           @RequestParam(required = false) @NotBlank @EnumValidator(enumClazz = OffCodeSections.class) String payFor,
                           @RequestParam(required = false) @NotBlank String refId
-                          ) {
+    ) {
         return "Ad";
     }
 
