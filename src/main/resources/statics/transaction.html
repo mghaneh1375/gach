@@ -37,7 +37,7 @@
         if(status === "success") {
             $("#refDiv").removeClass('hidden');
             $("#payStatusText").text("موفق");
-            $("#link").attr('href', host + '/payStatus/' + $("#refId").text());
+            $("#link").attr('href', host + '/invoice/' + $("#refId").text());
         }
         else {
             $("#payStatusText").text("ناموفق");

@@ -118,6 +118,11 @@ public class PayPing {
             transaction.put("sale_ref_id", saleRefId);
             transaction.put("status", "success");
 
+            transactionRepository.replaceOne(
+                    transaction.getObjectId("_id"),
+                    transaction
+            );
+
             new Thread(() -> {
                 completePay(transaction);
             }).start();
