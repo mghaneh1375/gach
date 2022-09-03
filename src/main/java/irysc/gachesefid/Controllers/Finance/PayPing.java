@@ -52,8 +52,11 @@ public class PayPing {
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
         if(user != null) {
-            if(!transaction.getString("section").equalsIgnoreCase("charge"))
+            if(transaction.getString("section").equalsIgnoreCase("charge"))
+                user.put("money", user.getInteger("money") + transaction.getInteger("amount"));
+            else {
                 user.put("money", 0);
+            }
 
             userRepository.replaceOne(
                     user.getObjectId("_id"), user
@@ -129,9 +132,7 @@ public class PayPing {
                     transaction
             );
 
-            if(!transaction.getString("section").equalsIgnoreCase("charge")) {
-                new Thread(() -> completePay(transaction)).start();
-            }
+            new Thread(() -> completePay(transaction)).start();
 
             return refId;
         }
@@ -157,9 +158,7 @@ public class PayPing {
 
                 transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
 
-                if(!transaction.getString("section").equalsIgnoreCase("charge")) {
-                    new Thread(() -> completePay(transaction)).start();
-                }
+                new Thread(() -> completePay(transaction)).start();
 
                 System.out.println(res);
                 return refId;
