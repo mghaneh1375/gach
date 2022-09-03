@@ -10,14 +10,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_UNKNOWN;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.getSolarDate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class PayPing {
 
@@ -63,11 +63,11 @@ public class PayPing {
 
             transaction.put("sale_ref_id", saleRefId);
 
-            String res = execPHP("verify.php", transaction.get("_id").toString() + " " + saleOrderId + " " + saleRefId);
+            String res = execPHP("verify.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
             System.out.println(res);
 
             if (res.startsWith("0")) {
-                res = execPHP("settle.php", transaction.get("_id").toString() + " " + saleOrderId + " " + saleRefId);
+                res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
                 System.out.println(res);
                 return refId;
             }
@@ -81,19 +81,22 @@ public class PayPing {
 
     public static String pay() {
 
-//        if (1 == 1)
-//            return generateSuccessMsg("data", "D2DA7137D0EAF22B");
-
-        ObjectId orderId = new ObjectId();
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        )) {
+            orderId = Math.abs(new Random().nextLong());
+        }
 
         Document doc = new Document()
-                .append("_id", orderId)
+                .append("order_id", orderId)
                 .append("amount", 10000)
                 .append("created_at", System.currentTimeMillis());
 
+        System.out.println(orderId);
         String output = execPHP("pay.php", "50000 " + orderId);
         System.out.println(output);
-        
+
         if (output.startsWith("0,")) {
             System.out.println("good");
             doc.append("ref_id", output.substring(2));
