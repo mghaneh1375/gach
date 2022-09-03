@@ -62,12 +62,12 @@ public class PayPing {
                 return null;
 
             transaction.put("sale_ref_id", saleRefId);
-            String res = execPHP("verify.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+
+            String res = execPHP("verify.php", transaction.get("_id").toString() + " " + saleOrderId + " " + saleRefId);
             System.out.println(res);
-            System.out.println(transaction.get("order_id").toString());
 
             if (res.startsWith("0")) {
-                res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+                res = execPHP("settle.php", transaction.get("_id").toString() + " " + saleOrderId + " " + saleRefId);
                 System.out.println(res);
                 return refId;
             }

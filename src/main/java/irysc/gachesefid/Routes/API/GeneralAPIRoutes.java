@@ -72,10 +72,10 @@ public class GeneralAPIRoutes extends Router {
         }
         else {
             System.out.println("Salam");
-            System.out.println(refId);
-            System.out.println(resCode);
-            System.out.println(saleOrderId);
-            System.out.println(name.keySet().size());
+            System.out.println("refId " + refId);
+            System.out.println("resCode " + resCode);
+            System.out.println("saleOrderId " + saleOrderId);
+            System.out.println("size is " + name.keySet().size());
 
             String referenceId = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
             if(referenceId == null)
