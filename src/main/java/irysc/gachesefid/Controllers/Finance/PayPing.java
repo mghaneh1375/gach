@@ -43,33 +43,39 @@ public class PayPing {
         return output.toString();
     }
 
-    public static void checkPay(
+    public static String checkPay(
             String refId,
             String refCode,
             Long saleOrderId,
             Long saleRefId
     ) {
 
-	System.out.println("ref code is " + refCode);
+        System.out.println("ref code is " + refCode);
 
-        if(refCode.equalsIgnoreCase("0")) {
+        if (refCode.equalsIgnoreCase("0")) {
 
             Document transaction = transactionRepository.findOne(
                     eq("ref_id", refId), null
             );
 
-            if(transaction == null)
-                return;
+            if (transaction == null)
+                return null;
 
             transaction.put("sale_ref_id", saleRefId);
             String res = execPHP("verify.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
             System.out.println(res);
             System.out.println(transaction.get("order_id").toString());
 
-            if(res.startsWith("0"))
-                execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+            if (res.startsWith("0")) {
+                res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+                System.out.println(res);
+                return refId;
+            }
+            else
+                return null;
         }
 
+        return null;
     }
 
 

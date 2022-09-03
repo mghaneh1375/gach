@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+<p>
+    <span>وضعیت پرداخت</span>
+    <span data-status="[[${status}]]" id="payStatus"></span>
+</p>
+
+<p class="hidden" id="refDiv">
+    <span>کد رهگیری</span>
+    <span>[[${refId}]]</span>
+</p>
+
+<p>
+<span>برای بازگشت به برنامه</span>
+<a href="https://e.irysc.com">کلیک</a>
+<span>کنید</span>
+</p>
+
+<script>
+    $(document).ready(function () {
+        const status = $("#payStatus").attr('data-status');
+        if(status === "success") {
+            $("#refDiv").removeClass('hidden');
+            $("#payStatus").text("موفق");
+        }
+        else {
+            $("#payStatus").text("ناموفق");
+        }
+    });
+</script>
+</body>
+</html>

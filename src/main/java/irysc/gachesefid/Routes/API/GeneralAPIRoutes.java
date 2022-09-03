@@ -5,7 +5,6 @@ import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
-import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -13,10 +12,8 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -26,6 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import org.springframework.http.MediaType;
+import org.springframework.web.servlet.ModelAndView;
+
 import java.util.Map;
 
 
@@ -34,21 +33,6 @@ import java.util.Map;
 @Validated
 public class GeneralAPIRoutes extends Router {
 
-
-	public class A {
-		public String RefId;
-		public String ResCode;
-		public Long SaleOrderId;
-		public Long SaleReferenceId;
-
-		public void print() {
-
-			System.out.println(RefId);
-			System.out.println(ResCode);
-			System.out.println(SaleOrderId);
-			System.out.println(SaleReferenceId);
-		};
-	}
 
     @GetMapping(value = "/preparePay")
     @ResponseBody
@@ -61,34 +45,49 @@ public class GeneralAPIRoutes extends Router {
 		consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE}
     )
     @ResponseBody
-    public String callBackBank(
+    public ModelAndView callBackBank(
 	@RequestParam Map<String, Object> name
     ) {
-	String refId = null, resCode = null;
-	Long saleOrderId = null, saleReferenceId = null;
+        String refId = null, resCode = null;
+        Long saleOrderId = null, saleReferenceId = null;
 
-	for(String key : name.keySet()) {
+        for(String key : name.keySet()) {
 
-		if(key.equalsIgnoreCase("RefId"))
-			refId = name.get(key).toString();
-		else if(key.equalsIgnoreCase("ResCode"))
-			resCode = name.get(key).toString();
-		else if(key.equalsIgnoreCase("saleOrderId"))
-			saleOrderId = Long.parseLong(name.get(key).toString());
-		else if(key.equalsIgnoreCase("saleReferenceId"))
-			saleReferenceId = Long.parseLong(name.get(key).toString());
+            if(key.equalsIgnoreCase("RefId"))
+                refId = name.get(key).toString();
+            else if(key.equalsIgnoreCase("ResCode"))
+                resCode = name.get(key).toString();
+            else if(key.equalsIgnoreCase("saleOrderId"))
+                saleOrderId = Long.parseLong(name.get(key).toString());
+            else if(key.equalsIgnoreCase("saleReferenceId"))
+                saleReferenceId = Long.parseLong(name.get(key).toString());
 
 
-	}
-	System.out.println("Salam");
-	System.out.println(refId);
-	System.out.println(resCode);
-	System.out.println(saleOrderId);
-	System.out.println(name.keySet().size());
+        }
 
-        PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+        ModelAndView modelAndView = new ModelAndView();
 
-	return "ok";
+        if(refId == null || resCode == null) {
+            modelAndView.addObject("status", "fail");
+        }
+        else {
+            System.out.println("Salam");
+            System.out.println(refId);
+            System.out.println(resCode);
+            System.out.println(saleOrderId);
+            System.out.println(name.keySet().size());
+
+            String referenceId = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+            if(referenceId == null)
+                modelAndView.addObject("status", "fail");
+            else {
+                modelAndView.addObject("status", "success");
+                modelAndView.addObject("refId", "referenceId");
+            }
+        }
+
+        modelAndView.setViewName("transaction");
+        return modelAndView;
     }
 
 /*
