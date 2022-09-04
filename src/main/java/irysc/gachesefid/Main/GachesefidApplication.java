@@ -70,6 +70,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static PackageRepository packageRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
+    public static QuestionTagRepository questionTagRepository;
     public static RequestRepository requestRepository;
     public static SchoolQuizRepository schoolQuizRepository;
     public static SchoolRepository schoolRepository;
@@ -116,6 +117,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             packageRepository = new PackageRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();
+            questionTagRepository = new QuestionTagRepository();
             requestRepository = new RequestRepository();
             schoolQuizRepository = new SchoolQuizRepository();
             schoolRepository = new SchoolRepository();

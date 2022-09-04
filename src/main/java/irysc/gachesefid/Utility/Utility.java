@@ -656,6 +656,10 @@ public class Utility {
         return dates;
     }
 
+    public static int randInt(int upperBound) {
+        return Math.abs(random.nextInt(upperBound));
+    }
+
     public static int randInt() {
 
         if (DEV_MODE)
@@ -888,6 +892,10 @@ public class Utility {
         catch (Exception e) {
             return false;
         }
+    }
+
+    public static String batchRowErr(int rowIdx, String err) {
+        return "ردیف " + rowIdx + ":" + err + "\n";
     }
 
     public static String returnAddResponse(JSONArray excepts,

@@ -3,7 +3,6 @@ package irysc.gachesefid.Controllers.Question;
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.QuestionRepository;
-import irysc.gachesefid.Digests.Question;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionLevel;
@@ -22,6 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Pattern;
@@ -29,13 +29,10 @@ import java.util.regex.Pattern;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.FileUtils.uploadDocOrMultimediaFile;
-import static irysc.gachesefid.Utility.FileUtils.uploadFile;
+import static irysc.gachesefid.Utility.Excel.getCellValue;
 import static irysc.gachesefid.Utility.FileUtils.uploadImageFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.printException;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class QuestionController extends Utilities {
 
@@ -345,6 +342,7 @@ public class QuestionController extends Utilities {
 
         HashMap<ObjectId, Integer> subjectsCounter = new HashMap<>();
         HashMap<ObjectId, Integer> authorCounter = new HashMap<>();
+        JSONArray errs = new JSONArray();
 
         boolean addAtLeastOne = false;
 
@@ -356,12 +354,14 @@ public class QuestionController extends Utilities {
 
                 if (row.getLastCellNum() < 9) {
                     excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "تعداد ستون ها نامعتیر است."));
                     continue;
                 }
 
                 String questionFilename = row.getCell(1).getStringCellValue();
                 if (!FileUtils.checkExist(questionFilename, QuestionRepository.FOLDER)) {
                     excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "فایل سوال موجود نیست."));
                     continue;
                 }
 
@@ -372,24 +372,19 @@ public class QuestionController extends Utilities {
                     answerFilename = cell.getStringCellValue();
                     if (!FileUtils.checkExist(answerFilename, QuestionRepository.FOLDER)) {
                         excepts.put(rowIdx);
+                        errs.put(batchRowErr(rowIdx, "فایل پاسخ سوال موجود نیست."));
                         continue;
                     }
                 }
 
-                if (
-                        !Utility.validationNationalCode(row.getCell(3).getStringCellValue())
-                ) {
-                    excepts.put(rowIdx);
-                    continue;
-                }
-
                 JSONObject jsonObject = new JSONObject();
 
-                int code = (int)row.getCell(2).getNumericCellValue();
+                int code = (int)getCellValue(row.getCell(2));
                 Document subject = subjectRepository.findBySecKey(String.format("%07d", code));
 
                 if(subject == null) {
                     excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "کد مبحث نامعتیر است."));
                     continue;
                 }
 
@@ -398,13 +393,10 @@ public class QuestionController extends Utilities {
                 if(!subjectsCounter.containsKey(subjectId))
                     subjectsCounter.put(subjectId, (Integer) subject.getOrDefault("q_no", 0));
 
-//                int nid = (int) row.getCell(3).getNumericCellValue();
-//                Document author = userRepository.findBySecKey(String.format("%010d", nid));
-
-                Document author = userRepository.findBySecKey(row.getCell(3).getStringCellValue());
-
+                Document author = authorRepository.findBySecKey(getCellValue(row.getCell(3)));
                 if(author == null) {
                     excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "کد مولف نامعتبر است."));
                     continue;
                 }
 
@@ -415,6 +407,7 @@ public class QuestionController extends Utilities {
 
                 String kindQuestion = row.getCell(4).getStringCellValue();
                 if (!EnumValidatorImp.isValid(kindQuestion, QuestionType.class)) {
+                    errs.put(batchRowErr(rowIdx, "نوع سوال نامعتیر است."));
                     excepts.put(rowIdx);
                     continue;
                 }
@@ -424,6 +417,7 @@ public class QuestionController extends Utilities {
                 String level = row.getCell(8).getStringCellValue();
                 if (!EnumValidatorImp.isValid(level, QuestionLevel.class)) {
                     excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "سطح سختی نامعتیر است."));
                     continue;
                 }
                 jsonObject.put("level", level);
@@ -457,11 +451,53 @@ public class QuestionController extends Utilities {
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     jsonObject.put("neededLine", (int) cell.getNumericCellValue());
 
+                ArrayList<String> tags = new ArrayList<>();
+
+                for(int i = 14; i < 19; i++) {
+                    cell = row.getCell(i);
+                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
+                        try {
+
+                            int tagCode = (int) cell.getNumericCellValue();
+
+                            Document t = questionTagRepository.findBySecKey(tagCode);
+                            if(t != null) {
+                                String tt = t.getString("tag");
+                                if(!tags.contains(tt))
+                                    tags.add(tt);
+                            }
+
+                        }
+                        catch (Exception x) {
+
+                            String t = cell.getStringCellValue();
+                            if(!questionTagRepository.exist(
+                                    eq("tag", t)
+                            )) {
+                                int tagCode = randInt(8);
+
+                                while (questionTagRepository.exist(
+                                        eq("code", tagCode)
+                                ))
+                                    tagCode = randInt(8);
+
+                                questionTagRepository.insertOne(
+                                        new Document("tag", t).append("code", tagCode)
+                                );
+                            }
+
+                            tags.add(t);
+                        }
+                    }
+                }
+
                 checkAnswer(jsonObject);
+                jsonObject.put("tags", tags);
 
                 questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionFilename, null);
 
                 if (questionFilename == null) {
+                    errs.put(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
                     excepts.put(rowIdx);
                     continue;
                 }
@@ -470,6 +506,7 @@ public class QuestionController extends Utilities {
                     answerFilename = FileUtils.renameFile(QuestionRepository.FOLDER, answerFilename, null);
 
                     if (answerFilename == null) {
+                        errs.put(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
                         excepts.put(rowIdx);
                         continue;
                     }
@@ -481,7 +518,7 @@ public class QuestionController extends Utilities {
                 jsonObject.put("createdAt", System.currentTimeMillis());
 
                 Document newDoc = new Document("subject_id", subjectId)
-                        .append("author_id", authorId);
+                        .append("author", author.getString("name"));
 
                 for (String str : jsonObject.keySet())
                     newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
@@ -494,6 +531,7 @@ public class QuestionController extends Utilities {
             } catch (Exception ignore) {
                 printException(ignore);
                 excepts.put(rowIdx);
+                errs.put(batchRowErr(rowIdx, ignore.getMessage()));
             }
         }
 
@@ -513,13 +551,13 @@ public class QuestionController extends Utilities {
 
             for(ObjectId authorId : authorCounter.keySet()) {
 
-                Document user = userRepository.findById(authorId);
+                Document user = authorRepository.findById(authorId);
                 if(user == null)
                     continue;
 
                 user.put("q_no", authorCounter.get(authorId));
 
-                userRepository.updateOne(authorId,
+                authorRepository.updateOne(authorId,
                         set("q_no", authorCounter.get(authorId))
                 );
             }
@@ -533,7 +571,8 @@ public class QuestionController extends Utilities {
 
         return generateSuccessMsg(
                 "excepts",
-                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts
+                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
+                new PairValue("errs", errs)
         );
     }
 
@@ -683,5 +722,17 @@ public class QuestionController extends Utilities {
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static ByteArrayInputStream getQuestionTagsExcel() {
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = questionTagRepository.find(null, null);
+        for(Document doc : docs) {
+            jsonArray.put(new JSONObject()
+                    .put("code", doc.getInteger("code"))
+                    .put("tag", doc.getString("tag"))
+            );
+        }
+        return Excel.write(jsonArray);
     }
 }

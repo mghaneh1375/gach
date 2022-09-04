@@ -1,0 +1,84 @@
+@import './Font/font.css';
+
+body{
+    font-family: 'IRANSans';
+    font-size: 15px;
+    font-weight: 600;
+}
+.box{
+    margin: 5px;
+    padding: 15px;
+    box-shadow: 0px 3px 16px 4px rgba(0,0,0,16%);
+    border-radius: 15px;
+    -webkit-border-radius: 15px;
+    -moz-border-radius: 15px;
+    -ms-border-radius: 15px;
+    -o-border-radius: 15px;
+}
+.blue-bold{
+    color: #013243;
+    font-weight: 700;
+}
+.marginRight25{
+    margin-right: 25px;
+}
+.colorGreen{
+    color: #307E42;
+    font-size: 20px;
+    font-weight: 600;
+}
+.colorRed{
+    color: #FF0000;
+    font-size: 20px;
+    font-weight: 600;
+}
+.marginTop0{
+    margin-top: 0;
+}
+.hidden {
+    display: none !important;
+}
+.btn{
+    padding: 5px 30px;
+    font-family: 'IRANSans';
+    font-size: 15px;
+    font-weight: 600;
+    color: #efefef;
+    border: none;
+    background-color: #013243;
+    border-radius: 15px;
+    -webkit-border-radius: 15px;
+    -moz-border-radius: 15px;
+    -ms-border-radius: 15px;
+    -o-border-radius: 15px;
+}
+.btn:hover{
+     box-shadow: inset 0px 0px 1px 3px #efefef80;
+     opacity: .7;
+}
+.fontSize13{
+    font-size: 13px;
+}
+.fontSize15{
+    font-size: 15px;
+}
+.marginTop50{
+    margin-top: 50px;
+}
+.colorOrange{
+    color: #ffaa00;
+    font-weight: 700;
+}
+.marginUpDown{
+    margin-top: 7px;
+    margin-bottom: 7px;
+}
+.marginBottom0{
+    margin-bottom: 0;
+}
+.marginTop25{
+    margin-top: 25px;
+}
+a{
+    text-decoration: none;
+}

@@ -1,5 +1,6 @@
 package irysc.gachesefid.Utility;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -140,6 +141,28 @@ public class Excel {
         }
 
         return null;
+    }
+
+    public static Object getCellValue(Cell cell) {
+
+        try {
+            String str = cell.getStringCellValue();
+            try {
+                return Integer.parseInt(str);
+            }
+            catch (Exception x) {
+                return str;
+            }
+        }
+        catch (Exception x) {
+            double d = cell.getNumericCellValue();
+            if ((d == Math.floor(d)) && !Double.isInfinite(d)) {
+                return (int)d;
+            }
+
+            return d;
+        }
+
     }
 
 }

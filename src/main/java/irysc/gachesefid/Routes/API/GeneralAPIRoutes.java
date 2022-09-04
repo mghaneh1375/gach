@@ -6,6 +6,7 @@ import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.Finance.TransactionController;
+import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -14,20 +15,23 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
-import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import org.bson.types.ObjectId;
+import org.apache.commons.io.IOUtils;
 import org.json.JSONObject;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.io.ByteArrayInputStream;
 import java.util.Map;
 
 
@@ -76,6 +80,8 @@ public class GeneralAPIRoutes extends Router {
 
         ModelAndView modelAndView = new ModelAndView();
 
+        String frontEndUrl = "https://e.irysc.com/";
+
         if (refId == null || resCode == null) {
             modelAndView.addObject("status", "fail");
         } else {
@@ -86,8 +92,14 @@ public class GeneralAPIRoutes extends Router {
             else {
                 modelAndView.addObject("status", "success");
                 modelAndView.addObject("refId", referenceId);
+
+                modelAndView.addObject("financeUrl", frontEndUrl + "finantialReport");
+                modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + refId);
+                modelAndView.addObject("myQuizzesUrl", frontEndUrl + "myQuizzes");
             }
         }
+
+        modelAndView.addObject("homeUrl", frontEndUrl);
 
         modelAndView.setViewName("transaction");
         return modelAndView;
@@ -110,6 +122,22 @@ public class GeneralAPIRoutes extends Router {
         return UserController.getMySummary(
                 getUserWithOutCheckCompleteness(request)
         );
+    }
+    @GetMapping(value = "/getQuestionTagsExcel")
+    @ResponseBody
+    public void getQuestionTagsExcel(
+            HttpServletResponse response
+    )  {
+
+        try {
+            ByteArrayInputStream byteArrayInputStream = QuestionController.getQuestionTagsExcel();
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=tags.xlsx");
+            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
     }
 
     @GetMapping(value = "/fetchStates")

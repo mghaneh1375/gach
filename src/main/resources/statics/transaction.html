@@ -1,47 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <style>
-        .hidden {
-            display: none !important;
-        }
-    </style>
+    <meta charset="UTF-8" />
+    <title>صفحه انتقال</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="http://localhost:3000/assets/transaction/style.css" />
+    <link
+            rel="stylesheet"
+            href="http://localhost:3000/assets/fonts/AtFontFace.css"
+    />
 </head>
-<body>
-<p>
-    <span>وضعیت پرداخت</span>
-    <span id="payStatus" class="hidden">[[${status}]]</span>
-    <span id="payStatusText"></span>
-</p>
+<body dir="rtl">
 
-<p class="hidden" id="refDiv">
-    <span>کد رهگیری</span>
-    <span id="refId">[[${refId}]]</span>
-</p>
+<span id="payStatus" class="hidden">[[${status}]]</span>
 
-<p>
-<span>برای بازگشت به برنامه</span>
-<a id="link" href="">کلیک</a>
-<span>کنید</span>
-</p>
+<div id="boxSuccess" class="box hidden">
+
+    <p>
+        <span class="blue-bold">بازگشت از درگاه</span>
+    </p>
+    <div class="marginRight25">
+        <img src="http://localhost:3000/assets/transaction/img/1F600.svg" alt="success" />
+        <p class="colorGreen marginTop0">پرداخت شما با موفقیت انجام گردید</p>
+        <p id="refDiv">
+            <span class="blue-bold fontSize15">کد رهگیری</span>
+            <span class="blue-bold" id="refId">[[${refId}]]</span>
+        </p>
+
+        <span class="hidden" id="getRecpHref" >[[${getRecpUrl}]]</span>
+        <button id="getRecp" class="my-link btn">دریافت رسید</button>
+
+        <p class="marginTop50 blue-bold fontSize13 marginBottom0">
+            نام خرید :<span>نام آزمون</span>
+        </p>
+        <p class="colorOrange marginUpDown fontSize13">
+            <span>برای مشاهده آزمون ها به صفحه</span>
+            <span class="hidden" id="myQuizzesLinkHref">[[${myQuizzesUrl}]]</span>
+            <span class="my-link" id="myQuizzesLink">آزمون های من</span>
+            <span>بروید.</span>
+        </p>
+        <span id="homeLinkHref" class="hidden">[[${homeUrl}]]</span>
+        <p class="blue-bold marginUpDown fontSize13">
+            برای بازگشت به خانه <span class="my-link" id="homeLink">اینجا</span> را کلیک کنید.
+        </p>
+        <span id="financeUrlHref" class="hidden">[[${financeUrl}]]</span>
+        <p class="colorOrange marginUpDown fontSize13">
+            شما همواره می توانید برای مشاهده سوابق تراکنش ها و دریافت رسید پرداخت
+            به صفحه <span id="financeUrl" class="my-link">سوابق مالی</span> بروید.
+        </p>
+    </div>
+</div>
+<div id="boxFail" class="box hidden">
+    <p>
+        <span class="blue-bold">بازگشت از درگاه</span>
+    </p>
+    <div class="marginRight25">
+        <img src="http://localhost:3000/assets/transaction/img/Icon-material-close.svg" alt="fail" />
+        <p class="colorRed marginTop0">پرداخت ناموفق بود.</p>
+
+        <p class="blue-bold fontSize15 marginBottom0">
+            متاسفانه عملیات پرداخت با مشکل مواجه گردید.
+        </p>
+        <p class="blue-bold fontSize15 marginBottom0">
+            در صورت کسر مبلغ از حساب شما، حداکثر تا 72 ساعت بعد مبلغ کسر شده به
+            حساب شما باز خواهد گردید.
+        </p>
+        <p class="blue-bold fontSize13 marginBottom0 marginTop25">
+            در صورت عدم عودت از بانک خود پیگیری نمایید.
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            این امر می تواند به دلایل زیر باشد :
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            در بعضی موارد اتصال خارج از کشور به درگاه ها با اختلال مواجه می گردد.
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            مشکل موقتی در سایت و یا درگاه پرداخت به وجود آمده است.
+        </p>
+        <p class="blue-bold fontSize13 marginTop25">
+            اگر این مشکل برای شما به دفعات تکرار می شود از طریق پشتیبانی ما را در
+            جریان بگذارید.
+        </p>
+
+        <span class="hidden" id="backHref" >[[${homeUrl}]]</span>
+        <button id="back" class="my-link btn">بازگشت به خانه</button>
+
+    </div>
+</div>
 
 <script>
-    // var host = 'https://e.irysc.com';
-    const host = 'http://localhost:3000';
 
     $(document).ready(function () {
+
+        $(".my-link").on('click', function () {
+            document.location.href = $("#" + $(this).attr("id") + "Href").text();
+        })
+
         const status = $("#payStatus").text();
-        if(status === "success") {
-            $("#refDiv").removeClass('hidden');
-            $("#payStatusText").text("موفق");
-            $("#link").attr('href', host + '/invoice/' + $("#refId").text());
-        }
-        else {
-            $("#payStatusText").text("ناموفق");
-            $("#link").attr('href', host);
+
+        if (status === "success") {
+            $("#boxSuccess").removeClass('hidden');
+        } else {
+            $("#boxFail").removeClass('hidden');
         }
     });
 </script>
