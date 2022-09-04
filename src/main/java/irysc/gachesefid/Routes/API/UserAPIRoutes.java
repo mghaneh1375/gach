@@ -301,8 +301,8 @@ public class UserAPIRoutes extends Router {
         try {
             JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
-            if (!Utility.isValidPassword(jsonObject.getString("password")))
-                return generateErr("رمزعبور وارد شده ملاحظات امنیتی لازم را ندارد.");
+//            if (!Utility.isValidPassword(jsonObject.getString("password")))
+//                return generateErr("رمزعبور وارد شده ملاحظات امنیتی لازم را ندارد.");
 
             jsonObject.put("password", userService.getEncPass(jsonObject.getString("password")));
 
@@ -389,13 +389,13 @@ public class UserAPIRoutes extends Router {
                                                "name", "tel", "state",
                                                "workYear", "workSchools", "universeField",
                                                "bio", "address", "managerName", "schoolSex",
-                                               "kindSchool"
+                                               "kindSchool", "invitationCode"
                                        },
                                        optionalsType = {
                                                String.class, String.class, String.class,
                                                Positive.class, String.class, String.class,
                                                String.class, String.class, String.class,
-                                               String.class, String.class,
+                                               String.class, String.class, String.class
 
                                        }
                                ) String json

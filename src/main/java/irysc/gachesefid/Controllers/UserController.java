@@ -56,6 +56,10 @@ public class UserController {
             new FormField(false, "bio", "بیو", "اختیاری", false),
     };
 
+    private static FormField[] fieldsNeededForStudent = new FormField[]{
+            new FormField(false, "invitationCode", "کد معرف", "اختیاری", false),
+    };
+
     private static FormField[] fieldsNeededForAgent = new FormField[]{
             new FormField(true, "state", "استان", null, false),
             new FormField(false, "bio", "بیو", "اختیاری", false),
@@ -269,6 +273,8 @@ public class UserController {
             wantedList = fieldsNeededForAdvisor;
         else if (role.equals(Access.SCHOOL.getName()))
             wantedList = fieldsNeededForSchool;
+        else if (role.equals(Access.STUDENT.getName()))
+            wantedList = fieldsNeededForStudent;
         else
             wantedList = fieldsNeededForAgent;
 
@@ -550,6 +556,7 @@ public class UserController {
     public static String getRoleForms() {
 
         JSONArray formsJSON = new JSONArray();
+        fillWithFormFields(fieldsNeededForStudent, formsJSON, Access.STUDENT.getName());
         fillWithFormFields(fieldsNeededForAdvisor, formsJSON, Access.ADVISOR.getName());
         fillWithFormFields(fieldsNeededForAgent, formsJSON, Access.AGENT.getName());
         fillWithFormFields(fieldsNeededForSchool, formsJSON, Access.SCHOOL.getName());
