@@ -198,8 +198,7 @@ public class PayPing {
 
     public static String goToPayment(int price, Document transaction) {
 
-        String output = execPHP("pay.php", price + " " + transaction.getLong("order_id"));
-        System.out.println(output);
+        String output = execPHP("pay.php", (price * 10) + " " + transaction.getLong("order_id"));
 
         if (output.startsWith("0,")) {
             transaction.append("ref_id", output.substring(2));
