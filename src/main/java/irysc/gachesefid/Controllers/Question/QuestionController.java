@@ -453,7 +453,11 @@ public class QuestionController extends Utilities {
 
                 ArrayList<String> tags = new ArrayList<>();
 
-                for(int i = 14; i < 19; i++) {
+                cell = row.getCell(14);
+                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
+                    jsonObject.put("year", getCellValue(cell));
+
+                for(int i = 15; i < 20; i++) {
                     cell = row.getCell(i);
                     if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
                         try {

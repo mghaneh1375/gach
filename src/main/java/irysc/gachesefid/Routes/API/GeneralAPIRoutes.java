@@ -3,6 +3,7 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.CityController;
+import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.Finance.TransactionController;
@@ -123,6 +124,7 @@ public class GeneralAPIRoutes extends Router {
                 getUserWithOutCheckCompleteness(request)
         );
     }
+
     @GetMapping(value = "/getQuestionTagsExcel")
     @ResponseBody
     public void getQuestionTagsExcel(
@@ -133,6 +135,22 @@ public class GeneralAPIRoutes extends Router {
             ByteArrayInputStream byteArrayInputStream = QuestionController.getQuestionTagsExcel();
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=tags.xlsx");
+            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+    }
+
+    @GetMapping(value = "/getSubjectCodesExcel")
+    @ResponseBody
+    public void getSubjectCodesExcel(
+            HttpServletResponse response
+    )  {
+        try {
+            ByteArrayInputStream byteArrayInputStream = ContentController.getSubjectCodesExcel();
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=codes.xlsx");
             IOUtils.copy(byteArrayInputStream, response.getOutputStream());
         }
         catch (Exception x) {

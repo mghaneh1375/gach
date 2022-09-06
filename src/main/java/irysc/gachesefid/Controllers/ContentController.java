@@ -15,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -957,6 +958,23 @@ public class ContentController {
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static ByteArrayInputStream getSubjectCodesExcel() {
+
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = subjectRepository.find(null, null);
+
+        for (Document doc : docs) {
+            jsonArray.put(new JSONObject()
+                    .put("grade", doc.get("grade", Document.class).getString("name"))
+                    .put("lesson", doc.get("lesson", Document.class).getString("name"))
+                    .put("title", doc.getString("name"))
+                    .put("code", doc.get("code"))
+            );
+        }
+
+        return Excel.write(jsonArray);
     }
 
 //
