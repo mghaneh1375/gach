@@ -30,11 +30,14 @@ public class AdminCertificateAPIRoutes extends Router {
     @ResponseBody
     public String store(HttpServletRequest request,
                         @RequestBody @StrongJSONConstraint(
-                                params = {"title", "isLandscape", "params", "qrX", "qrY"},
+                                params = {
+                                        "title", "isLandscape", "params",
+                                        "qrSize", "qrX", "qrY"
+                                },
                                 paramsType = {
                                         String.class, Boolean.class,
                                         JSONArray.class, Positive.class,
-                                        Positive.class
+                                        Positive.class, Positive.class
                                 }
                         ) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -48,11 +51,12 @@ public class AdminCertificateAPIRoutes extends Router {
                          @PathVariable @ObjectIdConstraint ObjectId certId,
                          @RequestBody @StrongJSONConstraint(
                                  params = {"title", "isLandscape", "params",
-                                         "qrX", "qrY", "visibility"},
+                                         "qrX", "qrY", "qrSize", "visibility"},
                                  paramsType = {
                                          String.class, Boolean.class,
                                          JSONArray.class, Positive.class,
-                                         Positive.class, Boolean.class
+                                         Positive.class, Positive.class,
+                                         Boolean.class
                                  }
                          ) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {

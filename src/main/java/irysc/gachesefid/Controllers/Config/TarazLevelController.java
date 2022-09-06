@@ -42,7 +42,7 @@ public class TarazLevelController {
         configRepository.replaceOne(config.getObjectId("_id"), config);
 
         return generateSuccessMsg(
-                "_id", newId
+                "id", newId
         );
     }
 

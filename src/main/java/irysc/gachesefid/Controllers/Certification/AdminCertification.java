@@ -33,6 +33,7 @@ public class AdminCertification {
                 .append("title", jsonObject.getString("title"))
                 .append("qr_x", jsonObject.getInt("qrX"))
                 .append("qr_y", jsonObject.getInt("qrY"))
+                .append("qr_size", jsonObject.getInt("qrSize"))
                 .append("created_at", System.currentTimeMillis());
 
         try {
@@ -68,6 +69,7 @@ public class AdminCertification {
         certificate.put("title", jsonObject.getString("title"));
         certificate.put("qr_x", jsonObject.getInt("qrX"));
         certificate.put("qr_y", jsonObject.getInt("qrY"));
+        certificate.put("qr_size", jsonObject.getInt("qrSize"));
         certificate.put("visibility", jsonObject.getBoolean("visibility"));
 
         certificateRepository.replaceOne(certId, certificate);
@@ -141,7 +143,7 @@ public class AdminCertification {
         certificate.put("img", filename);
         certificateRepository.updateOne(certId, set("img", filename));
 
-        return JSON_OK;
+        return generateSuccessMsg("url", STATICS_SERVER + CertificateRepository.FOLDER + "/" + filename);
     }
 
     public static String addUserToCert(Document cert, ObjectId certId,
