@@ -700,8 +700,8 @@ public class Utility {
 
     public static String getRandIntForSubjectId() {
 
-        int number = random.nextInt(9999999);
-        String code = String.format("%07d", number);
+        int number = random.nextInt(999);
+        String code = String.format("%03d", number);
 
         if (subjectRepository.exist(eq("code", code)))
             return getRandIntForSubjectId();
