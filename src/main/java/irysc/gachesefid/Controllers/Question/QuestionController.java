@@ -91,7 +91,7 @@ public class QuestionController extends Utilities {
             newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet()) {
-            if(str.equalsIgnoreCase("authorId"))
+            if(str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
                 continue;
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
         }
@@ -116,6 +116,33 @@ public class QuestionController extends Utilities {
                     set("q_no", qNo)
             );
             newDoc.put("author", user.getString("name"));
+        }
+
+        if(jsonObject.has("tags")) {
+            ArrayList<String> tags = new ArrayList<>();
+
+            for (int j = 0; j < jsonObject.getJSONArray("tags").length(); j++) {
+
+                String tag = jsonObject.getJSONArray("tags").get(j).toString();
+
+                if (!questionTagRepository.exist(
+                        eq("tag", tag)
+                )) {
+                    int tagCode = getRandIntForTag();
+
+                    while (questionTagRepository.exist(
+                            eq("code", tagCode)
+                    ))
+                        tagCode = getRandIntForTag();
+
+                    questionTagRepository.insertOne(
+                            new Document("tag", tag).append("code", tagCode)
+                    );
+                }
+
+                tags.add(tag);
+            }
+            newDoc.put("tags", tags);
         }
 
         return questionRepository.insertOneWithReturn(newDoc);
@@ -478,12 +505,12 @@ public class QuestionController extends Utilities {
                             if(!questionTagRepository.exist(
                                     eq("tag", t)
                             )) {
-                                int tagCode = randInt(8);
+                                int tagCode = getRandIntForTag();
 
                                 while (questionTagRepository.exist(
                                         eq("code", tagCode)
                                 ))
-                                    tagCode = randInt(8);
+                                    tagCode = getRandIntForTag();
 
                                 questionTagRepository.insertOne(
                                         new Document("tag", t).append("code", tagCode)
@@ -739,4 +766,18 @@ public class QuestionController extends Utilities {
         }
         return Excel.write(jsonArray);
     }
+
+    public static String getTagsKeyVals() {
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = questionTagRepository.find(null, null);
+        for(Document doc : docs) {
+            jsonArray.put(new JSONObject()
+                    .put("id", doc.getInteger("code"))
+                    .put("name", doc.getString("tag"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
 }

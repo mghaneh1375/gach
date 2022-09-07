@@ -112,6 +112,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("mode", quiz.getString("mode"))
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
+                .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
 
         int questionsCount = 0;

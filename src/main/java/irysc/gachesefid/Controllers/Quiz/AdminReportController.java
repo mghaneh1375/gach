@@ -304,6 +304,9 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
+        if(!quiz.containsKey("ranking_list"))
+            return JSON_NOT_ACCESS;
+
         JSONArray data = new JSONArray();
 
         HashMap<ObjectId, ArrayList<Integer>> stateTaraz = new HashMap<>();
@@ -383,6 +386,9 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
+        if(!quiz.containsKey("ranking_list"))
+            return JSON_NOT_ACCESS;
+
         JSONArray data = new JSONArray();
 
         HashMap<ObjectId, ArrayList<Integer>> cityTaraz = new HashMap<>();
@@ -454,6 +460,9 @@ public class AdminReportController {
         Document quiz = iryscQuizRepository.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
+
+        if(!quiz.containsKey("ranking_list"))
+            return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
 
@@ -527,6 +536,9 @@ public class AdminReportController {
         Document quiz = iryscQuizRepository.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
+
+        if(!quiz.containsKey("ranking_list"))
+            return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
 

@@ -142,6 +142,13 @@ public class GeneralAPIRoutes extends Router {
         }
     }
 
+
+    @GetMapping(value = "/getTagsKeyVals")
+    @ResponseBody
+    public String getTagsKeyVals()  {
+        return QuestionController.getTagsKeyVals();
+    }
+
     @GetMapping(value = "/getSubjectCodesExcel")
     @ResponseBody
     public void getSubjectCodesExcel(

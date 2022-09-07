@@ -122,7 +122,7 @@ public class Utilities {
             if (isDetailNeeded) {
                 jsonObject
                         .put("used", doc.getOrDefault("used", 0))
-                        .put("neededTime", doc.getInteger("needed_time"))
+                        .put("neededTime", doc.get("needed_time"))
                         .put("visibility", doc.getBoolean("visibility"))
                         .put("organizationId", doc.getString("organization_id"));
 

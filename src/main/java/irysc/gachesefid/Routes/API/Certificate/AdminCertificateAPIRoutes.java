@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -42,7 +43,7 @@ public class AdminCertificateAPIRoutes extends Router {
                         ) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return AdminCertification.store(new JSONObject(jsonStr));
+        return AdminCertification.store(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PostMapping(path = "/update/{certId}")

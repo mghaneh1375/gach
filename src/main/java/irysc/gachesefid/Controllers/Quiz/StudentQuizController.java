@@ -88,8 +88,31 @@ public class StudentQuizController {
                 );
             }
 
+            int neededTime = new RegularQuizController().calcLen(quiz);
+            Document questions =
+                    quiz.get("questions", Document.class);
+
+            int qNo = 0;
+
+            if(questions.containsKey("_id"))
+                qNo = questions.getList("_id", ObjectId.class).size();
+
             JSONObject quizJSON = new JSONObject()
-                    .put("title", quiz.getString("title"));
+                    .put("title", quiz.getString("title"))
+                    .put("questionsNo", qNo)
+                    .put("description", quiz.getOrDefault("description", ""))
+                    .put("mode", quiz.getString("mode"))
+                    .put("attaches", new JSONArray()
+                            .put(new JSONObject()
+                                    .put("name", "a.jpg")
+                                    .put("link", "https://google.com")
+                            )
+                            .put(new JSONObject()
+                                    .put("name", "b.pdf")
+                                    .put("link", "https://varzesh3.com")
+                            )
+                    )
+                    .put("duration", neededTime);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
         }
@@ -220,6 +243,19 @@ public class StudentQuizController {
 
             JSONObject quizJSON = new JSONObject()
                     .put("title", doc.getString("title"))
+                    .put("questionsNo", doc.get("questions", Document.class).getList("_id", ObjectId.class).size())
+                    .put("description", doc.getOrDefault("description", ""))
+                    .put("mode", doc.getString("mode"))
+                    .put("attaches", new JSONArray()
+                            .put(new JSONObject()
+                                    .put("name", "a.jpg")
+                                    .put("link", "https://google.com")
+                            )
+                            .put(new JSONObject()
+                                    .put("name", "b.pdf")
+                                    .put("link", "https://varzesh3.com")
+                            )
+                    )
                     .put("duration", neededTime)
                     .put("reminder", reminder)
                     .put("isNewPerson", student.getLong("start_at") == curr);

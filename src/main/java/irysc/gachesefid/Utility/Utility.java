@@ -656,10 +656,6 @@ public class Utility {
         return dates;
     }
 
-    public static int randInt(int upperBound) {
-        return Math.abs(random.nextInt(upperBound));
-    }
-
     public static int randInt() {
 
         if (DEV_MODE)
@@ -700,13 +696,28 @@ public class Utility {
 
     public static String getRandIntForSubjectId() {
 
-        int number = random.nextInt(999);
+        int number = Math.abs(random.nextInt(999));
+        if(number < 100)
+            number += 100;
+
         String code = String.format("%03d", number);
 
         if (subjectRepository.exist(eq("code", code)))
             return getRandIntForSubjectId();
 
         return code;
+    }
+
+    public static int getRandIntForTag() {
+
+        int number = Math.abs(random.nextInt(999));
+        if(number < 100)
+            number += 100;
+
+        if (questionTagRepository.exist(eq("code", number)))
+            return getRandIntForTag();
+
+        return number;
     }
 
     public static ArrayList<Object> paginate(Common repository,

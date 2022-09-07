@@ -83,7 +83,7 @@ public class AdminCertification {
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
-            JSONObject param = jsonArray.getJSONObject(i);
+            JSONObject param = Utility.convertPersian(jsonArray.getJSONObject(i));
 
             if (!param.has("fontSize") ||
                     !param.has("isBold") ||
@@ -239,9 +239,10 @@ public class AdminCertification {
 
             jsonArray.put(
                     new JSONObject()
+                            .put("id", doc.getObjectId("_id").toString())
                             .put("title", doc.getString("title"))
                             .put("createdAt", Utility.getSolarDate(doc.getLong("created_at")))
-                            .put("studentsCount", doc.getList("students", Document.class).size())
+                            .put("studentsCount", doc.containsKey("students") ? doc.getList("students", Document.class).size() : 0)
             );
         }
 
@@ -251,11 +252,20 @@ public class AdminCertification {
     public static String get(ObjectId certificateId) {
 
         Document certificate = certificateRepository.findById(certificateId);
-        List<Document> students = certificate.getList("students", Document.class);
+
+        if(certificate == null)
+            return JSON_NOT_VALID_ID;
+
+        int studentsSize = 0;
+        if(certificate.containsKey("students")) {
+            List<Document> students = certificate.getList("students", Document.class);
+            studentsSize = students.size();
+        }
 
         JSONObject jsonObject = new JSONObject()
+//                .put("id")
                 .put("createdAt", Utility.getSolarDate(certificate.getLong("created_at")))
-                .put("studentsCount", students.size());
+                .put("studentsCount", studentsSize);
 
 //        JSONArray studentsJSON = new JSONArray();
 //        for(Document student : students)
