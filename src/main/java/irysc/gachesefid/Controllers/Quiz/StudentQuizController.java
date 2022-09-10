@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -94,8 +95,8 @@ public class StudentQuizController {
 
             int qNo = 0;
 
-            if(questions.containsKey("_id"))
-                qNo = questions.getList("_id", ObjectId.class).size();
+            if(questions.containsKey("_ids"))
+                qNo = questions.getList("_ids", ObjectId.class).size();
 
             JSONObject quizJSON = new JSONObject()
                     .put("title", quiz.getString("title"))
@@ -243,7 +244,9 @@ public class StudentQuizController {
 
             JSONObject quizJSON = new JSONObject()
                     .put("title", doc.getString("title"))
-                    .put("questionsNo", doc.get("questions", Document.class).getList("_id", ObjectId.class).size())
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("generalMode", db instanceof IRYSCQuizRepository ? "IRYSC" : "school")
+                    .put("questionsNo", doc.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", doc.getOrDefault("description", ""))
                     .put("mode", doc.getString("mode"))
                     .put("attaches", new JSONArray()
@@ -256,6 +259,7 @@ public class StudentQuizController {
                                     .put("link", "https://varzesh3.com")
                             )
                     )
+                    .put("refresh", 1) //Math.abs(new Random().nextInt(10)) + 5
                     .put("duration", neededTime)
                     .put("reminder", reminder)
                     .put("isNewPerson", student.getLong("start_at") == curr);
@@ -291,13 +295,32 @@ public class StudentQuizController {
 //            if(student.containsKey("start_at") &&
 //                    student.get("start_at") != null) {
 
-            int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
-            if(untilYetInSecondFormat > neededTime)
+            long startAt = student.getLong("start_at");
+            int delay = Math.max(
+                    0,
+                    (int)(startAt + neededTime * 1000L - doc.getLong("end")) / 1000
+            );
+
+            int reminder = neededTime -
+                    (int)((curr - student.getLong("start_at")) / 1000) -
+                    delay;
+
+            if(reminder <= 0)
                 return generateErr("شما در این آزمون شرکت کرده اید.");
+
+//            int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
+//            if(untilYetInSecondFormat > neededTime)
+//                return generateErr("شما در این آزمون شرکت کرده اید.");
 
             student.put("finish_at", curr);
 
-            return saveStudentAnswers(doc, answers, student, db);
+            String result = saveStudentAnswers(doc, answers, student, db);
+            if(result.contains("nok"))
+                return result;
+//            Math.abs(new Random().nextInt(3)) + 1
+            return generateSuccessMsg("reminder", reminder,
+                    new PairValue("refresh", 3)
+            );
 
         } catch (Exception x) {
             x.printStackTrace();

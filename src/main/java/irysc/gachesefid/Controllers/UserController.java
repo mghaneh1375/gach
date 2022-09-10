@@ -316,7 +316,10 @@ public class UserController {
         Document form = new Document("role", role);
 
         for (String key : keys)
-            form.put(key, jsonObject.get(key));
+            form.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    jsonObject.get(key)
+            );
 
         List<Document> forms;
         int idx = -1;
