@@ -46,6 +46,22 @@ public class AdminCertificateAPIRoutes extends Router {
         return AdminCertification.store(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
+    @DeleteMapping(path = "/remove")
+    @ResponseBody
+    public String remove(HttpServletRequest request,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {
+                                         "items",
+                                 },
+                                 paramsType = {
+                                         JSONArray.class,
+                                 }
+                         ) String jsonStr)
+            throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.remove(new JSONObject(jsonStr).getJSONArray("items"));
+    }
+
     @PostMapping(path = "/update/{certId}")
     @ResponseBody
     public String update(HttpServletRequest request,
@@ -95,6 +111,22 @@ public class AdminCertificateAPIRoutes extends Router {
         );
     }
 
+    @PutMapping(path = "/editUserInCert/{certId}/{NID}")
+    @ResponseBody
+    public String editUserInCert(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId certId,
+                                 @PathVariable @NotBlank String NID,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = "params",
+                                         paramsType = JSONArray.class
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.editUserInCert(certId, NID,
+                new JSONObject(jsonStr).getJSONArray("params")
+        );
+    }
+
     @GetMapping(path = "/getAll")
     @ResponseBody
     public String getAll(HttpServletRequest request,
@@ -140,13 +172,15 @@ public class AdminCertificateAPIRoutes extends Router {
     @DeleteMapping(path = "/removeStudents/{certificateId}")
     @ResponseBody
     public String removeStudents(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint Object certificateId,
+                                 @PathVariable @ObjectIdConstraint ObjectId certificateId,
                                  @RequestBody @StrongJSONConstraint(
-                                         params = {"students"},
+                                         params = {"items"},
                                          paramsType = JSONArray.class) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         getAdminPrivilegeUserVoid(request);
-        return "as";
+        return AdminCertification.removeUsersFromCert(
+                certificateId,
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
     }
 }

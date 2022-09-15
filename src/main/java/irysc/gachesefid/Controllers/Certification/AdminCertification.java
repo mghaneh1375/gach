@@ -21,6 +21,7 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.returnRemoveResponse;
 
 public class AdminCertification {
 
@@ -124,12 +125,6 @@ public class AdminCertification {
         if (certificate == null)
             return JSON_NOT_VALID_ID;
 
-        if (certificate.get("img") != null)
-            FileUtils.removeFile(
-                    certificate.getString("img"),
-                    CertificateRepository.FOLDER
-            );
-
         String fileType = FileUtils.uploadImageFile(file);
 
         if (fileType == null)
@@ -139,6 +134,12 @@ public class AdminCertification {
 
         if (filename == null)
             return JSON_UNKNOWN_UPLOAD_FILE;
+
+        if (certificate.get("img") != null)
+            FileUtils.removeFile(
+                    certificate.getString("img"),
+                    CertificateRepository.FOLDER
+            );
 
         certificate.put("img", filename);
         certificateRepository.updateOne(certId, set("img", filename));
@@ -170,7 +171,9 @@ public class AdminCertification {
             return JSON_NOT_VALID_PARAMS;
 
         users.add(new Document("NID", NID)
-                .append("params", values));
+                .append("_id", new ObjectId())
+                .append("params", values)
+        );
 
         if (needUpdate)
             certificateRepository.replaceOne(cert.getObjectId("_id"), cert);
@@ -178,9 +181,33 @@ public class AdminCertification {
         return JSON_OK;
     }
 
+    public static String editUserInCert(ObjectId certId,
+                                       String NID, JSONArray values) {
+
+        Document cert = certificateRepository.findById(certId);
+
+        if (cert == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> users = cert.getList("users", Document.class);
+        Document user = Utility.searchInDocumentsKeyVal(users, "NID", NID);
+
+        if (user == null)
+            return Utility.generateErr("فرد موردنظر در لیست نفرات گواهی موردنظر موجود ندارد.");
+
+        List<Document> params = cert.getList("params", Document.class);
+        if (params.size() != values.length())
+            return JSON_NOT_VALID_PARAMS;
+
+        user.put("params", values);
+        certificateRepository.replaceOne(cert.getObjectId("_id"), cert);
+
+        return JSON_OK;
+    }
+
     private static String removeUserFromCert(Document cert,
                                              ObjectId certId,
-                                             String NID) {
+                                             ObjectId id) {
 
         boolean needUpdate = cert == null;
 
@@ -193,7 +220,7 @@ public class AdminCertification {
         List<Document> users = cert.getList("users", Document.class);
 
         Document user = Utility.searchInDocumentsKeyVal(
-                users, "NID", NID
+                users, "_id", id
         );
 
         if (user == null)
@@ -207,7 +234,7 @@ public class AdminCertification {
         return JSON_OK;
     }
 
-    public static String removeUsersFromCert(ObjectId certId, JSONArray NIDs) {
+    public static String removeUsersFromCert(ObjectId certId, JSONArray students) {
 
         Document cert = certificateRepository.findById(certId);
 
@@ -215,16 +242,28 @@ public class AdminCertification {
             return JSON_NOT_VALID_ID;
 
         JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
 
-        for (int i = 0; i < NIDs.length(); i++) {
-            if (removeUserFromCert(cert, null, NIDs.getString(i)).contains("nok"))
-                excepts.put(NIDs.get(i));
+
+        for (int i = 0; i < students.length(); i++) {
+
+            String id = students.getString(i);
+
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            if (removeUserFromCert(cert, null, new ObjectId(id)).contains("nok"))
+                excepts.put(i + 1);
+            else
+                doneIds.put(id);
         }
 
-        if (excepts.length() == 0)
-            return JSON_OK;
+        if(doneIds.length() > 0)
+            certificateRepository.replaceOne(certId, cert);
 
-        return generateSuccessMsg("excepts", excepts);
+        return returnRemoveResponse(excepts, doneIds);
     }
 
     public static String getAll(String title) {
@@ -242,7 +281,7 @@ public class AdminCertification {
                             .put("id", doc.getObjectId("_id").toString())
                             .put("title", doc.getString("title"))
                             .put("createdAt", Utility.getSolarDate(doc.getLong("created_at")))
-                            .put("studentsCount", doc.containsKey("students") ? doc.getList("students", Document.class).size() : 0)
+                            .put("studentsCount", doc.containsKey("users") ? doc.getList("users", Document.class).size() : 0)
             );
         }
 
@@ -256,16 +295,24 @@ public class AdminCertification {
         if(certificate == null)
             return JSON_NOT_VALID_ID;
 
-        int studentsSize = 0;
-        if(certificate.containsKey("students")) {
-            List<Document> students = certificate.getList("students", Document.class);
-            studentsSize = students.size();
-        }
-
         JSONObject jsonObject = new JSONObject()
-//                .put("id")
-                .put("createdAt", Utility.getSolarDate(certificate.getLong("created_at")))
-                .put("studentsCount", studentsSize);
+                .put("createdAt", Utility.getSolarDate(certificate.getLong("created_at")));
+
+        if(certificate.containsKey("users")) {
+            List<Document> students = certificate.getList("users", Document.class);
+            JSONArray jsonArray = new JSONArray();
+            for(Document student : students) {
+                jsonArray.put(
+                        new JSONObject()
+                                .put("id", student.getObjectId("_id").toString())
+                                .put("NID", student.getString("NID"))
+                                .put("params", student.getList("params", Object.class))
+                );
+            }
+            jsonObject.put("users", jsonArray);
+        }
+        else
+            jsonObject.put("users", new ArrayList<>());
 
 //        JSONArray studentsJSON = new JSONArray();
 //        for(Document student : students)
@@ -273,12 +320,68 @@ public class AdminCertification {
 
         for (String key : certificate.keySet()) {
 
-            if (key.equals("created_at") || key.equals("students"))
+            if (key.equals("created_at") || key.equals("users") || key.equals("params"))
                 continue;
 
-            jsonObject.put(Utility.camel(key, false), certificate.get(key));
+            if(key.equals("img"))
+                jsonObject.put("img", STATICS_SERVER + CertificateRepository.FOLDER + "/" + certificate.getString("img"));
+            else
+                jsonObject.put(Utility.camel(key, false), certificate.get(key));
         }
 
+
+        if(certificate.containsKey("params")) {
+            List<Document> params = certificate.getList("params", Document.class);
+            JSONArray jsonArray = new JSONArray();
+            for(Document param : params) {
+                JSONObject jsonObject1 = new JSONObject();
+                for(String key : param.keySet()) {
+                    jsonObject1.put(Utility.camel(key, false), param.get(key));
+                }
+                jsonArray.put(jsonObject1);
+            }
+            jsonObject.put("params", jsonArray);
+        }
+        else
+            jsonObject.put("params", new ArrayList<>());
+
         return generateSuccessMsg("data", jsonObject);
+    }
+
+    public static String remove(JSONArray jsonArray) {
+
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId certificateId = new ObjectId(id);
+
+            Document certificate = certificateRepository.findOneAndDelete(
+                    eq("_id", certificateId)
+            );
+
+            if(certificate == null) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            if (certificate.get("img") != null)
+                FileUtils.removeFile(
+                        certificate.getString("img"),
+                        CertificateRepository.FOLDER
+                );
+
+            doneIds.put(id);
+        }
+
+        return returnRemoveResponse(excepts, doneIds);
     }
 }
