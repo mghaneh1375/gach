@@ -68,20 +68,22 @@ public class AdminCertificateAPIRoutes extends Router {
                          @PathVariable @ObjectIdConstraint ObjectId certId,
                          @RequestBody @StrongJSONConstraint(
                                  params = {"title", "isLandscape", "params",
-                                         "qrX", "qrY", "qrSize", "visibility"},
+                                         "qrX", "qrY", "qrSize"},
                                  paramsType = {
                                          String.class, Boolean.class,
                                          JSONArray.class, Positive.class,
                                          Positive.class, Positive.class,
-                                         Boolean.class
-                                 }
+
+                                 },
+                                 optionals = {"visibility"},
+                                 optionalsType = {Boolean.class}
                          ) String jsonStr)
             throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return AdminCertification.update(certId, new JSONObject(jsonStr));
     }
 
-    @PutMapping(path = "/setImg/{certId}")
+    @PostMapping(path = "/setImg/{certId}")
     @ResponseBody
     public String setImg(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId certId,

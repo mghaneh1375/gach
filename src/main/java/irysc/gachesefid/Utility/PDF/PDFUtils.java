@@ -130,7 +130,7 @@ public class PDFUtils {
 
     public static File getCertificate(List<Document> params, List<String> values,
                                       String img, boolean isLandscape,
-                                      int qrX, int qrY) {
+                                      int qrX, int qrY, int qrSize) {
 
         PDDocument document = new PDDocument();
         try {
@@ -180,8 +180,7 @@ public class PDFUtils {
 //            myShowText(bidiReorder(competition), contentStream, mediaBox, 9, 260, 380, false);
 //            myShowText(bidiReorder(date), contentStream, mediaBox, 9, 260, 530, false);
 
-//            drawQR(document, contentStream, (int) (mediaBox.getWidth() - 62), 25, 100, 33, "https://google.com");
-            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, 100, 33, "https://google.com");
+            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://google.com");
 
             contentStream.close();
 

@@ -55,13 +55,17 @@ public class StudentCertification {
         if (userCert == null)
             return null;
 
+        userCert.put("download_at", System.currentTimeMillis());
+        certificateRepository.replaceOne(certId, certificate);
+
         return PDFUtils.getCertificate(
                 certificate.getList("params", Document.class),
                 userCert.getList("params", String.class),
                 certificate.getString("img"),
                 certificate.getBoolean("is_landscape"),
                 certificate.getInteger("qr_x"),
-                certificate.getInteger("qr_y")
+                certificate.getInteger("qr_y"),
+                certificate.getInteger("qr_size")
         );
     }
 

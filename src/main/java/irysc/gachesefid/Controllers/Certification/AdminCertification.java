@@ -20,8 +20,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.returnRemoveResponse;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminCertification {
 
@@ -63,6 +62,8 @@ public class AdminCertification {
         try {
             certificate.put("params", fetchParams(params));
         } catch (Exception x) {
+            System.out.println(x.getMessage());
+            x.printStackTrace();
             return Utility.generateErr(x.getMessage());
         }
 
@@ -71,7 +72,9 @@ public class AdminCertification {
         certificate.put("qr_x", jsonObject.getInt("qrX"));
         certificate.put("qr_y", jsonObject.getInt("qrY"));
         certificate.put("qr_size", jsonObject.getInt("qrSize"));
-        certificate.put("visibility", jsonObject.getBoolean("visibility"));
+
+        if(jsonObject.has("visibility"))
+            certificate.put("visibility", jsonObject.getBoolean("visibility"));
 
         certificateRepository.replaceOne(certId, certificate);
         return JSON_OK;
@@ -280,6 +283,7 @@ public class AdminCertification {
                     new JSONObject()
                             .put("id", doc.getObjectId("_id").toString())
                             .put("title", doc.getString("title"))
+                            .put("visibility", doc.getBoolean("visibility"))
                             .put("createdAt", Utility.getSolarDate(doc.getLong("created_at")))
                             .put("studentsCount", doc.containsKey("users") ? doc.getList("users", Document.class).size() : 0)
             );
@@ -306,6 +310,7 @@ public class AdminCertification {
                         new JSONObject()
                                 .put("id", student.getObjectId("_id").toString())
                                 .put("NID", student.getString("NID"))
+                                .put("downloadAt", student.containsKey("download_at") ? getSolarDate(student.getLong("download_at")) : "")
                                 .put("params", student.getList("params", Object.class))
                 );
             }

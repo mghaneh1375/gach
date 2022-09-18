@@ -248,7 +248,10 @@ public class PackageController {
 
             List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
 
-            if (!isAdmin) {
+            if (isAdmin) {
+                jsonObject
+                        .put("quizzes", quizzes.size());
+            } else {
 
                 ArrayList<String> subTags;
                 if (tags.containsKey(grade.getString("name")))
@@ -316,14 +319,13 @@ public class PackageController {
                         .put("totalPrice", totalPrice)
                         .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
                         .put("quizzesDoc", quizzesDoc);
-            } else {
-                jsonObject
-                        .put("quizzes", quizzes.size());
             }
 
             if(jsonObject.has("registrable") &&
                     jsonObject.getInt("registrable") > 0)
                 jsonArray.put(jsonObject.put("type", "package"));
+            else if(!jsonObject.has("registrable"))
+                jsonArray.put(jsonObject);
         }
 
         if (!isAdmin) {
@@ -358,7 +360,6 @@ public class PackageController {
 
                     ), null
             );
-            System.out.println(docs.size());
 
             RegularQuizController quizController = new RegularQuizController();
             for (Document doc : docs) {
@@ -386,8 +387,8 @@ public class PackageController {
             data.put("tags", tags);
         }
 
-
         data.put("items", jsonArray);
+
         return generateSuccessMsg("data", data);
     }
 
