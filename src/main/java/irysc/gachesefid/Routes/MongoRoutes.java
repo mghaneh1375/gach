@@ -202,7 +202,6 @@ public class MongoRoutes extends Router {
                     .append("lessons", lessonsDoc)
             );
         }
-        System.out.println(counter);
 
         return "ok";
     }

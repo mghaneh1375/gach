@@ -452,4 +452,5 @@ public class ManageUserAPIRoutes extends Router {
 
         return ManageUserController.getMyStudents(school.getList("students", ObjectId.class));
     }
+
 }

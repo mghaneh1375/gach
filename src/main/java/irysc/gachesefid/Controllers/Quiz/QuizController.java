@@ -1013,6 +1013,7 @@ public class QuizController {
             filters.add(regex("tag", Pattern.compile(Pattern.quote(tag), Pattern.CASE_INSENSITIVE)));
 
         ArrayList<Document> docs = db.find(and(filters), isAdmin ? QUIZ_DIGEST_MANAGEMENT : QUIZ_DIGEST);
+
         JSONArray jsonArray = new JSONArray();
 
         for (Document doc : docs) {

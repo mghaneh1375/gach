@@ -416,8 +416,6 @@ public class ManageUserController {
                 agentName = user.getString("first_name") + " " + user.getString("last_name");
         }
 
-        System.out.println(form);
-
         JSONObject jsonObject = new JSONObject()
                 .put("phone", doc.getString("phone"))
                 .put("NID", doc.getString("NID"))

@@ -64,7 +64,7 @@ public class StudentTicketAPIRouter extends Router {
         JSONObject jsonObject = new JSONObject(jsonStr);
 
         Document user = getUser(request);
-        System.out.println(user);
+
         return TicketController.insert(
                 user.getList("accesses", String.class),
                 user.getObjectId("_id"),
