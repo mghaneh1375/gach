@@ -3,6 +3,8 @@ package irysc.gachesefid.Controllers.Quiz;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -193,9 +195,12 @@ public class PackageController {
         return getPackageQuizzes(packageId, true);
     }
 
-    public static String getPackages(boolean isAdmin, ObjectId userId,
+    public static String getPackages(List<String> accesses, ObjectId userId,
                                      ObjectId gradeId, ObjectId lessonId
     ) {
+
+        boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
+        boolean isSchool = !isAdmin && accesses != null && Authorization.isSchool(accesses);
 
         ArrayList<Bson> filters = new ArrayList<>();
 
@@ -346,6 +351,12 @@ public class PackageController {
                         .put("type", off.getString("type"))
                         .put("amount", off.getInteger("amount"))
                 );
+
+            if(isSchool) {
+                data.put("groupRegistrationOff",
+                        Utility.getConfig().getInteger("school_off_percent")
+                );
+            }
 
             ArrayList<Document> docs = iryscQuizRepository.find(
                     and(

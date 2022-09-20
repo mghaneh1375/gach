@@ -86,8 +86,8 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody
     public String launch(HttpServletRequest request,
-                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                             @PathVariable @ObjectIdConstraint ObjectId quizId
+                         @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                         @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return StudentQuizController.launch(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
@@ -151,7 +151,40 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getObjectId("_id"),
                 jsonObject.has("packageId") ?
                         new ObjectId(jsonObject.getString("packageId")) : null,
+                jsonObject.getJSONArray("ids"), null,
+                user.getInteger("money"),
+                user.getString("phone"),
+                user.getString("mail"),
+                jsonObject.has("code") ?
+                        jsonObject.getString("code") : null
+        );
+    }
+
+
+    @PostMapping(path = "groupBuy")
+    @ResponseBody
+    public String groupBuy(HttpServletRequest request,
+                           @RequestBody @StrongJSONConstraint(
+                                   params = {"ids", "studentIds"},
+                                   paramsType = {JSONArray.class, JSONArray.class},
+                                   optionals = {"packageId", "code"},
+                                   optionalsType = {ObjectId.class, String.class}
+                           )
+                           @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+
+        Document user = getSchoolUser(request);
+
+        JSONObject jsonObject = Utility.convertPersian(
+                new JSONObject(jsonStr)
+        );
+
+        return StudentQuizController.buy(
+                user.getObjectId("_id"),
+                jsonObject.has("packageId") ?
+                        new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"),
+                jsonObject.getJSONArray("studentIds"),
                 user.getInteger("money"),
                 user.getString("phone"),
                 user.getString("mail"),

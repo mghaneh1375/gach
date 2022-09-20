@@ -329,10 +329,9 @@ public class StudentQuizController {
         }
     }
 
-
     public static String buy(ObjectId userId, ObjectId packageId,
-                             JSONArray ids, int money,
-                             String phone, String mail,
+                             JSONArray ids, JSONArray studentIds,
+                             int money, String phone, String mail,
                              String offcode) {
 
         Document quizPackage = null;
@@ -411,8 +410,36 @@ public class StudentQuizController {
         if (quizzes.size() != quizIds.size())
             return JSON_NOT_VALID_PARAMS;
 
+        if(studentIds != null) {
+            Document school = schoolRepository.findOne(eq("user_id", userId), new BasicDBObject("_id", 1));
+            if(school == null)
+                return JSON_NOT_ACCESS;
+
+            ObjectId schoolId = school.getObjectId("_id");
+            ArrayList<ObjectId> studentOIds = new ArrayList<>();
+
+            for (int i = 0; i < studentIds.length(); i++) {
+
+                if (!ObjectId.isValid(studentIds.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+
+                ObjectId studentId = new ObjectId(studentIds.getString(i));
+                Document user = userRepository.findById(studentId);
+                if(user == null || !user.containsKey("school") ||
+                        !user.get("school", Document.class).get("_id").equals(schoolId)
+                )
+                    return JSON_NOT_ACCESS;
+
+                studentOIds.add(studentId);
+            }
+
+            return doBuy(userId, phone, mail, money,
+                    quizPackage, off, quizzes, studentOIds
+            );
+        }
+
         return doBuy(userId, phone, mail, money,
-                quizPackage, off, quizzes
+                quizPackage, off, quizzes, null
         );
     }
 
@@ -420,14 +447,19 @@ public class StudentQuizController {
     private static String doBuy(ObjectId studentId, String phone,
                                 String mail, int money,
                                 Document quizPackage,
-                                Document off, ArrayList<Document> quizzes
+                                Document off, ArrayList<Document> quizzes,
+                                ArrayList<ObjectId> studentIds
     ) {
 
         long curr = System.currentTimeMillis();
         int totalPrice = 0;
 
-        for(Document quiz : quizzes)
-            totalPrice += quiz.getInteger("price");
+        if(studentIds == null)
+            for(Document quiz : quizzes)
+                totalPrice += quiz.getInteger("price");
+        else
+            for(Document quiz : quizzes)
+                totalPrice += quiz.getInteger("price") * studentIds.size();
 
         if(off == null) {
             off = offcodeRepository.findOne(
@@ -459,6 +491,12 @@ public class StudentQuizController {
         double offAmount = totalPrice * packageOff / 100.0;
         double shouldPayDouble = totalPrice - offAmount;
 
+        if(studentIds != null) {
+            int groupRegistrationOff = irysc.gachesefid.Utility.Utility.getConfig().getInteger("school_off_percent");
+            offAmount += shouldPayDouble * groupRegistrationOff / 100.0;
+            shouldPayDouble =  totalPrice - offAmount;
+        }
+
         if(off != null) {
             offAmount +=
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
@@ -489,8 +527,12 @@ public class StudentQuizController {
             boolean finalUsePackageOff = usePackageOff;
             new Thread(() -> {
 
-                new RegularQuizController()
-                        .registry(studentId, phone, mail, quizIds, 0);
+                if(studentIds != null)
+                    new RegularQuizController()
+                            .registry(studentIds, phone, mail, quizIds, 0);
+                else
+                    new RegularQuizController()
+                            .registry(studentId, phone, mail, quizIds, 0);
 
                 if (finalOff != null) {
 
@@ -529,6 +571,9 @@ public class StudentQuizController {
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("products", quizIds);
 
+                if(studentIds != null)
+                    doc.append("student_ids", studentIds);
+
                 if(finalOff != null)
                     doc.append("off_code", finalOff.getObjectId("_id"));
 
@@ -557,6 +602,9 @@ public class StudentQuizController {
                         .append("products", quizIds)
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("off_code", off == null ? null : off.getObjectId("_id"));
+
+        if(studentIds != null)
+            doc.append("student_ids", studentIds);
 
         if(quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));

@@ -64,13 +64,20 @@ public class PayPing {
 
             if(transaction.containsKey("products")) {
                 List<ObjectId> products = transaction.getList("products", ObjectId.class);
-
-                new RegularQuizController()
-                        .registry(studentId,
-                                user.getString("phone"),
-                                user.getString("mail"),
-                                products,
-                                transaction.getInteger("amount"));
+                if(!transaction.containsKey("student_ids"))
+                    new RegularQuizController()
+                            .registry(studentId,
+                                    user.getString("phone"),
+                                    user.getString("mail"),
+                                    products,
+                                    transaction.getInteger("amount"));
+                else
+                    new RegularQuizController()
+                            .registry(transaction.getList("student_ids", ObjectId.class),
+                                    user.getString("phone"),
+                                    user.getString("mail"),
+                                    products,
+                                    transaction.getInteger("amount"));
 
                 if(transaction.containsKey("off_code") &&
                         transaction.get("off_code") != null) {

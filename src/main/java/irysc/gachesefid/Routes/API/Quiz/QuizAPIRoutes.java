@@ -682,10 +682,9 @@ public class QuizAPIRoutes extends Router {
                               @RequestParam(required = false) ObjectId lessonId
     ) {
         Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         return PackageController.getPackages(
-                isAdmin,
+                user == null ? null : user.getList("accesses", String.class),
                 user == null ? null : user.getObjectId("_id"),
                 gradeId, lessonId
         );
