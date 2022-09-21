@@ -365,7 +365,7 @@ public class UserAPIRoutes extends Router {
             );
 
             return userService.signIn(jsonObject.getString("username"),
-                    password, true);
+                    password, false);
 
         } catch (Exception e) {
             return generateErr(e.getMessage());
