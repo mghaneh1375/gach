@@ -504,7 +504,7 @@ public class TashrihiQuizController extends QuizAbstract {
 //    }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy) {
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
         return null;
     }
 

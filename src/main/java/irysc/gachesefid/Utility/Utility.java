@@ -10,6 +10,7 @@ import irysc.gachesefid.Kavenegar.excepctions.HttpException;
 import irysc.gachesefid.Kavenegar.models.SendResult;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Validator.DateValidator;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONArray;
@@ -223,14 +224,33 @@ public class Utility {
         return sb.toString();
     }
 
-    public static boolean sendSMS(int code, String phoneNum) {
+    public static boolean sendSMS(String receptor, String token,
+                                  String token2, String token3,
+                                  String template
+    ) {
 
-        if(DEV_MODE)
-            return true;
+//        if(DEV_MODE)
+//            return true;
+
+        receptor = convertPersianDigits(receptor);
+
+        if(!PhoneValidator.isValid(receptor)) {
+            System.out.println("not valid phone num");
+            return false;
+        }
 
         try {
-            KavenegarApi api = new KavenegarApi("2B7376456266497A53474479625A47755345324C73413D3D");
-            SendResult Result = api.send("", convertPersianDigits(phoneNum), code + "");
+            KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
+            SendResult Result = api.verifyLookup(receptor, token, token2, token3, template);
+
+            if(Result.getStatus() == 6 ||
+                    Result.getStatus() == 11 ||
+                    Result.getStatus() == 13 ||
+                    Result.getStatus() == 14 ||
+                    Result.getStatus() == 100
+            )
+                return false;
+
             return true;
         } catch (HttpException ex) {
             System.out.print("HttpException  : " + ex.getMessage());

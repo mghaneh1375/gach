@@ -22,7 +22,9 @@ public abstract class QuizAbstract {
 
     abstract void quit(Document student, Document quiz);
 
-    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy);
+    abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin,
+                                         boolean afterBuy, boolean isDescNeeded
+    );
 
     class QuestionStat {
 

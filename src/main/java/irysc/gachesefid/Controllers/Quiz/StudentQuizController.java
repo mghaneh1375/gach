@@ -171,7 +171,7 @@ public class StudentQuizController {
                     continue;
 
                 JSONObject jsonObject = quizAbstract.convertDocToJSON(
-                        quiz, true, false, true
+                        quiz, true, false, true, true
                 );
 
                 if(jsonObject.getString("status")

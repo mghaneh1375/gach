@@ -304,7 +304,10 @@ public class PackageController {
                     else
                         quizAbstract = new TashrihiQuizController();
 
-                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false, false);
+                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false,
+                            false, true
+                    );
+
                     if ((quiz.containsKey("end_registry") &&
                             quiz.getLong("end_registry") > curr) ||
                             (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
@@ -392,7 +395,7 @@ public class PackageController {
                     }
                 }
                 jsonArray.put(quizController.convertDocToJSON(
-                        doc, true, false, false
+                        doc, true, false, false, true
                 ).put("type", "quiz"));
             }
             data.put("tags", tags);
@@ -424,7 +427,9 @@ public class PackageController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin, false));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin,
+                    false, false
+            ));
         }
 
         return generateSuccessMsg("data", jsonArray);

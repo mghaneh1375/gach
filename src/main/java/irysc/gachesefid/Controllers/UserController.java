@@ -208,7 +208,7 @@ public class UserController {
         int code = Utility.randInt();
 
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
-            Utility.sendSMS(code, doc.getString("username"));
+            Utility.sendSMS(doc.getString("username"), code + "", "", "", "activationCode");
         else
             Utility.sendMail(
                     doc.getString("username"), code + "", "کد اعتبارسنجی",

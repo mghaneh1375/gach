@@ -41,7 +41,8 @@ public class StudentQuizAPIRoutes extends Router {
     public String get(HttpServletRequest request,
                       @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                       @RequestParam(required = false) String tag,
-                      @RequestParam(required = false) Boolean finishedIsNeeded
+                      @RequestParam(required = false) Boolean finishedIsNeeded,
+                      @RequestParam(required = false) Boolean justRegistrable
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));

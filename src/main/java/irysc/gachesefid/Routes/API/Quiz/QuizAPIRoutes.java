@@ -192,7 +192,11 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.get(iryscQuizRepository, isAdmin ? null : "", quizId);
+            return QuizController.get(
+                    iryscQuizRepository,
+                    isAdmin ? null : "",
+                    quizId
+            );
 
         if (user == null)
             return JSON_NOT_ACCESS;

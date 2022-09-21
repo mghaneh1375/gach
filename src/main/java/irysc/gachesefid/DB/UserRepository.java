@@ -83,7 +83,7 @@ public class UserRepository extends Common {
         );
 
         if(authVia.equals(AuthVia.SMS.getName()))
-            Utility.sendSMS(code, username);
+            Utility.sendSMS(username, code + "", "", "", "activationCode");
         else
             Utility.sendMail(
                     username, code + "", "کد اعتبارسنجی",
@@ -116,7 +116,7 @@ public class UserRepository extends Common {
             );
 
             if (via.equals(AuthVia.SMS.getName()))
-                Utility.sendSMS(code, username);
+                Utility.sendSMS(username, code + "" , "", "", "activationCode");
             else
                 Utility.sendMail(username, code + "", "Forget password", "forget", null);
 

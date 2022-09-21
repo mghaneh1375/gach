@@ -167,7 +167,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false));
+            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -295,7 +295,9 @@ public class QuizController {
 
     }
 
-    public static String get(Common db, Object user, ObjectId quizId) {
+    public static String get(Common db, Object user,
+                             ObjectId quizId
+    ) {
 
         try {
 
@@ -307,7 +309,7 @@ public class QuizController {
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
-                        quizAbstract.convertDocToJSON(quiz, false, true, false)
+                        quizAbstract.convertDocToJSON(quiz, false, true, false, false)
                 );
             }
 
@@ -992,7 +994,14 @@ public class QuizController {
         long curr = System.currentTimeMillis();
 
         if (isAdmin) {
-            filters.add(gt("start", curr));
+            filters.add(and(
+                    gt("start", curr),
+                    or(
+                            exists("end_registry", false),
+                            gt("end_registry", curr)
+                    )
+            ));
+
         } else {
             filters.add(eq("visibility", true));
 
@@ -1025,7 +1034,7 @@ public class QuizController {
             else
                 quizAbstract = new TashrihiQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false));
+            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
         }
 
         return generateSuccessMsg("data", new JSONObject()

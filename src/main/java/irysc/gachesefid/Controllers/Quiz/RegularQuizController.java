@@ -46,7 +46,9 @@ public class RegularQuizController extends QuizAbstract {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "quiz", new RegularQuizController()
-                            .convertDocToJSON(newDoc, false, true, false)
+                            .convertDocToJSON(newDoc, false, true,
+                                    false, false
+                            )
             );
 
         } catch (InvalidFieldsException e) {
@@ -102,7 +104,7 @@ public class RegularQuizController extends QuizAbstract {
 
     @Override
     JSONObject convertDocToJSON(Document quiz, boolean isDigest,
-                                boolean isAdmin, boolean afterBuy) {
+                                boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
@@ -164,11 +166,19 @@ public class RegularQuizController extends QuizAbstract {
         if (quiz.containsKey("capacity"))
             jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
 
+        if(!isDigest || isDescNeeded)
+            jsonObject
+                    .put("description", quiz.getOrDefault("description", ""));
+
         if (!isDigest) {
             jsonObject
-                    .put("description", quiz.getOrDefault("description", ""))
                     .put("topStudentsCount", quiz.getInteger("top_students_count"))
                     .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
+
+            if(isAdmin) {
+                jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
+                jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+            }
         }
 
         return jsonObject;

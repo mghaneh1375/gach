@@ -198,9 +198,9 @@ public class ContentAPIRoutes extends Router {
         return ContentController.editSubject(subjectId, convertPersian(new JSONObject(jsonStr)));
     }
 
-    @DeleteMapping(value = "/deleteGrade")
+    @DeleteMapping(value = "/deleteGrades")
     @ResponseBody
-    public String deleteGrade(HttpServletRequest request,
+    public String deleteGrades(HttpServletRequest request,
                               @RequestBody @StrongJSONConstraint(
                                       params = {"items"},
                                       paramsType = {JSONArray.class}

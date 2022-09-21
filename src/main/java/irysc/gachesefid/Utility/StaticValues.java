@@ -43,7 +43,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
