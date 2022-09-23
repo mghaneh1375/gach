@@ -1,9 +1,11 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.Authorization;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -304,7 +306,7 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(!quiz.containsKey("ranking_list"))
+        if (!quiz.containsKey("ranking_list"))
             return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
@@ -386,7 +388,7 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(!quiz.containsKey("ranking_list"))
+        if (!quiz.containsKey("ranking_list"))
             return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
@@ -461,7 +463,7 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(!quiz.containsKey("ranking_list"))
+        if (!quiz.containsKey("ranking_list"))
             return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
@@ -537,7 +539,7 @@ public class AdminReportController {
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(!quiz.containsKey("ranking_list"))
+        if (!quiz.containsKey("ranking_list"))
             return JSON_NOT_ACCESS;
 
         JSONArray data = new JSONArray();
@@ -620,7 +622,7 @@ public class AdminReportController {
 
         List<Binary> questionStats = null;
 
-        if(quiz.containsKey("question_stat")) {
+        if (quiz.containsKey("question_stat")) {
             questionStats = quiz.getList("question_stat", Binary.class);
 
             if (questionStats.size() != questions.size())
@@ -639,12 +641,11 @@ public class AdminReportController {
             else
                 tmp = new ArrayList<>();
 
-            if(questionStats != null) {
+            if (questionStats != null) {
                 byte[] stats = questionStats.get(k).getData();
                 int percent = (stats[1] * 100) / (stats[0] + stats[1] + stats[2]);
                 tmp.add(percent);
-            }
-            else
+            } else
                 tmp.add(0);
 
             authorPercents.put(author, tmp);
@@ -673,7 +674,40 @@ public class AdminReportController {
 
     }
 
-    public static String getParticipantReport(ObjectId quizId) {
+    private static ArrayList<Document> filterStudentsWithAccess(ArrayList<ObjectId> students,
+                                                                Document user) {
+
+        List<String> accesses = user.getList("accesses", String.class);
+
+        boolean isAdmin = Authorization.isAdmin(accesses);
+        ArrayList<ObjectId> studentsIdAfterFilter = new ArrayList<>();
+
+        if(isAdmin)
+            studentsIdAfterFilter = students;
+        else {
+
+            if (Authorization.isSchool(accesses)) {
+
+                if(!user.containsKey("students"))
+                    return null;
+
+                List<ObjectId> myStudentsId = user.getList("students", ObjectId.class);
+                for (ObjectId std : students) {
+
+                    if (!myStudentsId.contains(std))
+                        continue;
+
+                    studentsIdAfterFilter.add(std);
+                }
+            }
+        }
+
+        return userRepository.findByIds(
+                studentsIdAfterFilter, true
+        );
+    }
+
+    public static String getParticipantReport(ObjectId quizId, Document user) {
 
         Document quiz = iryscQuizRepository.findById(quizId);
         if (quiz == null)
@@ -681,27 +715,28 @@ public class AdminReportController {
 
         JSONArray data = new JSONArray();
         List<Document> students = quiz.getList("students", Document.class);
-        ArrayList<ObjectId> studentsId = new ArrayList<>();
+        ArrayList<ObjectId> studentsIdBeforeFilter = new ArrayList<>();
 
         for (Document student : students)
-            studentsId.add(student.getObjectId("_id"));
+            studentsIdBeforeFilter.add(student.getObjectId("_id"));
 
-        ArrayList<Document> studentsInfo = userRepository.findByIds(
-                studentsId, true
+        ArrayList<Document> studentsInfo = filterStudentsWithAccess(
+                studentsIdBeforeFilter,
+                user
         );
 
-        if(studentsInfo == null)
-            return JSON_NOT_UNKNOWN;
+        if(studentsInfo == null || studentsInfo.size() == 0)
+            return JSON_NOT_ACCESS;
 
         int i = 0;
-        for (Document student : students) {
+        for (Document student : studentsInfo) {
             JSONObject jsonObject = new JSONObject()
-                    .put("startAt", student.containsKey("start_at") && student.get("start_at") != null ?
-                            getSolarDate(student.getLong("start_at")) : "")
-                    .put("finishAt", student.containsKey("finish_at") && student.get("finish_at") != null ?
-                            getSolarDate(student.getLong("finish_at")) : "")
-                    .put("name", studentsInfo.get(i).getString("first_name") + " " + studentsInfo.get(i).getString("last_name"))
-                    .put("id", studentsInfo.get(i).getObjectId("_id"));
+                    .put("startAt", students.get(i).containsKey("start_at") && students.get(i).get("start_at") != null ?
+                            getSolarDate(students.get(i).getLong("start_at")) : "")
+                    .put("finishAt", students.get(i).containsKey("finish_at") && students.get(i).get("finish_at") != null ?
+                            getSolarDate(students.get(i).getLong("finish_at")) : "")
+                    .put("name", student.getString("first_name") + " " + student.getString("last_name"))
+                    .put("id", student.getObjectId("_id"));
 
             data.put(jsonObject);
             i++;

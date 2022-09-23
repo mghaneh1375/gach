@@ -189,7 +189,7 @@ public class ContentController {
 
     public static String addGrade(String name) {
 
-        if (gradeRepository.find(eq("name", name), new BasicDBObject("_id", 1)).size() > 0)
+        if (gradeRepository.exist(eq("name", name)))
             return generateErr("مقطعی با این نام در سیستم موجود است.");
 
         return gradeRepository.insertOneWithReturn(new Document("name", name)

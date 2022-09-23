@@ -779,6 +779,10 @@ public class Utility {
     }
 
     public static String getSolarDate(long time) {
+
+        if(time < 1610494635)
+            return "";
+
         Date d = new Date(time);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         String[] dateTime = simpleDateFormat.format(d).split(" ");

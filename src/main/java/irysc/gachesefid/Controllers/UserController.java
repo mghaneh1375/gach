@@ -108,6 +108,11 @@ public class UserController {
         ))
             return Utility.generateErr("شماره همراه/ایمیل وارد شده در سامانه موجود است.");
 
+        if (userRepository.exist(
+                eq("NID", jsonObject.getString("NID"))
+        ))
+            return Utility.generateErr("کد ملی وارد شده در سامانه موجود است.");
+
         PairValue existTokenP = UserRepository.existSMS(jsonObject.getString("username"));
 
         if (existTokenP != null)

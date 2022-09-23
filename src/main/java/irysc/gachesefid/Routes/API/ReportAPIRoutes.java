@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
+import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -69,8 +70,12 @@ public class ReportAPIRoutes extends Router {
     @GetMapping(value = "/participantReport/{quizId}")
     @ResponseBody
     public String participantReport(HttpServletRequest request,
-                                    @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getParticipantReport(quizId);
+                                    @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getPrivilegeUser(request);
+        return AdminReportController.getParticipantReport(
+                quizId, user
+        );
     }
 
     @GetMapping(value = "/showRanking/{mode}/{quizId}")

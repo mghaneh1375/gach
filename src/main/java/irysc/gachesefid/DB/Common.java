@@ -66,9 +66,9 @@ public abstract class Common extends Repository {
         FindIterable<Document> cursor;
 
         if (filter == null)
-            cursor = documentMongoCollection.find().projection(new BasicDBObject("_id", 1));
+            cursor = documentMongoCollection.find().projection(JUST_ID);
         else
-            cursor = documentMongoCollection.find(filter).projection(new BasicDBObject("_id", 1));
+            cursor = documentMongoCollection.find(filter).projection(JUST_ID);
 
         ArrayList<ObjectId> result = new ArrayList<>();
 
@@ -269,7 +269,7 @@ public abstract class Common extends Repository {
 
         FindIterable<Document> cursor = documentMongoCollection.
                 find(filter)
-                .projection(new BasicDBObject("_id", 1));
+                .projection(JUST_ID);
 
         for (Document doc : cursor)
             removeFromCache(table, doc.getObjectId("_id"));

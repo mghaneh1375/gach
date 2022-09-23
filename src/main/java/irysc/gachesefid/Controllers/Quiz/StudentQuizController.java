@@ -10,6 +10,7 @@ import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -63,7 +64,6 @@ public class StudentQuizController {
             return generateSuccessMsg("data",jsonObject);
         }
         catch (Exception x) {
-            System.out.println(x.getMessage());
             x.printStackTrace();
             return generateErr(x.getMessage());
         }
@@ -118,14 +118,13 @@ public class StudentQuizController {
             return returnQuiz(quiz, stdDoc, true, quizJSON);
         }
         catch (Exception x) {
-            System.out.println(x.getMessage());
             x.printStackTrace();
             return generateErr(x.getMessage());
         }
     }
 
 
-    public static String myQuizzes(ObjectId userId,
+    public static String myQuizzes(Document user,
                                    String generalMode,
                                    String status) {
 
@@ -133,9 +132,19 @@ public class StudentQuizController {
                 !EnumValidatorImp.isValid(generalMode, GeneralKindQuiz.class))
             return JSON_NOT_VALID_PARAMS;
 
+        List<String> accesses = user.getList("accesses", String.class);
+        ObjectId userId = user.getObjectId("_id");
+
+        boolean isSchool = Authorization.isSchool(accesses);
+        if(isSchool && !user.containsKey("students"))
+            return JSON_NOT_UNKNOWN;
+
         JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();
-        filters.add(in("students._id", userId));
+        if(isSchool)
+            filters.add(in("students._id", user.getList("students", ObjectId.class)));
+        else
+            filters.add(in("students._id", userId));
 
         long curr = System.currentTimeMillis();
 
@@ -158,36 +167,44 @@ public class StudentQuizController {
                 generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
         ) {
             ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
+
             QuizAbstract quizAbstract = new RegularQuizController();
 
             for(Document quiz : quizzes) {
 
-                Document studentDoc = searchInDocumentsKeyVal(
-                        quiz.getList("students", Document.class),
-                        "_id", userId
-                );
-
-                if(studentDoc == null)
-                    continue;
-
-                JSONObject jsonObject = quizAbstract.convertDocToJSON(
-                        quiz, true, false, true, true
-                );
-
-                if(jsonObject.getString("status")
-                        .equalsIgnoreCase("inProgress") &&
-                        studentDoc.containsKey("start_at") &&
-                        studentDoc.get("start_at") != null
-                ) {
-                    int neededTime = quizAbstract.calcLen(quiz);
-                    int untilYetInSecondFormat =
-                            (int) ((curr - studentDoc.getLong("start_at")) / 1000);
-                    if (untilYetInSecondFormat > neededTime)
-                        jsonObject.put("status", "waitForResult");
+                if(isSchool) {
+                    data.put(quizAbstract.convertDocToJSON(
+                            quiz, true, false, true, true
+                    ));
                 }
+                else {
 
-                data.put(jsonObject);
+                    Document studentDoc = searchInDocumentsKeyVal(
+                            quiz.getList("students", Document.class),
+                            "_id", userId
+                    );
 
+                    if(studentDoc == null)
+                        continue;
+
+                    JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                            quiz, true, false, true, true
+                    );
+
+                    if(jsonObject.getString("status")
+                            .equalsIgnoreCase("inProgress") &&
+                            studentDoc.containsKey("start_at") &&
+                            studentDoc.get("start_at") != null
+                    ) {
+                        int neededTime = quizAbstract.calcLen(quiz);
+                        int untilYetInSecondFormat =
+                                (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+                        if (untilYetInSecondFormat > neededTime)
+                            jsonObject.put("status", "waitForResult");
+                    }
+
+                    data.put(jsonObject);
+                }
             }
 
         }
@@ -268,7 +285,6 @@ public class StudentQuizController {
 
         } catch (Exception x) {
             x.printStackTrace();
-            System.out.println(x.getMessage());
             return null;
         }
 
@@ -324,7 +340,6 @@ public class StudentQuizController {
 
         } catch (Exception x) {
             x.printStackTrace();
-            System.out.println(x.getMessage());
             return null;
         }
     }
@@ -411,7 +426,7 @@ public class StudentQuizController {
             return JSON_NOT_VALID_PARAMS;
 
         if(studentIds != null) {
-            Document school = schoolRepository.findOne(eq("user_id", userId), new BasicDBObject("_id", 1));
+            Document school = schoolRepository.findOne(eq("user_id", userId), JUST_ID);
             if(school == null)
                 return JSON_NOT_ACCESS;
 

@@ -4,7 +4,6 @@ package irysc.gachesefid.Routes.API.Quiz;
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
-import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -29,7 +28,6 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -102,9 +100,9 @@ public class StudentQuizAPIRoutes extends Router {
                             @RequestParam(required = false) String mode,
                             @RequestParam(required = false) String status
     ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.myQuizzes(
-                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
-                mode, status
+                user, mode, status
         );
     }
 
