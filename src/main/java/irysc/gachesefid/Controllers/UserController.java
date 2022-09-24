@@ -1087,6 +1087,8 @@ public class UserController {
         if (city == null)
             return JSON_NOT_VALID_PARAMS;
 
+        System.out.println("1");
+
         Document grade = null;
 
         if(jsonObject.has("gradeId")) {
@@ -1098,9 +1100,11 @@ public class UserController {
                 return JSON_NOT_VALID_PARAMS;
         }
 
+        System.out.println("2");
+
         Document school = null;
 
-        if(jsonObject.has("school")) {
+        if(jsonObject.has("schoolId")) {
            school = schoolRepository.findById(
                     new ObjectId(jsonObject.getString("schoolId"))
             );
@@ -1108,6 +1112,8 @@ public class UserController {
             if (school == null)
                 return JSON_NOT_VALID_PARAMS;
         }
+
+        System.out.println("3");
 
         user.put("first_name", jsonObject.getString("firstName"));
         user.put("last_name", jsonObject.getString("lastName"));
