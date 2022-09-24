@@ -447,6 +447,7 @@ public class UserController {
                 .put("money", user.getInteger("money"))
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
+                .put("invitationCode", user.get("invitation_code"))
                 .put("NID", user.getString("NID"))
                 .put("grade", !user.containsKey("grade") ? "" : new JSONObject().put("id",
                         ((Document) user.get("grade")).getObjectId("_id").toString())
@@ -999,10 +1000,40 @@ public class UserController {
 
     public static String getMySummary(Document user) {
 
+        long curr = System.currentTimeMillis();
+
         JSONObject jsonObject = new JSONObject()
                 .put("money", user.getInteger("money"))
                 .put("rank", 1)
-                .put("activeQuizzes", 2)
+                .put("branchRank", 1)
+                .put("gradeRank", 1)
+                .put("registrableQuizzes", iryscQuizRepository.count(
+                        and(
+                                lt("start_registry", curr),
+                                or(
+                                        and(
+                                                exists("end_registry", false),
+                                                gt("end", curr)
+                                        ),
+                                        and(
+                                                exists("end_registry", true),
+                                                gt("end_registry", curr)
+                                        )
+                                )
+                        )
+                ))
+                .put("activeQuizzes", iryscQuizRepository.count(
+                        and(
+                            in("students._id", user.getObjectId("_id")),
+                            gt("start", curr)
+                        )
+                ))
+                .put("passedQuizzes", iryscQuizRepository.count(
+                        and(
+                                in("students._id", user.getObjectId("_id")),
+                                lt("end", curr)
+                        )
+                ))
                 .put("coin", user.get("coin"));
 
         int totalQuizzes = iryscQuizRepository.count(

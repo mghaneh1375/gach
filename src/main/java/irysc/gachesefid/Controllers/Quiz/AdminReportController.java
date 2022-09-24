@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -746,5 +747,76 @@ public class AdminReportController {
                 "data", data
         );
 
+    }
+
+    public static String A1(Common db, ObjectId userId,
+                            ObjectId quizId) {
+
+        try {
+            Document quiz = hasAccess(db, userId, quizId);
+
+            long curr = System.currentTimeMillis();
+
+            if (quiz.getLong("end") > curr || !quiz.containsKey("report_status") ||
+                    !quiz.getString("report_status").equals("ready"))
+                return JSON_NOT_ACCESS;
+
+            Document questionsDoc = quiz.get("questions", Document.class);
+
+            ArrayList<Document> questionsList = new ArrayList<>();
+            List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                    "_ids", new ArrayList<ObjectId>()
+            );
+            List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+                    "marks", new ArrayList<Double>()
+            );
+
+            if (questionsMark.size() != questions.size())
+                return JSON_NOT_UNKNOWN;
+
+            int i = 0;
+            for (ObjectId itr : questions) {
+
+                Document question = questionRepository.findById(itr);
+
+                if (question == null) {
+                    i++;
+                    continue;
+                }
+
+                questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+                i++;
+            }
+
+            List<Binary> questionStats = null;
+            if (quiz.containsKey("question_stat")) {
+                questionStats = quiz.getList("question_stat", Binary.class);
+                if (questionStats.size() != questionsMark.size())
+                    questionStats = null;
+            }
+
+            JSONArray questionsJSONArr = Utilities.convertList(
+                    questionsList, true, true, true, true, false
+            );
+
+            if (questionStats != null) {
+                for (i = 0; i < questionsJSONArr.length(); i++) {
+
+                    JSONObject jsonObject = questionsJSONArr.getJSONObject(i);
+
+                    byte[] bytes = questionStats.get(i).getData();
+                    jsonObject
+                            .put("oldCorrect", bytes[1] & 0xff)
+                            .put("oldIncorrect", bytes[2] & 0xff)
+                            .put("oldWhite", bytes[0] & 0xff);
+                }
+            }
+
+            return generateSuccessMsg("data", questionsJSONArr);
+
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            return null;
+        }
     }
 }

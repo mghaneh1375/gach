@@ -78,6 +78,26 @@ public class ReportAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "/A1/{mode}/{quizId}")
+    @ResponseBody
+    public String A1(HttpServletRequest request,
+                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                     @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return AdminReportController.A1(
+                    iryscQuizRepository, null, quizId
+            );
+
+        return AdminReportController.A1(
+                iryscQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId
+        );
+    }
+
     @GetMapping(value = "/showRanking/{mode}/{quizId}")
     @ResponseBody
     public String showRanking(HttpServletRequest request,
