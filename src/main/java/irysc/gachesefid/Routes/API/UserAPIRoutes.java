@@ -11,6 +11,7 @@ import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
@@ -320,20 +321,26 @@ public class UserAPIRoutes extends Router {
                              @PathVariable(required = false) String userId,
                              @RequestBody @StrongJSONConstraint(
                                      params = {
-                                             "sex", "cityId", "gradeId",
+                                             "sex", "cityId",
                                              "firstName", "lastName",
-                                             "NID", "branches", "schoolId"},
-
+                                             "NID"
+                                     },
                                      paramsType = {
-                                             String.class, ObjectId.class, ObjectId.class,
+                                             Sex.class, ObjectId.class,
                                              String.class, String.class,
-                                             Positive.class, JSONArray.class, ObjectId.class}
+                                             String.class
+                                     },
+                                     optionals = {
+                                             "branches", "schoolId", "gradeId",
+                                     },
+                                     optionalsType = {
+                                             JSONArray.class, ObjectId.class,
+                                             ObjectId.class,
+                                     }
                              ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         Document user = (Document) getUserWithAdminAccess(request, false, false, userId).get("user");
-        JSONObject jsonObject = new JSONObject(json);
-        convertPersian(jsonObject);
-        return UserController.updateInfo(jsonObject, user);
+        return UserController.updateInfo(convertPersian(new JSONObject(json)), user);
     }
 
     @PostMapping(value = "/resendCode")

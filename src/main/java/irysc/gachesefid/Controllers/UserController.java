@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -1052,8 +1051,6 @@ public class UserController {
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
         String sex = jsonObject.getString("sex");
-        if (!EnumValidatorImp.isValid(sex, Sex.class))
-            return JSON_NOT_VALID_PARAMS;
 
         if (userRepository.exist(and(
                 eq("NID", NID),
@@ -1061,21 +1058,26 @@ public class UserController {
         )))
             return generateErr("کد ملی وارد شده در سامانه موجود است.");
 
-        JSONArray branches = jsonObject.getJSONArray("branches");
-        List<Document> branchesDoc = new ArrayList<>();
+        List<Document> branchesDoc = null;
 
-        for (int i = 0; i < branches.length(); i++) {
-            if (!ObjectId.isValid(branches.getString(i)))
-                return JSON_NOT_VALID_PARAMS;
+        if(jsonObject.has("branches")) {
 
-            Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
-            if (branch == null)
-                return JSON_NOT_VALID_PARAMS;
+            JSONArray branches = jsonObject.getJSONArray("branches");
+            branchesDoc = new ArrayList<>();
 
-            branchesDoc.add(
-                    new Document("_id", branch.getObjectId("_id"))
-                            .append("name", branch.getString("name"))
-            );
+            for (int i = 0; i < branches.length(); i++) {
+                if (!ObjectId.isValid(branches.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+
+                Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
+                if (branch == null)
+                    return JSON_NOT_VALID_PARAMS;
+
+                branchesDoc.add(
+                        new Document("_id", branch.getObjectId("_id"))
+                                .append("name", branch.getString("name"))
+                );
+            }
         }
 
         Document city = cityRepository.findById(
@@ -1085,34 +1087,57 @@ public class UserController {
         if (city == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document grade = gradeRepository.findById(
-                new ObjectId(jsonObject.getString("gradeId"))
-        );
+        Document grade = null;
 
-        if (grade == null)
-            return JSON_NOT_VALID_PARAMS;
+        if(jsonObject.has("gradeId")) {
+            grade = gradeRepository.findById(
+                    new ObjectId(jsonObject.getString("gradeId"))
+            );
 
-        Document school = schoolRepository.findById(
-                new ObjectId(jsonObject.getString("schoolId"))
-        );
+            if (grade == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
 
-        if (school == null)
-            return JSON_NOT_VALID_PARAMS;
+        Document school = null;
+
+        if(jsonObject.has("school")) {
+           school = schoolRepository.findById(
+                    new ObjectId(jsonObject.getString("schoolId"))
+            );
+
+            if (school == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
 
         user.put("first_name", jsonObject.getString("firstName"));
         user.put("last_name", jsonObject.getString("lastName"));
-        user.put("grade", new Document("_id", grade.getObjectId("_id"))
-                .append("name", grade.getString("name"))
-        );
+
+        if(grade != null)
+            user.put("grade", new Document("_id", grade.getObjectId("_id"))
+                    .append("name", grade.getString("name"))
+            );
+        else
+
+            user.remove("grade");
+
         user.put("city", new Document("_id", city.getObjectId("_id"))
                 .append("name", city.getString("name"))
         );
-        user.put("school", new Document("_id", school.getObjectId("_id"))
-                .append("name", school.getString("name"))
-        );
+
+        if(school != null)
+            user.put("school", new Document("_id", school.getObjectId("_id"))
+                    .append("name", school.getString("name"))
+            );
+        else
+            user.remove("school");
+
         user.put("NID", NID);
         user.put("sex", sex);
-        user.put("branches", branchesDoc);
+
+        if(branchesDoc != null)
+            user.put("branches", branchesDoc);
+        else
+            user.remove("branches");
 
         userRepository.replaceOne(
                 user.getObjectId("_id"),
