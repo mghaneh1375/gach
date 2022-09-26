@@ -83,6 +83,19 @@ public class UserAPIRoutes extends Router {
 //
 //            questionRepository.replaceOne(doc.getObjectId("_id"), doc);
 //        }
+        ArrayList<Document> docs = userRepository.find(null, null);
+        for(Document doc : docs) {
+            doc.put("grade", new Document("_id", new ObjectId("62e6167a398da90567548341"))
+                    .append("name", "دوازدهم تجربی")
+            );
+            userRepository.replaceOne(
+                    doc.getObjectId("_id"),
+                    doc
+            );
+        }
+
+        if(1 == 1)
+            return "ok";
 
         int taraz = 10930; // 2
         int correct = 20; // 1

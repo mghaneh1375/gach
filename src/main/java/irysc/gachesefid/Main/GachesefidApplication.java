@@ -8,7 +8,7 @@ import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Models.NewAlert;
-import irysc.gachesefid.Utility.Enc;
+
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -18,16 +18,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.exists;
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Utility.Utility.printException;
+import static irysc.gachesefid.Utility.StaticValues.SCHOOLS;
+import static irysc.gachesefid.Utility.StaticValues.STUDENTS;
+import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
 import static java.util.Map.entry;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
@@ -76,6 +75,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static SchoolRepository schoolRepository;
     public static StateRepository stateRepository;
     public static SubjectRepository subjectRepository;
+    public static TarazRepository tarazRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
     public static UserRepository userRepository;
@@ -123,9 +123,14 @@ public class GachesefidApplication implements WebMvcConfigurer {
             schoolRepository = new SchoolRepository();
             stateRepository = new StateRepository();
             subjectRepository = new SubjectRepository();
+            tarazRepository = new TarazRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();
+
+            SCHOOLS = schoolRepository.count(exists("user_id"));
+            QUESTIONS = questionRepository.count(null);
+            STUDENTS = userRepository.count(eq("level", false));
 
         } catch (Exception x) {
             printException(x);

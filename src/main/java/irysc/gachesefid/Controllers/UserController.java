@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -413,6 +414,8 @@ public class UserController {
             newDoc.append("mail", username);
 
         userRepository.insertOne(newDoc);
+        STUDENTS++;
+
         return doc.getString("password");
     }
 
@@ -1001,11 +1004,13 @@ public class UserController {
 
         long curr = System.currentTimeMillis();
 
+        Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
+
         JSONObject jsonObject = new JSONObject()
                 .put("money", user.getInteger("money"))
-                .put("rank", 1)
+                .put("rank", rank == null ? "" : rank.getInteger("rank"))
                 .put("branchRank", 1)
-                .put("gradeRank", 1)
+                .put("gradeRank", rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
                 .put("registrableQuizzes", iryscQuizRepository.count(
                         and(
                                 lt("start_registry", curr),
@@ -1042,6 +1047,14 @@ public class UserController {
         jsonObject.put("totalQuizzes", totalQuizzes);
 
         return generateSuccessMsg("data", jsonObject);
+    }
+
+    public static String getSiteSummary() {
+        return generateSuccessMsg("data", new JSONObject()
+                .put("schools", SCHOOLS)
+                .put("students", STUDENTS)
+                .put("questions", QUESTIONS)
+        );
     }
 
     public static String updateInfo(JSONObject jsonObject, Document user) {
@@ -1151,5 +1164,36 @@ public class UserController {
         );
 
         return JSON_OK;
+    }
+
+    public static String getRankingList() {
+
+        ArrayList<Document> docs = tarazRepository.find(lt("rank", 50), null,
+                Sorts.ascending("rank")
+        );
+
+        ArrayList<ObjectId> userIds = new ArrayList<>();
+        for(Document doc : docs)
+            userIds.add(doc.getObjectId("user_id"));
+
+        ArrayList<Document> users = userRepository.findByIds(userIds, true);
+        if(users == null)
+            return JSON_NOT_UNKNOWN;
+
+        JSONArray jsonArray = new JSONArray();
+
+        int i = 0;
+        for(Document user : users) {
+            JSONObject jsonObject = new JSONObject()
+                    .put("totalQuizzes", docs.get(i).getList("quizzes", Document.class).size())
+                    .put("cumSum", docs.get(i).getInteger("cum_sum_last_five"))
+                    ;
+            user.put("rank", docs.get(i).getInteger("rank"));
+            Utility.fillJSONWithUser(jsonObject, user);
+            jsonArray.put(jsonObject);
+            i++;
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 }

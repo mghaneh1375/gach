@@ -895,7 +895,32 @@ public class Utility {
         if(!jsonObject1.has("school"))
             jsonObject1.put("school", "");
 
-        jsonObject1.put("rank", 1);
+        if(user.containsKey("grade")) {
+            Document grade = (Document) user.get("grade");
+            if(grade != null && grade.containsKey("name"))
+                jsonObject1.put("grade", grade.getString("name"));
+        }
+
+        if(!jsonObject1.has("grade"))
+            jsonObject1.put("grade", "");
+
+
+        if(user.containsKey("branches")) {
+            List<Document> branches = user.getList("branches", Document.class);
+            if(branches.size() > 0) {
+                StringBuilder sb = new StringBuilder();
+                for (Document branch : branches) {
+                    sb.append(branch.getString("name")).append(" - ");
+                }
+                jsonObject1.put("branches", sb.substring(0, sb.toString().length() - 3));
+            }
+            else jsonObject1.put("branches", "");
+        }
+
+        if(!jsonObject1.has("branches"))
+            jsonObject1.put("branches", "");
+
+        jsonObject1.put("rank", user.getOrDefault("rank", -1));
         jsonObject.put("student", jsonObject1);
     }
 

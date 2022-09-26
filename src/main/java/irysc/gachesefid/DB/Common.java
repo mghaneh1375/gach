@@ -9,6 +9,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UnwindOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Variable;
+import com.mongodb.client.model.WriteModel;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -21,9 +22,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.*;
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.expr;
-import static com.mongodb.client.model.Filters.in;
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
@@ -339,6 +339,41 @@ public abstract class Common extends Repository {
             return null;
 
         return infos;
+    }
+
+    public ArrayList<Document> findPreserveOrderWitNull(String key, List<ObjectId> objectIds) {
+
+        ArrayList<Document> infos = new ArrayList<>();
+        for(int i = 0; i < objectIds.size(); i++)
+            infos.add(null);
+
+        FindIterable<Document> cursor =
+                documentMongoCollection.find(in(key, objectIds));
+
+        int idx, counter = 0;
+        for (Document doc : cursor) {
+            idx = objectIds.indexOf(doc.getObjectId(key));
+            if(idx != -1) {
+                infos.set(idx, doc);
+                counter++;
+            }
+        }
+        if(counter != objectIds.size()) {
+            idx = 0;
+            for(Document doc : infos) {
+                if(doc == null)
+                    infos.set(idx, new Document(key, objectIds.get(idx))
+                            .append("_id", new ObjectId())
+                    );
+                idx++;
+            }
+        }
+
+        return infos;
+    }
+
+    public void bulkWrite(List<WriteModel<Document>> writes) {
+        documentMongoCollection.bulkWrite(writes);
     }
 
     public void cleanRemove(Document doc) {

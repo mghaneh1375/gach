@@ -125,6 +125,18 @@ public class GeneralAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "/getRankingList")
+    @ResponseBody
+    public String getRankingList() {
+        return UserController.getRankingList();
+    }
+
+    @GetMapping(value = "/getSiteStats")
+    @ResponseBody
+    public String getSiteStats() {
+        return UserController.getSiteSummary();
+    }
+
     @GetMapping(value = "/getQuestionTagsExcel")
     @ResponseBody
     public void getQuestionTagsExcel(

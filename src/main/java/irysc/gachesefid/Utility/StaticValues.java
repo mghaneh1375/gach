@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-//    public final static String STATICS_SERVER = "http://192.168.0.106/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@okft.org";
@@ -22,6 +22,10 @@ public class StaticValues {
     public final static int TOKEN_EXPIRATION = 60 * 60 * 24 * 7;
 
     public final static int MAX_QUIZ_ATTACH_SIZE = 5; // MB
+
+    public static int STUDENTS = 0;
+    public static int QUESTIONS = 0;
+    public static int SCHOOLS = 0;
 
     public final static int SMS_RESEND_SEC = 300;
     public final static int SMS_RESEND_MSEC = 1000 * SMS_RESEND_SEC;
@@ -43,7 +47,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
