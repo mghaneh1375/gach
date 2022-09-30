@@ -169,20 +169,52 @@ public class ContentController {
         );
     }
 
-    public static String updateBranch(ObjectId branchId, String name) {
+    public static String updateBranch(ObjectId branchId,
+                                      String name,
+                                      boolean isOlympiad
+    ) {
 
         Document branch = branchRepository.findById(branchId);
         if (branch == null)
             return JSON_NOT_VALID_PARAMS;
 
-        if (branch.getString("name").equals(name))
-            return JSON_OK;
+        if (
+                (isOlympiad && branchRepository.exist(and(
+                            eq("name", name),
+                            ne("_id", branchId)
+                        )
+                )) ||
+                        (!isOlympiad && gradeRepository.exist(and(
+                                eq("name", name),
+                                ne("_id", branchId)
+                                )
+                        ))
+        ) {
+            if(isOlympiad)
+                return generateErr("رشته ای با این نام در سیستم موجود است.");
 
-        if (branchRepository.exist(eq("name", name)))
-            return generateErr("رشته ای با این نام در سیستم موجود است.");
+            return generateErr("مقطعی با این نام در سیستم موجود است.");
+        }
 
-        branch.put("name", name);
-        branchRepository.updateOne(branchId, set("name", name));
+        if(isOlympiad) {
+            if(branch.getString("name").equals(name))
+                return JSON_OK;
+
+            branch.put("name", name);
+            branchRepository.updateOne(branchId, set("name", name));
+        }
+        else {
+            if(userRepository.exist(
+                    eq("branches._id", branchId)
+            ))
+                return generateErr("دانش آموزانی از این رشته استفاده می کنند و عملیات موردنظر مجاز نمی باشد.");
+
+            branchRepository.deleteOne(branchId);
+            gradeRepository.insertOne(
+                    new Document("name", name)
+                            .append("lessons", new ArrayList<>())
+            );
+        }
 
         return JSON_OK;
     }
@@ -198,22 +230,53 @@ public class ContentController {
         );
     }
 
-    public static String updateGrade(ObjectId gradeId, String name) {
+    public static String updateGrade(ObjectId gradeId, String name, boolean isOlympiad) {
 
         Document grade = gradeRepository.findById(gradeId);
         if (grade == null)
             return JSON_NOT_VALID_PARAMS;
 
-        if (grade.getString("name").equals(name))
-            return JSON_OK;
+        if (
+                (isOlympiad && branchRepository.exist(and(
+                        eq("name", name),
+                        ne("_id", gradeId)
+                        )
+                )) ||
+                        (!isOlympiad && gradeRepository.exist(and(
+                                eq("name", name),
+                                ne("_id", gradeId)
+                                )
+                        ))
+        ) {
+            if(isOlympiad)
+                return generateErr("رشته ای با این نام در سیستم موجود است.");
 
-        if (gradeRepository.exist(eq("name", name)))
             return generateErr("مقطعی با این نام در سیستم موجود است.");
+        }
 
-        grade.put("name", name);
+        if(isOlympiad) {
 
-        new Thread(() -> {
+            if(userRepository.exist(
+                    eq("grade._id", gradeId)
+            ))
+                return generateErr("دانش آموزانی از این مقطع استفاده می کنند و عملیات موردنظر مجاز نمی باشد.");
 
+            if(subjectRepository.exist(
+                    eq("grade._id", gradeId)
+            ))
+                return generateErr("مباحثی از این مقطع استفاده می کنند و عملیات موردنظر مجاز نمی باشد.");
+
+            gradeRepository.deleteOne(gradeId);
+            branchRepository.insertOne(
+                    new Document("name", name)
+            );
+        }
+        else {
+
+            if(grade.getString("name").equals(name))
+                return JSON_OK;
+
+            grade.put("name", name);
             gradeRepository.updateOne(gradeId, set("name", name));
 
             subjectRepository.updateMany(
@@ -222,8 +285,7 @@ public class ContentController {
             );
 
             subjectRepository.clearFormCacheByGradeId(gradeId);
-
-        }).start();
+        }
 
         return JSON_OK;
     }

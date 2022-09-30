@@ -3,8 +3,7 @@ package irysc.gachesefid.Controllers;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.exists;
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
@@ -17,6 +16,7 @@ public class Jobs implements Runnable {
         Timer timer = new Timer();
         timer.schedule(new TokenHandler(), 0, 86400000); // 1 day
         timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
+        timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
     }
 
     class TokenHandler extends TimerTask {
@@ -44,4 +44,18 @@ public class Jobs implements Runnable {
         }
     }
 
+    class RemoveRedundantCustomQuizzes extends TimerTask {
+
+        @Override
+        public void run() {
+
+            customQuizRepository.deleteMany(
+                    and(
+                            eq("status", "wait"),
+                            lt("created_at", System.currentTimeMillis() - 1200000) // 20min
+                    )
+            );
+
+        }
+    }
 }

@@ -18,6 +18,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
+import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -127,8 +128,10 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/getRankingList")
     @ResponseBody
-    public String getRankingList() {
-        return UserController.getRankingList();
+    public String getRankingList(
+            @RequestParam(required = false, value = "gradeId") ObjectId gradeId
+            ) {
+        return UserController.getRankingList(gradeId);
     }
 
     @GetMapping(value = "/getSiteStats")
@@ -155,6 +158,32 @@ public class GeneralAPIRoutes extends Router {
     }
 
 
+    @GetMapping(value = "/getAllFlags")
+    @ResponseBody
+    public String getAllFlags(HttpServletRequest request
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+        getUser(request);
+        return QuestionController.getAllFlags();
+    }
+
+    @PostMapping(value = "/checkAvailableQuestions")
+    @ResponseBody
+    public String checkAvailableQuestions(HttpServletRequest request,
+                                          @RequestParam(value = "qNo") int qNo,
+                                          @RequestParam(required = false, value = "level") String level,
+                                          @RequestParam(required = false, value = "gradeId") ObjectId gradeId,
+                                          @RequestParam(required = false, value = "lessonId") ObjectId lessonId,
+                                          @RequestParam(required = false, value = "subjectId") ObjectId subjectId,
+                                          @RequestParam(required = false, value = "tag") String tag
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+        return QuestionController.checkAvailableQuestions(
+                getUser(request).getObjectId("_id"),
+                tag, gradeId, lessonId, subjectId, qNo, level
+        );
+    }
+
+
+
     @GetMapping(value = "/getTagsKeyVals")
     @ResponseBody
     public String getTagsKeyVals()  {
@@ -170,6 +199,22 @@ public class GeneralAPIRoutes extends Router {
             ByteArrayInputStream byteArrayInputStream = ContentController.getSubjectCodesExcel();
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=codes.xlsx");
+            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+    }
+
+    @GetMapping(value = "/getAuthorCodesExcel")
+    @ResponseBody
+    public void getAuthorCodesExcel(
+            HttpServletResponse response
+    )  {
+        try {
+            ByteArrayInputStream byteArrayInputStream = UserController.getAuthorCodesExcel();
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=author_codes.xlsx");
             IOUtils.copy(byteArrayInputStream, response.getOutputStream());
         }
         catch (Exception x) {

@@ -9,10 +9,12 @@ import irysc.gachesefid.Kavenegar.excepctions.ApiException;
 import irysc.gachesefid.Kavenegar.excepctions.HttpException;
 import irysc.gachesefid.Kavenegar.models.SendResult;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -27,8 +29,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.gt;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
@@ -229,8 +231,8 @@ public class Utility {
                                   String template
     ) {
 
-//        if(DEV_MODE)
-//            return true;
+        if(DEV_MODE)
+            return true;
 
         receptor = convertPersianDigits(receptor);
 
@@ -714,6 +716,22 @@ public class Utility {
         return studentId;
     }
 
+    public static Object getOrDefault(JSONObject jsonObject, String key, Object defaultValue) {
+
+        if(!jsonObject.has(key))
+            return defaultValue;
+
+        return jsonObject.get(key);
+    }
+
+    public static ObjectId getOrDefaultObjectId(JSONObject jsonObject, String key) {
+
+        if(!jsonObject.has(key))
+            return null;
+
+        return new ObjectId(jsonObject.get(key).toString());
+    }
+
     public static String getRandIntForSubjectId() {
 
         int number = Math.abs(random.nextInt(999));
@@ -983,4 +1001,57 @@ public class Utility {
         );
     }
 
+    public static Document validateOffCode(String offcode, ObjectId userId,
+                                           long curr, String section) {
+
+        return offcodeRepository.findOne(
+                and(
+                        exists("code"),
+                        eq("code", offcode),
+                        or(
+                                and(
+                                        exists("user_id"),
+                                        eq("user_id", userId)
+                                ),
+                                and(
+                                        exists("is_public"),
+                                        eq("is_public", true)
+                                )
+                        ),
+                        or(
+                                exists("used", false),
+                                and(
+                                        exists("used"),
+                                        eq("used", false)
+                                )
+                        ),
+                        or(
+                                eq("section", OffCodeSections.ALL.getName()),
+                                eq("section", section)
+                        ),
+                        nin("students", userId),
+                        gt("expire_at", curr)
+                ), null
+        );
+    }
+
+    public static Document findAccountOff(ObjectId userId,
+                                          long curr,
+                                          String section
+                                          ) {
+        return offcodeRepository.findOne(
+                and(
+                        exists("code", false),
+                        exists("used"),
+                        exists("user_id"),
+                        eq("user_id", userId),
+                        eq("used", false),
+                        or(
+                                eq("section", OffCodeSections.ALL.getName()),
+                                eq("section", section)
+                        ),
+                        gt("expire_at", curr)
+                ), null
+        );
+    }
 }

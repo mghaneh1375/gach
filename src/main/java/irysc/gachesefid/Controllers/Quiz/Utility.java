@@ -381,8 +381,8 @@ public class Utility {
 
     public static byte[] getAnswersByteArr(List<ObjectId> ids) {
 
-        ArrayList<byte[]> bytes = new ArrayList<>();
-        ArrayList<Document> questions = new ArrayList<>();
+        ArrayList<Document> questions;
+        questions = new ArrayList<>();
 
         for (ObjectId id : ids) {
 
@@ -393,6 +393,24 @@ public class Utility {
 
             questions.add(question);
         }
+
+        return calcAnswerByteArr(questions);
+    }
+
+    public static PairValue getAnswersByteArrWithNeededTime(List<ObjectId> ids) {
+
+        ArrayList<Document> questions = questionRepository.findByIds(ids, true);
+
+        int totalNeededTime = 0;
+        for(Document question : questions)
+            totalNeededTime += question.getInteger("needed_time");
+
+        return new PairValue(totalNeededTime, calcAnswerByteArr(questions));
+    }
+
+    private static byte[] calcAnswerByteArr(ArrayList<Document> questions) {
+
+        ArrayList<byte[]> bytes = new ArrayList<>();
 
         int i = 0;
         while (i < questions.size()) {
@@ -412,7 +430,7 @@ public class Utility {
 
                 int j;
 
-                for (j = i + 1; j < ids.size(); j++) {
+                for (j = i + 1; j < questions.size(); j++) {
 
                     if (!questions.get(j).getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
                         break;
@@ -546,7 +564,6 @@ public class Utility {
         for (byte[] itr : bytes) {
 //            if(itr == null)
 //                continue;
-            System.out.println(itr);
             neededSize += itr.length;
         }
 

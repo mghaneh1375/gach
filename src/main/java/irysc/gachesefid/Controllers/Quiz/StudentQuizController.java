@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
-import static irysc.gachesefid.Controllers.Quiz.Utility.*;
+import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
+import static irysc.gachesefid.Controllers.Quiz.Utility.saveStudentAnswers;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -58,12 +58,11 @@ public class StudentQuizController {
                     .put("createdAt", getSolarDate(std.getLong("register_at")))
                     .put("for", GiftController.translateUseFor(OffCodeSections.GACH_EXAM.getName()));
 
-            if(transaction != null)
+            if (transaction != null)
                 jsonObject.put("refId", transaction.get("ref_id"));
 
-            return generateSuccessMsg("data",jsonObject);
-        }
-        catch (Exception x) {
+            return generateSuccessMsg("data", jsonObject);
+        } catch (Exception x) {
             x.printStackTrace();
             return generateErr(x.getMessage());
         }
@@ -77,12 +76,12 @@ public class StudentQuizController {
             Document quiz = hasProtectedAccess(db, userId, quizId);
             long curr = System.currentTimeMillis();
 
-            if(isStudent && quiz.getLong("end") > curr)
+            if (isStudent && quiz.getLong("end") > curr)
                 return JSON_NOT_ACCESS;
 
             Document stdDoc = null;
 
-            if(isStudent) {
+            if (isStudent) {
                 stdDoc = searchInDocumentsKeyVal(
                         quiz.getList("students", Document.class),
                         "_id", userId
@@ -95,7 +94,7 @@ public class StudentQuizController {
 
             int qNo = 0;
 
-            if(questions.containsKey("_ids"))
+            if (questions.containsKey("_ids"))
                 qNo = questions.getList("_ids", ObjectId.class).size();
 
             JSONObject quizJSON = new JSONObject()
@@ -116,8 +115,7 @@ public class StudentQuizController {
                     .put("duration", neededTime);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             x.printStackTrace();
             return generateErr(x.getMessage());
         }
@@ -128,7 +126,7 @@ public class StudentQuizController {
                                    String generalMode,
                                    String status) {
 
-        if(generalMode != null &&
+        if (generalMode != null &&
                 !EnumValidatorImp.isValid(generalMode, GeneralKindQuiz.class))
             return JSON_NOT_VALID_PARAMS;
 
@@ -136,23 +134,23 @@ public class StudentQuizController {
         ObjectId userId = user.getObjectId("_id");
 
         boolean isSchool = Authorization.isSchool(accesses);
-        if(isSchool && !user.containsKey("students"))
+        if (isSchool && !user.containsKey("students"))
             return JSON_NOT_UNKNOWN;
 
         JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();
-        if(isSchool)
+        if (isSchool)
             filters.add(in("students._id", user.getList("students", ObjectId.class)));
         else
             filters.add(in("students._id", userId));
 
         long curr = System.currentTimeMillis();
 
-        if(status != null) {
+        if (status != null) {
 
-            if(status.equalsIgnoreCase("finished"))
+            if (status.equalsIgnoreCase("finished"))
                 filters.add(lt("end", curr));
-            else if(status.equalsIgnoreCase("inProgress"))
+            else if (status.equalsIgnoreCase("inProgress"))
                 filters.add(
                         and(
                                 lte("start", curr),
@@ -163,35 +161,34 @@ public class StudentQuizController {
                 filters.add(gt("start", curr));
         }
 
-        if(generalMode == null ||
+        if (generalMode == null ||
                 generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
         ) {
             ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
 
             QuizAbstract quizAbstract = new RegularQuizController();
 
-            for(Document quiz : quizzes) {
+            for (Document quiz : quizzes) {
 
-                if(isSchool) {
+                if (isSchool) {
                     data.put(quizAbstract.convertDocToJSON(
                             quiz, true, false, true, true
                     ));
-                }
-                else {
+                } else {
 
                     Document studentDoc = searchInDocumentsKeyVal(
                             quiz.getList("students", Document.class),
                             "_id", userId
                     );
 
-                    if(studentDoc == null)
+                    if (studentDoc == null)
                         continue;
 
                     JSONObject jsonObject = quizAbstract.convertDocToJSON(
                             quiz, true, false, true, true
                     );
 
-                    if(jsonObject.getString("status")
+                    if (jsonObject.getString("status")
                             .equalsIgnoreCase("inProgress") &&
                             studentDoc.containsKey("start_at") &&
                             studentDoc.get("start_at") != null
@@ -212,6 +209,57 @@ public class StudentQuizController {
         return generateSuccessMsg("data", data);
     }
 
+    public static String myCustomQuizzes(ObjectId userId) {
+
+        JSONArray data = new JSONArray();
+
+        long curr = System.currentTimeMillis();
+        ArrayList<Document> quizzes = customQuizRepository.find(
+                and(
+                    eq("user_id", userId),
+                    ne("status", "wait")
+                ), null);
+
+        for (Document quiz : quizzes) {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("title", quiz.getString("name"));
+
+            int neededTime = quiz.getInteger("duration");
+
+            jsonObject.put("duration", neededTime);
+
+            if(quiz.getString("status").equals("finished")) {
+                jsonObject.put("status", "finished");
+            }
+            else {
+                if(quiz.containsKey("start_at") &&
+                        quiz.get("start_at") != null) {
+
+                    int untilYetInSecondFormat =
+                            (int) ((curr - quiz.getLong("start_at")) / 1000);
+
+                    if (untilYetInSecondFormat > neededTime)
+                        jsonObject.put("status", "finished");
+                    else
+                        jsonObject.put("status", "inProgress");
+
+                }
+                else
+                    jsonObject.put("status", "inProgress");
+            }
+
+            jsonObject.put("questionsCount", quiz.getList("questions", ObjectId.class).size());
+            jsonObject.put("createdAt",
+                    getSolarDate(quiz.getLong("created_at"))
+            );
+
+            data.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", data);
+    }
+
     public static String launch(Common db, ObjectId quizId,
                                 ObjectId studentId) {
 
@@ -219,7 +267,7 @@ public class StudentQuizController {
             Document doc = hasProtectedAccess(db, studentId, quizId);
             long curr = System.currentTimeMillis();
 
-            if(doc.getLong("start") > curr ||
+            if (doc.getLong("start") > curr ||
                     doc.getLong("end") < curr)
                 return generateErr("در زمان ارزیابی قرار نداریم.");
 
@@ -232,7 +280,7 @@ public class StudentQuizController {
             int neededTime = new RegularQuizController().calcLen(doc);
             long startAt;
 
-            if(student.containsKey("start_at") &&
+            if (student.containsKey("start_at") &&
                     student.get("start_at") != null) {
 
                 int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
@@ -240,8 +288,7 @@ public class StudentQuizController {
                     return generateErr("شما در این آزمون شرکت کرده اید.");
 
                 startAt = student.getLong("start_at");
-            }
-            else {
+            } else {
                 student.put("start_at", curr);
                 startAt = curr;
             }
@@ -250,11 +297,11 @@ public class StudentQuizController {
 
             int delay = Math.max(
                     0,
-                    (int)(startAt + neededTime * 1000L - doc.getLong("end")) / 1000
+                    (int) (startAt + neededTime * 1000L - doc.getLong("end")) / 1000
             );
 
             int reminder = neededTime -
-                    (int)((curr - student.getLong("start_at")) / 1000) -
+                    (int) ((curr - student.getLong("start_at")) / 1000) -
                     delay;
 
             db.replaceOne(quizId, doc);
@@ -296,7 +343,7 @@ public class StudentQuizController {
             Document doc = hasProtectedAccess(db, studentId, quizId);
             long curr = System.currentTimeMillis();
 
-            if(doc.getLong("start") > curr ||
+            if (doc.getLong("start") > curr ||
                     doc.getLong("end") < curr)
                 return generateErr("در زمان ارزیابی قرار نداریم.");
 
@@ -314,14 +361,14 @@ public class StudentQuizController {
             long startAt = student.getLong("start_at");
             int delay = Math.max(
                     0,
-                    (int)(startAt + neededTime * 1000L - doc.getLong("end")) / 1000
+                    (int) (startAt + neededTime * 1000L - doc.getLong("end")) / 1000
             );
 
             int reminder = neededTime -
-                    (int)((curr - student.getLong("start_at")) / 1000) -
+                    (int) ((curr - student.getLong("start_at")) / 1000) -
                     delay;
 
-            if(reminder <= 0)
+            if (reminder <= 0)
                 return generateErr("شما در این آزمون شرکت کرده اید.");
 
 //            int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
@@ -331,7 +378,7 @@ public class StudentQuizController {
             student.put("finish_at", curr);
 
             String result = saveStudentAnswers(doc, answers, student, db);
-            if(result.contains("nok"))
+            if (result.contains("nok"))
                 return result;
 //            Math.abs(new Random().nextInt(3)) + 1
             return generateSuccessMsg("reminder", reminder,
@@ -353,46 +400,21 @@ public class StudentQuizController {
         Document off = null;
         long curr = System.currentTimeMillis();
 
-        if(packageId != null) {
+        if (packageId != null) {
             quizPackage = packageRepository.findById(packageId);
-            if(quizPackage == null || quizPackage.getLong("expire_at") < curr)
+            if (quizPackage == null || quizPackage.getLong("expire_at") < curr)
                 return JSON_NOT_VALID_PARAMS;
         }
 
-        if(offcode != null) {
+        if (offcode != null) {
 
-            off = offcodeRepository.findOne(
-                    and(
-                            exists("code"),
-                            eq("code", offcode),
-                            or(
-                                    and(
-                                            exists("user_id"),
-                                            eq("user_id", userId)
-                                    ),
-                                    and(
-                                            exists("is_public"),
-                                            eq("is_public", true)
-                                    )
-                            ),
-                            or(
-                                    exists("used", false),
-                                    and(
-                                            exists("used"),
-                                            eq("used", false)
-                                    )
-                            ),
-                            or(
-                                    eq("section", OffCodeSections.ALL.getName()),
-                                    eq("section", OffCodeSections.GACH_EXAM.getName())
-                            ),
-                            nin("students", userId),
-                            gt("expire_at", curr)
-                    ), null
+            off = validateOffCode(
+                    offcode, userId, curr,
+                    OffCodeSections.GACH_EXAM.getName()
             );
 
-            if(off == null)
-                return JSON_NOT_VALID_PARAMS;
+            if (off == null)
+                return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
         }
 
         ArrayList<ObjectId> quizIds = new ArrayList<>();
@@ -402,7 +424,7 @@ public class StudentQuizController {
                 return JSON_NOT_VALID_PARAMS;
 
             ObjectId quizId = new ObjectId(ids.getString(i));
-            if(quizPackage != null &&
+            if (quizPackage != null &&
                     !quizPackage.getList("quizzes", ObjectId.class).contains(quizId))
                 return JSON_NOT_VALID_PARAMS;
 
@@ -425,9 +447,9 @@ public class StudentQuizController {
         if (quizzes.size() != quizIds.size())
             return JSON_NOT_VALID_PARAMS;
 
-        if(studentIds != null) {
+        if (studentIds != null) {
             Document school = schoolRepository.findOne(eq("user_id", userId), JUST_ID);
-            if(school == null)
+            if (school == null)
                 return JSON_NOT_ACCESS;
 
             ObjectId schoolId = school.getObjectId("_id");
@@ -440,7 +462,7 @@ public class StudentQuizController {
 
                 ObjectId studentId = new ObjectId(studentIds.getString(i));
                 Document user = userRepository.findById(studentId);
-                if(user == null || !user.containsKey("school") ||
+                if (user == null || !user.containsKey("school") ||
                         !user.get("school", Document.class).get("_id").equals(schoolId)
                 )
                     return JSON_NOT_ACCESS;
@@ -469,35 +491,23 @@ public class StudentQuizController {
         long curr = System.currentTimeMillis();
         int totalPrice = 0;
 
-        if(studentIds == null)
-            for(Document quiz : quizzes)
+        if (studentIds == null)
+            for (Document quiz : quizzes)
                 totalPrice += quiz.getInteger("price");
         else
-            for(Document quiz : quizzes)
+            for (Document quiz : quizzes)
                 totalPrice += quiz.getInteger("price") * studentIds.size();
 
-        if(off == null) {
-            off = offcodeRepository.findOne(
-                    and(
-                            exists("code", false),
-                            exists("used"),
-                            exists("user_id"),
-                            eq("user_id", studentId),
-                            eq("used", false),
-                            or(
-                                    eq("section", OffCodeSections.ALL.getName()),
-                                    eq("section", OffCodeSections.GACH_EXAM.getName())
-                            ),
-                            gt("expire_at", curr)
-                    ), null
+        if (off == null)
+            off = findAccountOff(
+                    studentId, curr, OffCodeSections.GACH_EXAM.getName()
             );
-        }
 
         int packageOff = 0;
         boolean usePackageOff = false;
 
-        if(quizPackage != null) {
-            if(quizzes.size() >= quizPackage.getInteger("min_select")) {
+        if (quizPackage != null) {
+            if (quizzes.size() >= quizPackage.getInteger("min_select")) {
                 packageOff = quizPackage.getInteger("off_percent");
                 usePackageOff = true;
             }
@@ -506,13 +516,13 @@ public class StudentQuizController {
         double offAmount = totalPrice * packageOff / 100.0;
         double shouldPayDouble = totalPrice - offAmount;
 
-        if(studentIds != null) {
+        if (studentIds != null) {
             int groupRegistrationOff = irysc.gachesefid.Utility.Utility.getConfig().getInteger("school_off_percent");
             offAmount += shouldPayDouble * groupRegistrationOff / 100.0;
-            shouldPayDouble =  totalPrice - offAmount;
+            shouldPayDouble = totalPrice - offAmount;
         }
 
-        if(off != null) {
+        if (off != null) {
             offAmount +=
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
                             shouldPayDouble * off.getInteger("amount") / 100.0 :
@@ -524,14 +534,14 @@ public class StudentQuizController {
         int shouldPay = (int) shouldPayDouble;
 
         ArrayList<ObjectId> quizIds = new ArrayList<>();
-        for(Document quiz : quizzes)
+        for (Document quiz : quizzes)
             quizIds.add(quiz.getObjectId("_id"));
 
         if (shouldPay - money <= 100) {
 
             int newUserMoney = money;
 
-            if(shouldPay > 100) {
+            if (shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, money);
                 Document user = userRepository.findById(studentId);
                 user.put("money", newUserMoney);
@@ -542,7 +552,7 @@ public class StudentQuizController {
             boolean finalUsePackageOff = usePackageOff;
             new Thread(() -> {
 
-                if(studentIds != null)
+                if (studentIds != null)
                     new RegularQuizController()
                             .registry(studentIds, phone, mail, quizIds, 0);
                 else
@@ -553,14 +563,13 @@ public class StudentQuizController {
 
                     BasicDBObject update;
 
-                    if(finalOff.containsKey("is_public") &&
+                    if (finalOff.containsKey("is_public") &&
                             finalOff.getBoolean("is_public")
                     ) {
                         List<ObjectId> students = finalOff.getList("students", ObjectId.class);
                         students.add(studentId);
                         update = new BasicDBObject("students", students);
-                    }
-                    else
+                    } else
                         update = new BasicDBObject("used", true)
                                 .append("used_at", curr)
                                 .append("used_section", OffCodeSections.GACH_EXAM.getName())
@@ -572,7 +581,7 @@ public class StudentQuizController {
                     );
                 }
 
-                if(finalUsePackageOff) {
+                if (finalUsePackageOff) {
                     quizPackage.put("buyers", quizPackage.getInteger("buyers") + 1);
                     packageRepository.replaceOne(
                             quizPackage.getObjectId("_id"), quizPackage
@@ -586,10 +595,10 @@ public class StudentQuizController {
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("products", quizIds);
 
-                if(studentIds != null)
+                if (studentIds != null)
                     doc.append("student_ids", studentIds);
 
-                if(finalOff != null)
+                if (finalOff != null)
                     doc.append("off_code", finalOff.getObjectId("_id"));
 
                 transactionRepository.insertOne(doc);
@@ -618,10 +627,10 @@ public class StudentQuizController {
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("off_code", off == null ? null : off.getObjectId("_id"));
 
-        if(studentIds != null)
+        if (studentIds != null)
             doc.append("student_ids", studentIds);
 
-        if(quizPackage != null)
+        if (quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));
 
         return goToPayment(shouldPay - money, doc);

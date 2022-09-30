@@ -83,11 +83,35 @@ public class UserAPIRoutes extends Router {
 //
 //            questionRepository.replaceOne(doc.getObjectId("_id"), doc);
 //        }
-        ArrayList<Document> docs = userRepository.find(null, null);
-        for(Document doc : docs) {
-            doc.put("grade", new Document("_id", new ObjectId("62e6167a398da90567548341"))
-                    .append("name", "دوازدهم تجربی")
+
+        ArrayList<Document> subjects = subjectRepository.find(null, null);
+        for(Document subject : subjects) {
+            String code = subject.getString("code").replace(" ", "");
+            subject.put("code", code);
+            subjectRepository.replaceOne(
+                    subject.getObjectId("_id"),
+                    subject
             );
+        }
+
+
+        if(1 == 1)
+            return "sd";
+
+        ArrayList<Document> docs = userRepository.find(null, null);
+        int k = 0;
+
+        for(Document doc : docs) {
+            k++;
+            if(k % 2 == 0)
+                doc.put("grade", new Document("_id", new ObjectId("62e3c9be8142d17e191622ec"))
+                        .append("name", "دوازدهم تجربی")
+                );
+            else
+                doc.put("grade", new Document("_id", new ObjectId("62e3c9be8142d17e191622f6"))
+                        .append("name", "دوازدهم ریاضی")
+                );
+
             userRepository.replaceOne(
                     doc.getObjectId("_id"),
                     doc
@@ -409,13 +433,14 @@ public class UserAPIRoutes extends Router {
                                                "name", "tel", "state",
                                                "workYear", "workSchools", "universeField",
                                                "bio", "address", "managerName", "schoolSex",
-                                               "kindSchool", "invitationCode"
+                                               "kindSchool", "invitationCode", "workLessons"
                                        },
                                        optionalsType = {
                                                String.class, String.class, String.class,
                                                Positive.class, String.class, String.class,
                                                String.class, String.class, String.class,
-                                               String.class, String.class, String.class
+                                               String.class, String.class, String.class,
+                                               String.class
 
                                        }
                                ) String json

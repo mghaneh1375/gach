@@ -1,10 +1,14 @@
 package irysc.gachesefid.Controllers.Question;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Excel;
@@ -22,12 +26,12 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.Excel.getCellValue;
 import static irysc.gachesefid.Utility.FileUtils.uploadImageFile;
@@ -52,14 +56,14 @@ public class QuestionController extends Utilities {
         }
 
         if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
-            return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE+ " مگ است.");
+            return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
 
         String fileType = uploadImageFile(questionFile);
 
         if (fileType == null)
             return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
 
-        if(answerFile != null) {
+        if (answerFile != null) {
             if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
                 return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
 
@@ -70,14 +74,14 @@ public class QuestionController extends Utilities {
         }
 
         String questionFileName = FileUtils.uploadFile(questionFile, QuestionRepository.FOLDER);
-        if(questionFileName == null)
+        if (questionFileName == null)
             return JSON_NOT_VALID_FILE;
 
         String answerFileName = null;
-        if(answerFile != null) {
+        if (answerFile != null) {
             answerFileName = FileUtils.uploadFile(answerFile, QuestionRepository.FOLDER);
 
-            if(answerFileName == null) {
+            if (answerFileName == null) {
                 FileUtils.removeFile(questionFileName, QuestionRepository.FOLDER);
                 return JSON_NOT_VALID_FILE;
             }
@@ -87,17 +91,17 @@ public class QuestionController extends Utilities {
         Document newDoc = new Document("visibility", !jsonObject.has("visibility") || jsonObject.getBoolean("visibility"))
                 .append("question_file", questionFileName);
 
-        if(answerFileName != null)
+        if (answerFileName != null)
             newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet()) {
-            if(str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
+            if (str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
                 continue;
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
         }
 
         Document subject = subjectRepository.findById(subjectId);
-        if(subject != null) {
+        if (subject != null) {
             int qNo = ((int) subject.getOrDefault("q_no", 0) + 1);
             subject.put("q_no", qNo);
             subjectRepository.updateOne(subjectId,
@@ -108,7 +112,7 @@ public class QuestionController extends Utilities {
         ObjectId authorId = new ObjectId(jsonObject.get("authorId").toString());
 
         Document user = authorRepository.findById(authorId);
-        if(user != null) {
+        if (user != null) {
             int qNo = ((int) user.getOrDefault("q_no", 0) + 1);
 
             user.put("q_no", qNo);
@@ -118,7 +122,7 @@ public class QuestionController extends Utilities {
             newDoc.put("author", user.getString("name"));
         }
 
-        if(jsonObject.has("tags")) {
+        if (jsonObject.has("tags")) {
             ArrayList<String> tags = new ArrayList<>();
 
             for (int j = 0; j < jsonObject.getJSONArray("tags").length(); j++) {
@@ -173,21 +177,21 @@ public class QuestionController extends Utilities {
         )
             jsonObject.put("sentencesCount", question.getInteger("sentences_count"));
 
-        if(jsonObject.has("organizationId") &&
+        if (jsonObject.has("organizationId") &&
                 jsonObject.getString("organizationId").equalsIgnoreCase(
                         question.getString("organization_id")
                 )
         )
             jsonObject.remove("organizationId");
 
-        if(jsonObject.has("subjectId") &&
+        if (jsonObject.has("subjectId") &&
                 jsonObject.getString("subjectId").equalsIgnoreCase(
                         question.getObjectId("subject_id").toString()
                 )
         )
             jsonObject.remove("subjectId");
 
-        if(jsonObject.has("authorId") &&
+        if (jsonObject.has("authorId") &&
                 jsonObject.getString("authorId").equalsIgnoreCase(
                         question.getObjectId("author_id").toString()
                 )
@@ -200,7 +204,7 @@ public class QuestionController extends Utilities {
             return generateErr(e.getMessage());
         }
 
-        if(questionFile != null) {
+        if (questionFile != null) {
             if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
                 return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
 
@@ -210,7 +214,7 @@ public class QuestionController extends Utilities {
                 return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
         }
 
-        if(answerFile != null) {
+        if (answerFile != null) {
             if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
                 return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
 
@@ -221,27 +225,27 @@ public class QuestionController extends Utilities {
         }
 
         String questionFileName = null;
-        if(questionFile != null) {
+        if (questionFile != null) {
             questionFileName = FileUtils.uploadFile(questionFile, QuestionRepository.FOLDER);
             if (questionFileName == null)
                 return JSON_NOT_VALID_FILE;
         }
 
         String answerFileName = null;
-        if(answerFile != null) {
+        if (answerFile != null) {
             answerFileName = FileUtils.uploadFile(answerFile, QuestionRepository.FOLDER);
 
-            if(answerFileName == null) {
+            if (answerFileName == null) {
                 FileUtils.removeFile(questionFileName, QuestionRepository.FOLDER);
                 return JSON_NOT_VALID_FILE;
             }
 
         }
 
-        if(jsonObject.has("subjectId")) {
+        if (jsonObject.has("subjectId")) {
 
             Document subject = subjectRepository.findById(question.getObjectId("subject_id"));
-            if(subject != null) {
+            if (subject != null) {
                 subject.put("q_no", subject.getInteger("q_no") - 1);
                 subjectRepository.replaceOne(subject.getObjectId("_id"), subject);
             }
@@ -250,16 +254,16 @@ public class QuestionController extends Utilities {
                     (ObjectId) jsonObject.get("subjectId")
             );
 
-            if(newSubject != null) {
+            if (newSubject != null) {
                 newSubject.put("q_no", newSubject.getInteger("q_no") + 1);
                 subjectRepository.replaceOne(newSubject.getObjectId("_id"), newSubject);
             }
         }
 
-        if(jsonObject.has("authorId")) {
+        if (jsonObject.has("authorId")) {
 
             Document author = authorRepository.findById(question.getObjectId("author_id"));
-            if(author != null) {
+            if (author != null) {
                 author.put("q_no", author.getInteger("q_no") - 1);
                 authorRepository.replaceOne(author.getObjectId("_id"), author);
             }
@@ -268,19 +272,19 @@ public class QuestionController extends Utilities {
                     (ObjectId) jsonObject.get("authorId")
             );
 
-            if(newAuthor != null) {
+            if (newAuthor != null) {
                 newAuthor.put("q_no", newAuthor.getInteger("q_no") + 1);
                 authorRepository.replaceOne(newAuthor.getObjectId("_id"), newAuthor);
             }
 
         }
 
-        if(questionFileName != null) {
+        if (questionFileName != null) {
             FileUtils.removeFile(question.getString("question_file"), QuestionRepository.FOLDER);
             question.put("question_file", questionFileName);
         }
 
-        if(answerFileName != null) {
+        if (answerFileName != null) {
             FileUtils.removeFile(question.getString("answer_file"), QuestionRepository.FOLDER);
             question.put("answer_file", answerFileName);
         }
@@ -406,10 +410,10 @@ public class QuestionController extends Utilities {
 
                 JSONObject jsonObject = new JSONObject();
 
-                int code = (int)getCellValue(row.getCell(2));
-                Document subject = subjectRepository.findBySecKey(String.format("%07d", code));
+                int code = (int) getCellValue(row.getCell(2));
+                Document subject = subjectRepository.findBySecKey(String.format("%03d", code));
 
-                if(subject == null) {
+                if (subject == null) {
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, "کد مبحث نامعتیر است."));
                     continue;
@@ -417,11 +421,11 @@ public class QuestionController extends Utilities {
 
                 ObjectId subjectId = subject.getObjectId("_id");
 
-                if(!subjectsCounter.containsKey(subjectId))
+                if (!subjectsCounter.containsKey(subjectId))
                     subjectsCounter.put(subjectId, (Integer) subject.getOrDefault("q_no", 0));
 
                 Document author = authorRepository.findBySecKey(getCellValue(row.getCell(3)));
-                if(author == null) {
+                if (author == null) {
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, "کد مولف نامعتبر است."));
                     continue;
@@ -429,7 +433,7 @@ public class QuestionController extends Utilities {
 
                 ObjectId authorId = author.getObjectId("_id");
 
-                if(!authorCounter.containsKey(authorId))
+                if (!authorCounter.containsKey(authorId))
                     authorCounter.put(authorId, (Integer) author.getOrDefault("q_no", 0));
 
                 String kindQuestion = row.getCell(4).getStringCellValue();
@@ -484,7 +488,7 @@ public class QuestionController extends Utilities {
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     jsonObject.put("year", getCellValue(cell));
 
-                for(int i = 15; i < 20; i++) {
+                for (int i = 15; i < 20; i++) {
                     cell = row.getCell(i);
                     if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
                         try {
@@ -492,17 +496,16 @@ public class QuestionController extends Utilities {
                             int tagCode = (int) cell.getNumericCellValue();
 
                             Document t = questionTagRepository.findBySecKey(tagCode);
-                            if(t != null) {
+                            if (t != null) {
                                 String tt = t.getString("tag");
-                                if(!tags.contains(tt))
+                                if (!tags.contains(tt))
                                     tags.add(tt);
                             }
 
-                        }
-                        catch (Exception x) {
+                        } catch (Exception x) {
 
                             String t = cell.getStringCellValue();
-                            if(!questionTagRepository.exist(
+                            if (!questionTagRepository.exist(
                                     eq("tag", t)
                             )) {
                                 int tagCode = getRandIntForTag();
@@ -566,11 +569,11 @@ public class QuestionController extends Utilities {
             }
         }
 
-        if(addAtLeastOne) {
+        if (addAtLeastOne) {
 
-            for(ObjectId subjectId : subjectsCounter.keySet()) {
+            for (ObjectId subjectId : subjectsCounter.keySet()) {
                 Document subject = subjectRepository.findById(subjectId);
-                if(subject == null)
+                if (subject == null)
                     continue;
 
                 subject.put("q_no", subjectsCounter.get(subjectId));
@@ -580,10 +583,10 @@ public class QuestionController extends Utilities {
                 );
             }
 
-            for(ObjectId authorId : authorCounter.keySet()) {
+            for (ObjectId authorId : authorCounter.keySet()) {
 
                 Document user = authorRepository.findById(authorId);
-                if(user == null)
+                if (user == null)
                     continue;
 
                 user.put("q_no", authorCounter.get(authorId));
@@ -595,7 +598,7 @@ public class QuestionController extends Utilities {
 
         }
 
-        if(excepts.length() == 0)
+        if (excepts.length() == 0)
             return generateSuccessMsg(
                     "excepts", "تمامی سوالات به درستی به سامانه اضافه شدند"
             );
@@ -624,37 +627,37 @@ public class QuestionController extends Utilities {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if(!isForAdmin)
+        if (!isForAdmin)
             filters.add(eq("visibility", true));
-        else if(justUnVisible)
+        else if (justUnVisible)
             filters.add(eq("visibility", false));
 
-        if(kindQuestion != null &&
+        if (kindQuestion != null &&
                 EnumValidatorImp.isValid(kindQuestion, QuestionType.class)
         )
             filters.add(eq("kind_question", kindQuestion));
 
-        if(level != null &&
+        if (level != null &&
                 EnumValidatorImp.isValid(level, QuestionLevel.class)
         )
             filters.add(eq("level", level));
 
-        if(questionId != null && ObjectId.isValid(questionId.toString()))
+        if (questionId != null && ObjectId.isValid(questionId.toString()))
             filters.add(eq("_id", questionId));
 
-        if(authorId != null && ObjectId.isValid(authorId.toString()))
+        if (authorId != null && ObjectId.isValid(authorId.toString()))
             filters.add(eq("authorId", authorId));
 
-        if(subjectId != null && ObjectId.isValid(subjectId.toString()))
+        if (subjectId != null && ObjectId.isValid(subjectId.toString()))
             filters.add(eq("subject_id", subjectId));
 
-        if(organizationId != null)
+        if (organizationId != null)
             filters.add(eq("organization_id", organizationId));
 
-        if(organizationLike != null)
+        if (organizationLike != null)
             filters.add(regex("organization_id", Pattern.compile(Pattern.quote(organizationLike), Pattern.CASE_INSENSITIVE)));
 
-        if(lessonId != null && ObjectId.isValid(lessonId.toString())) {
+        if (lessonId != null && ObjectId.isValid(lessonId.toString())) {
             ArrayList<ObjectId> subjectIds = subjectRepository.findJustIds(eq("lesson._id", lessonId));
             filters.add(in("subject_id", subjectIds));
         }
@@ -663,7 +666,7 @@ public class QuestionController extends Utilities {
         Bson sortByFilter = null;
 
         //todo : sort by complete
-        if(sortBy != null) {
+        if (sortBy != null) {
             switch (sortBy) {
                 case "created_at_desc":
                     sortByFilter = Sorts.descending("created_at");
@@ -678,10 +681,10 @@ public class QuestionController extends Utilities {
         JSONArray jsonArray = Utilities.convertList(
                 sortBy == null ?
                         questionRepository.find(filters.size() > 0 ?
-                            and(filters) : null, null
+                                and(filters) : null, null
                         ) :
                         questionRepository.find(filters.size() > 0 ?
-                                and(filters) : null, null,
+                                        and(filters) : null, null,
                                 sortByFilter
                         ), isSubjectsNeeded, isAuthorsNeeded, false, false, true
         );
@@ -699,16 +702,16 @@ public class QuestionController extends Utilities {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if(subjectId != null)
+        if (subjectId != null)
             filters.add(eq("_id", subjectId));
 
-        if(lessonId != null)
+        if (lessonId != null)
             filters.add(eq("lesson._id", lessonId));
 
-        if(gradeId != null)
+        if (gradeId != null)
             filters.add(eq("grade._id", gradeId));
 
-        if(criticalThresh != null)
+        if (criticalThresh != null)
             filters.add(or(
                     exists("q_no", false),
                     lte("q_no", criticalThresh)
@@ -721,7 +724,7 @@ public class QuestionController extends Utilities {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
@@ -730,15 +733,15 @@ public class QuestionController extends Utilities {
                             .put("name", doc.getString("name"))
                             .put("id", doc.getObjectId("_id").toString()))
                     .put("lesson", new JSONObject()
-                            .put("name", ((Document)doc.get("lesson")).getString("name"))
-                            .put("id", ((Document)doc.get("lesson")).getObjectId("_id").toString())
+                            .put("name", ((Document) doc.get("lesson")).getString("name"))
+                            .put("id", ((Document) doc.get("lesson")).getObjectId("_id").toString())
                     )
                     .put("grade", new JSONObject()
-                            .put("name", ((Document)doc.get("grade")).getString("name"))
-                            .put("id", ((Document)doc.get("grade")).getObjectId("_id").toString())
+                            .put("name", ((Document) doc.get("grade")).getString("name"))
+                            .put("id", ((Document) doc.get("grade")).getObjectId("_id").toString())
                     );
 
-            if(isQuestionNeeded != null && isQuestionNeeded) {
+            if (isQuestionNeeded != null && isQuestionNeeded) {
                 ArrayList<Document> questions = questionRepository.find(
                         eq("subject_id", doc.getObjectId("_id")), null
                 );
@@ -758,7 +761,7 @@ public class QuestionController extends Utilities {
     public static ByteArrayInputStream getQuestionTagsExcel() {
         JSONArray jsonArray = new JSONArray();
         ArrayList<Document> docs = questionTagRepository.find(null, null);
-        for(Document doc : docs) {
+        for (Document doc : docs) {
             jsonArray.put(new JSONObject()
                     .put("code", doc.getInteger("code"))
                     .put("tag", doc.getString("tag"))
@@ -770,7 +773,7 @@ public class QuestionController extends Utilities {
     public static String getTagsKeyVals() {
         JSONArray jsonArray = new JSONArray();
         ArrayList<Document> docs = questionTagRepository.find(null, null);
-        for(Document doc : docs) {
+        for (Document doc : docs) {
             jsonArray.put(new JSONObject()
                     .put("id", doc.getInteger("code"))
                     .put("name", doc.getString("tag"))
@@ -780,4 +783,533 @@ public class QuestionController extends Utilities {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String getAllFlags() {
+
+        JSONArray jsonArray = new JSONArray();
+
+        ArrayList<Document> subjects = subjectRepository.find(null,
+                new BasicDBObject("_id", 1)
+                        .append("q_no", 1)
+                        .append("name", 1)
+                        .append("lesson", 1)
+                        .append("grade", 1)
+        );
+
+        HashMap<ObjectId, Document> lessons = new HashMap<>();
+        HashMap<ObjectId, Document> grades = new HashMap<>();
+
+        for (Document subject : subjects) {
+
+            int qNo = (int) subject.getOrDefault("q_no", 0);
+            if (qNo == 0)
+                continue;
+
+            ObjectId lessonId = subject.get("lesson", Document.class).getObjectId("_id");
+            String lesson = subject.get("lesson", Document.class).getString("name");
+
+            ObjectId gradeId = subject.get("grade", Document.class).getObjectId("_id");
+            String grade = subject.get("grade", Document.class).getString("name");
+
+            jsonArray.put(new JSONObject()
+                    .put("limit", qNo)
+                    .put("name", subject.getString("name"))
+                    .put("desc", subject.getString("name") + " در " +
+                            lesson + " در " + grade)
+                    .put("id", subject.getObjectId("_id").toString())
+                    .put("section", "subject")
+            );
+
+            if (lessons.containsKey(lessonId))
+                lessons.get(lessonId).put("q_no", lessons.get(lessonId).getInteger("q_no") + qNo);
+            else {
+                lessons.put(lessonId,
+                        new Document("name", lesson)
+                                .append("q_no", qNo)
+                                .append("desc", lesson + " در " + grade)
+                );
+            }
+
+            if (grades.containsKey(gradeId))
+                grades.get(gradeId).put("q_no", grades.get(gradeId).getInteger("q_no") + qNo);
+            else {
+                grades.put(gradeId,
+                        new Document("name",
+                                subject.get("grade", Document.class).getString("name")
+                        ).append("q_no", qNo)
+                );
+            }
+
+        }
+
+        for (ObjectId lessonId : lessons.keySet()) {
+            jsonArray.put(new JSONObject()
+                    .put("limit", lessons.get(lessonId).getInteger("q_no"))
+                    .put("name", lessons.get(lessonId).getString("name"))
+                    .put("id", lessonId.toString())
+                    .put("desc", lessons.get(lessonId).getString("desc"))
+                    .put("section", "lesson")
+            );
+        }
+
+        for (ObjectId gradeId : grades.keySet()) {
+            jsonArray.put(new JSONObject()
+                    .put("limit", grades.get(gradeId).getInteger("q_no"))
+                    .put("name", grades.get(gradeId).getString("name"))
+                    .put("id", gradeId.toString())
+                    .put("section", "grade")
+            );
+        }
+
+        ArrayList<Document> docs = questionTagRepository.find(null, null);
+        for (Document doc : docs) {
+            jsonArray.put(new JSONObject()
+                    .put("id", doc.getInteger("code"))
+                    .put("name", doc.getString("tag"))
+                    .put("limit", doc.getOrDefault("q_no", 1))
+                    .put("section", "tag")
+            );
+        }
+
+//        for (int i = 0; i < jsonArray.length(); i++) {
+//            jsonArray.put(i, jsonArray.getJSONObject(i).put("name",
+//                    jsonArray.getJSONObject(i).getString("name") + "  -  " +
+//                            jsonArray.getJSONObject(i).getString("section"))
+//            );
+//        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    private static ArrayList<Bson> fetchFilter(
+            String tag,
+            ObjectId gradeId,
+            ObjectId lessonId,
+            ObjectId subjectId,
+            String level) throws InvalidFieldsException {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if (level != null) {
+
+            if (!EnumValidatorImp.isValid(level, QuestionLevel.class))
+                throw new InvalidFieldsException("level is not correct");
+
+            filters.add(eq("level", level));
+        }
+
+        if (tag != null) {
+            filters.add(
+                    and(
+                            exists("tags"),
+                            in("tags", tag)
+                    )
+            );
+        }
+
+        if (gradeId != null || lessonId != null) {
+            ArrayList<Bson> subFilters = new ArrayList<>();
+
+            if (gradeId != null)
+                subFilters.add(eq("grade._id", gradeId));
+
+            if (lessonId != null)
+                subFilters.add(eq("lesson._id", lessonId));
+
+            ArrayList<Document> subjects = subjectRepository.find(
+                    and(subFilters), JUST_ID
+            );
+
+            ArrayList<ObjectId> subjectIds = new ArrayList<>();
+
+            for (Document subject : subjects)
+                subjectIds.add(subject.getObjectId("_id"));
+
+            filters.add(in("subject_id", subjectIds));
+        }
+
+        if (subjectId != null)
+            filters.add(eq("subject_id", subjectId));
+
+        return filters;
+    }
+
+    public static String checkAvailableQuestions(
+            ObjectId userId,
+            String tag,
+            ObjectId gradeId,
+            ObjectId lessonId,
+            ObjectId subjectId,
+            int questionsNo,
+            String level
+    ) {
+
+        try {
+
+            ArrayList<Bson> filters = fetchFilter(tag, gradeId,
+                    lessonId, subjectId, level
+            );
+
+            if (questionRepository.count(and(filters)) < questionsNo)
+                return generateErr("تعداد سوالات سامانه کمتر از فیلتر انتخابی شما می باشد.");
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+
+
+        return JSON_OK;
+    }
+
+    public static String payCustomQuiz(Document user,
+                                       ObjectId id,
+                                       JSONObject data) {
+
+        ObjectId userId = user.getObjectId("_id");
+        int money = user.getInteger("money");
+
+        Document doc = customQuizRepository.findById(id);
+
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!doc.getObjectId("user_id").equals(userId))
+            return JSON_NOT_ACCESS;
+
+        if(!doc.getString("status").equalsIgnoreCase("wait"))
+            return generateErr("شما قبلا بهای این آزمون را پرداخت کرده اید.");
+
+        long curr = System.currentTimeMillis();
+
+        if(curr - doc.getLong("created_at") > 1200000)
+            return JSON_NOT_VALID_PARAMS;
+
+
+        String offcode = (String) Utility.getOrDefault(data, "offcode", null);
+        Document off = null;
+
+        if(offcode != null) {
+
+            off = validateOffCode(
+                    offcode, userId, curr,
+                    OffCodeSections.BANK_EXAM.getName()
+            );
+
+            if(off == null)
+                return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
+        }
+
+        int totalPrice = doc.getInteger("price");
+
+        if(off == null)
+            off = findAccountOff(
+                    userId, curr, OffCodeSections.BANK_EXAM.getName()
+            );
+
+        double shouldPayDouble = totalPrice;
+
+        if(off != null) {
+
+            double offAmount =
+                    off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
+                            totalPrice * off.getInteger("amount") / 100.0 :
+                            off.getInteger("amount");
+
+            shouldPayDouble = totalPrice - offAmount;
+        }
+
+        int shouldPay = (int) shouldPayDouble;
+
+        if (shouldPay - money <= 100) {
+
+            int newUserMoney = money;
+
+            if(shouldPay > 100) {
+                newUserMoney -= Math.min(shouldPay, money);
+                user.put("money", newUserMoney);
+                userRepository.replaceOne(userId, user);
+            }
+
+            Document finalOff = off;
+            doc.put("status", "paid");
+
+            PairValue p = irysc.gachesefid.Controllers.Quiz.Utility.getAnswersByteArrWithNeededTime(
+                    doc.getList("questions", ObjectId.class)
+            );
+
+            doc.put("answers", p.getValue());
+            doc.put("duration", p.getKey());
+            doc.put("student_answers", new ArrayList<>());
+            doc.put("start_at", null);
+
+            customQuizRepository.replaceOne(id, doc);
+
+            if (finalOff != null) {
+
+                BasicDBObject update;
+
+                if(finalOff.containsKey("is_public") &&
+                        finalOff.getBoolean("is_public")
+                ) {
+                    List<ObjectId> students = finalOff.getList("students", ObjectId.class);
+                    students.add(userId);
+                    update = new BasicDBObject("students", students);
+                }
+                else
+                    update = new BasicDBObject("used", true)
+                            .append("used_at", curr)
+                            .append("used_section", OffCodeSections.BANK_EXAM.getName())
+                            .append("used_for", id);
+
+                offcodeRepository.updateOne(
+                        finalOff.getObjectId("_id"),
+                        new BasicDBObject("$set", update)
+                );
+            }
+
+            Document transaction = new Document("user_id", userId)
+                    .append("amount", 0)
+                    .append("created_at", curr)
+                    .append("status", "success")
+                    .append("section", OffCodeSections.BANK_EXAM.getName())
+                    .append("products", id);
+
+            if(finalOff != null)
+                doc.append("off_code", finalOff.getObjectId("_id"));
+
+            transactionRepository.insertOne(transaction);
+
+            return generateSuccessMsg(
+                    "action", "success",
+                    new PairValue("refId", newUserMoney)
+            );
+        }
+
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        )) {
+            orderId = Math.abs(new Random().nextLong());
+        }
+
+        Document transaction =
+                new Document("user_id", userId)
+                        .append("amount", shouldPay - money)
+                        .append("created_at", curr)
+                        .append("status", "init")
+                        .append("order_id", orderId)
+                        .append("products", id)
+                        .append("section", OffCodeSections.BANK_EXAM.getName())
+                        .append("off_code", off == null ? null : off.getObjectId("_id"));
+
+        return goToPayment(shouldPay - money, transaction);
+    }
+
+    public static String prepareCustomQuiz(ObjectId userId,
+                                           JSONArray filters,
+                                           String name
+    ) {
+
+        if (filters.length() == 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        int totalPrice = 0;
+        List<ObjectId> questionIds = new ArrayList<>();
+
+        for (int i = 0; i < filters.length(); i++) {
+
+            JSONObject jsonObject = filters.getJSONObject(i);
+            if (!jsonObject.has("qNo"))
+                return JSON_NOT_VALID_PARAMS;
+
+            if (
+                    !jsonObject.has("tag") &&
+                            !jsonObject.has("gradeId") &&
+                            !jsonObject.has("lessonId") &&
+                            !jsonObject.has("subjectId")
+            )
+                return JSON_NOT_VALID_PARAMS;
+
+        }
+
+        for (int i = 0; i < filters.length(); i++) {
+
+            JSONObject jsonObject = convertPersian(filters.getJSONObject(i));
+
+            PairValue p;
+            try {
+                p = fetchQuestionsByFilter(
+                        userId,
+                        (String) getOrDefault(jsonObject, "tag", null),
+                        getOrDefaultObjectId(jsonObject, "gradeId"),
+                        getOrDefaultObjectId(jsonObject, "lessonId"),
+                        getOrDefaultObjectId(jsonObject, "subjectId"),
+                        Integer.parseInt(jsonObject.get("qNo").toString()),
+                        (String) getOrDefault(jsonObject, "level", null)
+                );
+            } catch (InvalidFieldsException e) {
+                return generateErr(e.getMessage());
+            }
+
+            totalPrice += (int) p.getValue();
+            questionIds.addAll((List<ObjectId>) p.getKey());
+
+        }
+
+        Document doc = new Document("user_id", userId)
+                .append("created_at", System.currentTimeMillis())
+                .append("status", "wait")
+                .append("price", totalPrice)
+                .append("name", name)
+                .append("questions", questionIds);
+
+        ObjectId oId = customQuizRepository.insertOneWithReturnId(doc);
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("price", totalPrice)
+                .put("id", oId)
+        );
+    }
+
+    private static PairValue fetchQuestionsByFilter(
+            ObjectId userId,
+            String tag,
+            ObjectId gradeId,
+            ObjectId lessonId,
+            ObjectId subjectId,
+            int questionsNo,
+            String level) throws InvalidFieldsException {
+
+        ArrayList<Bson> filters = fetchFilter(tag, gradeId,
+                lessonId, subjectId, level
+        );
+
+        List<Document> docs = questionRepository.find(and(filters), JUST_ID);
+
+        if (docs.size() < questionsNo)
+            throw new InvalidFieldsException("تعداد سوالات سامانه کمتر از فیلتر انتخابی شما می باشد.");
+
+        List<Integer> indices = getRandomElement(docs, questionsNo);
+        ArrayList<ObjectId> questionIds = new ArrayList<>();
+
+        for (int i : indices)
+            questionIds.add(docs.get(i).getObjectId("_id"));
+
+        int price = 0;
+
+        if (subjectId != null && level != null) {
+            Document subject = subjectRepository.findById(subjectId);
+            if (level.equals(QuestionLevel.EASY.getName()))
+                price = subject.getInteger("easy_price") * questionsNo;
+            else if (level.equals(QuestionLevel.MID.getName()))
+                price = subject.getInteger("mid_price") * questionsNo;
+            else
+                price = subject.getInteger("hard_price") * questionsNo;
+        } else {
+
+            ArrayList<Document> questions = questionRepository.findByIds(
+                    questionIds, false
+            );
+
+            HashMap<ObjectId, SubjectFilter> subjectFilterHashMap = new HashMap<>();
+
+            for (Document question : questions) {
+
+                ObjectId sId = question.getObjectId("subject_id");
+                String l = question.getString("level");
+
+                if (subjectFilterHashMap.containsKey(sId))
+                    subjectFilterHashMap.get(sId).add(1, l);
+                else
+                    subjectFilterHashMap.put(sId, new SubjectFilter(sId, 1, l));
+            }
+
+            for (ObjectId sId : subjectFilterHashMap.keySet())
+                price += subjectFilterHashMap.get(sId).calc();
+        }
+
+        return new PairValue(questionIds, price);
+    }
+
+    private static List<Integer> getRandomElement(List<Document> list, int totalItems
+    ) throws InvalidFieldsException {
+
+        if (list.size() < totalItems)
+            throw new InvalidFieldsException("list size is invalid");
+
+        ArrayList<Integer> selectedIndices = new ArrayList<>();
+
+        if (list.size() == totalItems) {
+
+            for (int i = 0; i < list.size(); i++)
+                selectedIndices.add(i);
+
+            Collections.shuffle(selectedIndices);
+            return selectedIndices;
+        }
+
+        Random rand = new Random();
+
+        if (list.size() - totalItems < totalItems) {
+
+            List<Integer> tmp = getRandomElement(list, list.size() - totalItems);
+
+            for (int i = 0; i < list.size(); i++) {
+
+                if (tmp.contains(i))
+                    continue;
+
+                selectedIndices.add(i);
+            }
+
+            Collections.shuffle(selectedIndices);
+
+            return selectedIndices;
+        }
+
+        while (selectedIndices.size() < totalItems) {
+
+            int randomIndex = rand.nextInt(list.size());
+            if (selectedIndices.contains(randomIndex))
+                continue;
+
+            selectedIndices.add(randomIndex);
+        }
+
+        return selectedIndices;
+    }
+
+    static class SubjectFilter {
+
+        HashMap<String, Integer> levelsQNo;
+        ObjectId objectId;
+
+        SubjectFilter(ObjectId oId, int qNo, String level) {
+            objectId = oId;
+            levelsQNo = new HashMap<>();
+            levelsQNo.put(level, qNo);
+        }
+
+        void add(int qNo, String level) {
+            if (levelsQNo.containsKey(level))
+                levelsQNo.put(level, levelsQNo.get(level) + qNo);
+            else
+                levelsQNo.put(level, qNo);
+        }
+
+        int calc() {
+
+            int sum = 0;
+            Document subject = subjectRepository.findById(objectId);
+            for (String key : levelsQNo.keySet()) {
+                if (key.equals(QuestionLevel.EASY.getName()))
+                    sum += subject.getInteger("easy_price") * levelsQNo.get(key);
+                else if (key.equals(QuestionLevel.MID.getName()))
+                    sum += subject.getInteger("mid_price") * levelsQNo.get(key);
+                else
+                    sum += subject.getInteger("hard_price") * levelsQNo.get(key);
+            }
+
+            return sum;
+        }
+    }
 }

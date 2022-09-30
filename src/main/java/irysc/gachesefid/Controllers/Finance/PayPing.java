@@ -63,21 +63,32 @@ public class PayPing {
             );
 
             if(transaction.containsKey("products")) {
-                List<ObjectId> products = transaction.getList("products", ObjectId.class);
-                if(!transaction.containsKey("student_ids"))
-                    new RegularQuizController()
-                            .registry(studentId,
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    products,
-                                    transaction.getInteger("amount"));
-                else
-                    new RegularQuizController()
-                            .registry(transaction.getList("student_ids", ObjectId.class),
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    products,
-                                    transaction.getInteger("amount"));
+                if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
+                ) {
+                    Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
+                    if(quiz != null) {
+                        quiz.put("status", "paid");
+                        customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+                    }
+                }
+                else if(transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
+                    List<ObjectId> products = transaction.getList("products", ObjectId.class);
+                    if (!transaction.containsKey("student_ids"))
+                        new RegularQuizController()
+                                .registry(studentId,
+                                        user.getString("phone"),
+                                        user.getString("mail"),
+                                        products,
+                                        transaction.getInteger("amount"));
+                    else
+                        new RegularQuizController()
+                                .registry(transaction.getList("student_ids", ObjectId.class),
+                                        user.getString("phone"),
+                                        user.getString("mail"),
+                                        products,
+                                        transaction.getInteger("amount"));
+                }
 
                 if(transaction.containsKey("off_code") &&
                         transaction.get("off_code") != null) {
@@ -99,7 +110,7 @@ public class PayPing {
                             update = new BasicDBObject("used", true)
                                     .append("used_at", System.currentTimeMillis())
                                     .append("used_section", transaction.getString("section"))
-                                    .append("used_for", products);
+                                    .append("used_for", transaction.get("products"));
 
                         offcodeRepository.updateOne(
                                 off.getObjectId("_id"),

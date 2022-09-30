@@ -9,6 +9,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Enc;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -20,6 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -50,19 +52,22 @@ public class UserController {
     };
 
     private static FormField[] fieldsNeededForAdvisor = new FormField[]{
-            new FormField(true, "workYear", "سابقه کار", null, true),
-            new FormField(true, "workSchools", "مدارس کارکرده", null, false),
-            new FormField(true, "universeField", "رشته تحصیلی", null, false),
-            new FormField(false, "bio", "بیو", "اختیاری", false),
+//            new FormField(true, "workYear", "سابقه کار", null, true),
+            new FormField(true, "workLessons", "درس تخصصی", null, false),
+            new FormField(true, "workSchools", "مدارس همکار", null, false)
     };
 
     private static FormField[] fieldsNeededForStudent = new FormField[]{
-            new FormField(false, "invitationCode", "کد معرف", "اختیاری", false),
+            new FormField(true, "invitationCode", "کد معرف", "اختیاری", false),
     };
 
     private static FormField[] fieldsNeededForAgent = new FormField[]{
-            new FormField(true, "state", "استان", null, false),
-            new FormField(false, "bio", "بیو", "اختیاری", false),
+            new FormField(true, "name", "نام نمایندگی یا موسسه", null, false),
+    };
+
+    private static FormField[] fieldsNeededForTeacher = new FormField[]{
+            new FormField(true, "workLessons", "درس تخصصی", null, false),
+            new FormField(true, "workSchools", "مدارس همکار", null, false)
     };
 
     public static String whichKindOfAuthIsAvailable(String NID) {
@@ -272,7 +277,7 @@ public class UserController {
 
     private static FormField[] getWantedList(String role) {
 
-        FormField[] wantedList = null;
+        FormField[] wantedList;
 
         if (role.equals(Access.ADVISOR.getName()))
             wantedList = fieldsNeededForAdvisor;
@@ -280,6 +285,8 @@ public class UserController {
             wantedList = fieldsNeededForSchool;
         else if (role.equals(Access.STUDENT.getName()))
             wantedList = fieldsNeededForStudent;
+        else if (role.equals(Access.TEACHER.getName()))
+            wantedList = fieldsNeededForTeacher;
         else
             wantedList = fieldsNeededForAgent;
 
@@ -316,6 +323,56 @@ public class UserController {
                 if(!find)
                     return JSON_NOT_VALID_PARAMS;
             }
+        }
+
+        if (role.equals(Access.STUDENT.getName())) {
+
+            if(user.containsKey("invitor"))
+                return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
+
+            Document invitor = userRepository.findOne(
+                    eq("invitation_code", jsonObject.getString("invitationCode")), new BasicDBObject("_id", 1)
+            );
+
+            if(invitor == null)
+                return generateErr("کد معرف وارد شده معتبر نمی باشد.");
+
+            invitor = userRepository.findById(invitor.getObjectId("_id"));
+            Document config = Utility.getConfig();
+
+            if(config.containsKey("invite_coin")) {
+                invitor.put("coin",
+                        config.getDouble("invite_coin") +
+                                invitor.getDouble("coin")
+                );
+                user.put("coin",
+                        config.getDouble("invite_coin") +
+                                user.getDouble("coin")
+                );
+            }
+
+            if(config.containsKey("invite_money")) {
+                invitor.put("money",
+                        config.getInteger("invite_money") +
+                                invitor.getInteger("money")
+                );
+                user.put("money",
+                        config.getInteger("invite_money") +
+                                user.getInteger("money")
+                );
+            }
+
+            user.put("invitor", invitor.getObjectId("_id"));
+
+            userRepository.replaceOne(
+                    invitor.getObjectId("_id"), invitor
+            );
+
+            userRepository.replaceOne(
+                    user.getObjectId("_id"), user
+            );
+
+            return JSON_OK;
         }
 
         Document form = new Document("role", role);
@@ -570,6 +627,7 @@ public class UserController {
         fillWithFormFields(fieldsNeededForStudent, formsJSON, Access.STUDENT.getName());
         fillWithFormFields(fieldsNeededForAdvisor, formsJSON, Access.ADVISOR.getName());
         fillWithFormFields(fieldsNeededForAgent, formsJSON, Access.AGENT.getName());
+        fillWithFormFields(fieldsNeededForTeacher, formsJSON, Access.TEACHER.getName());
         fillWithFormFields(fieldsNeededForSchool, formsJSON, Access.SCHOOL.getName());
 
         return generateSuccessMsg("data", formsJSON);
@@ -1100,8 +1158,6 @@ public class UserController {
         if (city == null)
             return JSON_NOT_VALID_PARAMS;
 
-        System.out.println("1");
-
         Document grade = null;
 
         if(jsonObject.has("gradeId")) {
@@ -1113,8 +1169,6 @@ public class UserController {
                 return JSON_NOT_VALID_PARAMS;
         }
 
-        System.out.println("2");
-
         Document school = null;
 
         if(jsonObject.has("schoolId")) {
@@ -1125,8 +1179,6 @@ public class UserController {
             if (school == null)
                 return JSON_NOT_VALID_PARAMS;
         }
-
-        System.out.println("3");
 
         user.put("first_name", jsonObject.getString("firstName"));
         user.put("last_name", jsonObject.getString("lastName"));
@@ -1166,10 +1218,25 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String getRankingList() {
+    public static String getRankingList(ObjectId gradeId) {
 
-        ArrayList<Document> docs = tarazRepository.find(lt("rank", 50), null,
-                Sorts.ascending("rank")
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(
+                lt("rank", 50)
+        );
+
+        if(gradeId != null) {
+            filters.add(and(
+                    eq("grade_id", gradeId),
+                    lt("grade_rank", 50)
+
+            ));
+        }
+
+        ArrayList<Document> docs = tarazRepository.find(and(filters), null,
+                gradeId == null ?
+                        Sorts.ascending("rank") :
+                        Sorts.ascending("grade_rank")
         );
 
         ArrayList<ObjectId> userIds = new ArrayList<>();
@@ -1188,12 +1255,31 @@ public class UserController {
                     .put("totalQuizzes", docs.get(i).getList("quizzes", Document.class).size())
                     .put("cumSum", docs.get(i).getInteger("cum_sum_last_five"))
                     ;
-            user.put("rank", docs.get(i).getInteger("rank"));
+            user.put("rank", gradeId == null ?
+                    docs.get(i).getInteger("rank") :
+                    docs.get(i).getInteger("grade_rank")
+            );
             Utility.fillJSONWithUser(jsonObject, user);
             jsonArray.put(jsonObject);
             i++;
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+
+    public static ByteArrayInputStream getAuthorCodesExcel() {
+
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = authorRepository.find(null, null);
+
+        for (Document doc : docs) {
+            jsonArray.put(new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("code", doc.get("code"))
+            );
+        }
+
+        return Excel.write(jsonArray);
     }
 }

@@ -7,6 +7,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.NewAlert;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,7 +19,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
@@ -61,6 +64,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static BranchRepository branchRepository;
     public static CertificateRepository certificateRepository;
     public static CityRepository cityRepository;
+    public static CustomQuizRepository customQuizRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigRepository configRepository;
     public static GiftRepository giftRepository;
@@ -82,6 +86,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static MailRepository mailRepository;
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
+
+    private static List<PairValue> branches = new ArrayList<>();
 
     private static void setupDB() {
         try {
@@ -108,6 +114,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             branchRepository = new BranchRepository();
             certificateRepository = new CertificateRepository();
             cityRepository = new CityRepository();
+            customQuizRepository = new CustomQuizRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
             giftRepository = new GiftRepository();

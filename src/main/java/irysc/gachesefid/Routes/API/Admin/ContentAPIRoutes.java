@@ -132,12 +132,17 @@ public class ContentAPIRoutes extends Router {
     public String updateBranch(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId branchId,
                                @RequestBody @StrongJSONConstraint(
-                                       params = {"name"},
-                                       paramsType = {String.class}
+                                       params = {"name", "isOlympiad"},
+                                       paramsType = {String.class, Boolean.class}
                                ) @NotBlank String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.updateBranch(branchId, new JSONObject(jsonStr).getString("name"));
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        return ContentController.updateBranch(
+                branchId,
+                jsonObject.getString("name"),
+                jsonObject.getBoolean("isOlympiad")
+        );
     }
 
     @PutMapping(value = "/updateGrade/{gradeId}")
@@ -145,12 +150,17 @@ public class ContentAPIRoutes extends Router {
     public String updateGrade(HttpServletRequest request,
                               @PathVariable @ObjectIdConstraint ObjectId gradeId,
                               @RequestBody @StrongJSONConstraint(
-                                      params = {"name"},
-                                      paramsType = {String.class}
+                                      params = {"name", "isOlympiad"},
+                                      paramsType = {String.class, Boolean.class}
                               ) @NotBlank String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return ContentController.updateGrade(gradeId, new JSONObject(jsonStr).getString("name"));
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        return ContentController.updateGrade(
+                gradeId,
+                jsonObject.getString("name"),
+                jsonObject.getBoolean("isOlympiad")
+        );
     }
 
     @PutMapping(value = "/updateLesson/{gradeId}/{lessonId}")

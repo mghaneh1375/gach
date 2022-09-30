@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
+import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
@@ -103,6 +104,15 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.myQuizzes(
                 user, mode, status
+        );
+    }
+
+    @GetMapping(value = "myCustomQuizzes")
+    @ResponseBody
+    public String myCustomQuizzes(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return StudentQuizController.myCustomQuizzes(
+                getUser(request).getObjectId("_id")
         );
     }
 
@@ -215,6 +225,45 @@ public class StudentQuizAPIRoutes extends Router {
                 schoolQuizRepository,
                 quizId, user.getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("answers")
+        );
+    }
+
+
+    @PostMapping(path = "prepareCustomQuiz")
+    @ResponseBody
+    public String prepareCustomQuiz(HttpServletRequest request,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {"filters", "name"},
+                                            paramsType = {JSONArray.class, String.class}
+                                    )
+                                    @NotBlank String jsonStr
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+
+        JSONObject jsonObject = new JSONObject(jsonStr);
+
+        return QuestionController.prepareCustomQuiz(
+                getUser(request).getObjectId("_id"),
+                jsonObject.getJSONArray("filters"),
+                jsonObject.getString("name")
+        );
+    }
+
+    @PostMapping(path = "payCustomQuiz/{id}")
+    @ResponseBody
+    public String payCustomQuiz(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestBody(required = false) @StrongJSONConstraint(
+                                        params = {}, paramsType = {},
+                                        optionals = {"offcode"},
+                                        optionalsType = {String.class}
+                                ) String jsonStr
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+        return QuestionController.payCustomQuiz(
+                getUser(request),
+                id,
+                (jsonStr == null || jsonStr.isEmpty()) ?
+                        new JSONObject() :
+                        new JSONObject(jsonStr)
         );
     }
 
