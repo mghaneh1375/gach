@@ -28,105 +28,92 @@ public class AdminReportController {
 
     public static String getStudentStatCustomQuiz(ObjectId quizId, ObjectId userId) {
 
-        try {
+        Document doc = customQuizRepository.findOne(
+                and(
+                        eq("_id", quizId),
+                        eq("user_id", userId),
+                        ne("status", "wait")
+                ), null
+        );
 
-            Document doc = customQuizRepository.findOne(
-                    and(
-                            eq("_id", quizId),
-                            eq("user_id", userId),
-                            ne("status", "wait")
-                    ), null
-            );
-
-            if(doc == null || !doc.containsKey("start_at") ||
-                    doc.get("start_at") == null || !doc.containsKey("subjects"))
-                return JSON_NOT_ACCESS;
-
-            int neededTime = doc.getInteger("duration");
-            long curr = System.currentTimeMillis();
-
-            int untilYetInSecondFormat =
-                    (int) ((curr - doc.getLong("start_at")) / 1000);
-
-            int reminder = neededTime - untilYetInSecondFormat;
-
-            if (reminder > 0)
-                return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
-
-
-            Document config = getConfig();
-
-            DecimalFormat df_obj = new DecimalFormat("#.##");
-
-            JSONObject data = new JSONObject();
-            JSONArray lessons = new JSONArray();
-
-
-            int totalCorrect = 0;
-            for (Document lesson : doc.getList("lessons", Document.class)) {
-
-                Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
-                totalCorrect += (int) stats[2];
-
-                JSONObject jsonObject = new JSONObject()
-                        .put("name", doc.getString("name"))
-                        .put("whites", stats[0])
-                        .put("corrects", stats[1])
-                        .put("incorrects", stats[2])
-                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
-                        .put("percent", stats[3]);
-
-                lessons.put(jsonObject);
-            }
-
-            JSONArray subjects = new JSONArray();
-            for (Document subject : doc.getList("subjects", Document.class)) {
-
-                Object[] stats = QuizAbstract.decode(subject.get("stat", Binary.class).getData());
-
-                JSONObject jsonObject = new JSONObject()
-                        .put("name", doc.getString("name"))
-                        .put("whites", stats[0])
-                        .put("corrects", stats[1])
-                        .put("incorrects", stats[32])
-                        .put("percent", stats[3])
-                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3]);
-
-                subjects.put(jsonObject);
-            }
-
-            data.put("lessons", lessons);
-            data.put("subjects", subjects);
-            data.put("totalCorrects", totalCorrect);
-
-            data.put("quizName", doc.getString("name"));
-
-            if (config.containsKey("taraz_levels")) {
-                List<Document> levels = config.getList("taraz_levels", Document.class);
-                levels.sort(Comparator.comparing(o -> o.getInteger("priority")));
-
-                JSONArray conditions = new JSONArray();
-                for (int i = levels.size() - 1; i >= 0; i--) {
-                    Document level = levels.get(i);
-                    conditions.put(new JSONObject()
-                            .put("min", level.getInteger("min"))
-                            .put("max", level.getInteger("max"))
-                            .put("color", level.getString("color")));
-                }
-                data.put("conditions", conditions);
-            }
-
-            irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
-
-            return generateSuccessMsg(
-                    "data", data
-            );
-
-        } catch (InvalidFieldsException e) {
+        if(doc == null || !doc.containsKey("start_at") ||
+                doc.get("start_at") == null || !doc.containsKey("subjects"))
             return JSON_NOT_ACCESS;
+
+        int neededTime = doc.getInteger("duration");
+        long curr = System.currentTimeMillis();
+
+        int untilYetInSecondFormat =
+                (int) ((curr - doc.getLong("start_at")) / 1000);
+
+        int reminder = neededTime - untilYetInSecondFormat;
+
+        if (reminder > 0)
+            return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+
+        Document config = getConfig();
+
+        JSONObject data = new JSONObject();
+        JSONArray lessons = new JSONArray();
+
+        int totalCorrect = 0;
+        for (Document lesson : doc.getList("lessons", Document.class)) {
+
+            Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
+            totalCorrect += (int) stats[2];
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", lesson.getString("name"))
+                    .put("whites", stats[0])
+                    .put("corrects", stats[1])
+                    .put("incorrects", stats[2])
+                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2])
+                    .put("percent", stats[3]);
+
+            lessons.put(jsonObject);
         }
 
+        JSONArray subjects = new JSONArray();
+        for (Document subject : doc.getList("subjects", Document.class)) {
 
+            Object[] stats = QuizAbstract.decode(subject.get("stat", Binary.class).getData());
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", subject.getString("name"))
+                    .put("whites", stats[0])
+                    .put("corrects", stats[1])
+                    .put("incorrects", stats[2])
+                    .put("percent", stats[3])
+                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2]);
+
+            subjects.put(jsonObject);
+        }
+
+        data.put("lessons", lessons);
+        data.put("subjects", subjects);
+        data.put("totalCorrects", totalCorrect);
+
+        data.put("quizName", doc.getString("name"));
+
+        if (config.containsKey("taraz_levels")) {
+            List<Document> levels = config.getList("taraz_levels", Document.class);
+            levels.sort(Comparator.comparing(o -> o.getInteger("priority")));
+
+            JSONArray conditions = new JSONArray();
+            for (int i = levels.size() - 1; i >= 0; i--) {
+                Document level = levels.get(i);
+                conditions.put(new JSONObject()
+                        .put("min", level.getInteger("min"))
+                        .put("max", level.getInteger("max"))
+                        .put("color", level.getString("color")));
+            }
+            data.put("conditions", conditions);
+        }
+
+        data.put("student", new JSONObject().put("id", userId.toString()));
+        return generateSuccessMsg(
+                "data", data
+        );
     }
 
     public static String getStudentStat(Common db, Object user,
@@ -354,6 +341,59 @@ public class AdminReportController {
             System.out.println(x.getMessage());
             return null;
         }
+    }
+
+    public static String getStudentAnswerSheetCustomQuiz(ObjectId quizId, ObjectId studentId) {
+
+        Document doc = customQuizRepository.findOne(
+                and(
+                        eq("_id", quizId),
+                        eq("user_id", studentId),
+                        ne("status", "wait")
+                ), null
+        );
+
+        if(doc == null || !doc.containsKey("start_at") ||
+                doc.get("start_at") == null)
+            return JSON_NOT_ACCESS;
+
+        //!doc.containsKey("subjects")
+        int neededTime = doc.getInteger("duration");
+        long curr = System.currentTimeMillis();
+
+        int untilYetInSecondFormat =
+                (int) ((curr - doc.getLong("start_at")) / 1000);
+
+        int reminder = neededTime - untilYetInSecondFormat;
+
+        if (reminder > 0)
+            return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+
+        ArrayList<PairValue> pairValues = Utility.getAnswers(
+                ((Binary) doc.getOrDefault("answers", new byte[0])).getData()
+        );
+
+        ArrayList<Double> marks = new ArrayList<>();
+        for(int i = 0; i < doc.getList("questions", ObjectId.class).size(); i++)
+            marks.add(3.0);
+
+        JSONArray answersJsonArray = new JSONArray();
+        fillWithAnswerSheetData(answersJsonArray, null, pairValues, marks);
+        ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) doc.getOrDefault("student_answers", new byte[0])).getData());
+
+        for (int i = 0; i < pairValues.size(); i++) {
+
+            if (i >= stdAnswers.size())
+                answersJsonArray.getJSONObject(i).put("studentAns", "");
+            else {
+                if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
+                    answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                else
+                    answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+            }
+        }
+
+        return generateSuccessMsg("data", answersJsonArray);
     }
 
     public static String getStudentAnswerSheet(Common db, ObjectId userId,

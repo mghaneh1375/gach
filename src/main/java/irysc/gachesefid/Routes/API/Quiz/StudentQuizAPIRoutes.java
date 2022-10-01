@@ -132,11 +132,16 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "/getMyAnswerSheet/{mode}/{quizId}")
     @ResponseBody
     public String getMyAnswerSheet(HttpServletRequest request,
-                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.toString()))
+            return AdminReportController.getStudentAnswerSheetCustomQuiz(
+                    quizId, user.getObjectId("_id")
+            );
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return AdminReportController.getStudentAnswerSheet(
