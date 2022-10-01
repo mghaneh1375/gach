@@ -1,6 +1,5 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -27,6 +26,109 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminReportController {
 
+    public static String getStudentStatCustomQuiz(ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document doc = customQuizRepository.findOne(
+                    and(
+                            eq("_id", quizId),
+                            eq("user_id", userId),
+                            ne("status", "wait")
+                    ), null
+            );
+
+            if(doc == null || !doc.containsKey("start_at") ||
+                    doc.get("start_at") == null || !doc.containsKey("subjects"))
+                return JSON_NOT_ACCESS;
+
+            int neededTime = doc.getInteger("duration");
+            long curr = System.currentTimeMillis();
+
+            int untilYetInSecondFormat =
+                    (int) ((curr - doc.getLong("start_at")) / 1000);
+
+            int reminder = neededTime - untilYetInSecondFormat;
+
+            if (reminder > 0)
+                return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+
+
+            Document config = getConfig();
+
+            DecimalFormat df_obj = new DecimalFormat("#.##");
+
+            JSONObject data = new JSONObject();
+            JSONArray lessons = new JSONArray();
+
+
+            int totalCorrect = 0;
+            for (Document lesson : doc.getList("lessons", Document.class)) {
+
+                Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
+                totalCorrect += (int) stats[2];
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("name", doc.getString("name"))
+                        .put("whites", stats[0])
+                        .put("corrects", stats[1])
+                        .put("incorrects", stats[2])
+                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
+                        .put("percent", stats[3]);
+
+                lessons.put(jsonObject);
+            }
+
+            JSONArray subjects = new JSONArray();
+            for (Document subject : doc.getList("subjects", Document.class)) {
+
+                Object[] stats = QuizAbstract.decode(subject.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("name", doc.getString("name"))
+                        .put("whites", stats[0])
+                        .put("corrects", stats[1])
+                        .put("incorrects", stats[32])
+                        .put("percent", stats[3])
+                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3]);
+
+                subjects.put(jsonObject);
+            }
+
+            data.put("lessons", lessons);
+            data.put("subjects", subjects);
+            data.put("totalCorrects", totalCorrect);
+
+            data.put("quizName", doc.getString("name"));
+
+            if (config.containsKey("taraz_levels")) {
+                List<Document> levels = config.getList("taraz_levels", Document.class);
+                levels.sort(Comparator.comparing(o -> o.getInteger("priority")));
+
+                JSONArray conditions = new JSONArray();
+                for (int i = levels.size() - 1; i >= 0; i--) {
+                    Document level = levels.get(i);
+                    conditions.put(new JSONObject()
+                            .put("min", level.getInteger("min"))
+                            .put("max", level.getInteger("max"))
+                            .put("color", level.getString("color")));
+                }
+                data.put("conditions", conditions);
+            }
+
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
+
+            return generateSuccessMsg(
+                    "data", data
+            );
+
+        } catch (InvalidFieldsException e) {
+            return JSON_NOT_ACCESS;
+        }
+
+
+    }
+
     public static String getStudentStat(Common db, Object user,
                                         ObjectId quizId, ObjectId studentId) {
 
@@ -41,6 +143,7 @@ public class AdminReportController {
             long curr = System.currentTimeMillis();
             Document config = getConfig();
 
+            //todo
 //            if (
 //                    !quiz.containsKey("report_status") ||
 //                            !quiz.containsKey("ranking_list") ||

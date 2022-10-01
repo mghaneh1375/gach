@@ -9,6 +9,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
@@ -69,10 +70,17 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "reviewQuiz/{mode}/{quizId}")
     @ResponseBody
     public String reviewQuiz(HttpServletRequest request,
-                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
         Document user = getUser(request);
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return StudentQuizController.reviewCustomQuiz(
+                    quizId, user.getObjectId("_id")
+            );
+
+
         boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
@@ -86,9 +94,14 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody
     public String launch(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                          @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return StudentQuizController.launchCustom(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
         return StudentQuizController.launch(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
@@ -205,7 +218,7 @@ public class StudentQuizAPIRoutes extends Router {
     @PutMapping(value = "/storeAnswers/{mode}/{quizId}")
     @ResponseBody
     public String storeAnswers(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId,
                                @RequestBody @StrongJSONConstraint(
                                        params = {"answers"},
@@ -214,6 +227,12 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return StudentQuizController.storeCustomAnswers(
+                    quizId, user.getObjectId("_id"),
+                    new JSONObject(jsonStr).getJSONArray("answers")
+            );
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return StudentQuizController.storeAnswers(
@@ -241,7 +260,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         JSONObject jsonObject = new JSONObject(jsonStr);
 
-        return QuestionController.prepareCustomQuiz(
+        return StudentQuizController.prepareCustomQuiz(
                 getUser(request).getObjectId("_id"),
                 jsonObject.getJSONArray("filters"),
                 jsonObject.getString("name")
@@ -258,7 +277,7 @@ public class StudentQuizAPIRoutes extends Router {
                                         optionalsType = {String.class}
                                 ) String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
-        return QuestionController.payCustomQuiz(
+        return StudentQuizController.payCustomQuiz(
                 getUser(request),
                 id,
                 (jsonStr == null || jsonStr.isEmpty()) ?

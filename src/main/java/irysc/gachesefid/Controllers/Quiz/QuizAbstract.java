@@ -26,7 +26,7 @@ public abstract class QuizAbstract {
                                          boolean afterBuy, boolean isDescNeeded
     );
 
-    class QuestionStat {
+    static class QuestionStat {
 
         String name;
         ObjectId id;
@@ -321,7 +321,12 @@ public abstract class QuizAbstract {
 
             byte[] out = new byte[11];
 
-            double t = isForSubject ? subjectTaraz.get(oId) : lessonTaraz.get(oId);
+            double t = 0;
+            if(isForSubject && subjectTaraz != null && subjectTaraz.containsKey(oId))
+                t = subjectTaraz.get(oId);
+            else if(!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
+                t = lessonTaraz.get(oId);
+
             int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
             int c = isForSubject ? subjectCorrects.get(oId) : lessonCorrects.get(oId);
             int ic = isForSubject ? subjectIncorrects.get(oId) : lessonIncorrects.get(oId);
@@ -367,9 +372,42 @@ public abstract class QuizAbstract {
             return out;
         }
 
+        byte[] encodeCustomQuiz(ObjectId oId, boolean isForSubject) {
+
+            byte[] out = new byte[11];
+
+            int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
+            int c = isForSubject ? subjectCorrects.get(oId) : lessonCorrects.get(oId);
+            int ic = isForSubject ? subjectIncorrects.get(oId) : lessonIncorrects.get(oId);
+            double p = isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId);
+
+            out[0] = (byte) w;
+            out[1] = (byte) c;
+            out[2] = (byte) ic;
+
+            boolean minus = false;
+            if(p < 0) {
+                minus = true;
+                p = -p;
+            }
+
+            DecimalFormat df_obj = new DecimalFormat("#.##");
+            String[] splited = df_obj.format(p).split("\\.");
+            out[3] = (byte) Integer.parseInt(splited[0]);
+
+            if(splited.length == 1)
+                out[4] = (byte) (minus ? 0x80 : 0x00);
+            else if(minus)
+                out[4] = (byte) (Integer.parseInt(splited[1]) + 128);
+            else
+                out[4] = (byte) Integer.parseInt(splited[1]);
+
+            return out;
+        }
+
     }
 
-    class TarazRanking {
+    static class TarazRanking {
 
         ObjectId schoolId;
         ObjectId cityId;
@@ -422,6 +460,33 @@ public abstract class QuizAbstract {
 
         return new Object[] {
                 taraz, whites, corrects, incorrects, Math.round(percent), countryRank, stateRank, cityRank, schoolRank
+        };
+    }
+
+    public static Object[] decodeCustomQuiz(byte[] in) {
+
+        int whites = in[0] & 0xff;
+        int corrects = in[1] & 0xff;
+        int incorrects = in[2] & 0xff;
+
+        int floatSection = (in[4] & 0xff);
+
+        boolean minus = false;
+
+        if(floatSection > 128) {
+            minus = true;
+            floatSection -= 128;
+        }
+
+        double percent = (floatSection < 10) ?
+                (in[3] & 0xff) + (floatSection / 10.0) :
+                (in[3] & 0xff) + (floatSection / 100.0);
+
+        if(minus)
+            percent = -percent;
+
+        return new Object[] {
+                whites, corrects, incorrects, Math.round(percent)
         };
     }
 

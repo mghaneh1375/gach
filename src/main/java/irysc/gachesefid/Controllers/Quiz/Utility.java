@@ -402,7 +402,7 @@ public class Utility {
         ArrayList<Document> questions = questionRepository.findByIds(ids, true);
 
         int totalNeededTime = 0;
-        for(Document question : questions)
+        for (Document question : questions)
             totalNeededTime += question.getInteger("needed_time");
 
         return new PairValue(totalNeededTime, calcAnswerByteArr(questions));
@@ -679,7 +679,7 @@ public class Utility {
             if (userId != null && !quiz.getBoolean("visibility"))
                 throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
-            if(userId != null && searchInDocumentsKeyValIdx(
+            if (userId != null && searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class),
                     "_id", userId
             ) == -1)
@@ -728,10 +728,20 @@ public class Utility {
     static String saveStudentAnswers(Document doc, JSONArray answers,
                                      Document student, Common db) {
 
-        Document questions = doc.get("questions", Document.class);
-        ArrayList<PairValue> pairValues = Utility.getAnswers(
-                ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
-        );
+        ArrayList<PairValue> pairValues;
+
+        if(doc.containsKey("answers")) {
+            pairValues = Utility.getAnswers(
+                    ((Binary) doc.getOrDefault("answers", new byte[0])).getData()
+            );
+        }
+        else {
+            Document questions = doc.get("questions", Document.class);
+            pairValues = Utility.getAnswers(
+                    ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
+            );
+        }
+
 
         if (pairValues.size() != answers.length())
             return JSON_NOT_VALID_PARAMS;
@@ -750,13 +760,12 @@ public class Utility {
 
                 if (stdAns.isEmpty()) {
                     if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
-                        stdAnswers.add( new PairValue(
+                        stdAnswers.add(new PairValue(
                                 p.getKey(),
                                 new PairValue(((PairValue) p.getValue()).getKey(),
                                         0)
                         ));
-                    }
-                    else
+                    } else
                         stdAnswers.add(new PairValue(p.getKey(), null));
                     continue;
                 }
@@ -795,7 +804,10 @@ public class Utility {
             return JSON_NOT_VALID_PARAMS;
         }
 
-        student.put("answers", Utility.getStdAnswersByteArr(stdAnswers));
+        if(student != null)
+            student.put("answers", Utility.getStdAnswersByteArr(stdAnswers));
+        else if(doc.containsKey("answers"))
+            doc.put("student_answers", Utility.getStdAnswersByteArr(stdAnswers));
 
         db.replaceOne(doc.getObjectId("_id"), doc);
         return JSON_OK;

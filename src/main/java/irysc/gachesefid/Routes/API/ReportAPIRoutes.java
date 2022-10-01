@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
@@ -124,12 +125,16 @@ public class ReportAPIRoutes extends Router {
     @GetMapping(value = "/getStudentStat/{mode}/{quizId}/{userId}")
     @ResponseBody
     public String getStudentStat(HttpServletRequest request,
-                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                 @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
                                  @PathVariable @ObjectIdConstraint ObjectId userId
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return AdminReportController.getStudentStatCustomQuiz(quizId, userId);
+
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))

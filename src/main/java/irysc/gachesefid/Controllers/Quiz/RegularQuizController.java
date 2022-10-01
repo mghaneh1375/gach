@@ -8,7 +8,6 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -294,36 +293,36 @@ public class RegularQuizController extends QuizAbstract {
         // todo: send notif
     }
 
-    class Taraz {
+    static class Taraz {
 
-        private final Document quiz;
+        private Document quiz;
 
-        private final ArrayList<QuestionStat> lessonsStat;
-        private final ArrayList<QuestionStat> subjectsStat;
-        private final List<Document> questionsList;
-        private final List<ObjectId> questionIds;
+        private ArrayList<QuestionStat> lessonsStat;
+        private ArrayList<QuestionStat> subjectsStat;
+        private List<Document> questionsList;
+        private List<ObjectId> questionIds;
 
-        private final List<Double> marks;
-        private final List<Document> students;
-        private final ArrayList<QuestionStat> studentsStat;
-        private final ArrayList<byte[]> questionStats;
+        private List<Double> marks;
+        private List<Document> students;
+        private ArrayList<QuestionStat> studentsStat;
+        private ArrayList<byte[]> questionStats;
         private ArrayList<Document> studentsData;
 
-        private final HashMap<ObjectId, ObjectId> states;
-        private final HashMap<ObjectId, PairValue> usersCities;
+        private HashMap<ObjectId, ObjectId> states;
+        private HashMap<ObjectId, PairValue> usersCities;
 
-        private final HashMap<ObjectId, Integer> cityRanking;
-        private final HashMap<Object, Integer> stateRanking;
+        private HashMap<ObjectId, Integer> cityRanking;
+        private HashMap<Object, Integer> stateRanking;
 
-        private final HashMap<ObjectId, Integer> citySkip;
-        private final HashMap<Object, Integer> stateSkip;
+        private HashMap<ObjectId, Integer> citySkip;
+        private HashMap<Object, Integer> stateSkip;
 
-        private final HashMap<ObjectId, Double> cityOldT;
-        private final HashMap<Object, Double> stateOldT;
+        private HashMap<ObjectId, Double> cityOldT;
+        private HashMap<Object, Double> stateOldT;
 
-        private final ArrayList<Document> rankingList;
-        private final List<Document> subjectsGeneralStat;
-        private final List<Document> lessonsGeneralStat;
+        private ArrayList<Document> rankingList;
+        private List<Document> subjectsGeneralStat;
+        private List<Document> lessonsGeneralStat;
 
         HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
         HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
@@ -386,6 +385,37 @@ public class RegularQuizController extends QuizAbstract {
             storeInRankingTable();
         }
 
+        public ArrayList<Document> lessonsStatOutput;
+        public ArrayList<Document> subjectsStatOutput;
+
+        Taraz(
+                ArrayList<Document> questions, 
+                ObjectId userId,
+                ArrayList<PairValue> studentAnswers
+        ) {
+
+            lessonsStat = new ArrayList<>();
+            subjectsStat = new ArrayList<>();
+            questionsList = new ArrayList<>();
+            studentsStat = new ArrayList<>();
+            questionStats = new ArrayList<>();
+
+            fetchQuestions(questions);
+
+            studentsStat.add(new QuestionStat(
+                    userId, "", studentAnswers
+            ));
+
+            doCorrectStudents();
+            calcSubjectMarkSum();
+            calcLessonMarkSum();
+
+            calcSubjectsStandardDeviationAndTaraz();
+            calcLessonsStandardDeviationAndTaraz();
+
+            saveStudentStats();
+        }
+
         private void fetchQuestions() {
 
             int k = -1;
@@ -400,6 +430,62 @@ public class RegularQuizController extends QuizAbstract {
 
                 Document tmp = Document.parse(question.toJson());
                 tmp.put("mark", marks.get(k));
+
+                ObjectId subjectId = question.getObjectId("subject_id");
+
+                boolean isSubjectAdded = false;
+
+                tmp.put("subject_id", subjectId);
+
+                for (QuestionStat itr : subjectsStat) {
+                    if (itr.equals(subjectId)) {
+                        isSubjectAdded = true;
+                        tmp.put("lesson_id", itr.additionalId);
+                        break;
+                    }
+                }
+
+                if (!isSubjectAdded) {
+
+                    Document subject = subjectRepository.findById(subjectId);
+
+                    Document lesson = subject.get("lesson", Document.class);
+                    ObjectId lessonId = lesson.getObjectId("_id");
+
+                    subjectsStat.add(
+                            new QuestionStat(
+                                    subjectId, subject.getString("name"), lessonId
+                            )
+                    );
+
+                    tmp.put("lesson_id", lessonId);
+
+                    boolean isLessonAdded = false;
+
+                    for (QuestionStat itr : lessonsStat) {
+                        if (itr.equals(lessonId)) {
+                            isLessonAdded = true;
+                            break;
+                        }
+                    }
+
+                    if (!isLessonAdded)
+                        lessonsStat.add(
+                                new QuestionStat(lessonId,
+                                        lesson.getString("name"))
+                        );
+                }
+
+                questionsList.add(tmp);
+            }
+        }
+
+        private void fetchQuestions(ArrayList<Document> questions) {
+
+            for (Document question : questions) {
+
+                Document tmp = Document.parse(question.toJson());
+                tmp.put("mark", 3.0);
 
                 ObjectId subjectId = question.getObjectId("subject_id");
 
@@ -567,6 +653,37 @@ public class RegularQuizController extends QuizAbstract {
             }
 
         }
+
+
+        private void saveStudentStats() {
+
+
+            lessonsStatOutput = new ArrayList<>();
+
+            for (QuestionStat itr : lessonsStat) {
+
+                lessonsStatOutput.add(new Document
+                        ("stat", studentsStat.get(0).encodeCustomQuiz(itr.id, false))
+                        .append("name", itr.name)
+                        .append("_id", itr.id)
+                );
+
+            }
+
+            subjectsStatOutput = new ArrayList<>();
+
+            for (QuestionStat itr : subjectsStat) {
+
+                subjectsStatOutput.add(new Document
+                        ("stat", studentsStat.get(0).encodeCustomQuiz(itr.id, true))
+                        .append("name", itr.name)
+                        .append("_id", itr.id)
+                );
+
+            }
+
+        }
+
 
         private void fetchUsersData() {
 

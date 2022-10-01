@@ -2,9 +2,12 @@ package irysc.gachesefid.Controllers.Question;
 
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -12,8 +15,10 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.in;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JUST_ID;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 
@@ -197,5 +202,57 @@ public class Utilities {
         return new byte[]{(byte) 3};
     }
 
+    public static ArrayList<Bson> fetchFilter(
+            String tag,
+            ObjectId gradeId,
+            ObjectId lessonId,
+            ObjectId subjectId,
+            String level) throws InvalidFieldsException {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if (level != null) {
+
+            if (!EnumValidatorImp.isValid(level, QuestionLevel.class))
+                throw new InvalidFieldsException("level is not correct");
+
+            filters.add(eq("level", level));
+        }
+
+        if (tag != null) {
+            filters.add(
+                    and(
+                            exists("tags"),
+                            in("tags", tag)
+                    )
+            );
+        }
+
+        if (gradeId != null || lessonId != null) {
+            ArrayList<Bson> subFilters = new ArrayList<>();
+
+            if (gradeId != null)
+                subFilters.add(eq("grade._id", gradeId));
+
+            if (lessonId != null)
+                subFilters.add(eq("lesson._id", lessonId));
+
+            ArrayList<Document> subjects = subjectRepository.find(
+                    and(subFilters), JUST_ID
+            );
+
+            ArrayList<ObjectId> subjectIds = new ArrayList<>();
+
+            for (Document subject : subjects)
+                subjectIds.add(subject.getObjectId("_id"));
+
+            filters.add(in("subject_id", subjectIds));
+        }
+
+        if (subjectId != null)
+            filters.add(eq("subject_id", subjectId));
+
+        return filters;
+    }
 
 }

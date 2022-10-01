@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.LaunchMode;
@@ -733,7 +734,7 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getStudentAnswerSheet/{mode}/{quizId}/{studentId}")
     @ResponseBody
     public String getStudentAnswerSheet(HttpServletRequest request,
-                                        @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                        @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                         @PathVariable @ObjectIdConstraint ObjectId quizId,
                                         @PathVariable @ObjectIdConstraint ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
