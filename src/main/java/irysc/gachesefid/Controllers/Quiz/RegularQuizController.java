@@ -305,7 +305,7 @@ public class RegularQuizController extends QuizAbstract {
         private List<Double> marks;
         private List<Document> students;
         private ArrayList<QuestionStat> studentsStat;
-        private ArrayList<byte[]> questionStats;
+        public ArrayList<byte[]> questionStats;
         private ArrayList<Document> studentsData;
 
         private HashMap<ObjectId, ObjectId> states;
@@ -572,24 +572,25 @@ public class RegularQuizController extends QuizAbstract {
                 questionStats.add(tmp);
                 idx++;
             }
-
         }
 
         private void calcSubjectMarkSum() {
             for (QuestionStat itr : subjectsStat) {
-                for (QuestionStat aStudentsStat : studentsStat)
+                for (QuestionStat aStudentsStat : studentsStat) {
                     itr.marks.add(
                             (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
                     );
+                }
             }
         }
 
         private void calcLessonMarkSum() {
             for (QuestionStat itr : lessonsStat) {
-                for (QuestionStat aStudentsStat : studentsStat)
+                for (QuestionStat aStudentsStat : studentsStat) {
                     itr.marks.add(
                             (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
                     );
+                }
             }
         }
 

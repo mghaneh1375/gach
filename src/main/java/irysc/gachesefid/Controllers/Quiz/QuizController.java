@@ -2,7 +2,10 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
@@ -984,6 +987,32 @@ public class QuizController {
             return JSON_OK;
         } catch (Exception x) {
             return JSON_NOT_ACCESS;
+        }
+    }
+
+    public static String finalizeQuizResult(ObjectId quizId) {
+
+        try {
+            Document quiz = hasAccess(iryscQuizRepository, null, quizId);
+
+            if(!quiz.containsKey("report_status") ||
+                    !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
+
+            List<Binary> questionsStat = quiz.getList("question_stat", Binary.class);
+            ArrayList<Document> questions = questionRepository.findByIds(
+                    quiz.get("questions", Document.class).getList("_ids", ObjectId.class), true
+            );
+
+            if(questions == null || questions.size() != questionsStat.size())
+                return JSON_NOT_UNKNOWN;
+
+            Utilities.updateQuestionsStat(questions, questionsStat);
+            return JSON_OK;
+        }
+        catch (Exception x) {
+            return generateErr(x.getMessage());
         }
     }
 

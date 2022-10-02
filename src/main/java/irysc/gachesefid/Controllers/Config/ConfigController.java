@@ -9,8 +9,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import static com.mongodb.client.model.Filters.eq;
+import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 
 public class ConfigController {
@@ -54,8 +56,31 @@ public class ConfigController {
         for(String key : data.keySet()) {
 
             Object o = data.get(key);
+
+            if (o instanceof ObjectId) {
+                if (key.contains("CertId")) {
+                    if (!certificateRepository.exist(
+                            eq("_id", new ObjectId(o.toString()))
+                    ))
+                        return JSON_NOT_VALID_PARAMS;
+                }
+            }
+        }
+
+        for(String key : data.keySet()) {
+
+            Object o = data.get(key);
             if(o instanceof JSONArray)
                 o = new ArrayList<>(((JSONArray) o).toList());
+
+            if(o instanceof ObjectId) {
+                if(key.contains("CertId")) {
+                    if(!certificateRepository.exist(
+                            eq("_id", new ObjectId(o.toString()))
+                    ))
+                        return JSON_NOT_VALID_PARAMS;
+                }
+            }
 
             boolean hasLittleChar = false;
             for(int i = 0; i < key.length(); i++) {

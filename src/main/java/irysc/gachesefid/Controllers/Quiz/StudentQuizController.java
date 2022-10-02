@@ -152,7 +152,6 @@ public class StudentQuizController {
                 .put("questionsNo", questionIds.size())
                 .put("description", "")
                 .put("mode", "regular")
-                .put("attaches", new JSONArray())
                 .put("duration", neededTime);
 
         if(!doc.getString("status").equalsIgnoreCase("finished")) {
@@ -175,6 +174,36 @@ public class StudentQuizController {
 
             doc.put("lessons", t.lessonsStatOutput);
             doc.put("subjects", t.subjectsStatOutput);
+
+            int idx = 0;
+            ArrayList<byte[]> questionsStat = t.questionStats;
+            for(byte[] bytes : questionsStat) {
+
+                int whites = (bytes[0] & 0xff);
+                int corrects = (bytes[1] & 0xff);
+                int incorrects = (bytes[2] & 0xff);
+
+                int oldWhite = (int)questions.get(idx).getOrDefault("old_white", 0) + whites;
+                int oldCorrect = (int)questions.get(idx).getOrDefault("old_correct", 0) + corrects;
+                int oldIncorrect = (int)questions.get(idx).getOrDefault("old_incorrect", 0) + incorrects;
+                int total = oldCorrect + oldIncorrect + oldWhite;
+
+                String level = questions.get(idx).getString("level");
+
+                if(total < 100) {
+
+                    double p = (oldCorrect * 100.0) / total;
+
+                    level = "easy";
+                    if (p < 0.25)
+                        level = "hard";
+                    else if (p < 0.5)
+                        level = "mid";
+                }
+
+
+                idx++;
+            }
 
             customQuizRepository.replaceOne(quizId, doc);
 
@@ -1006,9 +1035,6 @@ public class StudentQuizController {
         }
 
         int shouldPay = (int) shouldPayDouble;
-        System.out.println(shouldPay);
-        System.out.println(money);
-        System.out.println(userId);
 
         if (shouldPay - money <= 100) {
 
@@ -1154,8 +1180,22 @@ public class StudentQuizController {
 
         ObjectId oId = customQuizRepository.insertOneWithReturnId(doc);
 
+        Document off = irysc.gachesefid.Utility.Utility.findAccountOff(
+                userId, System.currentTimeMillis(), OffCodeSections.BANK_EXAM.getName()
+        );
+
+        if(off == null)
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("price", totalPrice)
+                    .put("id", oId)
+            );
+
         return generateSuccessMsg("data", new JSONObject()
                 .put("price", totalPrice)
+                .put("off", new JSONObject()
+                        .put("type", off.getString("type"))
+                        .put("amount", off.getInteger("amount"))
+                )
                 .put("id", oId)
         );
     }

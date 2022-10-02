@@ -786,8 +786,13 @@ public class QuestionController extends Utilities {
     public static String getAllFlags() {
 
         JSONArray jsonArray = new JSONArray();
+        Document config = getConfig();
 
-        ArrayList<Document> subjects = subjectRepository.find(null,
+        ArrayList<Document> subjects = subjectRepository.find(
+                config.containsKey("min_question_for_custom_quiz") ?
+                    gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+                    gt("q_no", 0)
+                ,
                 new BasicDBObject("_id", 1)
                         .append("q_no", 1)
                         .append("name", 1)
@@ -801,8 +806,6 @@ public class QuestionController extends Utilities {
         for (Document subject : subjects) {
 
             int qNo = (int) subject.getOrDefault("q_no", 0);
-            if (qNo == 0)
-                continue;
 
             ObjectId lessonId = subject.get("lesson", Document.class).getObjectId("_id");
             String lesson = subject.get("lesson", Document.class).getString("name");

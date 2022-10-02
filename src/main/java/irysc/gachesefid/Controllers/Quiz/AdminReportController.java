@@ -37,7 +37,7 @@ public class AdminReportController {
         );
 
         if(doc == null || !doc.containsKey("start_at") ||
-                doc.get("start_at") == null || !doc.containsKey("subjects"))
+                doc.get("start_at") == null)
             return JSON_NOT_ACCESS;
 
         int neededTime = doc.getInteger("duration");
@@ -50,6 +50,32 @@ public class AdminReportController {
 
         if (reminder > 0)
             return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+
+
+        if(!doc.getString("status").equalsIgnoreCase("finished")) {
+            doc.put("status", "finished");
+
+            ArrayList<PairValue> studentAnswers = Utility.getAnswers(
+                    doc.get("student_answers", Binary.class).getData()
+            );
+
+            ArrayList<Document> questions = questionRepository.findByIds(
+                    doc.getList("questions", ObjectId.class), true
+            );
+
+            if(questions == null)
+                return JSON_NOT_UNKNOWN;
+
+            RegularQuizController.Taraz t  = new RegularQuizController.Taraz(
+                    questions, userId, studentAnswers
+            );
+
+            doc.put("lessons", t.lessonsStatOutput);
+            doc.put("subjects", t.subjectsStatOutput);
+
+            customQuizRepository.replaceOne(quizId, doc);
+            doc = customQuizRepository.findById(quizId);
+        }
 
         Document config = getConfig();
 
@@ -76,7 +102,7 @@ public class AdminReportController {
         JSONArray subjects = new JSONArray();
         for (Document subject : doc.getList("subjects", Document.class)) {
 
-            Object[] stats = QuizAbstract.decode(subject.get("stat", Binary.class).getData());
+            Object[] stats = QuizAbstract.decodeCustomQuiz(subject.get("stat", Binary.class).getData());
 
             JSONObject jsonObject = new JSONObject()
                     .put("name", subject.getString("name"))
@@ -357,7 +383,6 @@ public class AdminReportController {
                 doc.get("start_at") == null)
             return JSON_NOT_ACCESS;
 
-        //!doc.containsKey("subjects")
         int neededTime = doc.getInteger("duration");
         long curr = System.currentTimeMillis();
 

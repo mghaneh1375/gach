@@ -1,5 +1,8 @@
 package irysc.gachesefid.Controllers.Question;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.QuestionLevel;
@@ -8,12 +11,14 @@ import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.in;
@@ -253,6 +258,71 @@ public class Utilities {
             filters.add(eq("subject_id", subjectId));
 
         return filters;
+    }
+
+    public static void updateQuestionsStat(ArrayList<Document> questions, List<Binary> questionsStat) {
+
+        int idx = 0;
+        List<WriteModel<Document>> writes = new ArrayList<>();
+
+        for (Binary itr : questionsStat) {
+            writes.add(updateQuestionStat(itr.getData(), questions.get(idx)));
+            questionRepository.clearFromCache(questions.get(idx).getObjectId("_id"));
+            idx++;
+        }
+
+        questionRepository.bulkWrite(writes);
+    }
+
+    public static void updateQuestionsStat(ArrayList<Document> questions, List<byte[]> questionsStat) {
+
+        int idx = 0;
+        List<WriteModel<Document>> writes = new ArrayList<>();
+
+        for (byte[] itr : questionsStat) {
+            writes.add(updateQuestionStat(itr, questions.get(idx)));
+            questionRepository.clearFromCache(questions.get(idx).getObjectId("_id"));
+            idx++;
+        }
+
+        questionRepository.bulkWrite(writes);
+    }
+
+    private static UpdateOneModel<Document> updateQuestionStat(byte[] bytes, Document question) {
+
+        int whites = (bytes[0] & 0xff);
+        int corrects = (bytes[1] & 0xff);
+        int incorrects = (bytes[2] & 0xff);
+
+        int oldWhite = (int)question.getOrDefault("old_white", 0) + whites;
+        int oldCorrect = (int)question.getOrDefault("old_correct", 0) + corrects;
+        int oldIncorrect = (int)question.getOrDefault("old_incorrect", 0) + incorrects;
+        int total = oldCorrect + oldIncorrect + oldWhite;
+
+        String level = question.getString("level");
+
+        if(total < 100) {
+
+            double p = (oldCorrect * 100.0) / total;
+
+            level = "easy";
+            if (p < 0.25)
+                level = "hard";
+            else if (p < 0.5)
+                level = "mid";
+        }
+
+        return new UpdateOneModel<>(
+                eq("_id", question.getObjectId("_id")),
+                new BasicDBObject("$set", new BasicDBObject(
+                        "level", level
+                )
+                        .append("old_correct", oldCorrect)
+                        .append("old_incorrect", oldIncorrect)
+                        .append("old_white", oldWhite)
+                )
+        );
+
     }
 
 }

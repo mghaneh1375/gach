@@ -441,7 +441,7 @@ public abstract class QuizAbstract {
 
         boolean minus = false;
 
-        if(floatSection > 128) {
+        if(floatSection >= 128) {
             minus = true;
             floatSection -= 128;
         }
@@ -473,7 +473,7 @@ public abstract class QuizAbstract {
 
         boolean minus = false;
 
-        if(floatSection > 128) {
+        if(floatSection >= 128) {
             minus = true;
             floatSection -= 128;
         }

@@ -302,6 +302,17 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+
+    @PostMapping(path = "finalizeQuizResult/{quizId}")
+    @ResponseBody
+    public String finalizeQuizResult(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.finalizeQuizResult(quizId);
+    }
+
+
     @GetMapping(value = "/getParticipants/{mode}/{quizId}")
     @ResponseBody
     public String getParticipants(HttpServletRequest request,
@@ -740,6 +751,11 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return AdminReportController.getStudentAnswerSheetCustomQuiz(
+                    quizId, studentId
+            );
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
