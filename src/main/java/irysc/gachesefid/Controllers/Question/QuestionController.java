@@ -795,6 +795,9 @@ public class QuestionController extends Utilities {
                 ,
                 new BasicDBObject("_id", 1)
                         .append("q_no", 1)
+                        .append("q_hard_no", 1)
+                        .append("q_mid_no", 1)
+                        .append("q_easy_no", 1)
                         .append("name", 1)
                         .append("lesson", 1)
                         .append("grade", 1)
@@ -805,7 +808,9 @@ public class QuestionController extends Utilities {
 
         for (Document subject : subjects) {
 
-            int qNo = (int) subject.getOrDefault("q_no", 0);
+            int qNoEasy = (int) subject.getOrDefault("q_no_easy", 0);
+            int qNoMid = (int) subject.getOrDefault("q_no_mid", 0);
+            int qNoHard = (int) subject.getOrDefault("q_no_hard", 0);
 
             ObjectId lessonId = subject.get("lesson", Document.class).getObjectId("_id");
             String lesson = subject.get("lesson", Document.class).getString("name");
@@ -814,7 +819,9 @@ public class QuestionController extends Utilities {
             String grade = subject.get("grade", Document.class).getString("name");
 
             jsonArray.put(new JSONObject()
-                    .put("limit", qNo)
+                    .put("limitEasy", qNoEasy)
+                    .put("limitMid", qNoMid)
+                    .put("limitHard", qNoHard)
                     .put("name", subject.getString("name"))
                     .put("desc", subject.getString("name") + " در " +
                             lesson + " در " + grade)
@@ -822,23 +829,36 @@ public class QuestionController extends Utilities {
                     .put("section", "subject")
             );
 
-            if (lessons.containsKey(lessonId))
-                lessons.get(lessonId).put("q_no", lessons.get(lessonId).getInteger("q_no") + qNo);
+            if (lessons.containsKey(lessonId)) {
+                lessons.get(lessonId).put("q_no_easy", lessons.get(lessonId).getInteger("q_no_easy") + qNoEasy);
+                lessons.get(lessonId).put("q_no_mid", lessons.get(lessonId).getInteger("q_no_mid") + qNoMid);
+                lessons.get(lessonId).put("q_no_hard", lessons.get(lessonId).getInteger("q_no_hard") + qNoHard);
+            }
             else {
                 lessons.put(lessonId,
                         new Document("name", lesson)
-                                .append("q_no", qNo)
+                                .append("q_no_easy", qNoEasy)
+                                .append("q_no_mid", qNoMid)
+                                .append("q_no_hard", qNoHard)
                                 .append("desc", lesson + " در " + grade)
                 );
             }
 
-            if (grades.containsKey(gradeId))
-                grades.get(gradeId).put("q_no", grades.get(gradeId).getInteger("q_no") + qNo);
+            if (grades.containsKey(gradeId)) {
+                grades.get(gradeId)
+                        .put("q_no_easy", grades.get(gradeId).getInteger("q_no_easy") + qNoEasy);
+                grades.get(gradeId)
+                        .put("q_no_mid", grades.get(gradeId).getInteger("q_no_mid") + qNoMid);
+                grades.get(gradeId)
+                        .put("q_no_hard", grades.get(gradeId).getInteger("q_no_hard") + qNoHard);
+            }
             else {
                 grades.put(gradeId,
                         new Document("name",
                                 subject.get("grade", Document.class).getString("name")
-                        ).append("q_no", qNo)
+                        ).append("q_no_easy", qNoEasy)
+                                .append("q_no_mid", qNoMid)
+                                .append("q_no_hard", qNoHard)
                 );
             }
 
@@ -846,7 +866,9 @@ public class QuestionController extends Utilities {
 
         for (ObjectId lessonId : lessons.keySet()) {
             jsonArray.put(new JSONObject()
-                    .put("limit", lessons.get(lessonId).getInteger("q_no"))
+                    .put("limitEasy", lessons.get(lessonId).getInteger("q_no_easy"))
+                    .put("limitMid", lessons.get(lessonId).getInteger("q_no_mid"))
+                    .put("limitHard", lessons.get(lessonId).getInteger("q_no_hard"))
                     .put("name", lessons.get(lessonId).getString("name"))
                     .put("id", lessonId.toString())
                     .put("desc", lessons.get(lessonId).getString("desc"))
@@ -856,7 +878,9 @@ public class QuestionController extends Utilities {
 
         for (ObjectId gradeId : grades.keySet()) {
             jsonArray.put(new JSONObject()
-                    .put("limit", grades.get(gradeId).getInteger("q_no"))
+                    .put("limitEasy", grades.get(gradeId).getInteger("q_no_easy"))
+                    .put("limitHard", grades.get(gradeId).getInteger("q_no_hard"))
+                    .put("limitMid", grades.get(gradeId).getInteger("q_no_mid"))
                     .put("name", grades.get(gradeId).getString("name"))
                     .put("id", gradeId.toString())
                     .put("section", "grade")
@@ -868,7 +892,7 @@ public class QuestionController extends Utilities {
             jsonArray.put(new JSONObject()
                     .put("id", doc.getInteger("code"))
                     .put("name", doc.getString("tag"))
-                    .put("limit", doc.getOrDefault("q_no", 1))
+                    .put("limitEasy", doc.getOrDefault("q_no", 1))
                     .put("section", "tag")
             );
         }

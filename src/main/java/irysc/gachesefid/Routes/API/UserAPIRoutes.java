@@ -40,10 +40,7 @@ import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.List;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.inc;
@@ -75,14 +72,40 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-//        ArrayList<Document> docs = questionRepository.find(null, null);
-//        for(Document doc : docs) {
-//            long l = (long)doc.getOrDefault("used", 0);
-//            doc.put("used", (int)l);
-//            doc.remove("name");
-//
-//            questionRepository.replaceOne(doc.getObjectId("_id"), doc);
-//        }
+        JSONArray tags2 = questionRepository.distinctTags("tags");
+        for(int i = 0; i < tags2.length(); i++) {
+            String tag = tags2.getString(i);
+            questionTagRepository.insertOne(
+                    new Document("tag", tag)
+                        .append("code", Utility.getRandIntForTag())
+            );
+        }
+
+        if(1 == 1)
+            return "s";
+
+        ArrayList<Document> docs3 = questionRepository.find(null, null);
+        Random random = new Random();
+
+        for(Document doc : docs3) {
+            if(random.nextInt(100) < 40) {
+
+                Document subject = subjectRepository.findById(doc.getObjectId("subject_id"));
+                ArrayList<String> tags = new ArrayList<>();
+                tags.add(subject.getString("name"));
+
+                if(random.nextInt(100) < 30) {
+                    Document lesson = subject.get("lesson", Document.class);
+                    tags.add(lesson.getString("name"));
+                }
+
+                doc.put("tags", tags);
+                questionRepository.replaceOne(doc.getObjectId("_id"), doc);
+            }
+        }
+
+        if(1 == 1)
+            return "ok";
 
         ArrayList<Document> subjects = subjectRepository.find(null, null);
         for(Document subject : subjects) {

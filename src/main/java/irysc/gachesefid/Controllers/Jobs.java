@@ -4,9 +4,9 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
-import irysc.gachesefid.Digests.Question;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 
 import java.util.*;
 
@@ -24,6 +24,7 @@ public class Jobs implements Runnable {
         timer.schedule(new TokenHandler(), 0, 86400000); // 1 day
         timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
+        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
     class TokenHandler extends TimerTask {
@@ -40,7 +41,6 @@ public class Jobs implements Runnable {
 
         }
     }
-
 
     class SiteStatsHandler extends TimerTask {
 
@@ -120,6 +120,66 @@ public class Jobs implements Runnable {
             }
 
             subjectRepository.bulkWrite(writes);
+            try {
+//                Thread.sleep(60000);
+                Thread.sleep(1000);
+                calcTagQNo();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        void calcTagQNo() {
+
+            JSONArray tags = questionRepository.distinctTags("tags");
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+
+            for(int i = 0; i < tags.length(); i++) {
+
+                String tag = tags.getString(i);
+
+                Document questionTag = questionTagRepository.findOne(
+                        eq("tag", tag), null
+                );
+
+                if(questionTag == null)
+                    continue;
+
+                ArrayList<Document> docs = questionRepository.find(
+                        in("tags", tag),
+                        new BasicDBObject("level", 1)
+                );
+
+                int easy = 0, mid = 0, hard = 0;
+
+                for(Document doc : docs) {
+                    switch (doc.getString("level")) {
+                        case "easy":
+                            easy++;
+                            break;
+                        case "mid":
+                            mid++;
+                            break;
+                        case "hard":
+                            hard++;
+                            break;
+                    }
+                }
+
+                writes.add(
+                        new UpdateOneModel<>(
+                                eq("_id", questionTag.getObjectId("_id")),
+                                new BasicDBObject("$set",
+                                        new BasicDBObject("q_no_easy", easy)
+                                                .append("q_no_mid", mid)
+                                                .append("q_no_hard", hard)
+                                )
+                        )
+                );
+            }
+
+            questionTagRepository.bulkWrite(writes);
         }
     }
 }
