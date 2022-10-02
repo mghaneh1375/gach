@@ -174,38 +174,11 @@ public class StudentQuizController {
 
             doc.put("lessons", t.lessonsStatOutput);
             doc.put("subjects", t.subjectsStatOutput);
-
-            int idx = 0;
-            ArrayList<byte[]> questionsStat = t.questionStats;
-            for(byte[] bytes : questionsStat) {
-
-                int whites = (bytes[0] & 0xff);
-                int corrects = (bytes[1] & 0xff);
-                int incorrects = (bytes[2] & 0xff);
-
-                int oldWhite = (int)questions.get(idx).getOrDefault("old_white", 0) + whites;
-                int oldCorrect = (int)questions.get(idx).getOrDefault("old_correct", 0) + corrects;
-                int oldIncorrect = (int)questions.get(idx).getOrDefault("old_incorrect", 0) + incorrects;
-                int total = oldCorrect + oldIncorrect + oldWhite;
-
-                String level = questions.get(idx).getString("level");
-
-                if(total < 100) {
-
-                    double p = (oldCorrect * 100.0) / total;
-
-                    level = "easy";
-                    if (p < 0.25)
-                        level = "hard";
-                    else if (p < 0.5)
-                        level = "mid";
-                }
-
-
-                idx++;
-            }
-
             customQuizRepository.replaceOne(quizId, doc);
+
+            Utilities.updateQuestionsStatWithByteArr(
+                    questions, t.questionStats
+            );
 
             int i = 1;
             for(Document question : questions)
@@ -1308,18 +1281,18 @@ public class StudentQuizController {
         return selectedIndices;
     }
 
-    static class SubjectFilter {
+    public static class SubjectFilter {
 
         HashMap<String, Integer> levelsQNo;
         ObjectId objectId;
 
-        SubjectFilter(ObjectId oId, int qNo, String level) {
+        public SubjectFilter(ObjectId oId, int qNo, String level) {
             objectId = oId;
             levelsQNo = new HashMap<>();
             levelsQNo.put(level, qNo);
         }
 
-        void add(int qNo, String level) {
+        public void add(int qNo, String level) {
             if (levelsQNo.containsKey(level))
                 levelsQNo.put(level, levelsQNo.get(level) + qNo);
             else
@@ -1341,6 +1314,50 @@ public class StudentQuizController {
 
             return sum;
         }
+
+        public int total() {
+
+            int sum = 0;
+            for (String key : levelsQNo.keySet())
+                sum += levelsQNo.get(key);
+
+            return sum;
+        }
+
+        public int easy() {
+
+            int sum = 0;
+            for (String key : levelsQNo.keySet()) {
+                if (key.equals(QuestionLevel.EASY.getName()))
+                    sum += levelsQNo.get(key);
+            }
+
+            return sum;
+
+        }
+
+        public int mid() {
+
+            int sum = 0;
+            for (String key : levelsQNo.keySet()) {
+                if (key.equals(QuestionLevel.MID.getName()))
+                    sum += levelsQNo.get(key);
+            }
+
+            return sum;
+        }
+
+        public int hard() {
+
+            int sum = 0;
+            for (String key : levelsQNo.keySet()) {
+                if (key.equals(QuestionLevel.HARD.getName()))
+                    sum += levelsQNo.get(key);
+            }
+
+            return sum;
+        }
+
     }
 
 }

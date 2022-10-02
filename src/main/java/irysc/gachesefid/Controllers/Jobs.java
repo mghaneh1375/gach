@@ -1,7 +1,14 @@
 package irysc.gachesefid.Controllers;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.Digests.Question;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -56,6 +63,63 @@ public class Jobs implements Runnable {
                     )
             );
 
+        }
+    }
+
+    class CalcSubjectQuestions extends TimerTask {
+
+        @Override
+        public void run() {
+
+            HashMap<ObjectId, StudentQuizController.SubjectFilter> subjectFilterHashMap = new HashMap<>();
+            ArrayList<Document> questions = questionRepository.find(null,
+                    new BasicDBObject("level", 1).append("subject_id", 1)
+            );
+
+            ArrayList<ObjectId> subjectIds = new ArrayList<>();
+
+            for (Document question : questions) {
+
+                ObjectId sId = question.getObjectId("subject_id");
+                String l = question.getString("level");
+
+                if (subjectFilterHashMap.containsKey(sId))
+                    subjectFilterHashMap.get(sId).add(1, l);
+                else {
+                    subjectFilterHashMap.put(sId, new StudentQuizController.SubjectFilter(sId, 1, l));
+                    subjectIds.add(sId);
+                }
+            }
+
+            ArrayList<Document> subjects = subjectRepository.findByIds(
+                    subjectIds, true
+            );
+
+            int idx = 0;
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+
+            for(ObjectId sId : subjectFilterHashMap.keySet()) {
+
+                subjects.get(idx).put("q_no", subjectFilterHashMap.get(sId).total());
+                subjects.get(idx).put("q_no_easy", subjectFilterHashMap.get(sId).easy());
+                subjects.get(idx).put("q_no_mid", subjectFilterHashMap.get(sId).mid());
+                subjects.get(idx).put("q_no_hard", subjectFilterHashMap.get(sId).hard());
+
+                writes.add(new UpdateOneModel<>(
+                        eq("_id", sId),
+                        new BasicDBObject("$set",
+                                new BasicDBObject("q_no", subjectFilterHashMap.get(sId).total())
+                                        .append("q_no_easy", subjectFilterHashMap.get(sId).easy())
+                                        .append("q_no_mid", subjectFilterHashMap.get(sId).mid())
+                                        .append("q_no_hard", subjectFilterHashMap.get(sId).hard())
+                        )
+                ));
+
+                idx++;
+            }
+
+            subjectRepository.bulkWrite(writes);
         }
     }
 }

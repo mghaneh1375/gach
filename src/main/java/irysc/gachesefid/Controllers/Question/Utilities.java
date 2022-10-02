@@ -274,7 +274,7 @@ public class Utilities {
         questionRepository.bulkWrite(writes);
     }
 
-    public static void updateQuestionsStat(ArrayList<Document> questions, List<byte[]> questionsStat) {
+    public static void updateQuestionsStatWithByteArr(ArrayList<Document> questions, List<byte[]> questionsStat) {
 
         int idx = 0;
         List<WriteModel<Document>> writes = new ArrayList<>();

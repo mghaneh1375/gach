@@ -1009,11 +1009,56 @@ public class QuizController {
                 return JSON_NOT_UNKNOWN;
 
             Utilities.updateQuestionsStat(questions, questionsStat);
+
+            Document config = getConfig();
+            if(
+                    (config.containsKey("quiz_money") &&
+                            config.getInteger("quiz_money") > 0) ||
+                    (config.containsKey("quiz_coin") &&
+                            config.getDouble("quiz_coin") > 0)
+
+            ) {
+                List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+
+                if(rankingList.size() > 0)
+                    giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config);
+
+                if(rankingList.size() > 1)
+                    giveQuizGiftToUser(rankingList.get(1).getObjectId("_id"), config);
+
+                if(rankingList.size() > 2)
+                    giveQuizGiftToUser(rankingList.get(2).getObjectId("_id"), config);
+            }
+
+
             return JSON_OK;
         }
         catch (Exception x) {
             return generateErr(x.getMessage());
         }
+    }
+
+    private static void giveQuizGiftToUser(ObjectId userId, Document config) {
+
+        Document user = userRepository.findById(userId);
+        if(user == null)
+            return;
+
+        if(
+                (config.containsKey("quiz_money") &&
+                        config.getInteger("quiz_money") > 0)
+        )
+            user.put("money", user.getInteger("money") + config.getInteger("quiz_money"));
+
+        if(
+                (config.containsKey("quiz_coin") &&
+                        config.getDouble("quiz_coin") > 0)
+        )
+            user.put("coin", user.getDouble("coin") + config.getDouble("quiz_coin"));
+
+        userRepository.replaceOne(
+                userId, user
+        );
     }
 
     public static String getRegistrable(Common db, boolean isAdmin,

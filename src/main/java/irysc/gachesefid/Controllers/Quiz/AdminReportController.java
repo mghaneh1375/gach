@@ -51,7 +51,6 @@ public class AdminReportController {
         if (reminder > 0)
             return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
 
-
         if(!doc.getString("status").equalsIgnoreCase("finished")) {
             doc.put("status", "finished");
 
@@ -74,6 +73,11 @@ public class AdminReportController {
             doc.put("subjects", t.subjectsStatOutput);
 
             customQuizRepository.replaceOne(quizId, doc);
+
+            Utilities.updateQuestionsStatWithByteArr(
+                    questions, t.questionStats
+            );
+
             doc = customQuizRepository.findById(quizId);
         }
 
