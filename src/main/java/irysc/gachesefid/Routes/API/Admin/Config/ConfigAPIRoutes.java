@@ -31,6 +31,14 @@ public class ConfigAPIRoutes extends Router {
         return ConfigController.get();
     }
 
+    @GetMapping(path = "/getCert")
+    @ResponseBody
+    public String getCert(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ConfigController.getCert();
+    }
+
     //todo : json fields in this section
 
     @PutMapping(path = "/update")
@@ -61,6 +69,7 @@ public class ConfigAPIRoutes extends Router {
                                          "maxWebGiftSlot", "appGiftDays",
                                          "webGiftDays", "firstRankCertId",
                                          "secondRankCertId", "thirdRankCertId",
+                                         "forthRankCertId", "fifthRankCertId",
                                          "minQuestionForCustomQuiz",
                                  },
                                  optionalsType = {
@@ -80,7 +89,7 @@ public class ConfigAPIRoutes extends Router {
                                          Positive.class, Positive.class,
                                          JSONArray.class, JSONArray.class,
                                          ObjectId.class, ObjectId.class, ObjectId.class,
-                                         Integer.class
+                                         ObjectId.class, ObjectId.class, Integer.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

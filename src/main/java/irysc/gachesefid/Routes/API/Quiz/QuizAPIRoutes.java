@@ -162,7 +162,7 @@ public class QuizAPIRoutes extends Router {
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId,
-                new JSONObject(jsonStr)
+                Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
 
@@ -350,9 +350,7 @@ public class QuizAPIRoutes extends Router {
     public String addAttach(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId quizId,
                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                            @RequestBody(required = false) MultipartFile file,
-                            @RequestBody @NotBlank String title,
-                            @RequestBody(required = false) String link
+                            @RequestBody(required = false) MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -360,19 +358,19 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addAttach(iryscQuizRepository, null, quizId,
-                    file, title, link);
+                    file);
 
         return QuizController.addAttach(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
-                file, title, link);
+                file);
     }
 
-    @DeleteMapping(path = "removeAttach/{mode}/{quizId}/{attachId}")
+    @DeleteMapping(path = "removeAttach/{mode}/{quizId}")
     @ResponseBody
     public String removeAttach(HttpServletRequest request,
                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId,
-                               @PathVariable @ObjectIdConstraint ObjectId attachId
+                               @RequestParam(name = "attach") @NotBlank String attach
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -380,10 +378,10 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.removeAttach(iryscQuizRepository, null,
-                    quizId, attachId);
+                    quizId, attach);
 
         return QuizController.removeAttach(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, attachId);
+                isAdmin ? null : user.getObjectId("_id"), quizId, attach);
     }
 
     @PutMapping(value = "/arrangeQuestions/{mode}/{quizId}")

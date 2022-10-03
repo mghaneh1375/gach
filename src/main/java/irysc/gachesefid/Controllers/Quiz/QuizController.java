@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Controllers.Certification.AdminCertification.addUserToCert;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.*;
@@ -532,23 +533,22 @@ public class QuizController {
     public static String addAttach(Common db,
                                    ObjectId userId,
                                    ObjectId quizId,
-                                   MultipartFile file,
-                                   String title,
-                                   String link) {
+                                   MultipartFile file) {
 
         try {
 
-            if (file == null && link == null)
+            if (file == null)
                 return JSON_NOT_VALID_PARAMS;
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            List<Document> attaches = quiz.getList("attaches", Document.class);
+            List<String> attaches = quiz.containsKey("attaches") ?
+                    quiz.getList("attaches", String.class) : new ArrayList<>();
 
             if (db instanceof SchoolQuizRepository) {
 
                 Document config = irysc.gachesefid.Utility.Utility.getConfig();
-                if (config.getBoolean("school_quiz_attaches_just_link") && file != null)
+                if (config.getBoolean("school_quiz_attaches_just_link"))
                     return JSON_NOT_ACCESS;
 
                 if (attaches.size() >= config.getInteger("schoolQuizAttachesMax"))
@@ -557,49 +557,33 @@ public class QuizController {
                     );
             }
 
-            if (link != null && !LinkValidator.isValid(link))
+            String base = db instanceof SchoolQuizRepository ?
+                    SchoolQuizRepository.FOLDER :
+                    IRYSCQuizRepository.FOLDER;
+
+            if (db instanceof SchoolQuizRepository &&
+                    file.getSize() > MAX_QUIZ_ATTACH_SIZE)
                 return generateErr(
-                        "لینک موردنظر نامعتبر است."
+                        "حداکثر حجم مجاز، " + MAX_QUIZ_ATTACH_SIZE + " مگ است."
                 );
 
-            ObjectId id = new ObjectId();
+            String fileType = uploadPdfOrMultimediaFile(file);
+            if (fileType == null)
+                return generateErr(
+                        "فرمت فایل موردنظر معتبر نمی باشد."
+                );
 
-            Document doc = new Document("title", title)
-                    .append("is_external_link", link != null)
-                    .append("_id", id);
+            String filename = FileUtils.uploadFile(file, base);
+            if (filename == null)
+                return JSON_UNKNOWN_UPLOAD_FILE;
 
-            if (link != null)
-                doc.put("link", link);
-            else {
+            attaches.add(filename);
+            quiz.put("attaches", attaches);
 
-                String base = db instanceof SchoolQuizRepository ?
-                        SchoolQuizRepository.FOLDER :
-                        IRYSCQuizRepository.FOLDER;
-
-                if (db instanceof SchoolQuizRepository &&
-                        file.getSize() > MAX_QUIZ_ATTACH_SIZE)
-                    return generateErr(
-                            "حداکثر حجم مجاز، " + MAX_QUIZ_ATTACH_SIZE + " مگ است."
-                    );
-
-                String fileType = uploadPdfOrMultimediaFile(file);
-                if (fileType == null)
-                    return generateErr(
-                            "فرمت فایل موردنظر معتبر نمی باشد."
-                    );
-
-                String filename = FileUtils.uploadFile(file, base + "/attaches");
-                if (filename == null)
-                    return JSON_UNKNOWN_UPLOAD_FILE;
-
-                doc.put("link", filename);
-            }
-
-            attaches.add(doc);
             db.replaceOne(quizId, quiz);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                    "id", id.toString()
+                    "url", STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + filename
             );
 
         } catch (Exception x) {
@@ -610,31 +594,24 @@ public class QuizController {
     public static String removeAttach(Common db,
                                       ObjectId userId,
                                       ObjectId quizId,
-                                      ObjectId attachId) {
+                                      String attach) {
 
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            List<Document> attaches = quiz.getList("attaches", Document.class);
-            Document doc = searchInDocumentsKeyVal(
-                    attaches, "_id", attachId
-            );
+            List<String> attaches = quiz.containsKey("attaches") ?
+                    quiz.getList("attaches", String.class) : new ArrayList<>();
 
-            if (doc == null)
-                return JSON_NOT_VALID_ID;
+            String[] splited = attach.split("/");
+            System.out.println(splited[splited.length - 1]);
 
-            if (!doc.getBoolean("is_external_link")) {
+            int idx = attaches.indexOf(splited[splited.length - 1]);
+            if(idx < 0)
+                return JSON_NOT_VALID_PARAMS;
 
-                String base = db instanceof SchoolQuizRepository ?
-                        SchoolQuizRepository.FOLDER :
-                        IRYSCQuizRepository.FOLDER;
-
-                FileUtils.removeFile(doc.getString("link"), base + "/attaches");
-
-            }
-
-            attaches.remove(doc);
+            FileUtils.removeFile(splited[splited.length - 1], IRYSCQuizRepository.FOLDER);
+            attaches.remove(idx);
             db.replaceOne(quizId, quiz);
 
             return JSON_OK;
@@ -1011,6 +988,7 @@ public class QuizController {
             Utilities.updateQuestionsStat(questions, questionsStat);
 
             Document config = getConfig();
+
             if(
                     (config.containsKey("quiz_money") &&
                             config.getInteger("quiz_money") > 0) ||
@@ -1020,14 +998,37 @@ public class QuizController {
             ) {
                 List<Document> rankingList = quiz.getList("ranking_list", Document.class);
 
+                String date = irysc.gachesefid.Utility.Utility.getSolarDate(
+                        quiz.getLong("start")
+                ).split(" ")[0];
+                String quizName = quiz.getString("title");
+
+                System.out.println("salam");
+
                 if(rankingList.size() > 0)
-                    giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config);
+                    giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config, 1,
+                            date, quizName
+                    );
 
                 if(rankingList.size() > 1)
-                    giveQuizGiftToUser(rankingList.get(1).getObjectId("_id"), config);
+                    giveQuizGiftToUser(rankingList.get(1).getObjectId("_id"), config, 2,
+                            date, quizName
+                    );
 
                 if(rankingList.size() > 2)
-                    giveQuizGiftToUser(rankingList.get(2).getObjectId("_id"), config);
+                    giveQuizGiftToUser(rankingList.get(2).getObjectId("_id"), config, 3,
+                            date, quizName
+                    );
+
+                if(rankingList.size() > 3)
+                    giveQuizGiftToUser(rankingList.get(3).getObjectId("_id"), config, 4,
+                            date, quizName
+                    );
+
+                if(rankingList.size() > 4)
+                    giveQuizGiftToUser(rankingList.get(4).getObjectId("_id"), config, 5,
+                            date, quizName
+                    );
             }
 
 
@@ -1038,27 +1039,60 @@ public class QuizController {
         }
     }
 
-    private static void giveQuizGiftToUser(ObjectId userId, Document config) {
+    private static void giveQuizGiftToUser(ObjectId userId, Document config,
+                                           int rank, String data, String quizName) {
+
+        if(rank > 3 && !config.containsKey("forth_rank_cert_id"))
+            return;
 
         Document user = userRepository.findById(userId);
         if(user == null)
             return;
 
-        if(
-                (config.containsKey("quiz_money") &&
-                        config.getInteger("quiz_money") > 0)
-        )
-            user.put("money", user.getInteger("money") + config.getInteger("quiz_money"));
+        if(rank < 4) {
+            if (
+                    (config.containsKey("quiz_money") &&
+                            config.getInteger("quiz_money") > 0)
+            )
+                user.put("money", user.getInteger("money") + config.getInteger("quiz_money"));
 
-        if(
-                (config.containsKey("quiz_coin") &&
-                        config.getDouble("quiz_coin") > 0)
-        )
-            user.put("coin", user.getDouble("coin") + config.getDouble("quiz_coin"));
+            if (
+                    (config.containsKey("quiz_coin") &&
+                            config.getDouble("quiz_coin") > 0)
+            )
+                user.put("coin", user.getDouble("coin") + config.getDouble("quiz_coin"));
 
-        userRepository.replaceOne(
-                userId, user
-        );
+            userRepository.replaceOne(
+                    userId, user
+            );
+        }
+
+        JSONArray params = new JSONArray();
+        params.put(user.getString("first_name") + " " + user.getString("last_name"));
+        params.put(quizName);
+        params.put(data);
+        params.put(rank + "");
+
+        if(rank == 1 && config.containsKey("first_rank_cert_id"))
+            addUserToCert(null, config.getObjectId("first_rank_cert_id"),
+                    user.getString("NID"), params);
+
+        if(rank == 2 && config.containsKey("second_rank_cert_id"))
+            addUserToCert(null, config.getObjectId("second_rank_cert_id"),
+                    user.getString("NID"), params);
+
+        if(rank == 3 && config.containsKey("third_rank_cert_id"))
+            addUserToCert(null, config.getObjectId("third_rank_cert_id"),
+                    user.getString("NID"), params);
+
+        if(rank == 4 && config.containsKey("forth_rank_cert_id"))
+            addUserToCert(null, config.getObjectId("forth_rank_cert_id"),
+                    user.getString("NID"), params);
+
+        if(rank == 5 && config.containsKey("fifth_rank_cert_id"))
+            addUserToCert(null, config.getObjectId("fifth_rank_cert_id"),
+                    user.getString("NID"), params);
+
     }
 
     public static String getRegistrable(Common db, boolean isAdmin,

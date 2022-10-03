@@ -212,7 +212,9 @@ public class Utilities {
             ObjectId gradeId,
             ObjectId lessonId,
             ObjectId subjectId,
-            String level) throws InvalidFieldsException {
+            String level,
+            String author
+    ) throws InvalidFieldsException {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
@@ -256,6 +258,9 @@ public class Utilities {
 
         if (subjectId != null)
             filters.add(eq("subject_id", subjectId));
+
+        if (author != null)
+            filters.add(eq("author", author));
 
         return filters;
     }

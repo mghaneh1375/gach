@@ -795,9 +795,9 @@ public class QuestionController extends Utilities {
                 ,
                 new BasicDBObject("_id", 1)
                         .append("q_no", 1)
-                        .append("q_hard_no", 1)
-                        .append("q_mid_no", 1)
-                        .append("q_easy_no", 1)
+                        .append("q_no_hard", 1)
+                        .append("q_no_mid", 1)
+                        .append("q_no_easy", 1)
                         .append("name", 1)
                         .append("lesson", 1)
                         .append("grade", 1)
@@ -882,27 +882,47 @@ public class QuestionController extends Utilities {
                     .put("limitHard", grades.get(gradeId).getInteger("q_no_hard"))
                     .put("limitMid", grades.get(gradeId).getInteger("q_no_mid"))
                     .put("name", grades.get(gradeId).getString("name"))
+                    .put("desc", grades.get(gradeId).getString("name"))
                     .put("id", gradeId.toString())
                     .put("section", "grade")
             );
         }
 
-        ArrayList<Document> docs = questionTagRepository.find(null, null);
+        ArrayList<Document> docs = questionTagRepository.find(
+                config.containsKey("min_question_for_custom_quiz") ?
+                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+                        gt("q_no", 0)
+                , null);
+
         for (Document doc : docs) {
             jsonArray.put(new JSONObject()
                     .put("id", doc.getInteger("code"))
                     .put("name", doc.getString("tag"))
-                    .put("limitEasy", doc.getOrDefault("q_no", 1))
+                    .put("desc", doc.getString("tag"))
+                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
+                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
+                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
                     .put("section", "tag")
             );
         }
 
-//        for (int i = 0; i < jsonArray.length(); i++) {
-//            jsonArray.put(i, jsonArray.getJSONObject(i).put("name",
-//                    jsonArray.getJSONObject(i).getString("name") + "  -  " +
-//                            jsonArray.getJSONObject(i).getString("section"))
-//            );
-//        }
+        ArrayList<Document> authors = authorRepository.find(
+                config.containsKey("min_question_for_custom_quiz") ?
+                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+                        gt("q_no", 0)
+                , null);
+
+        for (Document doc : authors) {
+            jsonArray.put(new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("name", doc.getString("name"))
+                    .put("desc", doc.getString("name"))
+                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
+                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
+                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
+                    .put("section", "author")
+            );
+        }
 
         return generateSuccessMsg("data", jsonArray);
     }
@@ -914,13 +934,14 @@ public class QuestionController extends Utilities {
             ObjectId lessonId,
             ObjectId subjectId,
             int questionsNo,
-            String level
+            String level,
+            String author
     ) {
 
         try {
 
             ArrayList<Bson> filters = fetchFilter(tag, gradeId,
-                    lessonId, subjectId, level
+                    lessonId, subjectId, level, author
             );
 
             if (questionRepository.count(and(filters)) < questionsNo)

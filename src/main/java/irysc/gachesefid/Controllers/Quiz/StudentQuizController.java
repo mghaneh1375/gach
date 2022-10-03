@@ -1112,6 +1112,7 @@ public class StudentQuizController {
 
             if (
                     !jsonObject.has("tag") &&
+                            !jsonObject.has("author") &&
                             !jsonObject.has("gradeId") &&
                             !jsonObject.has("lessonId") &&
                             !jsonObject.has("subjectId")
@@ -1132,6 +1133,7 @@ public class StudentQuizController {
                         getOrDefaultObjectId(jsonObject, "gradeId"),
                         getOrDefaultObjectId(jsonObject, "lessonId"),
                         getOrDefaultObjectId(jsonObject, "subjectId"),
+                        (String) getOrDefault(jsonObject, "author", null),
                         Integer.parseInt(jsonObject.get("qNo").toString()),
                         (String) getOrDefault(jsonObject, "level", null)
                 );
@@ -1179,11 +1181,12 @@ public class StudentQuizController {
             ObjectId gradeId,
             ObjectId lessonId,
             ObjectId subjectId,
+            String author,
             int questionsNo,
             String level) throws InvalidFieldsException {
 
         ArrayList<Bson> filters = fetchFilter(tag, gradeId,
-                lessonId, subjectId, level
+                lessonId, subjectId, level, author
         );
 
         List<Document> docs = questionRepository.find(and(filters), JUST_ID);

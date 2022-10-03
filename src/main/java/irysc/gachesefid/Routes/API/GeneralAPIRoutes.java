@@ -174,11 +174,12 @@ public class GeneralAPIRoutes extends Router {
                                           @RequestParam(required = false, value = "gradeId") ObjectId gradeId,
                                           @RequestParam(required = false, value = "lessonId") ObjectId lessonId,
                                           @RequestParam(required = false, value = "subjectId") ObjectId subjectId,
+                                          @RequestParam(required = false, value = "author") String author,
                                           @RequestParam(required = false, value = "tag") String tag
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
         return QuestionController.checkAvailableQuestions(
                 getUser(request).getObjectId("_id"),
-                tag, gradeId, lessonId, subjectId, qNo, level
+                tag, gradeId, lessonId, subjectId, qNo, level, author
         );
     }
 

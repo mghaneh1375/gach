@@ -121,8 +121,7 @@ public class Jobs implements Runnable {
 
             subjectRepository.bulkWrite(writes);
             try {
-//                Thread.sleep(60000);
-                Thread.sleep(1000);
+                Thread.sleep(60000);
                 calcTagQNo();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -174,12 +173,74 @@ public class Jobs implements Runnable {
                                         new BasicDBObject("q_no_easy", easy)
                                                 .append("q_no_mid", mid)
                                                 .append("q_no_hard", hard)
+                                                .append("q_no", docs.size())
                                 )
                         )
                 );
             }
 
             questionTagRepository.bulkWrite(writes);
+
+            try {
+                Thread.sleep(60000);
+                calcAuthorsQNo();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        void calcAuthorsQNo() {
+
+            JSONArray authors = questionRepository.distinctTags("author");
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+
+            for(int i = 0; i < authors.length(); i++) {
+
+                String author = authors.getString(i);
+
+                Document authorDoc = authorRepository.findOne(
+                        eq("name", author), null
+                );
+
+                if(authorDoc == null)
+                    continue;
+
+                ArrayList<Document> docs = questionRepository.find(
+                        eq("author", author),
+                        new BasicDBObject("level", 1)
+                );
+
+                int easy = 0, mid = 0, hard = 0;
+
+                for(Document doc : docs) {
+                    switch (doc.getString("level")) {
+                        case "easy":
+                            easy++;
+                            break;
+                        case "mid":
+                            mid++;
+                            break;
+                        case "hard":
+                            hard++;
+                            break;
+                    }
+                }
+
+                writes.add(
+                        new UpdateOneModel<>(
+                                eq("_id", authorDoc.getObjectId("_id")),
+                                new BasicDBObject("$set",
+                                        new BasicDBObject("q_no_easy", easy)
+                                                .append("q_no_mid", mid)
+                                                .append("q_no_hard", hard)
+                                                .append("q_no", docs.size())
+                                )
+                        )
+                );
+            }
+
+            authorRepository.bulkWrite(writes);
         }
     }
 }

@@ -14,9 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.regex;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.authorRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
@@ -43,6 +44,10 @@ public class AuthorController {
         if(document == null)
             return JSON_NOT_VALID_ID;
 
+        String oldName = data.has("name") &&
+                !data.getString("name").equals(document.getString("name")) ?
+                document.getString("name") : null;
+
         for (String key : data.keySet()) {
             document.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
@@ -51,6 +56,10 @@ public class AuthorController {
         }
 
         authorRepository.replaceOne(authorId, document);
+        if(oldName != null)
+            questionRepository.updateMany(eq("author", oldName),
+                set("author", document.getString("name"))
+            );
 
         return JSON_OK;
     }

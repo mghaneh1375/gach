@@ -4,12 +4,14 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
@@ -18,8 +20,7 @@ import java.util.stream.Collectors;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class RegularQuizController extends QuizAbstract {
@@ -180,8 +181,15 @@ public class RegularQuizController extends QuizAbstract {
                     .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
 
             if(isAdmin) {
+                JSONArray attaches = new JSONArray();
+                if(quiz.containsKey("attaches")) {
+                    for (String attach : quiz.getList("attaches", String.class))
+                        attaches.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+                }
+
                 jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
                 jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+                jsonObject.put("attaches", attaches);
             }
         }
 

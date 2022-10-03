@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Config;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -10,12 +11,47 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.in;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 
 public class ConfigController {
+
+    public static String getCert() {
+
+        Document config = Utility.getConfig();
+        JSONObject jsonObject = new JSONObject();
+
+        ArrayList<Document> certifications = certificateRepository.find(
+                null,
+                new BasicDBObject("_id", 1)
+                        .append("title", 1)
+        );
+
+        JSONArray all = new JSONArray();
+
+        for(Document cert : certifications) {
+
+            JSONObject jsonObject1 = new JSONObject()
+                    .put("id", cert.getObjectId("_id").toString())
+                    .put("item", cert.getString("title"));
+
+            all.put(jsonObject1);
+        }
+
+        jsonObject.put("all", all);
+        jsonObject.put("first", config.getOrDefault("first_rank_cert_id", "").toString());
+        jsonObject.put("second", config.getOrDefault("second_rank_cert_id", "").toString());
+        jsonObject.put("third", config.getOrDefault("third_rank_cert_id", "").toString());
+        jsonObject.put("forth", config.getOrDefault("forth_rank_cert_id", "").toString());
+        jsonObject.put("fifth", config.getOrDefault("fifth_rank_cert_id", "").toString());
+
+        return Utility.generateSuccessMsg(
+                "data", jsonObject
+        );
+    }
 
     public static String get() {
 
@@ -57,13 +93,11 @@ public class ConfigController {
 
             Object o = data.get(key);
 
-            if (o instanceof ObjectId) {
-                if (key.contains("CertId")) {
-                    if (!certificateRepository.exist(
-                            eq("_id", new ObjectId(o.toString()))
-                    ))
-                        return JSON_NOT_VALID_PARAMS;
-                }
+            if (key.contains("CertId")) {
+                if (!certificateRepository.exist(
+                        eq("_id", new ObjectId(o.toString()))
+                ))
+                    return JSON_NOT_VALID_PARAMS;
             }
         }
 
@@ -73,14 +107,8 @@ public class ConfigController {
             if(o instanceof JSONArray)
                 o = new ArrayList<>(((JSONArray) o).toList());
 
-            if(o instanceof ObjectId) {
-                if(key.contains("CertId")) {
-                    if(!certificateRepository.exist(
-                            eq("_id", new ObjectId(o.toString()))
-                    ))
-                        return JSON_NOT_VALID_PARAMS;
-                }
-            }
+            if (key.contains("CertId"))
+                o = new ObjectId(o.toString());
 
             boolean hasLittleChar = false;
             for(int i = 0; i < key.length(); i++) {
