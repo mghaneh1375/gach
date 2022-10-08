@@ -151,15 +151,38 @@ public class QuizController {
 
     }
 
-    public static String getAll(Common db, ObjectId userId) {
+    public static String getAll(Common db, ObjectId userId,
+                                String name,
+                                Long startDateSolar,
+                                Long startDateSolarEndLimit,
+                                Long startRegistryDateSolar,
+                                Long startRegistrySolarEndLimit
+    ) {
 
         ArrayList<Document> docs;
+        ArrayList<Bson> filters = new ArrayList<>();
+        if(userId != null)
+            filters.add(eq("created_by", userId));
 
-        if (userId != null)
-            docs = db.find(eq("created_by", userId), QUIZ_DIGEST, Sorts.descending("created_at"));
-        else
-            docs = db.find(null, QUIZ_DIGEST_MANAGEMENT, Sorts.descending("created_at"));
+        if(name != null)
+            filters.add(regex("title", Pattern.compile(Pattern.quote(name), Pattern.CASE_INSENSITIVE)));
 
+        if(startDateSolar != null)
+            filters.add(gte("start", startDateSolar));
+
+        if(startDateSolarEndLimit != null)
+            filters.add(lte("start", startDateSolarEndLimit));
+
+        if(startRegistryDateSolar != null)
+            filters.add(gte("start_registry", startRegistryDateSolar));
+
+        if(startRegistrySolarEndLimit != null)
+            filters.add(lte("start_registry", startRegistrySolarEndLimit));
+
+        docs = db.find(filters.size() == 0 ? null : and(filters),
+                userId == null ? QUIZ_DIGEST_MANAGEMENT : QUIZ_DIGEST,
+                Sorts.descending("created_at")
+        );
         QuizAbstract quizAbstract;
 
         JSONArray jsonArray = new JSONArray();
@@ -393,12 +416,6 @@ public class QuizController {
                     continue;
                 }
 
-
-                if (quiz.getLong("start") >= System.currentTimeMillis()) {
-                    excepts.put("مورد " + (i + 1) + " " + "زمان آزمون فرارسیده و امکان حذف آن وجود ندارد.");
-                    continue;
-                }
-
                 db.deleteOne(quizId);
                 db.cleanRemove(quiz);
                 removedIds.put(quizId);
@@ -410,17 +427,7 @@ public class QuizController {
             }
         }
 
-        if (excepts.length() == 0)
-            return generateSuccessMsg(
-                    "excepts", "تمامی آزمون ها به درستی حذف شدند",
-                    new PairValue("removedIds", removedIds)
-            );
-
-        return generateSuccessMsg(
-                "excepts",
-                "بجز موارد زیر سایرین به درستی حذف گردیدند. " + excepts,
-                new PairValue("removedIds", removedIds)
-        );
+        return returnRemoveResponse(excepts, removedIds);
 
     }
 
@@ -604,7 +611,6 @@ public class QuizController {
                     quiz.getList("attaches", String.class) : new ArrayList<>();
 
             String[] splited = attach.split("/");
-            System.out.println(splited[splited.length - 1]);
 
             int idx = attaches.indexOf(splited[splited.length - 1]);
             if(idx < 0)

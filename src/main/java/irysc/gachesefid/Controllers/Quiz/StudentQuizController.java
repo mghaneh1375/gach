@@ -71,6 +71,10 @@ public class StudentQuizController {
     ) {
         try {
             Document quiz = hasProtectedAccess(db, userId, quizId);
+
+            if(!quiz.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج فرانرسیده است.");
+
             long curr = System.currentTimeMillis();
 
             if (isStudent && quiz.getLong("end") > curr)
@@ -94,21 +98,19 @@ public class StudentQuizController {
             if (questions.containsKey("_ids"))
                 qNo = questions.getList("_ids", ObjectId.class).size();
 
+            List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for(String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+
             JSONObject quizJSON = new JSONObject()
                     .put("title", quiz.getString("title"))
                     .put("questionsNo", qNo)
-                    .put("description", quiz.getOrDefault("description", ""))
+                    .put("description", quiz.getOrDefault("desc", ""))
+                    .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
                     .put("mode", quiz.getString("mode"))
-                    .put("attaches", new JSONArray()
-                            .put(new JSONObject()
-                                    .put("name", "a.jpg")
-                                    .put("link", "https://google.com")
-                            )
-                            .put(new JSONObject()
-                                    .put("name", "b.pdf")
-                                    .put("link", "https://varzesh3.com")
-                            )
-                    )
+                    .put("attaches", jsonArray)
                     .put("duration", neededTime);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
@@ -427,24 +429,20 @@ public class StudentQuizController {
                     delay;
 
             db.replaceOne(quizId, doc);
+            List<String> attaches = (List<String>) doc.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for(String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
 
             JSONObject quizJSON = new JSONObject()
                     .put("title", doc.getString("title"))
                     .put("id", doc.getObjectId("_id").toString())
                     .put("generalMode", db instanceof IRYSCQuizRepository ? "IRYSC" : "school")
                     .put("questionsNo", doc.get("questions", Document.class).getList("_ids", ObjectId.class).size())
-                    .put("description", doc.getOrDefault("description", ""))
+                    .put("description", doc.getOrDefault("desc", ""))
                     .put("mode", doc.getString("mode"))
-                    .put("attaches", new JSONArray()
-                            .put(new JSONObject()
-                                    .put("name", "a.jpg")
-                                    .put("link", "https://google.com")
-                            )
-                            .put(new JSONObject()
-                                    .put("name", "b.pdf")
-                                    .put("link", "https://varzesh3.com")
-                            )
-                    )
+                    .put("attaches", jsonArray)
                     .put("refresh", 1) //Math.abs(new Random().nextInt(10)) + 5
                     .put("duration", neededTime)
                     .put("reminder", reminder)

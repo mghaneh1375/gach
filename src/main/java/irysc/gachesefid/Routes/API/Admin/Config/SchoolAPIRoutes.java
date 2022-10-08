@@ -36,10 +36,11 @@ public class SchoolAPIRoutes extends Router {
                                @RequestParam(value = "state", required = false) ObjectId stateId,
                                @RequestParam(value = "city", required = false) ObjectId cityId,
                                @RequestParam(value = "grade", required = false) String grade,
+                               @RequestParam(value = "hasUser", required = false) Boolean hasUser,
                                @RequestParam(value = "kind", required = false) String kind
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return UserController.fetchSchools(grade, kind, cityId, stateId);
+        return UserController.fetchSchools(grade, kind, cityId, stateId, hasUser);
     }
 
     @DeleteMapping(value = "/remove")

@@ -960,9 +960,14 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String fetchSchools(String grade, String kind, ObjectId cityId, ObjectId stateId) {
+    public static String fetchSchools(String grade, String kind,
+                                      ObjectId cityId, ObjectId stateId, Boolean hasUser
+    ) {
 
         ArrayList<Bson> filter = new ArrayList<>();
+
+        if (grade != null)
+            filter.add(eq("grade", grade));
 
         if (grade != null)
             filter.add(eq("grade", grade));
@@ -972,6 +977,9 @@ public class UserController {
 
         if (cityId != null)
             filter.add(eq("city_id", cityId));
+
+        if (hasUser != null)
+            filter.add(exists("user_id", hasUser));
 
         ArrayList<Document> docs = schoolRepository.find(
                 filter.size() == 0 ? null : and(filter),

@@ -169,7 +169,12 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "getAll/{mode}")
     @ResponseBody
     public String getAll(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class) @NotBlank String mode
+                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class) @NotBlank String mode,
+                         @RequestParam(required = false, value = "name") String name,
+                         @RequestParam(required = false, value = "startDateSolar") Long startDateSolar,
+                         @RequestParam(required = false, value = "startDateSolarEndLimit") Long startDateSolarEndLimit,
+                         @RequestParam(required = false, value = "startRegistryDateSolar") Long startRegistryDateSolar,
+                         @RequestParam(required = false, value = "startRegistrySolarEndLimit") Long startRegistrySolarEndLimit
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -177,9 +182,15 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin)
-            return QuizController.getAll(iryscQuizRepository, null);
+            return QuizController.getAll(iryscQuizRepository, null,
+                    name, startDateSolar, startDateSolarEndLimit,
+                    startRegistryDateSolar, startRegistrySolarEndLimit
+            );
 
-        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"));
+        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
+                name, startDateSolar, startDateSolarEndLimit,
+                startRegistryDateSolar, startRegistrySolarEndLimit
+        );
     }
 
     @GetMapping(value = "/get/{mode}/{quizId}")

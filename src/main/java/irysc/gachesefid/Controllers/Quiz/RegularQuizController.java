@@ -137,7 +137,7 @@ public class RegularQuizController extends QuizAbstract {
                         quiz.containsKey("report_status") &&
                         quiz.getString("report_status").equalsIgnoreCase("ready");
 
-                if(canSeeResult)
+                if(canSeeResult || 1 == 1)
                     jsonObject.put("status", "finished")
                             .put("questionsCount", questionsCount);
                 else
@@ -186,6 +186,14 @@ public class RegularQuizController extends QuizAbstract {
                     for (String attach : quiz.getList("attaches", String.class))
                         attaches.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
                 }
+
+                jsonObject.put("lenMode", quiz.containsKey("duration") ? "custom" : "question");
+                if(quiz.containsKey("duration"))
+                    jsonObject.put("len", quiz.getInteger("duration"));
+
+                jsonObject.put("minusMark", quiz.getOrDefault("minus_mark", false));
+                jsonObject.put("backEn", quiz.getOrDefault("back_en", false));
+                jsonObject.put("permute", quiz.getOrDefault("permute", false));
 
                 jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
                 jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));

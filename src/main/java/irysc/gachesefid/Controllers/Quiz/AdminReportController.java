@@ -167,10 +167,10 @@ public class AdminReportController {
 //                            !quiz.getString("report_status").equalsIgnoreCase("ready")
 //            )
 //                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
-//
-//            if(!isAdmin &&
-//                    !quiz.getBoolean("show_results_after_correction"))
-//                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            if(user != null &&
+                    !quiz.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
             List<Document> students = quiz.getList("students", Document.class);
 
@@ -429,6 +429,10 @@ public class AdminReportController {
                                                ObjectId quizId, ObjectId studentId) {
         try {
             Document doc = hasAccess(db, userId, quizId);
+
+            if(!doc.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج فرانرسیده است.");
+
             List<Document> students = doc.getList("students", Document.class);
 
             Document student = searchInDocumentsKeyVal(

@@ -4,10 +4,12 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
+import java.io.File;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
@@ -24,10 +26,11 @@ public class Jobs implements Runnable {
         timer.schedule(new TokenHandler(), 0, 86400000); // 1 day
         timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
+        timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
-    class TokenHandler extends TimerTask {
+    private static class TokenHandler extends TimerTask {
 
         public void run() {
 
@@ -42,7 +45,7 @@ public class Jobs implements Runnable {
         }
     }
 
-    class SiteStatsHandler extends TimerTask {
+    private static class SiteStatsHandler extends TimerTask {
 
         public void run() {
             SCHOOLS = schoolRepository.count(exists("user_id"));
@@ -51,7 +54,7 @@ public class Jobs implements Runnable {
         }
     }
 
-    class RemoveRedundantCustomQuizzes extends TimerTask {
+    private static class RemoveRedundantCustomQuizzes extends TimerTask {
 
         @Override
         public void run() {
@@ -66,7 +69,7 @@ public class Jobs implements Runnable {
         }
     }
 
-    class CalcSubjectQuestions extends TimerTask {
+    private static class CalcSubjectQuestions extends TimerTask {
 
         @Override
         public void run() {
@@ -243,4 +246,54 @@ public class Jobs implements Runnable {
             authorRepository.bulkWrite(writes);
         }
     }
+
+    private static class RemoveRedundantAttaches extends TimerTask {
+
+        @Override
+        public void run() {
+
+            File ckFolder = new File(
+                    DEV_MODE ? FileUtils.uploadDir_dev + "ck" :
+                    FileUtils.uploadDir + "ck"
+            );
+
+            if (!ckFolder.exists() || !ckFolder.isDirectory())
+                return;
+
+            File[] allFiles = ckFolder.listFiles();
+            if(allFiles == null || allFiles.length == 0)
+                return;
+
+            ArrayList<Document> quizzes = iryscQuizRepository.find(
+                    or(
+                            exists("desc"),
+                            exists("desc_after")
+                    ), new BasicDBObject("desc", 1).append("desc_after", 1)
+            );
+
+            for(File f : allFiles) {
+
+                if(f.isDirectory() || f.getName().startsWith("."))
+                    continue;
+
+                boolean find = false;
+
+                for(Document quiz : quizzes) {
+                    if(
+                            (quiz.containsKey("desc") && quiz.getString("desc").contains(f.getName())) ||
+                            (quiz.containsKey("desc_after") && quiz.getString("desc_after").contains(f.getName()))
+                    ) {
+                        find = true;
+                        break;
+                    }
+                }
+
+                if(!find)
+                    f.delete();
+            }
+
+        }
+
+    }
+
 }
