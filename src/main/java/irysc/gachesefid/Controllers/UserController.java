@@ -80,7 +80,7 @@ public class UserController {
             return generateSuccessMsg("via", "both");
 
         if (user.containsKey("phone"))
-            return generateSuccessMsg("via", "phone");
+            return generateSuccessMsg("via", "sms");
 
         return generateSuccessMsg("via", "mail");
     }
