@@ -90,24 +90,31 @@ public class GeneralAPIRoutes extends Router {
         } else {
 
             PairValue p = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
-            String referenceId = (String) p.getKey();
-            String section = (String) p.getValue();
-
-            if (referenceId == null)
+            if(p == null)
                 modelAndView.addObject("status", "fail");
             else {
-                modelAndView.addObject("status", "success");
-                modelAndView.addObject("refId", referenceId);
-                modelAndView.addObject("section", section);
 
-                modelAndView.addObject("financeUrl", frontEndUrl + "finantialReport");
-                modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + refId);
-                modelAndView.addObject("myQuizzesUrl",
-                        section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
-                            frontEndUrl + "myIRYSCQuizzes" :
-                        section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()) ?
-                            frontEndUrl + "myCustomQuizzes" : frontEndUrl
-                );
+                String referenceId = (String) p.getKey();
+
+                if (referenceId == null)
+                    modelAndView.addObject("status", "fail");
+                else {
+
+                    String section = (String) p.getValue();
+                    
+                    modelAndView.addObject("status", "success");
+                    modelAndView.addObject("refId", referenceId);
+                    modelAndView.addObject("section", section);
+
+                    modelAndView.addObject("financeUrl", frontEndUrl + "finantialReport");
+                    modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + refId);
+                    modelAndView.addObject("myQuizzesUrl",
+                            section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
+                                    frontEndUrl + "myIRYSCQuizzes" :
+                                    section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()) ?
+                                            frontEndUrl + "myCustomQuizzes" : frontEndUrl
+                    );
+                }
             }
         }
 
