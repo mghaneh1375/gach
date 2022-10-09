@@ -424,7 +424,8 @@ public class QuestionController extends Utilities {
                 if (!subjectsCounter.containsKey(subjectId))
                     subjectsCounter.put(subjectId, (Integer) subject.getOrDefault("q_no", 0));
 
-                Document author = authorRepository.findBySecKey(getCellValue(row.getCell(3)));
+                int authorCode = (int) getCellValue(row.getCell(3));
+                Document author = authorRepository.findBySecKey(String.format("%03d", authorCode));
                 if (author == null) {
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, "کد مولف نامعتبر است."));
