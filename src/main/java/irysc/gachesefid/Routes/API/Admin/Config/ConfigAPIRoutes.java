@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -94,6 +95,6 @@ public class ConfigAPIRoutes extends Router {
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return ConfigController.update(new JSONObject(jsonStr));
+        return ConfigController.update(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 }

@@ -647,7 +647,7 @@ public class UserController {
 
     public static String forgetPass(JSONObject jsonObject) {
 
-        String NID = Utility.convertPersianDigits(jsonObject.getString("NID"));
+        String NID = jsonObject.getString("NID");
         if (!Utility.validationNationalCode(NID))
             return JSON_NOT_VALID_PARAMS;
 

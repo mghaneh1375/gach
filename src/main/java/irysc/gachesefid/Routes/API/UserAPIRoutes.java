@@ -406,7 +406,7 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/resendCode")
     @ResponseBody
     public String resendCode(@RequestBody @JSONConstraint(params = {"token", "username"}) String json) {
-        return UserController.resend(new JSONObject(json));
+        return UserController.resend(convertPersian(new JSONObject(json)));
     }
 
     @PostMapping(value = "/activate")
@@ -497,7 +497,7 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/forgetPassword")
     @ResponseBody
     public String forgetPassword(@RequestBody @JSONConstraint(params = {"NID", "authVia"}) String json) {
-        return UserController.forgetPass(new JSONObject(json));
+        return UserController.forgetPass(convertPersian(new JSONObject(json)));
     }
 
     @PostMapping(value = "/checkCode")
@@ -638,10 +638,10 @@ public class UserAPIRoutes extends Router {
 
         if(doc.getBoolean("isAdmin"))
             return UserController.forceUpdateUsername(
-                    (Document)doc.get("user"), new JSONObject(json)
+                    (Document)doc.get("user"), convertPersian(new JSONObject(json))
             );
 
-        return UserController.updateUsername(new JSONObject(json));
+        return UserController.updateUsername(convertPersian(new JSONObject(json)));
     }
 
     @GetMapping(value = "/doChangeMail/{link}")
