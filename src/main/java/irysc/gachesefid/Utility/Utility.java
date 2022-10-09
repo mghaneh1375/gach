@@ -288,7 +288,7 @@ public class Utility {
                     key.equalsIgnoreCase("code") ||
                     key.equals("NID")
             )
-                jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
+                jsonObject.put(key, Utility.convertPersianDigits(jsonObject.get(key).toString()));
             else if (jsonObject.get(key) instanceof Integer)
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
