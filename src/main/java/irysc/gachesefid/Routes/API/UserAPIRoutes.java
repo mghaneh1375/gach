@@ -504,15 +504,15 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String checkCode(@RequestBody @StrongJSONConstraint(
             params = {"token", "username", "code"},
-            paramsType = {String.class, String.class, Positive.class}
+            paramsType = {String.class, Positive.class, Positive.class}
     ) String json) {
 
-        JSONObject jsonObject = new JSONObject(json);
+        JSONObject jsonObject = convertPersian(new JSONObject(json));
 
         Document doc = activationRepository.findOne(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("username", jsonObject.getString("username")),
+                        eq("username", jsonObject.get("username").toString()),
                         eq("code", jsonObject.getInt("code"))
                 ), new BasicDBObject("_id", 1)
         );
