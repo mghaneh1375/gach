@@ -758,44 +758,6 @@ public class Utility {
         return number;
     }
 
-    public static ArrayList<Object> paginate(Common repository,
-                                             ArrayList<Bson> constraints,
-                                             Integer page, Integer perPage,
-                                             Integer startRow, Integer endRow) {
-
-        ArrayList<Object> arrayList = new ArrayList<>();
-        Bson skip = null, limit = null;
-        Integer totalPages = null;
-        Integer lastRow = null;
-
-        if (page != null && page > 0) {
-            int perPageItems = (perPage == null) ? ITEMS_PER_PAGE : perPage;
-            skip = Aggregates.skip((page - 1) * perPageItems);
-            limit = Aggregates.limit(perPageItems);
-            int totalRows = repository.count((constraints.size() == 0) ? null : Filters.and(constraints));
-            totalPages = (int) Math.ceil((totalRows * 1.0) / perPageItems);
-        }
-
-        if (skip == null && startRow != null && endRow != null) {
-            skip = Aggregates.skip(Math.max(0, startRow - 1));
-            int perPageItems = Math.max(0, endRow - startRow);
-            limit = Aggregates.limit(perPageItems);
-
-            int totalRows = repository.count((constraints.size() == 0) ? null : and(constraints));
-
-            int currentLastRow = startRow + totalRows;
-            lastRow = currentLastRow <= endRow ? currentLastRow : -1;
-            totalPages = (int) Math.ceil((totalRows * 1.0) / perPageItems);
-        }
-
-        arrayList.add(skip);
-        arrayList.add(limit);
-        arrayList.add(totalPages);
-        arrayList.add(lastRow);
-
-        return arrayList;
-    }
-
     public static String getSolarDate(long time) {
 
         if(time < 1610494635)

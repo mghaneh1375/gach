@@ -146,7 +146,12 @@ public class UserService {
     }
 
     public Document whoAmI(HttpServletRequest req) {
-        return userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+        try {
+            return userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+        }
+        catch (Exception x) {
+            return null;
+        }
     }
 
     public Document whoAmI(String token) {

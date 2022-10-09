@@ -26,7 +26,13 @@ public class AuthorController {
 
     public static String addAuthor(JSONObject data) {
 
-        Document newDoc = new Document();
+        String code = Utility.getRandIntForSubjectId();
+        while (authorRepository.exist(eq("code", code)))
+            code = Utility.getRandIntForSubjectId();
+
+        Document newDoc = new Document(
+                "code", code
+        );
 
         for (String key : data.keySet()) {
             newDoc.put(
@@ -190,7 +196,8 @@ public class AuthorController {
             JSONObject jsonObject = new JSONObject().
                     put("id", doc.getObjectId("_id").toString())
                     .put("name", doc.getString("name"))
-                    .put("tag", "") //doc.getString("tag")
+                    .put("code", doc.getOrDefault("code", ""))
+                    .put("tag", doc.getOrDefault("tag", ""))
                     .put("sumPayment", sumPayment)
                     .put("lastTransaction", lastTransaction == 0 ? "" : Utility.getSolarDate(lastTransaction))
                     .put("questionCount", doc.getOrDefault("q_no", 0));

@@ -137,7 +137,7 @@ public class RegularQuizController extends QuizAbstract {
                         quiz.containsKey("report_status") &&
                         quiz.getString("report_status").equalsIgnoreCase("ready");
 
-                if(canSeeResult || 1 == 1)
+                if(canSeeResult)
                     jsonObject.put("status", "finished")
                             .put("questionsCount", questionsCount);
                 else
