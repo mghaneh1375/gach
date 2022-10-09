@@ -69,6 +69,15 @@ public class PayPing {
                     Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
                     if(quiz != null) {
                         quiz.put("status", "paid");
+
+                        PairValue p = irysc.gachesefid.Controllers.Quiz.Utility.getAnswersByteArrWithNeededTime(
+                                quiz.getList("questions", ObjectId.class)
+                        );
+
+                        quiz.put("answers", p.getValue());
+                        quiz.put("duration", p.getKey());
+                        quiz.put("start_at", null);
+
                         customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                     }
                 }
