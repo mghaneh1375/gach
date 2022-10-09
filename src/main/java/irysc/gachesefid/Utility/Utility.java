@@ -284,7 +284,10 @@ public class Utility {
     public static JSONObject convertPersian(JSONObject jsonObject) {
 
         for (String key : jsonObject.keySet()) {
-            if(key.toLowerCase().contains("password") || key.equalsIgnoreCase("code"))
+            if(key.toLowerCase().contains("password") ||
+                    key.equalsIgnoreCase("code") ||
+                    key.equals("NID")
+            )
                 jsonObject.put(key, Utility.convertPersianDigits(jsonObject.getString(key)));
             else if (jsonObject.get(key) instanceof Integer)
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
