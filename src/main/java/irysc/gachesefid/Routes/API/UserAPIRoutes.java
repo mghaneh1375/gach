@@ -503,8 +503,8 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/checkCode")
     @ResponseBody
     public String checkCode(@RequestBody @StrongJSONConstraint(
-            params = {"token", "username", "code"},
-            paramsType = {String.class, Positive.class, Positive.class}
+            params = {"token", "NID", "code"},
+            paramsType = {String.class, String.class, Positive.class}
     ) String json) {
 
         JSONObject jsonObject = convertPersian(new JSONObject(json));
@@ -512,7 +512,7 @@ public class UserAPIRoutes extends Router {
         Document doc = activationRepository.findOne(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("username", jsonObject.get("username").toString()),
+                        eq("username", jsonObject.get("NID").toString()),
                         eq("code", jsonObject.getInt("code"))
                 ), new BasicDBObject("_id", 1)
         );
