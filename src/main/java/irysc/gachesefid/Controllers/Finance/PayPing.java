@@ -145,24 +145,24 @@ public class PayPing {
 
         System.out.println("ref code is " + refCode);
 
-        if(1 == 1) {
-
-            Document transaction = transactionRepository.findOne(
-                    eq("ref_id", refId), null
-            );
-
-            transaction.put("sale_ref_id", saleRefId);
-            transaction.put("status", "success");
-
-            transactionRepository.replaceOne(
-                    transaction.getObjectId("_id"),
-                    transaction
-            );
-
-            new Thread(() -> completePay(transaction)).start();
-
-            return refId;
-        }
+//        if(1 == 1) {
+//
+//            Document transaction = transactionRepository.findOne(
+//                    eq("ref_id", refId), null
+//            );
+//
+//            transaction.put("sale_ref_id", saleRefId);
+//            transaction.put("status", "success");
+//
+//            transactionRepository.replaceOne(
+//                    transaction.getObjectId("_id"),
+//                    transaction
+//            );
+//
+//            new Thread(() -> completePay(transaction)).start();
+//
+//            return refId;
+//        }
 
         if (refCode.equalsIgnoreCase("0")) {
 
