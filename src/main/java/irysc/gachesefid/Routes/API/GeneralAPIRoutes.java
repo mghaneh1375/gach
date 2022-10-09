@@ -13,6 +13,7 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
@@ -88,16 +89,25 @@ public class GeneralAPIRoutes extends Router {
             modelAndView.addObject("status", "fail");
         } else {
 
-            String referenceId = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+            PairValue p = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+            String referenceId = (String) p.getKey();
+            String section = (String) p.getValue();
+
             if (referenceId == null)
                 modelAndView.addObject("status", "fail");
             else {
                 modelAndView.addObject("status", "success");
                 modelAndView.addObject("refId", referenceId);
+                modelAndView.addObject("section", section);
 
                 modelAndView.addObject("financeUrl", frontEndUrl + "finantialReport");
                 modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + refId);
-                modelAndView.addObject("myQuizzesUrl", frontEndUrl + "myQuizzes");
+                modelAndView.addObject("myQuizzesUrl",
+                        section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
+                            frontEndUrl + "myIRYSCQuizzes" :
+                        section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()) ?
+                            frontEndUrl + "myCustomQuizzes" : frontEndUrl
+                );
             }
         }
 

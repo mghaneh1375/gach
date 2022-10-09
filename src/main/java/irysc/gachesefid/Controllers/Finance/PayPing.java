@@ -136,7 +136,7 @@ public class PayPing {
 
     }
 
-    public static String checkPay(
+    public static PairValue checkPay(
             String refId,
             String refCode,
             Long saleOrderId,
@@ -188,10 +188,10 @@ public class PayPing {
                 new Thread(() -> completePay(transaction)).start();
 
                 System.out.println(res);
-                return refId;
+                return new PairValue(refId, transaction.getString("section"));
             }
             else if(res.startsWith("43"))
-                return refId;
+                return new PairValue(refId, transaction.getString("section"));
             else {
                 transaction.put("status", "fail");
                 transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
