@@ -412,13 +412,11 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/activate")
     @ResponseBody
     public String activate(@RequestBody @StrongJSONConstraint(
-            params = {"token", "username", "code"},
+            params = {"token", "NID", "code"},
             paramsType = {String.class, String.class, Positive.class}
     ) String json) {
 
-        JSONObject jsonObject = new JSONObject(json);
-
-        Utility.convertPersian(jsonObject);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
         int code = jsonObject.getInt("code");
         if (code < 100000 || code > 999990)
@@ -428,10 +426,10 @@ public class UserAPIRoutes extends Router {
 
             String password = UserController.activate(code,
                     jsonObject.getString("token"),
-                    jsonObject.getString("username")
+                    jsonObject.getString("NID")
             );
 
-            return userService.signIn(jsonObject.getString("username"),
+            return userService.signIn(jsonObject.getString("NID"),
                     password, false);
 
         } catch (Exception e) {
