@@ -56,14 +56,19 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "getRecpForQuiz/{mode}/{quizId}")
     @ResponseBody
     public String getRecpForQuiz(HttpServletRequest request,
-                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                 @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+            return StudentQuizController.getMyRecpForCustomQuiz(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
         return StudentQuizController.getMyRecp(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
-
     }
 
 

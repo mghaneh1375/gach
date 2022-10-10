@@ -147,7 +147,8 @@ public class AdminReportController {
     }
 
     public static String getStudentStat(Common db, Object user,
-                                        ObjectId quizId, ObjectId studentId) {
+                                        ObjectId quizId, ObjectId studentId,
+                                        boolean userIsNotLogin) {
 
         try {
 
@@ -157,19 +158,24 @@ public class AdminReportController {
                 return JSON_NOT_VALID_ID;
 
             Document quiz = hasPublicAccess(db, user, quizId);
-            long curr = System.currentTimeMillis();
-            Document config = getConfig();
-
-            //todo
-//            if (
-//                    !quiz.containsKey("report_status") ||
-//                            !quiz.containsKey("ranking_list") ||
-//                            !quiz.getString("report_status").equalsIgnoreCase("ready")
-//            )
-//                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
             if(user != null &&
                     !quiz.getBoolean("show_results_after_correction"))
+                return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            if(userIsNotLogin &&
+                    !(boolean)quiz.getOrDefault("show_results_after_correction_not_login_users", false))
+                return generateErr("برای رویت نتایج باید وارد سامانه شوید.");
+
+            long curr = System.currentTimeMillis();
+            Document config = getConfig();
+
+            if (
+                    !quiz.containsKey("general_stat") ||
+                            !quiz.containsKey("ranking_list")
+//                            ||
+//                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
             List<Document> students = quiz.getList("students", Document.class);

@@ -55,6 +55,9 @@ public class UserService {
 
     public void deleteFromCache(String username) {
 
+        if(1 == 1)
+            return;
+
         for (int i = 0; i < cachedToken.size(); i++) {
             if (((PairValue) (cachedToken.get(i)).getKey()).getKey().equals(username)) {
                 cachedToken.remove(i);
@@ -126,8 +129,8 @@ public class UserService {
 
             String token = jwtTokenProvider.createToken(username, (user.getBoolean("level")) ? Role.ROLE_ADMIN : Role.ROLE_CLIENT);
 
-            if(checkPass)
-                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
+//            if(checkPass)
+//                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
 
             return Utility.generateSuccessMsg("token", token, new PairValue("user", UserController.isAuth(user)));
 

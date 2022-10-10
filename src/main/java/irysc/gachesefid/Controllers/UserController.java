@@ -670,7 +670,11 @@ public class UserController {
         if (via.equals(AuthVia.MAIL.getName()) && !user.containsKey("mail"))
             return JSON_NOT_VALID_PARAMS;
 
-        return sendSMSOrMail(NID, via);
+        return sendSMSOrMail(
+                NID,
+                via.equals(AuthVia.SMS.getName()) ? user.getString("phone") : user.getString("mail"),
+                via, false
+        );
     }
 
     public static String forceUpdateUsername(Document user, JSONObject data) {
@@ -704,7 +708,7 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String updateUsername(JSONObject data) {
+    public static String updateUsername(String NID, JSONObject data) {
 
         convertPersian(data);
         String via = data.getString("mode");
@@ -712,33 +716,36 @@ public class UserController {
         if (!EnumValidatorImp.isValid(via, AuthVia.class))
             return JSON_NOT_VALID_PARAMS;
 
-        String username = data.getString("username").toLowerCase();
+        String phoneOrMail = data.getString("username").toLowerCase();
 
-        if (via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(username))
+        if (via.equals(AuthVia.SMS.getName()) && !PhoneValidator.isValid(phoneOrMail))
             return generateErr("شماره همراه وارد شده معتبر نمی باشد.");
 
-        if (via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(username))
+        if (via.equals(AuthVia.MAIL.getName()) && !Utility.isValidMail(phoneOrMail))
             return generateErr("ایمیل وارد شده معتبر نمی باشد.");
 
         Bson filter = via.equals(AuthVia.SMS.getName()) ?
-                eq("phone", username) : eq("mail", username);
+                eq("phone", phoneOrMail) : eq("mail", phoneOrMail);
 
         if (userRepository.exist(filter))
             return generateErr("ایمیل/شماره همراه وارد شده در سیستم موجود است.");
 
-        return sendSMSOrMail(username, via);
+        return sendSMSOrMail(NID, phoneOrMail, via, true);
     }
 
-    private static String sendSMSOrMail(String username, String via) {
+    private static String sendSMSOrMail(
+            String NID, String phoneOrMail,
+            String via, boolean savePhoneOrMail
+    ) {
 
-        PairValue existTokenP = UserRepository.existSMS(username);
+        PairValue existTokenP = UserRepository.existSMS(NID);
 
         if (existTokenP != null)
             return generateSuccessMsg("token", existTokenP.getKey(),
                     new PairValue("reminder", existTokenP.getValue())
             );
 
-        String token = UserRepository.sendNewSMS(username, via);
+        String token = UserRepository.sendNewSMS(NID, phoneOrMail, via, savePhoneOrMail);
 
         return generateSuccessMsg("token", token,
                 new PairValue("reminder", SMS_RESEND_SEC)

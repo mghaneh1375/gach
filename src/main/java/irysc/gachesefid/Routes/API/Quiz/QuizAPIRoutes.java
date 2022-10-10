@@ -75,6 +75,7 @@ public class QuizAPIRoutes extends Router {
                                         "paperTheme", "database",
                                         "descAfter", "desc",
                                         "duration", // duration is in min format
+                                        "showResultsAfterCorrectionNotLoginUsers"
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -87,7 +88,7 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Positive.class,
                                         String.class, Boolean.class,
                                         String.class, String.class,
-                                        Positive.class
+                                        Positive.class, Boolean.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -136,7 +137,8 @@ public class QuizAPIRoutes extends Router {
                                        "paperTheme", "database",
                                        "descAfter", "desc",
                                        "duration", // duration is in min format
-                                       "visibility"
+                                       "visibility",
+                                       "showResultsAfterCorrectionNotLoginUsers"
                                },
                                optionalsType = {
                                        String.class, Positive.class, Boolean.class,
@@ -149,7 +151,8 @@ public class QuizAPIRoutes extends Router {
                                        Positive.class, Positive.class,
                                        String.class, Boolean.class,
                                        String.class, String.class,
-                                       Positive.class, Boolean.class
+                                       Positive.class, Boolean.class,
+                                       Boolean.class
                                }
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

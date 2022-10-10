@@ -30,6 +30,55 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class StudentQuizController {
 
+    public static String getMyRecpForCustomQuiz(ObjectId quizId, ObjectId userId) {
+
+        try {
+            Document quiz = customQuizRepository.findById(quizId);
+            if(quiz == null)
+                return JSON_NOT_VALID_ID;
+
+            if(!quiz.getObjectId("user_id").equals(userId) ||
+                    quiz.getString("status").equalsIgnoreCase("wait")
+            )
+                return JSON_NOT_ACCESS;
+
+            Document transaction = transactionRepository.findOne(
+                    and(
+                            eq("status", "success"),
+                            eq("section", OffCodeSections.BANK_EXAM.getName()),
+                            eq("user_id", userId),
+                            eq("products", quizId),
+                            exists("ref_id")
+                    ), new BasicDBObject("ref_id", 1).append("amount", 1)
+                            .append("account_money", 1).append("off_amount", 1)
+                            .append("created_at", 1)
+            );
+
+            if(transaction == null)
+                return JSON_NOT_VALID_ID;
+
+            String section = GiftController.translateUseFor(OffCodeSections.BANK_EXAM.getName()) + " - " + "خرید " +
+                    quiz.getList("questions", ObjectId.class).size() +
+                    " سوال ";
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("paid", transaction.getInteger("amount"))
+                    .put("account", transaction.getOrDefault("account", 0))
+                    .put("offAmount", transaction.getOrDefault("off_amount", 0))
+                    .put("createdAt", getSolarDate(transaction.getLong("created_at")))
+                    .put("for", section);
+
+            if (transaction.containsKey("ref_id") && transaction.get("ref_id") != null)
+                jsonObject.put("refId", transaction.get("ref_id"));
+
+            return generateSuccessMsg("data", jsonObject);
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+
+    }
+
     public static String getMyRecp(Common db, ObjectId quizId, ObjectId userId) {
 
         try {
@@ -52,10 +101,12 @@ public class StudentQuizController {
 
             JSONObject jsonObject = new JSONObject()
                     .put("paid", std.getInteger("paid"))
+                    .put("account", transaction == null ? 0 : transaction.getOrDefault("account", 0))
+                    .put("offAmount", transaction == null ? 0 : transaction.getOrDefault("off_amount", 0))
                     .put("createdAt", getSolarDate(std.getLong("register_at")))
                     .put("for", GiftController.translateUseFor(OffCodeSections.GACH_EXAM.getName()));
 
-            if (transaction != null)
+            if (transaction != null && transaction.containsKey("ref_id"))
                 jsonObject.put("refId", transaction.get("ref_id"));
 
             return generateSuccessMsg("data", jsonObject);
@@ -708,6 +759,7 @@ public class StudentQuizController {
 
             Document finalOff = off;
             boolean finalUsePackageOff = usePackageOff;
+            double finalOffAmount = offAmount;
             new Thread(() -> {
 
                 if (studentIds != null)
@@ -748,16 +800,22 @@ public class StudentQuizController {
 
                 Document doc = new Document("user_id", studentId)
                         .append("amount", 0)
+                        .append("account_money", shouldPay)
                         .append("created_at", curr)
                         .append("status", "success")
                         .append("section", OffCodeSections.GACH_EXAM.getName())
                         .append("products", quizIds);
 
+                if (finalUsePackageOff)
+                    doc.put("package_id", quizPackage.getObjectId("_id"));
+
                 if (studentIds != null)
                     doc.append("student_ids", studentIds);
 
-                if (finalOff != null)
+                if (finalOff != null) {
                     doc.append("off_code", finalOff.getObjectId("_id"));
+                    doc.append("off_amount", (int) finalOffAmount);
+                }
 
                 transactionRepository.insertOne(doc);
             }).start();
@@ -777,19 +835,24 @@ public class StudentQuizController {
 
         Document doc =
                 new Document("user_id", studentId)
+                        .append("account_money", money)
                         .append("amount", shouldPay - money)
                         .append("created_at", curr)
                         .append("status", "init")
                         .append("order_id", orderId)
                         .append("products", quizIds)
-                        .append("section", OffCodeSections.GACH_EXAM.getName())
-                        .append("off_code", off == null ? null : off.getObjectId("_id"));
+                        .append("section", OffCodeSections.GACH_EXAM.getName());
 
         if (studentIds != null)
             doc.append("student_ids", studentIds);
 
         if (quizPackage != null)
             doc.put("package_id", quizPackage.getObjectId("_id"));
+
+        if(off != null) {
+            doc.append("off_code", off.getObjectId("_id"));
+            doc.append("off_amount", (int)offAmount);
+        }
 
         return goToPayment(shouldPay - money, doc);
     }
@@ -994,10 +1057,11 @@ public class StudentQuizController {
             );
 
         double shouldPayDouble = totalPrice;
+        double offAmount = 0;
 
         if(off != null) {
 
-            double offAmount =
+             offAmount =
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
                             totalPrice * off.getInteger("amount") / 100.0 :
                             off.getInteger("amount");
@@ -1055,13 +1119,16 @@ public class StudentQuizController {
 
             Document transaction = new Document("user_id", userId)
                     .append("amount", 0)
+                    .append("account_money", shouldPay)
                     .append("created_at", curr)
                     .append("status", "success")
                     .append("section", OffCodeSections.BANK_EXAM.getName())
                     .append("products", id);
 
-            if(finalOff != null)
+            if(finalOff != null) {
+                doc.append("off_amount", (int)offAmount);
                 doc.append("off_code", finalOff.getObjectId("_id"));
+            }
 
             transactionRepository.insertOne(transaction);
 
@@ -1080,13 +1147,18 @@ public class StudentQuizController {
 
         Document transaction =
                 new Document("user_id", userId)
+                        .append("account_money", money)
                         .append("amount", shouldPay - money)
                         .append("created_at", curr)
                         .append("status", "init")
                         .append("order_id", orderId)
                         .append("products", id)
-                        .append("section", OffCodeSections.BANK_EXAM.getName())
-                        .append("off_code", off == null ? null : off.getObjectId("_id"));
+                        .append("section", OffCodeSections.BANK_EXAM.getName());
+
+        if(off != null) {
+            transaction.append("off_code", off.getObjectId("_id"));
+            transaction.append("off_amount", (int)offAmount);
+        }
 
         return goToPayment(shouldPay - money, transaction);
     }
