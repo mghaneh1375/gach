@@ -1,7 +1,6 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
-import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
@@ -53,6 +52,12 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getFinishedQuizzes")
+    @ResponseBody
+    public String getFinishedQuizzes() {
+        return QuizController.getFinishedQuizzes();
+    }
+
     @GetMapping(value = "getRecpForQuiz/{mode}/{quizId}")
     @ResponseBody
     public String getRecpForQuiz(HttpServletRequest request,
@@ -60,7 +65,7 @@ public class StudentQuizAPIRoutes extends Router {
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.getMyRecpForCustomQuiz(
                     quizId, getUser(request).getObjectId("_id")
             );
@@ -80,7 +85,7 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.reviewCustomQuiz(
                     quizId, user.getObjectId("_id")
             );
@@ -102,7 +107,7 @@ public class StudentQuizAPIRoutes extends Router {
                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                          @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.launchCustom(
                     quizId, getUser(request).getObjectId("_id")
             );
@@ -143,7 +148,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         Document user = getUser(request);
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.toString()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.toString()))
             return AdminReportController.getStudentAnswerSheetCustomQuiz(
                     quizId, user.getObjectId("_id")
             );

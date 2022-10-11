@@ -128,7 +128,7 @@ public class ReportAPIRoutes extends Router {
                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
                                  @PathVariable @ObjectIdConstraint ObjectId userId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) {
 
         Document user = getUserIfLogin(request);
 

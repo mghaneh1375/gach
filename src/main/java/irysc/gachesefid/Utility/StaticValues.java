@@ -27,9 +27,9 @@ public class StaticValues {
     public static int QUESTIONS = 0;
     public static int SCHOOLS = 0;
 
-    public final static int SMS_RESEND_SEC = 300;
+    public final static int SMS_RESEND_SEC = 60; // 300
     public final static int SMS_RESEND_MSEC = 1000 * SMS_RESEND_SEC;
-    public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * 60 * 10;
+    public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
 
     public final static int USER_LIMIT_CACHE_SIZE = 3000;
     public final static int USER_EXPIRATION_SEC = 60 * 60 * 24 * 7;
@@ -47,7 +47,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";

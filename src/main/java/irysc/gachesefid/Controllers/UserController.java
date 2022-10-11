@@ -138,73 +138,12 @@ public class UserController {
         );
     }
 
-    public static String setInfo(JSONObject jsonObject, Document user) {
-
-        Utility.convertPersian(jsonObject);
-        boolean isComplete = (user.containsKey("NID") || user.containsKey("passport_no"));
-
-        int exist = userRepository.isExistByNID(
-                (jsonObject.has("NID")) ? jsonObject.getString("NID") :
-                        jsonObject.getString("passport_no"),
-                user.getObjectId("_id")
-        );
-
-        if (exist < 0)
-            return new JSONObject().put("status", "nok")
-                    .put("msg", (exist == -4) ? "Duplicate National Code" : "Duplicate passport no").toString();
-
-        BasicDBObject updateList = new BasicDBObject();
-
-        if (jsonObject.has("phone") &&
-                !jsonObject.getString("phone").equals(user.getString("username"))) {
-
-            if (userRepository.exist(and(
-                    eq("username", jsonObject.getString("phone")),
-                    ne("_id", user.getObjectId("_id"))
-                    )
-            )
-            )
-                return new JSONObject().put("status", "nok")
-                        .put("msg", "This phone already exist").toString();
-
-            updateList.put("username", jsonObject.getString("phone"));
-            user.put("username", jsonObject.getString("phone"));
-            jsonObject.remove("phone");
-        }
-
-        for (String key : jsonObject.keySet()) {
-            user.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), jsonObject.get(key));
-            updateList.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), jsonObject.get(key));
-        }
-
-        if (user.containsKey("n_i_d")) {
-            user.put("NID", user.get("n_i_d"));
-            user.remove("n_i_d");
-
-            updateList.put("NID", updateList.get("n_i_d"));
-            updateList.remove("n_i_d");
-        }
-
-        new Thread(() -> {
-
-            userRepository.updateOne(user.getObjectId("_id"),
-                    new BasicDBObject("$set", updateList));
-
-            userRepository.checkCache(user);
-
-        }).start();
-
-        return JSON_OK;
-    }
-
     public static String resend(JSONObject jsonObject) {
-
-        Utility.convertPersian(jsonObject);
 
         Document doc = activationRepository.findOne(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("username", jsonObject.getString("username")))
+                        eq("username", jsonObject.get("username").toString()))
                 , null
         );
 
@@ -212,16 +151,35 @@ public class UserController {
             return JSON_NOT_ACCESS;
 
         long createdAt = doc.getLong("created_at");
+
         if (System.currentTimeMillis() - createdAt < SMS_RESEND_MSEC)
             return Utility.generateErr("کد قبلی هنوز منقضی نشده است.");
+
+        String username = doc.getString("username");
+
+        if(!doc.containsKey("NID")) {
+
+            if(doc.containsKey("phone_or_mail"))
+                username = doc.getString("phone_or_mail");
+            else {
+                Document user = userRepository.findBySecKey(jsonObject.getString("username"));
+                if (user == null)
+                    return JSON_NOT_ACCESS;
+
+                if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
+                    username = user.getString("phone");
+                else
+                    username = user.getString("mail");
+            }
+        }
 
         int code = Utility.randInt();
 
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
-            Utility.sendSMS(doc.getString("username"), code + "", "", "", "activationCode");
+            Utility.sendSMS(username, code + "", "", "", "activationCode");
         else
             Utility.sendMail(
-                    doc.getString("username"), code + "", "کد اعتبارسنجی",
+                    username, code + "", "کد اعتبارسنجی",
                     "signUp", doc.getString("first_name") + " " + doc.getString("last_name")
             );
 
@@ -968,7 +926,8 @@ public class UserController {
     }
 
     public static String fetchSchools(String grade, String kind,
-                                      ObjectId cityId, ObjectId stateId, Boolean hasUser
+                                      ObjectId cityId, ObjectId stateId, Boolean hasUser,
+                                      boolean isAdmin
     ) {
 
         ArrayList<Bson> filter = new ArrayList<>();
@@ -985,7 +944,7 @@ public class UserController {
         if (cityId != null)
             filter.add(eq("city_id", cityId));
 
-        if (hasUser != null)
+        if (hasUser != null && isAdmin)
             filter.add(exists("user_id", hasUser));
 
         ArrayList<Document> docs = schoolRepository.find(
@@ -1031,7 +990,7 @@ public class UserController {
                     .put("kind", kind)
                     .put("address", doc.getOrDefault("address", ""));
 
-            if(doc.containsKey("user_id")) {
+            if(isAdmin && doc.containsKey("user_id")) {
 
                 Document user = userRepository.findById(doc.getObjectId("user_id"));
 
@@ -1041,7 +1000,7 @@ public class UserController {
                 );
                 jsonObject.put("managerPhone", user.getOrDefault("phone", ""));
             }
-            else
+            else if(isAdmin)
                 jsonObject.put("manager", "").put("managerPhone", "");
 
             if (grade.equals(GradeSchool.DABESTAN.getName()))

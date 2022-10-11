@@ -47,8 +47,7 @@ public class StudentQuizController {
                             eq("status", "success"),
                             eq("section", OffCodeSections.BANK_EXAM.getName()),
                             eq("user_id", userId),
-                            eq("products", quizId),
-                            exists("ref_id")
+                            eq("products", quizId)
                     ), new BasicDBObject("ref_id", 1).append("amount", 1)
                             .append("account_money", 1).append("off_amount", 1)
                             .append("created_at", 1)
@@ -94,17 +93,55 @@ public class StudentQuizController {
                             eq("status", "success"),
                             eq("section", OffCodeSections.GACH_EXAM.getName()),
                             eq("user_id", userId),
-                            in("products", quizId),
-                            exists("ref_id")
-                    ), new BasicDBObject("ref_id", 1)
+                            or(
+                                    in("products", quizId),
+                                    eq("products", quizId)
+                            )
+                    ), null
             );
 
+            StringBuilder section = new StringBuilder(GiftController.translateUseFor(
+                    OffCodeSections.GACH_EXAM.getName()
+            ));
+
+            if(transaction != null) {
+
+                boolean checkAllItems = true;
+
+                if (transaction.containsKey("package_id")) {
+                    Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
+                    if (wantedPackage != null) {
+                        section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
+                        checkAllItems = false;
+                    }
+                }
+
+                if (checkAllItems) {
+                    Object products = transaction.get("products");
+                    if (products instanceof ObjectId) {
+                        Document quizTmp = iryscQuizRepository.findById((ObjectId) products);
+                        if (quizTmp != null)
+                            section.append(" - ").append(quizTmp.getString("title"));
+                    } else if (products instanceof List) {
+                        for (ObjectId quizIdTmp : (List<ObjectId>) products) {
+                            Document quizTmp = iryscQuizRepository.findById(quizIdTmp);
+                            if (quizTmp != null)
+                                section.append(" - ").append(quizTmp.getString("title"));
+                        }
+                    }
+                }
+            }
+            else
+                section.append(" - ").append(quiz.getString("title"));
+
             JSONObject jsonObject = new JSONObject()
-                    .put("paid", std.getInteger("paid"))
-                    .put("account", transaction == null ? 0 : transaction.getOrDefault("account", 0))
+                    .put("paid", transaction == null ? 0 : transaction.getOrDefault("amount", 0))
+                    .put("account", transaction == null ? 0 : transaction.getOrDefault("account_money", 0))
                     .put("offAmount", transaction == null ? 0 : transaction.getOrDefault("off_amount", 0))
-                    .put("createdAt", getSolarDate(std.getLong("register_at")))
-                    .put("for", GiftController.translateUseFor(OffCodeSections.GACH_EXAM.getName()));
+                    .put("createdAt", transaction == null ? getSolarDate(std.getLong("register_at")) :
+                            getSolarDate(transaction.getLong("created_at"))
+                    )
+                    .put("for", section.toString());
 
             if (transaction != null && transaction.containsKey("ref_id"))
                 jsonObject.put("refId", transaction.get("ref_id"));
