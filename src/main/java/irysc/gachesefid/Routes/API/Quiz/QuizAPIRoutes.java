@@ -320,7 +320,7 @@ public class QuizAPIRoutes extends Router {
     @PostMapping(path = "finalizeQuizResult/{quizId}")
     @ResponseBody
     public String finalizeQuizResult(HttpServletRequest request,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return QuizController.finalizeQuizResult(quizId);
@@ -714,6 +714,20 @@ public class QuizAPIRoutes extends Router {
         return PackageController.getPackages(
                 user == null ? null : user.getList("accesses", String.class),
                 user == null ? null : user.getObjectId("_id"),
+                gradeId, lessonId
+        );
+    }
+
+    @GetMapping(value = "/getPackagesDigest")
+    @ResponseBody
+    public String getPackagesDigest(HttpServletRequest request,
+                                    @RequestParam(required = false) ObjectId gradeId,
+                                    @RequestParam(required = false) ObjectId lessonId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+
+        return PackageController.getPackagesDigest(
                 gradeId, lessonId
         );
     }
