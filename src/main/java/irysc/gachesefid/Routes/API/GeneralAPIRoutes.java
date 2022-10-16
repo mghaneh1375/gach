@@ -101,7 +101,7 @@ public class GeneralAPIRoutes extends Router {
                 else {
 
                     String section = (String) p.getValue();
-                    
+
                     modelAndView.addObject("status", "success");
                     modelAndView.addObject("refId", referenceId);
                     modelAndView.addObject("section", section);
