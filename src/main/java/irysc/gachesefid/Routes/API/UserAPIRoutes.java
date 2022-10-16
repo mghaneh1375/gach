@@ -41,6 +41,7 @@ import javax.validation.constraints.NotBlank;
 import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.inc;
@@ -61,6 +62,39 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
+
+        if(1 == 1) {
+            ArrayList<Document> cities = cityRepository.find(
+                    regex("name", Pattern.compile(Pattern.quote("ناحیه"), Pattern.CASE_INSENSITIVE)),
+                    null
+            );
+            ArrayList<Document> cities2 = cityRepository.find(
+                    regex("name", Pattern.compile(Pattern.quote("تهران -منطقه"), Pattern.CASE_INSENSITIVE)),
+                    null
+            );
+
+            for(Document city : cities) {
+                if(city.getString("name").contains("ناحیه 1")) {
+                    city.put("name", city.getString("name").replace("ناحیه 1", ""));
+                    cityRepository.replaceOne(city.getObjectId("_id"), city);
+                }
+                else {
+                    cityRepository.deleteOne(city.getObjectId("_id"));
+                }
+            }
+
+            for(Document city : cities2) {
+                if(city.getString("name").contains("منطقه 1")) {
+                    city.put("name", city.getString("name").replace("-منطقه 1", ""));
+                    cityRepository.replaceOne(city.getObjectId("_id"), city);
+                }
+                else {
+                    cityRepository.deleteOne(city.getObjectId("_id"));
+                }
+            }
+
+            return "ok";
+        }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");
         for(int i = 0; i < tags2.length(); i++) {
