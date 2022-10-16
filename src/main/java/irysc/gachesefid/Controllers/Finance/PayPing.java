@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -238,55 +240,73 @@ public class PayPing {
         return JSON_NOT_UNKNOWN;
     }
 
-    public static String myTransactions(ObjectId userId,
-                                        String usedFor,
-                                        Boolean useOffCode) {
-
-        if (usedFor != null &&
-                !usedFor.equals("class") &&
-                !usedFor.equals("pay_link")
-        )
-            return JSON_NOT_VALID_PARAMS;
+    public static String myTransactions(ObjectId userId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("user_id", userId));
         filters.add(eq("status", "success"));
 
-        if (usedFor != null)
-            filters.add(eq("for", usedFor));
-
-        if (useOffCode != null)
-            filters.add(exists("off_code", useOffCode));
-
-        ArrayList<Document> transactions = new ArrayList<>();
-//        ArrayList<Document> transactions = transactionRepository.findWithJoin(match(
-//                and(filters)
-//                ), null, null, null, null, null, null,
-//                null, null, null, null, null);
+        ArrayList<Document> transactions = transactionRepository.find(and(filters), null);
 
         JSONArray jsonArray = new JSONArray();
 
         for (Document transaction : transactions) {
 
-            List<Document> offCodes = (transaction.containsKey("offCode")) ?
-                    transaction.getList("offCode", Document.class) : null;
+            StringBuilder section = new StringBuilder(GiftController.translateUseFor(
+                    transaction.getString("section")
+            ));
 
-            Document offCode = (offCodes != null && offCodes.size() > 0) ? offCodes.get(0) : null;
+            if(transaction.getString("section").equalsIgnoreCase(
+                    OffCodeSections.GACH_EXAM.getName()
+            )) {
 
-            if (offCode != null)
-                offCode.remove("_id");
+                boolean checkAllItems = true;
+
+                if(transaction.containsKey("package_id")) {
+                    Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
+                    if(wantedPackage != null) {
+                        section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
+                        checkAllItems = false;
+                    }
+                }
+
+                if(checkAllItems) {
+                    Object products = transaction.get("products");
+                    if (products instanceof ObjectId) {
+                        Document quiz = iryscQuizRepository.findById((ObjectId) products);
+                        if (quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    } else if (products instanceof List) {
+                        for (ObjectId quizId : (List<ObjectId>) products) {
+                            Document quiz = iryscQuizRepository.findById(quizId);
+                            if (quiz != null)
+                                section.append(" - ").append(quiz.getString("title"));
+                        }
+                    }
+                }
+            }
+            else if(transaction.getString("section").equalsIgnoreCase(
+                    OffCodeSections.BANK_EXAM.getName()
+            )) {
+                Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
+                if(quiz != null)
+                    section.append(" - ").append("خرید ").append(
+                            quiz.getList("questions", ObjectId.class).size()
+                    ).append(" سوال ");
+            }
 
             JSONObject jsonObject = new JSONObject()
-                    .put("offCode", offCode)
-                    .put("amount", transaction.getInteger("amount"))
-                    .put("refId", transaction.get("ref_id"))
+                    .put("for", section.toString())
+                    .put("account", transaction.getOrDefault("account_money", 0))
+                    .put("offAmount", transaction.getOrDefault("off_amount", 0))
+                    .put("paid", transaction.getInteger("amount"))
+                    .put("refId", transaction.getOrDefault("ref_id", ""))
                     .put("createdAt", getSolarDate(transaction.getLong("created_at")));
 
-//            addRightObjectToTransactionJSON(transaction, jsonObject);
             jsonArray.put(jsonObject);
         }
 
-        return new JSONObject().put("status", "ok").put("data", jsonArray).toString();
+        return generateSuccessMsg("data", jsonArray);
     }
 
 }

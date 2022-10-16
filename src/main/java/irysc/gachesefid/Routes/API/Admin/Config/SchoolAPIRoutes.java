@@ -8,10 +8,12 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GradeSchool;
 import irysc.gachesefid.Models.KindSchool;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,8 +41,9 @@ public class SchoolAPIRoutes extends Router {
                                @RequestParam(value = "hasUser", required = false) Boolean hasUser,
                                @RequestParam(value = "kind", required = false) String kind
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return UserController.fetchSchools(grade, kind, cityId, stateId, hasUser);
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+        return UserController.fetchSchools(grade, kind, cityId, stateId, hasUser, isAdmin);
     }
 
     @DeleteMapping(value = "/remove")

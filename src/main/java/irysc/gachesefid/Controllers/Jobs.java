@@ -42,6 +42,7 @@ public class Jobs implements Runnable {
                 blackListTokens.removeIf(itr -> itr.getValue() < System.currentTimeMillis());
             }
 
+            activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));
         }
     }
 

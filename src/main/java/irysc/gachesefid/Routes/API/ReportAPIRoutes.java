@@ -128,17 +128,24 @@ public class ReportAPIRoutes extends Router {
                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
                                  @PathVariable @ObjectIdConstraint ObjectId userId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) {
 
-        Document user = getUser(request);
+        Document user = getUserIfLogin(request);
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
-            return AdminReportController.getStudentStatCustomQuiz(quizId, userId);
+        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName())) {
+
+            if(user == null)
+                return JSON_NOT_ACCESS;
+
+            return AdminReportController.getStudentStatCustomQuiz(quizId, user.getObjectId("_id"));
+        }
 
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return AdminReportController.getStudentStat(iryscQuizRepository, isAdmin ? null : "", quizId, userId);
+            return AdminReportController.getStudentStat(
+                    iryscQuizRepository, isAdmin ? null : "", quizId, userId, user == null
+            );
 
         if (user == null)
             return JSON_NOT_ACCESS;
@@ -146,8 +153,7 @@ public class ReportAPIRoutes extends Router {
         return AdminReportController.getStudentStat(
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
-                quizId,
-                userId
+                quizId, userId, false
         );
     }
 }

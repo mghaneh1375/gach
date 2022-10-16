@@ -204,8 +204,7 @@ public class PackageController {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if (!isAdmin)
-            filters.add(gt("expire_at", System.currentTimeMillis()));
+        filters.add(gt("expire_at", System.currentTimeMillis()));
 
         if (gradeId != null)
             filters.add(eq("grade_id", gradeId));
@@ -214,14 +213,14 @@ public class PackageController {
             filters.add(eq("lesson_id", lessonId));
 
         ArrayList<Document> packages = packageRepository.find(
-                filters.size() == 0 ? null : and(filters), null
+                and(filters), null
         );
 
         JSONArray jsonArray = new JSONArray();
         long curr = System.currentTimeMillis();
 
-        HashMap<String, ArrayList<String>> tags = isAdmin ? null : new HashMap<>();
-        ArrayList<ObjectId> fetched = isAdmin ? null : new ArrayList<>();
+        HashMap<String, ArrayList<String>> tags = new HashMap<>();
+        ArrayList<ObjectId> fetched = new ArrayList<>();
         JSONObject data = new JSONObject();
 
         for (Document packageDoc : packages) {
@@ -248,86 +247,82 @@ public class PackageController {
                             .put("id", lesson.getObjectId("_id").toString())
                             .put("name", lesson.getString("name"))
                     )
+                    .put("type", "package")
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
 
             List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
 
-            if (isAdmin) {
-                jsonObject
-                        .put("quizzes", quizzes.size());
-            } else {
 
-                ArrayList<String> subTags;
-                if (tags.containsKey(grade.getString("name")))
-                    subTags = tags.get(grade.getString("name"));
+            ArrayList<String> subTags;
+            if (tags.containsKey(grade.getString("name")))
+                subTags = tags.get(grade.getString("name"));
+            else
+                subTags = new ArrayList<>();
+
+            if (!subTags.contains(lesson.getString("name")))
+                subTags.add(lesson.getString("name"));
+
+            tags.put(grade.getString("name"), subTags);
+            jsonObject.put("tags", new ArrayList<>() {{
+                add(lesson.getString("name"));
+            }});
+
+            JSONArray quizzesDoc = new JSONArray();
+            int totalPrice = 0;
+            int registrable = 0;
+
+            for (ObjectId quizId : quizzes) {
+
+                Document quiz = iryscQuizRepository.findById(quizId);
+                fetched.add(quizId);
+
+                if (quiz == null || quiz.getLong("start_registry") > curr ||
+                        (quiz.containsKey("end_registry") &&
+                                quiz.getLong("end_registry") < curr
+                        ) ||
+                        (!quiz.containsKey("end_registry") &&
+                                quiz.getLong("end") < curr
+                        )
+                )
+                    continue;
+
+                if(userId != null && searchInDocumentsKeyValIdx(
+                        quiz.getList("students", Document.class),
+                        "_id", userId
+                ) != -1)
+                    continue;
+
+                QuizAbstract quizAbstract;
+
+                if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+                    quizAbstract = new RegularQuizController();
                 else
-                    subTags = new ArrayList<>();
+                    quizAbstract = new TashrihiQuizController();
 
-                if (!subTags.contains(lesson.getString("name")))
-                    subTags.add(lesson.getString("name"));
+                JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false,
+                        false, true
+                );
 
-                tags.put(grade.getString("name"), subTags);
-                jsonObject.put("tags", new ArrayList<>() {{
-                    add(lesson.getString("name"));
-                }});
+                if ((quiz.containsKey("end_registry") &&
+                        quiz.getLong("end_registry") > curr) ||
+                        (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
+                ) {
+                    quizDoc.put("registrable", true);
+                    totalPrice += quiz.getInteger("price");
+                    registrable++;
+                } else
+                    quizDoc.put("registrable", false);
 
-                JSONArray quizzesDoc = new JSONArray();
-                int totalPrice = 0;
-                int registrable = 0;
-
-                for (ObjectId quizId : quizzes) {
-
-                    Document quiz = iryscQuizRepository.findById(quizId);
-                    fetched.add(quizId);
-
-                    if (quiz == null || quiz.getLong("start_registry") > curr ||
-                            (quiz.containsKey("end_registry") &&
-                                    quiz.getLong("end_registry") < curr
-                            ) ||
-                            (!quiz.containsKey("end_registry") &&
-                                    quiz.getLong("end") < curr
-                            )
-                    )
-                        continue;
-
-                    if(userId != null && searchInDocumentsKeyValIdx(
-                            quiz.getList("students", Document.class),
-                            "_id", userId
-                    ) != -1)
-                        continue;
-
-                    QuizAbstract quizAbstract;
-
-                    if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
-                        quizAbstract = new RegularQuizController();
-                    else
-                        quizAbstract = new TashrihiQuizController();
-
-                    JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false,
-                            false, true
-                    );
-
-                    if ((quiz.containsKey("end_registry") &&
-                            quiz.getLong("end_registry") > curr) ||
-                            (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
-                    ) {
-                        quizDoc.put("registrable", true);
-                        totalPrice += quiz.getInteger("price");
-                        registrable++;
-                    } else
-                        quizDoc.put("registrable", false);
-
-                    quizzesDoc.put(quizDoc);
-                }
-
-                jsonObject
-                        .put("quizzes", quizzesDoc.length())
-                        .put("registrable", registrable)
-                        .put("totalPrice", totalPrice)
-                        .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
-                        .put("quizzesDoc", quizzesDoc);
+                quizzesDoc.put(quizDoc);
             }
+
+            jsonObject
+                    .put("quizzes", quizzesDoc.length())
+                    .put("registrable", registrable)
+                    .put("totalPrice", totalPrice)
+                    .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
+                    .put("quizzesDoc", quizzesDoc);
 
             if(jsonObject.has("registrable") &&
                     jsonObject.getInt("registrable") > 0)
@@ -403,6 +398,63 @@ public class PackageController {
 
         data.put("items", jsonArray);
 
+        return generateSuccessMsg("data", data);
+    }
+
+    public static String getPackagesDigest(ObjectId gradeId, ObjectId lessonId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if (gradeId != null)
+            filters.add(eq("grade_id", gradeId));
+
+        if (lessonId != null)
+            filters.add(eq("lesson_id", lessonId));
+
+        ArrayList<Document> packages = packageRepository.find(
+                filters.size() == 0 ? null : and(filters), null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        long curr = System.currentTimeMillis();
+
+        JSONObject data = new JSONObject();
+
+        for (Document packageDoc : packages) {
+
+            Document grade = gradeRepository.findById(packageDoc.getObjectId("grade_id"));
+            if (grade == null)
+                continue;
+
+            Document lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    grade.getList("lessons", Document.class),
+                    "_id", packageDoc.getObjectId("lesson_id")
+            );
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", packageDoc.getObjectId("_id").toString())
+                    .put("title", packageDoc.getString("title"))
+                    .put("description", packageDoc.getOrDefault("description", ""))
+                    .put("buyers", packageDoc.getOrDefault("buyers", 0))
+                    .put("grade", new JSONObject()
+                            .put("id", grade.getObjectId("_id").toString())
+                            .put("name", grade.getString("name"))
+                    )
+                    .put("lesson", new JSONObject()
+                            .put("id", lesson.getObjectId("_id").toString())
+                            .put("name", lesson.getString("name"))
+                    )
+                    .put("type", "package")
+                    .put("offPercent", packageDoc.getInteger("off_percent"))
+                    .put("minSelect", packageDoc.getInteger("min_select"));
+
+            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+            jsonObject
+                    .put("quizzes", quizzes.size());
+            jsonArray.put(jsonObject);
+        }
+
+        data.put("items", jsonArray);
         return generateSuccessMsg("data", data);
     }
 

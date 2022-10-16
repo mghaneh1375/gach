@@ -36,10 +36,6 @@ public class UserRepository extends Common {
         init();
     }
 
-    public static void deleteExpiredSMS() {
-        activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));
-    }
-
     public static PairValue existSMS(String username) {
 
         Document doc = activationRepository.findOne(
@@ -93,7 +89,10 @@ public class UserRepository extends Common {
         return token;
     }
 
-    public static String sendNewSMS(String username, String via) {
+    public static String sendNewSMS(
+            String NID, String phoneOrMail,
+            String via, boolean savePhoneOrMail
+    ) {
 
         int code = Utility.randInt();
         String token = Utility.randomString(20);
@@ -103,22 +102,26 @@ public class UserRepository extends Common {
 
             new Thread(() -> activationRepository.deleteMany(
                     and(
-                            eq("username", username),
+                            eq("username", NID),
                             lt("created_at", now)
                     )
             )).start();
 
-            activationRepository.insertOne(new Document("code", code)
+            Document newDoc = new Document("code", code)
                     .append("created_at", now)
                     .append("token", token)
                     .append("auth_via", via)
-                    .append("username", username)
-            );
+                    .append("username", NID);
+
+            if(savePhoneOrMail)
+                newDoc.append("phone_or_mail", phoneOrMail);
+
+            activationRepository.insertOne(newDoc);
 
             if (via.equals(AuthVia.SMS.getName()))
-                Utility.sendSMS(username, code + "" , "", "", "activationCode");
+                Utility.sendSMS(phoneOrMail, code + "" , "", "", "activationCode");
             else
-                Utility.sendMail(username, code + "", "Forget password", "forget", null);
+                Utility.sendMail(phoneOrMail, code + "", "Forget password", "forget", null);
 
         }).start();
 

@@ -58,16 +58,6 @@ public class UserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
-    private void addByteToBitset(BitSet b1, byte[] b,
-                                 int fromIdx, int formIdxByte,
-                                 int endIdxByte
-    ) {
-        BitSet bitSet = BitSet.valueOf(b);
-        int k = fromIdx;
-        for(int i = formIdxByte; i < endIdxByte; i++)
-            b1.set(k++, bitSet.get(i));
-    }
-
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
@@ -412,13 +402,11 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/activate")
     @ResponseBody
     public String activate(@RequestBody @StrongJSONConstraint(
-            params = {"token", "username", "code"},
+            params = {"token", "NID", "code"},
             paramsType = {String.class, String.class, Positive.class}
     ) String json) {
 
-        JSONObject jsonObject = new JSONObject(json);
-
-        Utility.convertPersian(jsonObject);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
         int code = jsonObject.getInt("code");
         if (code < 100000 || code > 999990)
@@ -428,10 +416,10 @@ public class UserAPIRoutes extends Router {
 
             String password = UserController.activate(code,
                     jsonObject.getString("token"),
-                    jsonObject.getString("username")
+                    jsonObject.getString("NID")
             );
 
-            return userService.signIn(jsonObject.getString("username"),
+            return userService.signIn(jsonObject.getString("NID"),
                     password, false);
 
         } catch (Exception e) {
@@ -576,15 +564,16 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String setNewUsername(HttpServletRequest request,
                                  @RequestBody @StrongJSONConstraint(
-                                         params = {"token", "username", "code"},
-                                         paramsType = {String.class, String.class, Positive.class}
+                                         params = {"token", "code"},
+                                         paramsType = {String.class, Positive.class},
+                                         optionals = {"NID"},
+                                         optionalsType = {String.class}
                                  ) String json
     ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUserWithOutCheckCompleteness(request);
 
-        JSONObject jsonObject = new JSONObject(json);
-        Utility.convertPersian(jsonObject);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
         if (jsonObject.getString("token").length() != 20)
             return JSON_NOT_VALID_PARAMS;
@@ -595,7 +584,7 @@ public class UserAPIRoutes extends Router {
         Document doc = activationRepository.findOneAndDelete(
                 and(
                         eq("token", jsonObject.getString("token")),
-                        eq("username", jsonObject.getString("username")),
+                        eq("username", user.getString("NID")),
                         eq("code", jsonObject.getInt("code"))
                 )
         );
@@ -606,22 +595,24 @@ public class UserAPIRoutes extends Router {
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             return Utility.generateErr("توکن موردنظر منقضی شده است.");
 
+        String phoneOrMail = doc.getString("phone_or_mail");
+
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName())) {
 
             if (user.containsKey("phone"))
                 userService.deleteFromCache(user.getString("phone"));
 
-            user.put("phone", doc.getString("username"));
+            user.put("phone", phoneOrMail);
         } else {
 
             if (user.containsKey("mail"))
                 userService.deleteFromCache(user.getString("mail"));
 
-            user.put("mail", doc.getString("username"));
+            user.put("mail", phoneOrMail);
         }
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
-        logout(request);
+//        logout(request);
 
         return JSON_OK;
     }
@@ -641,7 +632,10 @@ public class UserAPIRoutes extends Router {
                     (Document)doc.get("user"), convertPersian(new JSONObject(json))
             );
 
-        return UserController.updateUsername(convertPersian(new JSONObject(json)));
+        return UserController.updateUsername(
+                ((Document)doc.get("user")).getString("NID"),
+                convertPersian(new JSONObject(json))
+        );
     }
 
     @GetMapping(value = "/doChangeMail/{link}")
@@ -780,11 +774,9 @@ public class UserAPIRoutes extends Router {
 
     @GetMapping(value = "/myTransactions")
     @ResponseBody
-    public String myTransactions(HttpServletRequest request,
-                                 @RequestParam(required = false, value = "usedFor") String usedFor,
-                                 @RequestParam(required = false, value = "useOffCode") Boolean useOffCode
+    public String myTransactions(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotAccessException, NotCompleteAccountException {
-        return PayPing.myTransactions(getStudentUser(request).getObjectId("_id"), usedFor, useOffCode);
+        return PayPing.myTransactions(getStudentUser(request).getObjectId("_id"));
     }
 
 //    @GetMapping(value = "/myTransaction/{referenceId}")

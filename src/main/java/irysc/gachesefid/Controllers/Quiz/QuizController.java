@@ -1157,6 +1157,38 @@ public class QuizController {
         );
     }
 
+    public static String getFinishedQuizzes() {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        long curr = System.currentTimeMillis();
+
+        filters.add(eq("visibility", true));
+        filters.add(lt("end", curr));
+        filters.add(exists("report_status"));
+        filters.add(exists("ranking_list"));
+        filters.add(eq("report_status", "ready"));
+
+        ArrayList<Document> docs = iryscQuizRepository.find(and(filters), QUIZ_DIGEST);
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            QuizAbstract quizAbstract;
+
+            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                quizAbstract = new RegularQuizController();
+            else
+                quizAbstract = new TashrihiQuizController();
+
+            JSONObject tmp = quizAbstract.convertDocToJSON(doc, true, false, false, false);
+            tmp.remove("price");
+            jsonArray.put(tmp);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String getQuizAnswerSheet(Common db, ObjectId userId,
                                             ObjectId quizId) {
         try {

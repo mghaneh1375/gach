@@ -75,6 +75,7 @@ public class QuizAPIRoutes extends Router {
                                         "paperTheme", "database",
                                         "descAfter", "desc",
                                         "duration", // duration is in min format
+                                        "showResultsAfterCorrectionNotLoginUsers"
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -87,7 +88,7 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Positive.class,
                                         String.class, Boolean.class,
                                         String.class, String.class,
-                                        Positive.class
+                                        Positive.class, Boolean.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -136,7 +137,8 @@ public class QuizAPIRoutes extends Router {
                                        "paperTheme", "database",
                                        "descAfter", "desc",
                                        "duration", // duration is in min format
-                                       "visibility"
+                                       "visibility",
+                                       "showResultsAfterCorrectionNotLoginUsers"
                                },
                                optionalsType = {
                                        String.class, Positive.class, Boolean.class,
@@ -149,7 +151,8 @@ public class QuizAPIRoutes extends Router {
                                        Positive.class, Positive.class,
                                        String.class, Boolean.class,
                                        String.class, String.class,
-                                       Positive.class, Boolean.class
+                                       Positive.class, Boolean.class,
+                                       Boolean.class
                                }
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -317,7 +320,7 @@ public class QuizAPIRoutes extends Router {
     @PostMapping(path = "finalizeQuizResult/{quizId}")
     @ResponseBody
     public String finalizeQuizResult(HttpServletRequest request,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return QuizController.finalizeQuizResult(quizId);
@@ -711,6 +714,20 @@ public class QuizAPIRoutes extends Router {
         return PackageController.getPackages(
                 user == null ? null : user.getList("accesses", String.class),
                 user == null ? null : user.getObjectId("_id"),
+                gradeId, lessonId
+        );
+    }
+
+    @GetMapping(value = "/getPackagesDigest")
+    @ResponseBody
+    public String getPackagesDigest(HttpServletRequest request,
+                                    @RequestParam(required = false) ObjectId gradeId,
+                                    @RequestParam(required = false) ObjectId lessonId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+
+        return PackageController.getPackagesDigest(
                 gradeId, lessonId
         );
     }
