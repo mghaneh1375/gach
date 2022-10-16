@@ -137,7 +137,10 @@ public class UserService {
 //            if(checkPass)
 //                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
 
-            return Utility.generateSuccessMsg("token", token, new PairValue("user", UserController.isAuth(user)));
+            return Utility.generateSuccessMsg(
+                    "token", token,
+                    new PairValue("user", UserController.isAuth(user))
+            );
 
         } catch (AuthenticationException x) {
             throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);

@@ -5,6 +5,7 @@ import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -23,9 +24,68 @@ import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_UNKNOWN;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class PayPing {
+
+    public static String exchange(ObjectId userId,
+                                  double money,
+                                  double coin,
+                                  double amount,
+                                  String mode) {
+
+        if(amount <= 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        String numberD = String.valueOf(amount);
+        numberD = numberD.substring(numberD.indexOf(".") + 1);
+
+        if(numberD.length() > 1)
+            return generateErr("تنها تا یک رقم اعشار می توانید عدد خود را وارد نمایید.");
+
+        Document config = getConfig();
+        double exchangeCoef =
+                mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) ?
+                        ((Number)config.get("coin_rate_coef")).doubleValue() :
+                        ((Number)config.get("money_rate_coef")).doubleValue();
+
+        if(
+                mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) &&
+                        coin < amount
+        )
+            return generateErr("مقدار انتخاب شده بیش از حد مجاز است.");
+
+        if(
+                mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName()) &&
+                        money < amount
+        )
+            return generateErr("مقدار انتخاب شده بیش از حد مجاز است.");
+
+        if(
+                mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
+        )
+            amount /= 1000.0;
+
+        double finalVal = amount * exchangeCoef;
+
+        BasicDBObject update = new BasicDBObject();
+
+        if(
+                mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
+        )
+            update.append("money", Math.round((money - amount * 1000) * 100.0) / 100.0)
+                    .append("coin", Math.round((coin + finalVal) * 100.0) / 100.0);
+        else {
+            update.append("money", Math.round((money + finalVal) * 100.0) / 100.0)
+                    .append("coin", Math.round((coin - amount) * 100.0) / 100.0);
+        }
+
+        userRepository.updateOne(userId, new BasicDBObject("$set", update));
+        userRepository.checkCache(userId);
+
+        return JSON_OK;
+    }
 
     private static String execPHP(String scriptName, String param) {
 
@@ -55,7 +115,7 @@ public class PayPing {
         Document user = userRepository.findById(studentId);
         if(user != null) {
             if(transaction.getString("section").equalsIgnoreCase("charge"))
-                user.put("money", user.getInteger("money") + transaction.getInteger("amount"));
+                user.put("money", ((Number)user.get("money")).doubleValue() + transaction.getInteger("amount"));
             else {
                 user.put("money", 0);
             }

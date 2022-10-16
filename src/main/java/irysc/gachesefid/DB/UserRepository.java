@@ -239,6 +239,10 @@ public class UserRepository extends Common {
         removeFromCache(table, newDoc.getObjectId("_id"));
     }
 
+    public void checkCache(ObjectId oId) {
+        removeFromCache(table, oId);
+    }
+
     // todo : after all transfer from mysql to mongo it should be delete
     public static ArrayList<Quiz> findAllMysql() {
 

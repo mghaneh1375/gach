@@ -71,7 +71,7 @@ public class ConfigAPIRoutes extends Router {
                                          "webGiftDays", "firstRankCertId",
                                          "secondRankCertId", "thirdRankCertId",
                                          "forthRankCertId", "fifthRankCertId",
-                                         "minQuestionForCustomQuiz",
+                                         "minQuestionForCustomQuiz", "moneyRateCoef"
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -90,7 +90,8 @@ public class ConfigAPIRoutes extends Router {
                                          Positive.class, Positive.class,
                                          JSONArray.class, JSONArray.class,
                                          ObjectId.class, ObjectId.class, ObjectId.class,
-                                         ObjectId.class, ObjectId.class, Integer.class
+                                         ObjectId.class, ObjectId.class, Integer.class,
+                                         Number.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

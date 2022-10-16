@@ -327,8 +327,8 @@ public class UserAPIRoutes extends Router {
     ) @NotBlank String jsonStr) {
 
         try {
-            JSONObject jsonObject = new JSONObject(jsonStr);
-            Utility.convertPersian(jsonObject);
+            JSONObject jsonObject =
+                    Utility.convertPersian(new JSONObject(jsonStr));
 
             return userService.signIn(
                     jsonObject.get("username").toString().toLowerCase(),

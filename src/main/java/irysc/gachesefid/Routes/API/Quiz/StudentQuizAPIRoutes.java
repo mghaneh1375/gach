@@ -189,7 +189,7 @@ public class StudentQuizAPIRoutes extends Router {
                 jsonObject.has("packageId") ?
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"), null,
-                user.getInteger("money"),
+                ((Number)user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
                 jsonObject.has("code") ?
@@ -222,7 +222,7 @@ public class StudentQuizAPIRoutes extends Router {
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"),
                 jsonObject.getJSONArray("studentIds"),
-                user.getInteger("money"),
+                ((Number)user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
                 jsonObject.has("code") ?

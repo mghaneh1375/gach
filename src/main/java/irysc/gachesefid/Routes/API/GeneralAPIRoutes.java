@@ -14,26 +14,25 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
-
-import org.springframework.http.MediaType;
-import org.springframework.web.servlet.ModelAndView;
-
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 
@@ -55,6 +54,28 @@ public class GeneralAPIRoutes extends Router {
         return PayPing.chargeAccount(
                 getUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getInt("amount")
+        );
+    }
+
+
+    @PostMapping(value = "/exchange")
+    @ResponseBody
+    public String exchange(HttpServletRequest request,
+                           @RequestBody @StrongJSONConstraint(
+                                   params = {"amount", "mode"},
+                                   paramsType = {Number.class, ExchangeMode.class}
+                           ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+
+        Document user = getUser(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        return PayPing.exchange(
+                user.getObjectId("_id"),
+                ((Number) user.get("money")).doubleValue(),
+                user.getDouble("coin"),
+                jsonObject.getNumber("amount").doubleValue(),
+                jsonObject.getString("mode")
         );
     }
 
@@ -90,7 +111,7 @@ public class GeneralAPIRoutes extends Router {
         } else {
 
             PairValue p = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
-            if(p == null)
+            if (p == null)
                 modelAndView.addObject("status", "fail");
             else {
 
@@ -147,7 +168,7 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String getRankingList(
             @RequestParam(required = false, value = "gradeId") ObjectId gradeId
-            ) {
+    ) {
         return UserController.getRankingList(gradeId);
     }
 
@@ -161,15 +182,14 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public void getQuestionTagsExcel(
             HttpServletResponse response
-    )  {
+    ) {
 
         try {
             ByteArrayInputStream byteArrayInputStream = QuestionController.getQuestionTagsExcel();
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=tags.xlsx");
             IOUtils.copy(byteArrayInputStream, response.getOutputStream());
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             System.out.println(x.getMessage());
         }
     }
@@ -201,10 +221,9 @@ public class GeneralAPIRoutes extends Router {
     }
 
 
-
     @GetMapping(value = "/getTagsKeyVals")
     @ResponseBody
-    public String getTagsKeyVals()  {
+    public String getTagsKeyVals() {
         return QuestionController.getTagsKeyVals();
     }
 
@@ -212,14 +231,13 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public void getSubjectCodesExcel(
             HttpServletResponse response
-    )  {
+    ) {
         try {
             ByteArrayInputStream byteArrayInputStream = ContentController.getSubjectCodesExcel();
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=codes.xlsx");
             IOUtils.copy(byteArrayInputStream, response.getOutputStream());
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             System.out.println(x.getMessage());
         }
     }
@@ -228,14 +246,13 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public void getAuthorCodesExcel(
             HttpServletResponse response
-    )  {
+    ) {
         try {
             ByteArrayInputStream byteArrayInputStream = UserController.getAuthorCodesExcel();
             response.setContentType("application/octet-stream");
             response.setHeader("Content-Disposition", "attachment; filename=author_codes.xlsx");
             IOUtils.copy(byteArrayInputStream, response.getOutputStream());
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             System.out.println(x.getMessage());
         }
     }

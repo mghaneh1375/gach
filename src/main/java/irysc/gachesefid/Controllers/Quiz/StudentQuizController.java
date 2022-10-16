@@ -639,7 +639,7 @@ public class StudentQuizController {
 
     public static String buy(ObjectId userId, ObjectId packageId,
                              JSONArray ids, JSONArray studentIds,
-                             int money, String phone, String mail,
+                             double money, String phone, String mail,
                              String offcode) {
 
         Document quizPackage = null;
@@ -728,7 +728,7 @@ public class StudentQuizController {
 
 
     private static String doBuy(ObjectId studentId, String phone,
-                                String mail, int money,
+                                String mail, double money,
                                 Document quizPackage,
                                 Document off, ArrayList<Document> quizzes,
                                 ArrayList<ObjectId> studentIds
@@ -785,7 +785,7 @@ public class StudentQuizController {
 
         if (shouldPay - money <= 100) {
 
-            int newUserMoney = money;
+            double newUserMoney = money;
 
             if (shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, money);
@@ -891,7 +891,7 @@ public class StudentQuizController {
             doc.append("off_amount", (int)offAmount);
         }
 
-        return goToPayment(shouldPay - money, doc);
+        return goToPayment((int) (shouldPay - money), doc);
     }
 
     private static String returnQuiz(Document quiz, Document stdDoc,
@@ -1053,7 +1053,7 @@ public class StudentQuizController {
                                        JSONObject data) {
 
         ObjectId userId = user.getObjectId("_id");
-        int money = user.getInteger("money");
+        double money = ((Number)user.get("money")).doubleValue();
 
         Document doc = customQuizRepository.findById(id);
 
@@ -1110,7 +1110,7 @@ public class StudentQuizController {
 
         if (shouldPay - money <= 100) {
 
-            int newUserMoney = money;
+            double newUserMoney = money;
 
             if(shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, money);
@@ -1197,7 +1197,7 @@ public class StudentQuizController {
             transaction.append("off_amount", (int)offAmount);
         }
 
-        return goToPayment(shouldPay - money, transaction);
+        return goToPayment((int) (shouldPay - money), transaction);
     }
 
     public static String prepareCustomQuiz(ObjectId userId,

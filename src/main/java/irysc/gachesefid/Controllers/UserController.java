@@ -204,7 +204,7 @@ public class UserController {
         Document config = Utility.getConfig();
 
         user.put("introduced", invitationCode);
-        user.put("money", user.getInteger("money") + config.getInteger("invitation_money"));
+        user.put("money", ((Number)user.get("money")).doubleValue() + config.getInteger("invitation_money"));
         user.put("coin", user.getInteger("coin") + config.getInteger("invitation_coin"));
 
         return JSON_OK;
@@ -312,11 +312,11 @@ public class UserController {
             if(config.containsKey("invite_money")) {
                 invitor.put("money",
                         config.getInteger("invite_money") +
-                                invitor.getInteger("money")
+                                ((Number)invitor.get("money")).doubleValue()
                 );
                 user.put("money",
                         config.getInteger("invite_money") +
-                                user.getInteger("money")
+                                ((Number)user.get("money")).doubleValue()
                 );
             }
 
@@ -461,7 +461,8 @@ public class UserController {
 
         JSONObject jsonObject = new JSONObject()
                 .put("id", userId.toString())
-                .put("money", user.getInteger("money"))
+                .put("money", user.get("money"))
+                .put("coin", user.get("coin"))
                 .put("pic", (user.containsKey("pic")) ? STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic") : "")
                 .put("firstName", user.getString("first_name"))
                 .put("invitationCode", user.get("invitation_code"))
@@ -517,9 +518,9 @@ public class UserController {
                             .put("title", field.title)
                             .put("isJustNum", field.isJustNum);
 
-                    if(field.pairValues != null) {
+                    if (field.pairValues != null) {
                         JSONArray jsonArray1 = new JSONArray();
-                        for(PairValue p : field.pairValues)
+                        for (PairValue p : field.pairValues)
                             jsonArray1.put(
                                     new JSONObject()
                                             .put("id", p.getKey())
@@ -541,7 +542,6 @@ public class UserController {
 
 
         return jsonObject;
-
     }
 
     private static void fillWithFormFields(FormField[] fields, JSONArray jsonArray, String role) {
@@ -593,7 +593,9 @@ public class UserController {
 
     public static JSONObject isAuth(Document user) {
 
-        boolean isComplete = user.containsKey("NID") && user.containsKey("pic");
+        boolean isComplete = user.containsKey("school") &&
+                user.containsKey("grade") && user.containsKey("city");
+
         JSONObject jsonObject = new JSONObject().put("isComplete", isComplete);
 
         jsonObject.put("user", convertUser(user));
@@ -1037,9 +1039,12 @@ public class UserController {
         long curr = System.currentTimeMillis();
 
         Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
+        Document config = getConfig();
 
         JSONObject jsonObject = new JSONObject()
-                .put("money", user.getInteger("money"))
+                .put("money", user.get("money"))
+                .put("coinToMoneyExchange", config.get("coin_rate_coef"))
+                .put("moneyToCoinExchange", config.get("money_rate_coef"))
                 .put("rank", rank == null ? "" : rank.getInteger("rank"))
                 .put("branchRank", 1)
                 .put("gradeRank", rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))

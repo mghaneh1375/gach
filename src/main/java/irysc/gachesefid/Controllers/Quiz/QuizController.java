@@ -1009,8 +1009,6 @@ public class QuizController {
                 ).split(" ")[0];
                 String quizName = quiz.getString("title");
 
-                System.out.println("salam");
-
                 if(rankingList.size() > 0)
                     giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config, 1,
                             date, quizName
@@ -1060,7 +1058,7 @@ public class QuizController {
                     (config.containsKey("quiz_money") &&
                             config.getInteger("quiz_money") > 0)
             )
-                user.put("money", user.getInteger("money") + config.getInteger("quiz_money"));
+                user.put("money", ((Number)user.get("money")).doubleValue() + config.getInteger("quiz_money"));
 
             if (
                     (config.containsKey("quiz_coin") &&
