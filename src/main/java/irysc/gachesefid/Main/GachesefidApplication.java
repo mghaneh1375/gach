@@ -19,6 +19,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,12 +41,10 @@ import static java.util.Map.entry;
 @Configuration
 public class GachesefidApplication implements WebMvcConfigurer {
 
-    final static public int MAX_ALLOWED_THREAD = 300;
-    public static final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(30);
-    final static private String username = "root";
-    final static private String password = "Ghhy@110";
-//    final static private String username = "test";
-//    final static private String password = "123456";
+//    final static private String username = "root";
+//    final static private String password = "Ghhy@110";
+    final static private String username = "test";
+    final static private String password = "123456";
 
     final static private String dbName = "gach"; // mydb
 

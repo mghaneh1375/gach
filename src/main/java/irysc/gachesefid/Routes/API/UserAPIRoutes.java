@@ -68,24 +68,10 @@ public class UserAPIRoutes extends Router {
                     regex("name", Pattern.compile(Pattern.quote("ناحیه"), Pattern.CASE_INSENSITIVE)),
                     null
             );
-            ArrayList<Document> cities2 = cityRepository.find(
-                    regex("name", Pattern.compile(Pattern.quote("تهران -منطقه"), Pattern.CASE_INSENSITIVE)),
-                    null
-            );
 
             for(Document city : cities) {
                 if(city.getString("name").contains("ناحیه 1")) {
                     city.put("name", city.getString("name").replace("ناحیه 1", ""));
-                    cityRepository.replaceOne(city.getObjectId("_id"), city);
-                }
-                else {
-                    cityRepository.deleteOne(city.getObjectId("_id"));
-                }
-            }
-
-            for(Document city : cities2) {
-                if(city.getString("name").contains("منطقه 1")) {
-                    city.put("name", city.getString("name").replace("-منطقه 1", ""));
                     cityRepository.replaceOne(city.getObjectId("_id"), city);
                 }
                 else {
