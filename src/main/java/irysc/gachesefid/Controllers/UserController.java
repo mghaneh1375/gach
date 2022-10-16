@@ -1114,7 +1114,8 @@ public class UserController {
                 if (!ObjectId.isValid(branches.getString(i)))
                     return JSON_NOT_VALID_PARAMS;
 
-                Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
+//                Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
+                Document branch = gradeRepository.findById(new ObjectId(branches.getString(i)));
                 if (branch == null)
                     return JSON_NOT_VALID_PARAMS;
 
@@ -1135,7 +1136,10 @@ public class UserController {
         Document grade = null;
 
         if(jsonObject.has("gradeId")) {
-            grade = gradeRepository.findById(
+//            grade = gradeRepository.findById(
+//                    new ObjectId(jsonObject.getString("gradeId"))
+//            );
+            grade = branchRepository.findById(
                     new ObjectId(jsonObject.getString("gradeId"))
             );
 
