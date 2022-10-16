@@ -62,40 +62,6 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-        if(1 == 1) {
-
-            Document admin = userRepository.findOne(eq("mail", "admin@yahoo.com"), null);
-
-            admin.put("level", true);
-            admin.remove("student_id");
-            admin.remove("schoolPhone");
-            admin.remove("schoolName");
-            admin.remove("role");
-
-            userRepository.replaceOne(admin.getObjectId("_id"), admin);
-            String[] NIDs = new String[] {
-                    "0945150989", "0204058457", "0371699967"
-            };
-
-            String[] mobiles = new String[] {
-                    "09121111111", "09122222222", "09123333333"
-            };
-
-            for(int z = 0; z < 3; z++) {
-                Document adminUserTmp1 = Document.parse(admin.toJson());
-                adminUserTmp1.put("first_name", "ادمین " + (z + 1));
-                adminUserTmp1.put("last_name", "ادمین " + (z + 1));
-                adminUserTmp1.put("NID", NIDs[z]);
-                adminUserTmp1.put("mail", "admin" + (z + 1) + "@yahoo.com");
-                adminUserTmp1.put("phone", mobiles[z]);
-                adminUserTmp1.put("_id", new ObjectId());
-                adminUserTmp1.put("password", UserService.getEncPassStatic("Asd12#45_"));
-                userRepository.insertOne(adminUserTmp1);
-            }
-
-            return "ok";
-        }
-
         JSONArray tags2 = questionRepository.distinctTags("tags");
         for(int i = 0; i < tags2.length(); i++) {
             String tag = tags2.getString(i);
