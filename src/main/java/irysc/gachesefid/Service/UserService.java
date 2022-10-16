@@ -34,10 +34,15 @@ public class UserService {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
-    private static PasswordEncoder staticPasswordEncoder;
+    private static PasswordEncoder passwordEncoderStatic;
 
     public boolean isOldPassCorrect(String password, String dbPassword) {
         return passwordEncoder.matches(password, dbPassword);
+    }
+
+    @Autowired
+    public void setStaticFoo(PasswordEncoder p) {
+        passwordEncoderStatic = p;
     }
 
     public String getEncPass(String username, String pass) {
@@ -46,7 +51,7 @@ public class UserService {
     }
 
     public static String getEncPassStatic(String pass) {
-        return staticPasswordEncoder.encode(pass);
+        return passwordEncoderStatic.encode(Utility.convertPersianDigits(pass));
     }
 
     public String getEncPass(String pass) {
