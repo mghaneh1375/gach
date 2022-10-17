@@ -11,10 +11,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.getSolarDate;
@@ -72,33 +73,72 @@ public class TransactionController {
         return generateSuccessMsg("data", data);
     }
 
-    public static String fetchInvoice(ObjectId userId, String refId) {
+    public static String fetchInvoice(ObjectId userId, ObjectId refId) {
 
-        Document doc = transactionRepository.findOne(
+        Document transaction = transactionRepository.findOne(
                 and(
-                        eq("ref_id", refId),
+                        eq("_id", refId),
                         eq("user_id", userId),
                         eq("status", "success")
                 ), null
         );
 
-        if(doc == null)
+        if(transaction == null)
             return JSON_NOT_VALID_ID;
 
-        JSONObject jsonObject = new JSONObject()
-                .put("paid", doc.get("amount"))
-                .put("createdAt", getSolarDate(doc.getLong("created_at")))
-                .put("for", GiftController.translateUseFor(doc.getString("section")));
+        StringBuilder section = new StringBuilder(GiftController.translateUseFor(
+                transaction.getString("section")
+        ));
 
-        if(doc.containsKey("ref_id"))
-            jsonObject.put("refId", doc.get("sale_ref_id"));
+        if(transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.GACH_EXAM.getName()
+        )) {
 
-        return generateSuccessMsg("data", jsonObject);
-    }
+            boolean checkAllItems = true;
 
-    public static String getMyRecp(ObjectId userId,
-                                   String section) {
-        return "";
+            if(transaction.containsKey("package_id")) {
+                Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
+                if(wantedPackage != null) {
+                    section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
+                    checkAllItems = false;
+                }
+            }
+
+            if(checkAllItems) {
+                Object products = transaction.get("products");
+                if (products instanceof ObjectId) {
+                    Document quiz = iryscQuizRepository.findById((ObjectId) products);
+                    if (quiz != null)
+                        section.append(" - ").append(quiz.getString("title"));
+                } else if (products instanceof List) {
+                    for (ObjectId quizId : (List<ObjectId>) products) {
+                        Document quiz = iryscQuizRepository.findById(quizId);
+                        if (quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    }
+                }
+            }
+        }
+        else if(transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.BANK_EXAM.getName()
+        )) {
+            Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
+
+            if(quiz != null)
+                section.append(" - ").append("خرید ").append(
+                        quiz.getList("questions", ObjectId.class).size()
+                ).append(" سوال ");
+        }
+
+        return generateSuccessMsg("data",
+                new JSONObject()
+                        .put("for", section.toString())
+                        .put("account", transaction.getOrDefault("account_money", 0))
+                        .put("offAmount", transaction.getOrDefault("off_amount", 0))
+                        .put("paid", transaction.getInteger("amount"))
+                        .put("refId", transaction.getOrDefault("ref_id", ""))
+                        .put("createdAt", getSolarDate(transaction.getLong("created_at")))
+        );
     }
 
 }

@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Config.GiftController;
-import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.ExchangeMode;
@@ -198,14 +197,14 @@ public class PayPing {
 
     }
 
-    public static PairValue checkPay(
+    public static String[] checkPay(
             String refId,
             String refCode,
             Long saleOrderId,
             Long saleRefId
     ) {
 
-        System.out.println("ref code is " + refCode);
+//        System.out.println("ref code is " + refCode);
 
 //        if(1 == 1) {
 //
@@ -236,7 +235,7 @@ public class PayPing {
                 return null;
 
             String res = execPHP("verify.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
-            System.out.println(res);
+//            System.out.println(res);
 
             if (res.startsWith("0")) {
 
@@ -249,11 +248,17 @@ public class PayPing {
 
                 new Thread(() -> completePay(transaction)).start();
 
-                System.out.println(res);
-                return new PairValue(refId, transaction.getString("section"));
+//                System.out.println(res);
+                return new String[] {
+                        refId, transaction.getString("section"),
+                        transaction.getObjectId("_id").toString()
+                };
             }
             else if(res.startsWith("43"))
-                return new PairValue(refId, transaction.getString("section"));
+                return new String[] {
+                        refId, transaction.getString("section"),
+                        transaction.getObjectId("_id").toString()
+                };
             else {
                 transaction.put("status", "fail");
                 transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
@@ -293,7 +298,8 @@ public class PayPing {
             transaction.append("ref_id", output.substring(2));
             transactionRepository.insertOne(transaction);
             return generateSuccessMsg("refId", output.substring(2),
-                    new PairValue("action", "pay")
+                    new PairValue("action", "pay"),
+                    new PairValue("transactionId", "")
             );
         }
 

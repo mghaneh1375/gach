@@ -19,6 +19,7 @@ import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
 import org.bson.Document;
@@ -110,25 +111,27 @@ public class GeneralAPIRoutes extends Router {
             modelAndView.addObject("status", "fail");
         } else {
 
-            PairValue p = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
+            String[] p = PayPing.checkPay(refId, resCode, saleOrderId, saleReferenceId);
             if (p == null)
                 modelAndView.addObject("status", "fail");
             else {
 
-                String referenceId = (String) p.getKey();
+                String referenceId = p[0];
 
                 if (referenceId == null)
                     modelAndView.addObject("status", "fail");
                 else {
 
-                    String section = (String) p.getValue();
+                    String section = p[1];
 
                     modelAndView.addObject("status", "success");
                     modelAndView.addObject("refId", referenceId);
                     modelAndView.addObject("section", section);
 
-                    modelAndView.addObject("financeUrl", frontEndUrl + "finantialReport");
-                    modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + refId);
+                    String transactionId = p[2];
+
+                    modelAndView.addObject("financeUrl", frontEndUrl + "financeHistory");
+                    modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + transactionId);
                     modelAndView.addObject("myQuizzesUrl",
                             section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
                                     frontEndUrl + "myIRYSCQuizzes" :
@@ -148,7 +151,7 @@ public class GeneralAPIRoutes extends Router {
     @GetMapping(value = "/fetchInvoice/{refId}")
     @ResponseBody
     public String fetchInvoice(HttpServletRequest request,
-                               @PathVariable @NotBlank String refId
+                               @PathVariable @ObjectIdConstraint ObjectId refId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return TransactionController.fetchInvoice(
                 getUser(request).getObjectId("_id"), refId
