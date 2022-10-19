@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-    public final static String STATICS_SERVER = "http://192.168.0.106/";
+    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@okft.org";
@@ -47,7 +47,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";

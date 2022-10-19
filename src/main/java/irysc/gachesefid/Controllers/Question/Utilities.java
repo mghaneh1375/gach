@@ -117,10 +117,16 @@ public class Utilities {
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("no", doc.getInteger("no"))
-                    .put("level", doc.getString("level"));
+                    .put("level", doc.getString("level"))
+                    .put("levelFa", doc.getString("level").equals("hard") ? "دشوار" :
+                            doc.getString("level").equals("mid") ? "متوسط" : "آسان");
 
-            if (doc.containsKey("stdAns"))
-                jsonObject.put("stdAns", doc.get("stdAns"));
+            if (doc.containsKey("stdAns")) {
+                if(doc.get("stdAns") instanceof Double && Double.isNaN((Double) doc.get("stdAns")))
+                    jsonObject.put("stdAns", "");
+                else
+                    jsonObject.put("stdAns", doc.get("stdAns"));
+            }
 
             if (isDetailNeeded || isAnswerFileNeeded) {
                 jsonObject.put("answer", doc.get("answer"))

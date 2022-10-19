@@ -54,9 +54,10 @@ public class AdminReportController {
         if(!doc.getString("status").equalsIgnoreCase("finished")) {
             doc.put("status", "finished");
 
-            ArrayList<PairValue> studentAnswers = Utility.getAnswers(
-                    doc.get("student_answers", Binary.class).getData()
-            );
+            ArrayList<PairValue> studentAnswers = doc.containsKey("student_answers") ?
+                    Utility.getAnswers(
+                            doc.get("student_answers", Binary.class).getData()
+                    ) : new ArrayList<>();
 
             ArrayList<Document> questions = questionRepository.findByIds(
                     doc.getList("questions", ObjectId.class), true
@@ -414,7 +415,8 @@ public class AdminReportController {
 
         JSONArray answersJsonArray = new JSONArray();
         fillWithAnswerSheetData(answersJsonArray, null, pairValues, marks);
-        ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) doc.getOrDefault("student_answers", new byte[0])).getData());
+        Binary binary = (Binary) doc.getOrDefault("student_answers", null);
+        ArrayList<PairValue> stdAnswers = binary == null ? new ArrayList<>() : Utility.getAnswers(binary.getData());
 
         for (int i = 0; i < pairValues.size(); i++) {
 

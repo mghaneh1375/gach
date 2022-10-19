@@ -464,7 +464,7 @@ public class StudentQuizController {
                 .put("description", "")
                 .put("mode", "regular")
                 .put("attaches", new JSONArray())
-                .put("refresh", Math.abs(new Random().nextInt(10)) + 5)
+                .put("refresh", 2)
                 .put("duration", neededTime)
                 .put("reminder", reminder)
                 .put("isNewPerson", doc.getLong("start_at") == curr);
@@ -531,7 +531,7 @@ public class StudentQuizController {
                     .put("description", doc.getOrDefault("desc", ""))
                     .put("mode", doc.getString("mode"))
                     .put("attaches", jsonArray)
-                    .put("refresh", 1) //Math.abs(new Random().nextInt(10)) + 5
+                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
                     .put("duration", neededTime)
                     .put("reminder", reminder)
                     .put("isNewPerson", student.getLong("start_at") == curr);
@@ -626,9 +626,9 @@ public class StudentQuizController {
             String result = saveStudentAnswers(doc, answers, student, db);
             if (result.contains("nok"))
                 return result;
-//            Math.abs(new Random().nextInt(3)) + 1
+
             return generateSuccessMsg("reminder", reminder,
-                    new PairValue("refresh", 3)
+                    new PairValue("refresh", Math.abs(new Random().nextInt(5)) + 5)
             );
 
         } catch (Exception x) {

@@ -250,6 +250,9 @@ public class Utility {
 
     public static ArrayList<PairValue> getAnswers(byte[] bytes) {
 
+        if(bytes == null)
+            return new ArrayList<>();
+
         ArrayList<PairValue> numbers = new ArrayList<>();
 
         int currIdx = 0;
@@ -341,10 +344,14 @@ public class Utility {
 
         byte[] output = null;
 
-        if (o instanceof Double) {
+        if (o == null || o instanceof Double) {
             output = new byte[8];
-            long lng = Double.doubleToLongBits((Double) o);
-            for (int i = 0; i < 8; i++) output[i] = (byte) ((lng >> ((7 - i) * 8)) & 0xff);
+            if(o == null)
+                for (int i = 0; i < 8; i++) output[i] = (byte) 0xff;
+            else {
+                long lng = Double.doubleToLongBits((Double) o);
+                for (int i = 0; i < 8; i++) output[i] = (byte) ((lng >> ((7 - i) * 8)) & 0xff);
+            }
         } else if (o instanceof PairValue) {
             output = new byte[1];
             output[0] = convertPairValueToByte((PairValue) o);
