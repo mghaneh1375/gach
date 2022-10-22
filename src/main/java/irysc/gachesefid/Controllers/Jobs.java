@@ -70,7 +70,7 @@ public class Jobs implements Runnable {
         }
     }
 
-    private static class CalcSubjectQuestions extends TimerTask {
+    public static class CalcSubjectQuestions extends TimerTask {
 
         @Override
         public void run() {

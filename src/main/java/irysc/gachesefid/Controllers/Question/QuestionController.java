@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Question;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -371,8 +372,6 @@ public class QuestionController extends Utilities {
         JSONArray excepts = new JSONArray();
         int rowIdx = 0;
 
-        HashMap<ObjectId, Integer> subjectsCounter = new HashMap<>();
-        HashMap<ObjectId, Integer> authorCounter = new HashMap<>();
         JSONArray errs = new JSONArray();
 
         boolean addAtLeastOne = false;
@@ -421,9 +420,6 @@ public class QuestionController extends Utilities {
 
                 ObjectId subjectId = subject.getObjectId("_id");
 
-                if (!subjectsCounter.containsKey(subjectId))
-                    subjectsCounter.put(subjectId, (Integer) subject.getOrDefault("q_no", 0));
-
                 int authorCode = (int) getCellValue(row.getCell(3));
                 Document author = authorRepository.findBySecKey(String.format("%03d", authorCode));
                 if (author == null) {
@@ -433,9 +429,6 @@ public class QuestionController extends Utilities {
                 }
 
                 ObjectId authorId = author.getObjectId("_id");
-
-                if (!authorCounter.containsKey(authorId))
-                    authorCounter.put(authorId, (Integer) author.getOrDefault("q_no", 0));
 
                 String kindQuestion = row.getCell(4).getStringCellValue();
                 if (!EnumValidatorImp.isValid(kindQuestion, QuestionType.class)) {
@@ -559,8 +552,6 @@ public class QuestionController extends Utilities {
                     newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
 
                 questionRepository.insertOne(newDoc);
-                subjectsCounter.put(subjectId, subjectsCounter.get(subjectId) + 1);
-                authorCounter.put(authorId, authorCounter.get(authorId) + 1);
                 addAtLeastOne = true;
 
             } catch (Exception ignore) {
@@ -570,34 +561,8 @@ public class QuestionController extends Utilities {
             }
         }
 
-        if (addAtLeastOne) {
-
-            for (ObjectId subjectId : subjectsCounter.keySet()) {
-                Document subject = subjectRepository.findById(subjectId);
-                if (subject == null)
-                    continue;
-
-                subject.put("q_no", subjectsCounter.get(subjectId));
-
-                subjectRepository.updateOne(subjectId,
-                        set("q_no", subjectsCounter.get(subjectId))
-                );
-            }
-
-            for (ObjectId authorId : authorCounter.keySet()) {
-
-                Document user = authorRepository.findById(authorId);
-                if (user == null)
-                    continue;
-
-                user.put("q_no", authorCounter.get(authorId));
-
-                authorRepository.updateOne(authorId,
-                        set("q_no", authorCounter.get(authorId))
-                );
-            }
-
-        }
+        if (addAtLeastOne)
+            new Jobs.CalcSubjectQuestions().run();
 
         if (excepts.length() == 0)
             return generateSuccessMsg(

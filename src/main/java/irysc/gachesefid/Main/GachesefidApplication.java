@@ -21,10 +21,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static com.mongodb.client.model.Filters.*;
@@ -87,8 +84,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
 
-    private static List<PairValue> branches = new ArrayList<>();
-
     private static void setupDB() {
         try {
 
@@ -144,38 +139,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
         }
     }
 
-    private static void fillCommonVals() {
-
-        commonVals = Map.ofEntries(
-                entry("money1", 1),
-                entry("money2", 2),
-                entry("money3", 33),
-                entry("invitationTransaction", 1),
-                entry("redundant1Transaction", 2),
-                entry("initTransaction", 8),
-                entry("redundant2Transaction", 3),
-                entry("ravanTransaction", 14),
-                entry("studentLevel", 1),
-                entry("adviserLevel", 2),
-                entry("operator1Level", 3),
-                entry("schoolLevel", 9),
-                entry("operator2Level", 4),
-                entry("adminLevel", 5),
-                entry("superAdminLevel", 6),
-                entry("controllerLevel", 7),
-                entry("namayandeLevel", 8)
-        );
-//				'designerLevel' => 10, "teacherLevel" => 99,
-//				'sampadSch' => 1, 'gheyrSch' => 2, 'nemoneSch' => 3, 'shahedSch' => 4, 'sayerSch' => 5, 'HeyatSch' => 6, 'dolatiSch' => 7,
-//				'staticOffCode' => 1, 'dynamicOffCode' => 2, 'chargeTransaction' => 4, 'systemQuiz' => 1, 'motevaseteAval' => 0, 'motevaseteDovom' => 1, 'dabestan' => 2, 'quizRankTransaction' => 9,
-//				'regularQuiz' => 2, 'questionQuiz' => 3, 'openQuiz' => 4, 'systemQuizTransaction' => 5, 'regularQuizTransaction' => 6, 'regularQuizGroupTransaction' => 7, 'questionBuyTransaction' => 10, 'kooshaExam' => 33,
-//				'konkurAdvice' => 1, 'olympiadAdvice' => 2, 'doore1Advice' => 3, 'doore2Advice' => 4, 'baliniAdvice' => 5, 'unknownAdvice' => 6, 'openQuizTransaction' => 17, 'schoolQuizTransaction' => 18,
-//				'elementaryAdvice' => 7, 'schoolAccountTransaction' => 20,
-//				'diplom' => 1, 'foghDiplom' => 2, 'lisans' => 3, 'foghLisans' => 4, 'phd' => 5, 'unknown' => 6,
-//				"standardRaven" => 1, "childRaven" => 2, "proRaven" => 3,
-//				"beckDepression" => 1, "beckAnxiety" => 2
-    }
-
     private static void setupNewThingsCache() {
 
         newThingsCache.put(NewAlert.NEW_TICKETS.getName(), ticketRepository.count(
@@ -195,6 +158,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     }
 
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("Iran"));
         setupDB();
 //        Enc.init();
         setupNewThingsCache();
