@@ -292,6 +292,11 @@ public class Utility {
                 int sentencesCount = bytes[currIdx + 1] & 0xff;
                 int streamLen = (int) Math.ceil(sentencesCount / 4.0);
 
+                if(sentencesCount == 255) {
+                    sentencesCount = 5;
+                    streamLen = 2;
+                }
+
                 next = currIdx + 1 + streamLen + 1;
                 int counter = 0;
                 ArrayList<Character> booleans = new ArrayList<>();
@@ -318,7 +323,11 @@ public class Utility {
                         break;
                 }
 
-                numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, booleans));
+                StringBuilder builder = new StringBuilder(booleans.size());
+                for(Character ch: booleans)
+                    builder.append(ch);
+
+                numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, builder.toString()));
             } else {
                 break;
             }
@@ -772,8 +781,16 @@ public class Utility {
                                 new PairValue(((PairValue) p.getValue()).getKey(),
                                         0)
                         ));
-                    } else
+                    } else if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
                         stdAnswers.add(new PairValue(p.getKey(), null));
+                    else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                        String s = "";
+                        System.out.println(p.getValue().toString());
+                        for(int z = 0; z < p.getValue().toString().length(); z++)
+                            s += "_";
+
+                        stdAnswers.add(new PairValue(p.getKey(), s.toCharArray()));
+                    }
                     continue;
                 }
 
@@ -792,14 +809,19 @@ public class Utility {
                     stdAnsAfterFilter = Double.parseDouble(stdAns);
                 else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
 
-                    String ans = p.getValue().toString();
+                    System.out.println(p.getValue().toString());
+                    System.out.println(stdAns);
 
-                    if (ans.length() != stdAns.length())
+                    if (p.getValue().toString().length() != stdAns.length())
                         return JSON_NOT_VALID_PARAMS;
+
+                    System.out.println("ok1");
 
                     if (!stdAns.matches("^[01_]+$"))
                         return JSON_NOT_VALID_PARAMS;
 
+                    System.out.println("ok2");
+                    System.out.println(stdAns.toCharArray());
                     stdAnsAfterFilter = stdAns.toCharArray();
                 } else
                     stdAnsAfterFilter = stdAns;

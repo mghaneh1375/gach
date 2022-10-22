@@ -1297,6 +1297,11 @@ public class StudentQuizController {
                 lessonId, subjectId, level, author
         );
 
+//        filters.add(or(
+//                eq("kind_question", "multi_sentence"),
+//                eq("kind_question", "short_answer")
+//        ));
+
         List<Document> docs = questionRepository.find(and(filters), JUST_ID);
 
         if (docs.size() < questionsNo)
