@@ -6,8 +6,10 @@ import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Models.Quiz;
 import irysc.gachesefid.Models.Sex;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Utility;
+import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -434,5 +438,24 @@ public class MongoRoutes extends Router {
             schoolRepository.insertOne(doc);
 
         return "salam";
+    }
+
+    @GetMapping(value = "/get_subject_excels")
+    @ResponseBody
+    public void get_subject_excels(
+            HttpServletResponse response
+    ) {
+
+        try {
+            ByteArrayInputStream byteArrayInputStream = Excel.write(
+                    SubjectRepository.getAllSubjectsCompleteFromMySQL()
+            );
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=subjects.xlsx");
+            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+        }
+        catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
     }
 }

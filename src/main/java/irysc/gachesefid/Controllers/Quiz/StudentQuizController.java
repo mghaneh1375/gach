@@ -997,6 +997,8 @@ public class StudentQuizController {
             else {
                 if (question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
                     question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                else if(question.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
+                    question.put("stdAns", stdAnswers.get(i).getValue().toString().matches("^[_]+$") ? "" : stdAnswers.get(i).getValue());
                 else
                     question.put("stdAns", stdAnswers.get(i).getValue());
             }

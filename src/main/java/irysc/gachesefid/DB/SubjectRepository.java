@@ -3,6 +3,8 @@ package irysc.gachesefid.DB;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -52,6 +54,37 @@ public class SubjectRepository extends Common {
         }
 
         return docs;
+    }
+
+    public static JSONArray getAllSubjectsCompleteFromMySQL() {
+
+        JSONArray jsonArray = new JSONArray();
+
+        try {
+            String sql = "select s.id, s.name, s.price1, s.price2, s.price3, l.name, g.name from " +
+                    "subject s, lesson l, grade g where s.lessonId = l.id and l.gradeId = g.id";
+
+            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next())
+                jsonArray.put(new JSONObject()
+                        .put("subject", rs.getString(2))
+                        .put("id", String.format("%3d", rs.getInt(1)))
+                        .put("easy_price", rs.getInt(3))
+                        .put("mid_price", rs.getInt(4))
+                        .put("hard_price", rs.getInt(5))
+                        .put("lesson", rs.getString(6))
+                        .put("grade", rs.getString(7))
+                );
+
+        }
+        catch (Exception x) {
+            printException(x);
+        }
+
+        return jsonArray;
     }
 
     public void clearFormCacheByGradeId(ObjectId gradeId) {

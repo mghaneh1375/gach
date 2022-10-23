@@ -224,22 +224,38 @@ public class Utility {
     public static byte[] getByteArrFromCharArr(char[] sentences) {
 
         BitSet bitSet = new BitSet(sentences.length * 2);
+        int bitSum = 0;
         int k = 0;
 
         for (char sentence : sentences) {
 
-            if (sentence == '_')
-                bitSet.set(k, k + 2, false);
-            else if (sentence == '1')
-                bitSet.set(k, k + 2, true);
-            else {
-                bitSet.set(k, true);
-                bitSet.set(k + 1, false);
-            }
+//            if (sentence == '_')
+//                bitSet.set(k, k + 2, false);
+//            if (sentence == '1')
+//                bitSet.set(k, k + 2, true);
+//            else {
+//                bitSet.set(k, true);
+//                bitSet.set(k + 1, false);
+//            }
+
+            if (sentence == '1')
+                bitSum += (int)Math.pow(2, k) + (int)Math.pow(2, k + 1);
+            else if(sentence == '0')
+                bitSum += (int)Math.pow(2, k);
+
             k += 2;
         }
 
-        byte[] sentencesByteArr = bitSet.toByteArray();
+        System.out.println("bitsum is " + bitSum);
+
+        byte[] b = ByteBuffer.allocate(4).putInt(bitSum).array();
+        byte[] sentencesByteArr = new byte[(int) Math.ceil(sentences.length * 2 / 8.0)];
+        for(int i = 0; i < sentencesByteArr.length; i++) {
+            sentencesByteArr[i] = b[3 - i];
+        }
+
+        System.out.println("cal len " + sentencesByteArr.length);
+
         byte[] out = new byte[sentencesByteArr.length + 1];
 
         out[0] = (byte) sentences.length;
@@ -258,11 +274,16 @@ public class Utility {
         int currIdx = 0;
         int next;
 
+        for(int i = 0; i < bytes.length; i++)
+            System.out.println(bytes[i]);
+
         while (currIdx < bytes.length) {
 
 //            System.out.println(currIdx);
 
             // TEST
+            System.out.println("type is " + bytes[currIdx]);
+
             if (bytes[currIdx] == 0x00) {
 
 //                System.out.println(bytes.length);
@@ -297,6 +318,7 @@ public class Utility {
                     streamLen = 2;
                 }
 
+                System.out.println("currIdx is " + currIdx);
                 next = currIdx + 1 + streamLen + 1;
                 int counter = 0;
                 ArrayList<Character> booleans = new ArrayList<>();
@@ -310,12 +332,13 @@ public class Utility {
 
                         int a = bytes[j] & ((1 << k) | (1 << k + 1));
 
-                        if (a == 0)
-                            booleans.add('_');
-                        else if (a == 3 || a == 12 || a == 48 || a == 192)
+                        if (a == 3 || a == 12 || a == 48 || a == 192)
                             booleans.add('1');
                         else if (a == 1 || a == 4 || a == 16 || a == 64)
                             booleans.add('0');
+                        else
+                            booleans.add('_');
+
                         counter++;
                     }
 
@@ -326,6 +349,9 @@ public class Utility {
                 StringBuilder builder = new StringBuilder(booleans.size());
                 for(Character ch: booleans)
                     builder.append(ch);
+
+                System.out.println(builder.toString());
+                System.out.println("next is " + next);
 
                 numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, builder.toString()));
             } else {
@@ -365,6 +391,7 @@ public class Utility {
             output = new byte[1];
             output[0] = convertPairValueToByte((PairValue) o);
         } else if (o instanceof ArrayList) {
+
             if (((ArrayList) o).get(0) instanceof PairValue) {
                 output = new byte[((ArrayList) o).size()];
                 int idx = 0;
@@ -372,8 +399,9 @@ public class Utility {
                 for (Object num : (ArrayList) o)
                     output[idx++] = convertPairValueToByte((PairValue) num);
             }
-        } else if (o instanceof char[])
+        } else if (o instanceof char[]) {
             return getByteArrFromCharArr((char[]) o);
+        }
 
         return output;
     }
@@ -536,12 +564,16 @@ public class Utility {
         ArrayList<byte[]> bytes = new ArrayList<>();
 
         int i = 0;
+
+        System.out.println("IN STORE");
+
         while (i < pairValues.size()) {
 
             String type = pairValues.get(i).getKey().toString();
 
             bytes.add(Utilities.convertTypeToByte(type));
             Object ans = pairValues.get(i).getValue();
+            System.out.println("type is: " + type);
 
             if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
 
@@ -564,7 +596,9 @@ public class Utility {
 
                 i = j;
             } else {
-                bytes.add(getByteArr(ans));
+                byte[] t = getByteArr(ans);
+                System.out.println("byte len " + t.length);
+                bytes.add(t);
                 i++;
             }
 //            else if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
@@ -785,7 +819,6 @@ public class Utility {
                         stdAnswers.add(new PairValue(p.getKey(), null));
                     else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
                         String s = "";
-                        System.out.println(p.getValue().toString());
                         for(int z = 0; z < p.getValue().toString().length(); z++)
                             s += "_";
 
@@ -809,19 +842,16 @@ public class Utility {
                     stdAnsAfterFilter = Double.parseDouble(stdAns);
                 else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
 
-                    System.out.println(p.getValue().toString());
-                    System.out.println(stdAns);
+                    System.out.println(p.getValue().toString() + " " + stdAns);
 
                     if (p.getValue().toString().length() != stdAns.length())
                         return JSON_NOT_VALID_PARAMS;
 
-                    System.out.println("ok1");
-
                     if (!stdAns.matches("^[01_]+$"))
                         return JSON_NOT_VALID_PARAMS;
 
-                    System.out.println("ok2");
-                    System.out.println(stdAns.toCharArray());
+                    System.out.println("ok");
+
                     stdAnsAfterFilter = stdAns.toCharArray();
                 } else
                     stdAnsAfterFilter = stdAns;

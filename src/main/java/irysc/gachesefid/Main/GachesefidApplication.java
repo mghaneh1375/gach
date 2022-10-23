@@ -38,10 +38,10 @@ import static java.util.Map.entry;
 @Configuration
 public class GachesefidApplication implements WebMvcConfigurer {
 
-//    final static private String username = "root";
-//    final static private String password = "Ghhy@110";
-    final static private String username = "test";
-    final static private String password = "123456";
+    final static private String username = "root";
+    final static private String password = "Ghhy@110";
+//    final static private String username = "test";
+//    final static private String password = "123456";
 
     final static private String dbName = "gach"; // mydb
 
@@ -87,11 +87,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
     private static void setupDB() {
         try {
 
-//            Class.forName("com.mysql.jdbc.Driver");
-//            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
-//            Statement st = con.createStatement();
-//            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
-//            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
+            Class.forName("com.mysql.jdbc.Driver");
+            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
+            Statement st = con.createStatement();
+            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
+            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
 
             MongoClientSettings settings = MongoClientSettings.builder()
                     .applyConnectionString(connString)
