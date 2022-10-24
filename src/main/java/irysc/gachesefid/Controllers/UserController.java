@@ -414,7 +414,7 @@ public class UserController {
                 .append("events", new ArrayList<>())
                 .append("avatar_id", avatar.getObjectId("_id"))
                 .append("pic", avatar.getString("file"))
-                .append("invitation_code", Utility.randomString(8))
+                .append("invitation_code", Utility.simpleRandomString(5))
                 .append("created_at", System.currentTimeMillis())
                 .append("accesses", new ArrayList<>() {
                     {

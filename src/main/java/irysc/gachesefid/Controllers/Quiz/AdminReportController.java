@@ -98,8 +98,7 @@ public class AdminReportController {
                     .put("whites", stats[0])
                     .put("corrects", stats[1])
                     .put("incorrects", stats[2])
-                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2])
-                    .put("percent", stats[3]);
+                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2]);
 
             lessons.put(jsonObject);
         }
@@ -114,7 +113,6 @@ public class AdminReportController {
                     .put("whites", stats[0])
                     .put("corrects", stats[1])
                     .put("incorrects", stats[2])
-                    .put("percent", stats[3])
                     .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2]);
 
             subjects.put(jsonObject);

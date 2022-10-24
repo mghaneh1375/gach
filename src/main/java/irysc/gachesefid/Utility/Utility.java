@@ -42,6 +42,8 @@ public class Utility {
     private static final Pattern mailPattern = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$", Pattern.CASE_INSENSITIVE);
     private static final String AB = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final String ABC = "0123456789";
+    private static final String ABCD = "ABCDEFGHIJKLMNOPQRSTUVWXY";
+
     private static Random random = new Random();
     private static SecureRandom rnd = new SecureRandom();
 
@@ -213,6 +215,17 @@ public class Utility {
         StringBuilder sb = new StringBuilder(len);
         for (int i = 0; i < len; i++)
             sb.append(AB.charAt(rnd.nextInt(AB.length())));
+        return sb.toString();
+    }
+
+    public static String simpleRandomString(int len) {
+
+        StringBuilder sb = new StringBuilder(len);
+        sb.append(ABCD.charAt(rnd.nextInt(ABCD.length()))).append("_");
+
+        for (int i = 0; i < len - 1; i++)
+            sb.append(ABC.charAt(rnd.nextInt(ABC.length())));
+
         return sb.toString();
     }
 

@@ -246,15 +246,11 @@ public class Utility {
             k += 2;
         }
 
-        System.out.println("bitsum is " + bitSum);
-
         byte[] b = ByteBuffer.allocate(4).putInt(bitSum).array();
         byte[] sentencesByteArr = new byte[(int) Math.ceil(sentences.length * 2 / 8.0)];
         for(int i = 0; i < sentencesByteArr.length; i++) {
             sentencesByteArr[i] = b[3 - i];
         }
-
-        System.out.println("cal len " + sentencesByteArr.length);
 
         byte[] out = new byte[sentencesByteArr.length + 1];
 
@@ -274,24 +270,16 @@ public class Utility {
         int currIdx = 0;
         int next;
 
-        for(int i = 0; i < bytes.length; i++)
-            System.out.println(bytes[i]);
-
         while (currIdx < bytes.length) {
 
-//            System.out.println(currIdx);
 
             // TEST
-            System.out.println("type is " + bytes[currIdx]);
 
             if (bytes[currIdx] == 0x00) {
 
-//                System.out.println(bytes.length);
                 int i = currIdx + 1;
                 while (i < bytes.length && bytes[i] != (byte) 0xff)
                     i++;
-
-//                System.out.println(i);
 
                 for (int j = currIdx + 1; j < i; j++) {
                     int choicesCount = (bytes[j] & 0xf0) >> 4;
@@ -318,7 +306,6 @@ public class Utility {
                     streamLen = 2;
                 }
 
-                System.out.println("currIdx is " + currIdx);
                 next = currIdx + 1 + streamLen + 1;
                 int counter = 0;
                 ArrayList<Character> booleans = new ArrayList<>();
@@ -350,9 +337,6 @@ public class Utility {
                 for(Character ch: booleans)
                     builder.append(ch);
 
-                System.out.println(builder.toString());
-                System.out.println("next is " + next);
-
                 numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, builder.toString()));
             } else {
                 break;
@@ -360,8 +344,6 @@ public class Utility {
 
             currIdx = next;
         }
-
-//        System.out.println(numbers.size());
 
         return numbers;
     }
@@ -565,15 +547,12 @@ public class Utility {
 
         int i = 0;
 
-        System.out.println("IN STORE");
-
         while (i < pairValues.size()) {
 
             String type = pairValues.get(i).getKey().toString();
 
             bytes.add(Utilities.convertTypeToByte(type));
             Object ans = pairValues.get(i).getValue();
-            System.out.println("type is: " + type);
 
             if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
 
@@ -597,7 +576,6 @@ public class Utility {
                 i = j;
             } else {
                 byte[] t = getByteArr(ans);
-                System.out.println("byte len " + t.length);
                 bytes.add(t);
                 i++;
             }
@@ -842,15 +820,11 @@ public class Utility {
                     stdAnsAfterFilter = Double.parseDouble(stdAns);
                 else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
 
-                    System.out.println(p.getValue().toString() + " " + stdAns);
-
                     if (p.getValue().toString().length() != stdAns.length())
                         return JSON_NOT_VALID_PARAMS;
 
                     if (!stdAns.matches("^[01_]+$"))
                         return JSON_NOT_VALID_PARAMS;
-
-                    System.out.println("ok");
 
                     stdAnsAfterFilter = stdAns.toCharArray();
                 } else

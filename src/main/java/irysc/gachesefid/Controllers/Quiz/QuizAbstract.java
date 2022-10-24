@@ -187,9 +187,61 @@ public abstract class QuizAbstract {
                     }
                 }
             }
-            else {
-                status = 0;
+            else if(question.getString("kind_question").equalsIgnoreCase(
+                    QuestionType.MULTI_SENTENCE.getName()
+            )) {
+
+
+                String stdAns = studentAnswers.get(idx).getValue().toString();
+                String answer = question.getString("answer");
+
+                int t = answer.length();
+                int c = 0;
+                int inc = 0;
+
+                for(int z = 0; z < t; z++) {
+
+                    if(z >= stdAns.length() || stdAns.charAt(z) == '_')
+                        continue;
+
+                    if(stdAns.charAt(z) == answer.charAt(z))
+                        c++;
+                    else
+                        inc++;
+
+                }
+
+                status = (short) (c == t ? 1 : inc + c == 0 ? 0 : -1);
+                double thisMark;
+
+                if(c == t)
+                    thisMark = question.getDouble("mark");
+                else {
+
+                    int p = -10 * inc;
+
+                    if (c > 1 && t <= 4) {
+                        if (c == 2)
+                            p += 20;
+                        else if (c == 3)
+                            p += 50;
+                    }
+                    else if(c > 1) {
+                        if (c == 2)
+                            p += 10;
+                        else if (c == 3)
+                            p += 30;
+                        else if (c == 4)
+                            p += 60;
+                    }
+                    thisMark = (p / 100.0) * question.getDouble("mark");
+                }
+
+                mark += thisMark;
+
             }
+            else
+                status = 0;
 
             marks.add(mark);
 
