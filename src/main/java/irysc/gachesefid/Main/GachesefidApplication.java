@@ -64,9 +64,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static CustomQuizRepository customQuizRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigRepository configRepository;
+    public static ContentRepository contentRepository;
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
     public static OffcodeRepository offcodeRepository;
+    public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
@@ -112,10 +114,12 @@ public class GachesefidApplication implements WebMvcConfigurer {
             customQuizRepository = new CustomQuizRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
+            contentRepository = new ContentRepository();
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
             mailRepository = new MailRepository();
             offcodeRepository = new OffcodeRepository();
+            openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();

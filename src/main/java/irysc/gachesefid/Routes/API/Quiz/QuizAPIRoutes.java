@@ -51,6 +51,16 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @Validated
 public class QuizAPIRoutes extends Router {
 
+
+    @PostMapping(value = "/createFromIRYSCQuiz/{quizId}")
+    @ResponseBody
+    public String createFromIRYSCQuiz(HttpServletRequest request,
+                                      @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return OpenQuizController.createFromIRYSCQuiz(quizId);
+    }
+
     @PostMapping(value = "/store/{mode}")
     @ResponseBody
     public String store(HttpServletRequest request,
@@ -172,7 +182,7 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "getAll/{mode}")
     @ResponseBody
     public String getAll(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = KindQuiz.class) @NotBlank String mode,
+                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) @NotBlank String mode,
                          @RequestParam(required = false, value = "name") String name,
                          @RequestParam(required = false, value = "startDateSolar") Long startDateSolar,
                          @RequestParam(required = false, value = "startDateSolarEndLimit") Long startDateSolarEndLimit,
@@ -184,16 +194,24 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin)
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
             return QuizController.getAll(iryscQuizRepository, null,
                     name, startDateSolar, startDateSolarEndLimit,
                     startRegistryDateSolar, startRegistrySolarEndLimit
             );
 
-        return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
-                name, startDateSolar, startDateSolarEndLimit,
-                startRegistryDateSolar, startRegistrySolarEndLimit
-        );
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return QuizController.getAll(openQuizRepository, null,
+                    name, null, null, null, null
+            );
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+            return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
+                    name, startDateSolar, startDateSolarEndLimit,
+                    startRegistryDateSolar, startRegistrySolarEndLimit
+            );
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
     @GetMapping(value = "/get/{mode}/{quizId}")
@@ -296,7 +314,7 @@ public class QuizAPIRoutes extends Router {
     @DeleteMapping(value = "/remove/{mode}")
     @ResponseBody
     public String remove(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                          @RequestBody @StrongJSONConstraint(
                                  params = {"items"},
                                  paramsType = {JSONArray.class}
@@ -311,9 +329,15 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.remove(iryscQuizRepository, null, jsonArray);
 
-        return QuizController.remove(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), jsonArray
-        );
+        if (isAdmin && mode.equals(AllKindQuiz.OPEN.getName()))
+            return QuizController.remove(openQuizRepository, null, jsonArray);
+
+        if(mode.equals(AllKindQuiz.SCHOOL.getName()))
+            return QuizController.remove(schoolQuizRepository,
+                    isAdmin ? null : user.getObjectId("_id"), jsonArray
+            );
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
 
@@ -474,7 +498,7 @@ public class QuizAPIRoutes extends Router {
     @PostMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
     @ResponseBody
     public String addBatchQuestionsToQuiz(HttpServletRequest request,
-                                          @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                           @PathVariable @ObjectIdConstraint ObjectId quizId,
                                           @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -489,14 +513,19 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, file);
 
-        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, file);
 
+        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+            return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
     @PutMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
     @ResponseBody
     public String addBatchQuestionsToQuiz(HttpServletRequest request,
-                                          @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                           @PathVariable @ObjectIdConstraint ObjectId quizId,
                                           @RequestBody @StrongJSONConstraint(
                                                   params = {"items"}, paramsType = {JSONArray.class},
@@ -515,7 +544,13 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, jsonArray, mark);
 
-        return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, jsonArray, mark);
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, jsonArray, mark);
+
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.SCHOOL.getName()))
+            return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, jsonArray, mark);
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
 

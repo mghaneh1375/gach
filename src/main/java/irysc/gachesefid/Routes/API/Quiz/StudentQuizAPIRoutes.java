@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
+import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -27,8 +28,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -38,7 +39,7 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "get/{mode}")
     @ResponseBody
     public String get(HttpServletRequest request,
-                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                      @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                       @RequestParam(required = false) String tag,
                       @RequestParam(required = false) Boolean finishedIsNeeded,
                       @RequestParam(required = false) Boolean justRegistrable
@@ -46,10 +47,16 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        return QuizController.getRegistrable(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
-                isAdmin, tag, finishedIsNeeded
-        );
+        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) || mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+            return QuizController.getRegistrable(
+                    mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                    isAdmin, tag, finishedIsNeeded
+            );
+
+//        if(mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+//            return OpenQuizController.getAll(isAdmin, user != null ? user.getObjectId("_id") : null);
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
     @GetMapping(value = "getFinishedQuizzes")
@@ -71,7 +78,10 @@ public class StudentQuizAPIRoutes extends Router {
             );
 
         return StudentQuizController.getMyRecp(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                        openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
     }

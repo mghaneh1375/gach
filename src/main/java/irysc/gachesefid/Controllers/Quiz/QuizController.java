@@ -11,10 +11,7 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.KindQuiz;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
-import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
@@ -187,15 +184,13 @@ public class QuizController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document quiz : docs) {
-            // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
-                quizAbstract = new RegularQuizController();
-            else
-                quizAbstract = new TashrihiQuizController();
+        if (db instanceof IRYSCQuizRepository)
+            quizAbstract = new RegularQuizController();
+        else
+            quizAbstract = new OpenQuiz();
 
+        for (Document quiz : docs)
             jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
-        }
 
         return generateSuccessMsg("data", jsonArray);
 
@@ -752,8 +747,8 @@ public class QuizController {
 
                     jsonArray.put(
                             new JSONObject()
-                                    .put("organizationId", row.getCell(1).getStringCellValue())
-                                    .put("mark", row.getCell(2).getNumericCellValue())
+                                    .put("organizationId", Excel.getCellValue(row.getCell(0)).toString())
+                                    .put("mark", Double.parseDouble(Excel.getCellValue(row.getCell(1)).toString()))
                     );
 
                 } catch (Exception x) {

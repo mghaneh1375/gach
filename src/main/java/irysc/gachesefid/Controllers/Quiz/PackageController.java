@@ -397,6 +397,7 @@ public class PackageController {
         }
 
         data.put("items", jsonArray);
+        data.put("openItems", OpenQuizController.getAll(isAdmin, userId));
 
         return generateSuccessMsg("data", data);
     }

@@ -88,10 +88,13 @@ public class StudentQuizController {
                     "_id", userId
             );
 
+            String section = db instanceof IRYSCQuizRepository ?
+                    OffCodeSections.GACH_EXAM.getName() : OffCodeSections.OPEN_EXAM.getName();
+
             Document transaction = transactionRepository.findOne(
                     and(
                             eq("status", "success"),
-                            eq("section", OffCodeSections.GACH_EXAM.getName()),
+                            eq("section", section),
                             eq("user_id", userId),
                             or(
                                     in("products", quizId),
@@ -100,9 +103,7 @@ public class StudentQuizController {
                     ), null
             );
 
-            StringBuilder section = new StringBuilder(GiftController.translateUseFor(
-                    OffCodeSections.GACH_EXAM.getName()
-            ));
+            StringBuilder sectionFa = new StringBuilder(GiftController.translateUseFor(section));
 
             if(transaction != null) {
 
@@ -111,7 +112,7 @@ public class StudentQuizController {
                 if (transaction.containsKey("package_id")) {
                     Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
                     if (wantedPackage != null) {
-                        section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
+                        sectionFa.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
                         checkAllItems = false;
                     }
                 }
@@ -119,20 +120,20 @@ public class StudentQuizController {
                 if (checkAllItems) {
                     Object products = transaction.get("products");
                     if (products instanceof ObjectId) {
-                        Document quizTmp = iryscQuizRepository.findById((ObjectId) products);
+                        Document quizTmp = db.findById((ObjectId) products);
                         if (quizTmp != null)
-                            section.append(" - ").append(quizTmp.getString("title"));
+                            sectionFa.append(" - ").append(quizTmp.getString("title"));
                     } else if (products instanceof List) {
                         for (ObjectId quizIdTmp : (List<ObjectId>) products) {
-                            Document quizTmp = iryscQuizRepository.findById(quizIdTmp);
+                            Document quizTmp = db.findById(quizIdTmp);
                             if (quizTmp != null)
-                                section.append(" - ").append(quizTmp.getString("title"));
+                                sectionFa.append(" - ").append(quizTmp.getString("title"));
                         }
                     }
                 }
             }
             else
-                section.append(" - ").append(quiz.getString("title"));
+                sectionFa.append(" - ").append(quiz.getString("title"));
 
             JSONObject jsonObject = new JSONObject()
                     .put("paid", transaction == null ? 0 : transaction.getOrDefault("amount", 0))
@@ -141,7 +142,7 @@ public class StudentQuizController {
                     .put("createdAt", transaction == null ? getSolarDate(std.getLong("register_at")) :
                             getSolarDate(transaction.getLong("created_at"))
                     )
-                    .put("for", section.toString());
+                    .put("for", sectionFa.toString());
 
             if (transaction != null && transaction.containsKey("ref_id"))
                 jsonObject.put("refId", transaction.get("ref_id"));
@@ -324,10 +325,15 @@ public class StudentQuizController {
                 generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
         ) {
             ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
+            quizzes.addAll(openQuizRepository.find(and(filters), null));
 
-            QuizAbstract quizAbstract = new RegularQuizController();
+            QuizAbstract regularQuizController = new RegularQuizController();
+            QuizAbstract openQuizAbstract = new OpenQuiz();
 
             for (Document quiz : quizzes) {
+
+                QuizAbstract quizAbstract = quiz.containsKey("launch_mode") ?
+                        regularQuizController : openQuizAbstract;
 
                 if (isSchool) {
                     data.put(quizAbstract.convertDocToJSON(
