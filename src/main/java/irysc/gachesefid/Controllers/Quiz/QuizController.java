@@ -1316,4 +1316,101 @@ public class QuizController {
             return generateErr(x.getMessage());
         }
     }
+
+    public static String removeQuestions(Common db, ObjectId quizId, JSONArray jsonArray) {
+
+        Document quiz = db.findById(quizId);
+        if(quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        if(db instanceof IRYSCQuizRepository) {
+
+            if(quiz.getLong("start") < System.currentTimeMillis())
+                return generateErr("زمان آزمون موردنظر رسیده است و امکان حذف سوال از آزمون وجود ندارد.");
+
+        }
+        else if(db instanceof OpenQuizRepository) {
+
+            if(quiz.getList("students", Document.class).size() > 0)
+                return generateErr("دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف سوال وجود ندارد.");
+
+        }
+
+        JSONArray removeIds = new JSONArray();
+        JSONArray excepts = new JSONArray();
+
+        Document questions = quiz.get("questions", Document.class);
+        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
+        List<Double> marks = questions.getList("marks", Double.class);
+        List<ObjectId> removed = new ArrayList<>();
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId qId = new ObjectId(id);
+            if(!questionIds.contains(qId)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            removeIds.put(qId);
+            removed.add(qId);
+
+            if (db instanceof IRYSCQuizRepository) {
+
+                Document question = questionRepository.findById(qId);
+
+                if (question == null)
+                    continue;
+
+                int used = (int) question.getOrDefault("used", 0);
+
+                questionRepository.updateOne(
+                        question.getObjectId("_id"),
+                        set("used", used - 1)
+                );
+            }
+
+        }
+
+        if(removeIds.length() == 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        List<ObjectId> newQuestionsIds = new ArrayList<>();
+        List<Double> newMarks = new ArrayList<>();
+
+        int idx = 0;
+
+        for(ObjectId qId : questionIds) {
+
+            if(removed.contains(qId)) {
+                idx++;
+                continue;
+            }
+
+            newQuestionsIds.add(qId);
+            newMarks.add(marks.get(idx));
+            idx++;
+        }
+
+        questions.put("marks", newMarks);
+        questions.put("_ids", newQuestionsIds);
+        questions.put("answers",
+                Utility.getAnswersByteArr(newQuestionsIds)
+        );
+
+        quiz.put("questions", questions);
+        db.replaceOne(quizId, quiz);
+
+
+        return irysc.gachesefid.Utility.Utility.returnRemoveResponse(
+                excepts, removeIds
+        );
+    }
+
 }

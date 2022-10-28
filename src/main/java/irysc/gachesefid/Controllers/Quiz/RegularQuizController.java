@@ -4,9 +4,12 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -81,34 +84,6 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    public int calcLen(Document quiz) {
-
-        if(quiz.containsKey("duration"))
-            return quiz.getInteger("duration") * 60;
-
-        if(quiz.containsKey("duration_sum"))
-            return quiz.getInteger("duration_sum");
-
-        if(!quiz.containsKey("questions"))
-            return 0;
-
-        Document questions = quiz.get("questions", Document.class);
-
-        if(!questions.containsKey("_ids"))
-            return 0;
-
-        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
-        ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
-
-        int total = 0;
-        for(Document question : questionsDoc)
-            total += question.getInteger("needed_time");
-
-        quiz.put("duration_sum", total);
-        return total;
-    }
-
-    @Override
     JSONObject convertDocToJSON(Document quiz, boolean isDigest,
                                 boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
 
@@ -116,7 +91,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("title", quiz.getString("title"))
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
-                .put("generalMode", "IRYSC")
+                .put("generalMode", AllKindQuiz.IRYSC.getName())
                 .put("mode", quiz.getString("mode"))
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
@@ -349,7 +324,7 @@ public class RegularQuizController extends QuizAbstract {
         HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
         HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
 
-        Taraz(Document quiz) {
+        Taraz(Document quiz, Common db) {
 
             this.quiz = quiz;
             Document questions = quiz.get("questions", Document.class);
@@ -402,8 +377,9 @@ public class RegularQuizController extends QuizAbstract {
             calcSubjectsStats();
             calcLessonsStats();
 
-            save();
-            storeInRankingTable();
+            save(db);
+            if(db instanceof IRYSCQuizRepository)
+                storeInRankingTable();
         }
 
         public ArrayList<Document> lessonsStatOutput;
@@ -1074,7 +1050,7 @@ public class RegularQuizController extends QuizAbstract {
             }
         }
 
-        private void save() {
+        private void save(Common db) {
 
             quiz.put("ranking_list", rankingList);
             quiz.put("report_status", "ready");
@@ -1085,7 +1061,10 @@ public class RegularQuizController extends QuizAbstract {
 
             quiz.put("question_stat", questionStats);
 
-            iryscQuizRepository.replaceOne(
+            if(db instanceof OpenQuizRepository)
+                quiz.put("last_build_at", System.currentTimeMillis());
+
+            db.replaceOne(
                     quiz.getObjectId("_id"), quiz
             );
 
@@ -1307,6 +1286,6 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     void createTaraz(Document quiz) {
-        new Taraz(quiz);
+        new Taraz(quiz, iryscQuizRepository);
     }
 }

@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -9,6 +10,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.security.core.parameters.P;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +75,70 @@ public class TransactionController {
         return generateSuccessMsg("data", data);
     }
 
+    public static void fetchQuizInvoice(StringBuilder section,
+                                          Document transaction) {
+        boolean checkAllItems = true;
+
+        if(transaction.containsKey("package_id")) {
+            Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
+            if(wantedPackage != null) {
+                section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
+                checkAllItems = false;
+            }
+        }
+
+        if(checkAllItems) {
+            Object products = transaction.get("products");
+            if (products instanceof ObjectId) {
+                Document quiz = iryscQuizRepository.findById((ObjectId) products);
+                if (quiz != null)
+                    section.append(" - ").append(quiz.getString("title"));
+                else {
+                    quiz = openQuizRepository.findById((ObjectId) products);
+                    if(quiz != null)
+                        section.append(" - ").append(quiz.getString("title"));
+                }
+            } else if (products instanceof List) {
+                for (ObjectId quizId : (List<ObjectId>) products) {
+
+                    Document quiz = iryscQuizRepository.findById(quizId);
+                    if (quiz != null)
+                        section.append(" - ").append(quiz.getString("title"));
+                    else {
+                        quiz = openQuizRepository.findById(quizId);
+                        if (quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    }
+                }
+            }
+        }
+    }
+
+    static String getTransactionTitle(Document transaction) {
+
+        StringBuilder section = new StringBuilder(GiftController.translateUseFor(
+                transaction.getString("section")
+        ));
+
+        if(transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.GACH_EXAM.getName()
+        ))
+            fetchQuizInvoice(section, transaction);
+
+        else if(transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.BANK_EXAM.getName()
+        )) {
+            Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
+
+            if(quiz != null)
+                section.append(" - ").append("خرید ").append(
+                        quiz.getList("questions", ObjectId.class).size()
+                ).append(" سوال ");
+        }
+
+        return section.toString();
+    }
+
     public static String fetchInvoice(ObjectId userId, ObjectId refId) {
 
         Document transaction = transactionRepository.findOne(
@@ -86,53 +152,9 @@ public class TransactionController {
         if(transaction == null)
             return JSON_NOT_VALID_ID;
 
-        StringBuilder section = new StringBuilder(GiftController.translateUseFor(
-                transaction.getString("section")
-        ));
-
-        if(transaction.getString("section").equalsIgnoreCase(
-                OffCodeSections.GACH_EXAM.getName()
-        )) {
-
-            boolean checkAllItems = true;
-
-            if(transaction.containsKey("package_id")) {
-                Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
-                if(wantedPackage != null) {
-                    section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
-                    checkAllItems = false;
-                }
-            }
-
-            if(checkAllItems) {
-                Object products = transaction.get("products");
-                if (products instanceof ObjectId) {
-                    Document quiz = iryscQuizRepository.findById((ObjectId) products);
-                    if (quiz != null)
-                        section.append(" - ").append(quiz.getString("title"));
-                } else if (products instanceof List) {
-                    for (ObjectId quizId : (List<ObjectId>) products) {
-                        Document quiz = iryscQuizRepository.findById(quizId);
-                        if (quiz != null)
-                            section.append(" - ").append(quiz.getString("title"));
-                    }
-                }
-            }
-        }
-        else if(transaction.getString("section").equalsIgnoreCase(
-                OffCodeSections.BANK_EXAM.getName()
-        )) {
-            Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
-
-            if(quiz != null)
-                section.append(" - ").append("خرید ").append(
-                        quiz.getList("questions", ObjectId.class).size()
-                ).append(" سوال ");
-        }
-
         return generateSuccessMsg("data",
                 new JSONObject()
-                        .put("for", section.toString())
+                        .put("for", getTransactionTitle(transaction))
                         .put("account", transaction.getOrDefault("account_money", 0))
                         .put("offAmount", transaction.getOrDefault("off_amount", 0))
                         .put("paid", transaction.getInteger("amount"))

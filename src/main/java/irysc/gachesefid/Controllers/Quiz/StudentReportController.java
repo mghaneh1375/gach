@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Validator.EnumValidator;
@@ -19,6 +21,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
+import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Main.GachesefidApplication.stateRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
@@ -26,6 +29,7 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 public class StudentReportController {
 
@@ -33,8 +37,11 @@ public class StudentReportController {
                                     ObjectId userId, ObjectId quizId) {
 
         try {
-
-            Document quiz = hasAccess(db, userId, quizId);
+            System.out.println(isAdmin);
+            System.out.println(userId);
+            Document quiz = db instanceof IRYSCQuizRepository ?
+                    hasAccess(db, userId, quizId) :
+                    hasProtectedAccess(db, isAdmin ? null : userId, quizId);
 
             if (
                     !quiz.containsKey("report_status") ||
@@ -44,8 +51,38 @@ public class StudentReportController {
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
             if (!isAdmin &&
-                    !quiz.getBoolean("show_results_after_correction"))
+                    !(boolean)quiz.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
+
+            if(!isAdmin && db instanceof OpenQuizRepository) {
+
+                List<Document> students = quiz.getList("students", Document.class);
+
+                Document userDocInQuiz = searchInDocumentsKeyVal(
+                        students, "_id", userId
+                );
+
+                if(userDocInQuiz == null)
+                    return JSON_NOT_ACCESS;
+
+                int neededTime = new RegularQuizController().calcLen(quiz);
+                long startAt = userDocInQuiz.getLong("start_at");
+                long curr = System.currentTimeMillis();
+
+                int reminder = neededTime -
+                        (int) ((curr - startAt) / 1000);
+
+                if(reminder > 0)
+                    return generateErr("هنوز زمان مشاهده نتایج فرا نرسیده است.");
+
+                if(quiz.getLong("last_build_at") == null ||
+                        quiz.getLong("last_build_at") < quiz.getLong("last_finished_at")
+                ) {
+                    new RegularQuizController.Taraz(quiz, openQuizRepository);
+                    openQuizRepository.clearFromCache(quiz.getObjectId("_id"));
+                    quiz = openQuizRepository.findById(quizId);
+                }
+            }
 
             JSONArray jsonArray = new JSONArray();
 

@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.Models.AllKindQuiz;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -55,11 +56,6 @@ public class OpenQuiz extends QuizAbstract {
     }
 
     @Override
-    int calcLen(Document quiz) {
-        return 0;
-    }
-
-    @Override
     void quit(Document student, Document quiz) {
 
     }
@@ -70,6 +66,7 @@ public class OpenQuiz extends QuizAbstract {
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
                 .put("mode", quiz.getString("mode"))
+                .put("generalMode", AllKindQuiz.OPEN.getName())
                 .put("tags", quiz.getList("tags", String.class))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
@@ -81,19 +78,18 @@ public class OpenQuiz extends QuizAbstract {
         } catch (Exception ignore) {
         }
 
-        if (afterBuy) {
-            jsonObject
-                    .put("status", "inProgress")
-                    .put("duration", calcLen(quiz))
-                    .put("questionsCount", questionsCount);
+        jsonObject.put("duration", calcLen(quiz))
+                .put("questionsCount", questionsCount);
 
-        } else
+        if (afterBuy)
+            jsonObject
+                    .put("status", "inProgress");
+        else
             jsonObject.put("price", quiz.getInteger("price"));
 
         if (isAdmin) {
             jsonObject
-                    .put("studentsCount", quiz.getInteger("registered"))
-                    .put("questionsCount", questionsCount);
+                    .put("studentsCount", quiz.getInteger("registered"));
         }
 
         if(!isDigest || isDescNeeded)

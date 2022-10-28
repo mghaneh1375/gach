@@ -2,7 +2,6 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
-import irysc.gachesefid.Controllers.Quiz.OpenQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -80,8 +79,8 @@ public class StudentQuizAPIRoutes extends Router {
         return StudentQuizController.getMyRecp(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
-                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                        openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
     }
@@ -105,7 +104,10 @@ public class StudentQuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return StudentQuizController.reviewQuiz(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                openQuizRepository : schoolQuizRepository,
                 quizId, isAdmin ? null : user.getObjectId("_id"), isStudent
         );
 
@@ -117,13 +119,17 @@ public class StudentQuizAPIRoutes extends Router {
                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                          @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.launchCustom(
                     quizId, getUser(request).getObjectId("_id")
             );
 
         return StudentQuizController.launch(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
     }
@@ -163,15 +169,11 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return AdminReportController.getStudentAnswerSheet(
-                    iryscQuizRepository,
-                    null,
-                    quizId, user.getObjectId("_id")
-            );
-
         return AdminReportController.getStudentAnswerSheet(
-                schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                openQuizRepository : schoolQuizRepository,
                 null,
                 quizId, user.getObjectId("_id")
         );
@@ -199,7 +201,7 @@ public class StudentQuizAPIRoutes extends Router {
                 jsonObject.has("packageId") ?
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"), null,
-                ((Number)user.get("money")).doubleValue(),
+                ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
                 jsonObject.has("code") ?
@@ -232,7 +234,7 @@ public class StudentQuizAPIRoutes extends Router {
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"),
                 jsonObject.getJSONArray("studentIds"),
-                ((Number)user.get("money")).doubleValue(),
+                ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
                 jsonObject.has("code") ?
@@ -259,16 +261,13 @@ public class StudentQuizAPIRoutes extends Router {
                     new JSONObject(jsonStr).getJSONArray("answers")
             );
 
-        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return StudentQuizController.storeAnswers(
-                    iryscQuizRepository, quizId,
-                    user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("answers")
-            );
-
         return StudentQuizController.storeAnswers(
-                schoolQuizRepository,
-                quizId, user.getObjectId("_id"),
-                new JSONObject(jsonStr).getJSONArray("answers")
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                openQuizRepository : schoolQuizRepository,
+                quizId,
+                user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("answers")
         );
     }
 

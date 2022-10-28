@@ -12,13 +12,40 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
+
 public abstract class QuizAbstract {
 
     abstract List<Document> registry(ObjectId studentId, String phone,
                                           String mail, List<ObjectId> quizIds,
                                           int paid);
 
-    abstract int calcLen(Document quiz);
+    public int calcLen(Document quiz) {
+
+        if(quiz.containsKey("duration"))
+            return quiz.getInteger("duration") * 60;
+
+        if(quiz.containsKey("duration_sum"))
+            return quiz.getInteger("duration_sum");
+
+        if(!quiz.containsKey("questions"))
+            return 0;
+
+        Document questions = quiz.get("questions", Document.class);
+
+        if(!questions.containsKey("_ids"))
+            return 0;
+
+        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
+        ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
+
+        int total = 0;
+        for(Document question : questionsDoc)
+            total += question.getInteger("needed_time");
+
+        quiz.put("duration_sum", total);
+        return total;
+    }
 
     abstract void quit(Document student, Document quiz);
 

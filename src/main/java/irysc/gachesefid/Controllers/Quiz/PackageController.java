@@ -370,8 +370,16 @@ public class PackageController {
                     ), null
             );
 
+            if(!isSchool)
+                docs.addAll(openQuizRepository.find(
+                        userId == null ? null : nin("students", userId), null
+                ));
+
             RegularQuizController quizController = new RegularQuizController();
+            OpenQuiz openQuiz = new OpenQuiz();
+
             for (Document doc : docs) {
+
                 if (doc.containsKey("tags")) {
                     List<String> t = doc.getList("tags", String.class);
                     if (t.size() > 0) {
@@ -389,15 +397,21 @@ public class PackageController {
                         tags.put("المپیاد", subTags);
                     }
                 }
-                jsonArray.put(quizController.convertDocToJSON(
-                        doc, true, false, false, true
-                ).put("type", "quiz"));
+
+                if(doc.containsKey("launch_mode"))
+                    jsonArray.put(quizController.convertDocToJSON(
+                            doc, true, false, false, true
+                    ).put("type", "quiz"));
+                else
+                    jsonArray.put(openQuiz.convertDocToJSON(
+                            doc, true, false, false, true
+                    ).put("type", "quiz"));
             }
+
             data.put("tags", tags);
         }
 
         data.put("items", jsonArray);
-        data.put("openItems", OpenQuizController.getAll(isAdmin, userId));
 
         return generateSuccessMsg("data", data);
     }

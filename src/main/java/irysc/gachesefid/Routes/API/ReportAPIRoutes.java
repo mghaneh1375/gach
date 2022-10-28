@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpServletRequest;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 
@@ -102,7 +103,7 @@ public class ReportAPIRoutes extends Router {
     @GetMapping(value = "/showRanking/{mode}/{quizId}")
     @ResponseBody
     public String showRanking(HttpServletRequest request,
-                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                              @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
 
         Document user = getUserIfLogin(request);
@@ -113,6 +114,9 @@ public class ReportAPIRoutes extends Router {
 
         if (user == null)
             return JSON_NOT_ACCESS;
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return StudentReportController.getRanking(openQuizRepository, isAdmin, user.getObjectId("_id"), quizId);
 
         return StudentReportController.getRanking(
                 schoolQuizRepository,
@@ -149,6 +153,11 @@ public class ReportAPIRoutes extends Router {
 
         if (user == null)
             return JSON_NOT_ACCESS;
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return AdminReportController.getStudentStat(
+                    openQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, userId, false
+            );
 
         return AdminReportController.getStudentStat(
                 schoolQuizRepository,

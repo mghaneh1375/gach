@@ -2,6 +2,8 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
@@ -156,17 +158,68 @@ public class AdminReportController {
             if (studentDoc == null)
                 return JSON_NOT_VALID_ID;
 
-            Document quiz = hasPublicAccess(db, user, quizId);
+            boolean isIRYSCQuiz = db instanceof IRYSCQuizRepository;
+
+            if(userIsNotLogin && !isIRYSCQuiz)
+                return JSON_NOT_ACCESS;
+
+            Document quiz = isIRYSCQuiz ?
+                    hasPublicAccess(db, user, quizId) :
+                    hasProtectedAccess(db, user == null ? null : (ObjectId) user, quizId);
 
             if(user != null &&
-                    !quiz.getBoolean("show_results_after_correction"))
+                    !(boolean)quiz.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
             if(userIsNotLogin &&
                     !(boolean)quiz.getOrDefault("show_results_after_correction_not_login_users", false))
                 return generateErr("برای رویت نتایج باید وارد سامانه شوید.");
 
+            List<Document> students = quiz.getList("students", Document.class);
+
+            Document student = searchInDocumentsKeyVal(
+                    students, "_id", studentId
+            );
+
+            if (student == null)
+                return JSON_NOT_VALID_ID;
+
             long curr = System.currentTimeMillis();
+
+            if(user != null && db instanceof OpenQuizRepository) {
+
+                Document userDocInQuiz = searchInDocumentsKeyVal(
+                        students, "_id", user
+                );
+
+                if(userDocInQuiz == null)
+                    return JSON_NOT_ACCESS;
+
+                int neededTime = new RegularQuizController().calcLen(quiz);
+                long startAt = userDocInQuiz.getLong("start_at");
+
+                int reminder = neededTime -
+                        (int) ((curr - startAt) / 1000);
+
+                if(reminder > 0)
+                    return generateErr("هنوز زمان مشاهده نتایج فرا نرسیده است.");
+
+                if(quiz.getLong("last_build_at") == null ||
+                        quiz.getLong("last_build_at") < quiz.getLong("last_finished_at")
+                ) {
+                    new RegularQuizController.Taraz(quiz, openQuizRepository);
+                    openQuizRepository.clearFromCache(quiz.getObjectId("_id"));
+                    quiz = openQuizRepository.findById(quizId);
+
+                    students = quiz.getList("students", Document.class);
+
+                    student = searchInDocumentsKeyVal(
+                            students, "_id", studentId
+                    );
+
+                }
+            }
+
             Document config = getConfig();
 
             if (
@@ -177,14 +230,6 @@ public class AdminReportController {
             )
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
-            List<Document> students = quiz.getList("students", Document.class);
-
-            Document student = searchInDocumentsKeyVal(
-                    students, "_id", studentId
-            );
-
-            if (student == null)
-                return JSON_NOT_VALID_ID;
 
             Document studentGeneralStat = searchInDocumentsKeyVal(
                     quiz.getList("ranking_list", Document.class),
@@ -436,7 +481,7 @@ public class AdminReportController {
         try {
             Document doc = hasAccess(db, userId, quizId);
 
-            if(!doc.getBoolean("show_results_after_correction"))
+            if(!(boolean)doc.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج فرانرسیده است.");
 
             List<Document> students = doc.getList("students", Document.class);
@@ -476,7 +521,6 @@ public class AdminReportController {
             return generateSuccessMsg("data", answersJsonArray);
 
         } catch (Exception x) {
-            System.out.println(x.getMessage());
             return null;
         }
     }
