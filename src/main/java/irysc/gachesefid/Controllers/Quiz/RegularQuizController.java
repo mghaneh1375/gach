@@ -328,9 +328,15 @@ public class RegularQuizController extends QuizAbstract {
 
             this.quiz = quiz;
             Document questions = quiz.get("questions", Document.class);
-            marks = questions.getList("marks", Double.class);
+
+//            marks = questions.getList("marks", Double.class);
+
             students = quiz.getList("students", Document.class);
             questionIds = questions.getList("_ids", ObjectId.class);
+
+            marks = new ArrayList<>();
+            for(int i = 0; i < questionIds.size(); i++)
+                marks.add(3.0);
 
             lessonsStat = new ArrayList<>();
             subjectsStat = new ArrayList<>();
@@ -1014,11 +1020,10 @@ public class RegularQuizController extends QuizAbstract {
                 rankingList.add(
                         new Document("_id", aStudentsStat.id)
                                 .append("stat", encodeFormatGeneral(
-                                        (int) currTaraz, rank, stateRanking.get(stateId), cityRanking.get(cityId)
+                                        (int) currTaraz, rank, cityRanking.get(cityId),
+                                        stateRanking.get(stateId)
                                 ))
                 );
-                stateRanking.put(stateId, stateRanking.get(stateId) + 1);
-                cityRanking.put(cityId, cityRanking.get(cityId) + 1);
 
                 oldTaraz = currTaraz;
                 stateOldT.put(stateId, currTaraz);
