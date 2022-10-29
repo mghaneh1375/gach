@@ -917,7 +917,7 @@ public class Utility {
         if(!jsonObject1.has("branches"))
             jsonObject1.put("branches", "");
 
-        Document rank = tarazRepository.findOne(eq("used_id", user.getObjectId("_id")), JUST_RANK);
+        Document rank = tarazRepository.findOne(eq("user_id", user.getObjectId("_id")), JUST_RANK);
         jsonObject1.put("rank", rank == null ? -1 : rank.get("rank"));
         jsonObject.put("student", jsonObject1);
     }
