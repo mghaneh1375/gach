@@ -88,7 +88,7 @@ public class StaticValues {
                     .append("questions", 1)
             ;
 
-    public final static BasicDBObject JUST_RANK = new BasicDBObject("rand", 1);
+    public final static BasicDBObject JUST_RANK = new BasicDBObject("rank", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
             .append("first_name", 1)
