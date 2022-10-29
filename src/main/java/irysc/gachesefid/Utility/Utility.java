@@ -1,5 +1,6 @@
 package irysc.gachesefid.Utility;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 import irysc.gachesefid.DB.Common;
@@ -916,7 +917,8 @@ public class Utility {
         if(!jsonObject1.has("branches"))
             jsonObject1.put("branches", "");
 
-        jsonObject1.put("rank", user.getOrDefault("rank", -1));
+        Document rank = tarazRepository.findOne(eq("used_id", user.getObjectId("_id")), JUST_RANK);
+        jsonObject1.put("rank", rank == null ? -1 : rank.get("rank"));
         jsonObject.put("student", jsonObject1);
     }
 

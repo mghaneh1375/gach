@@ -5,6 +5,7 @@ import irysc.gachesefid.Main.GachesefidApplication;
 
 public class ContentRepository extends Common {
 
+    public static final String FOLDER = "content";
     public ContentRepository() {
         init();
     }

@@ -47,7 +47,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -87,6 +87,8 @@ public class StaticValues {
                     .append("capacity", 1).append("registered", 1)
                     .append("questions", 1)
             ;
+
+    public final static BasicDBObject JUST_RANK = new BasicDBObject("rand", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
             .append("first_name", 1)

@@ -134,7 +134,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
             transactionRepository = new TransactionRepository();
             userRepository = new UserRepository();
 
-            SCHOOLS = schoolRepository.count(exists("user_id"));
+//            SCHOOLS = schoolRepository.count(exists("user_id"));
+            SCHOOLS = schoolRepository.count(null);
             QUESTIONS = questionRepository.count(null);
             STUDENTS = userRepository.count(eq("level", false));
 

@@ -481,6 +481,8 @@ public class ManageUserController {
 
             Document config = Utility.getConfig();
             Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+            avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+            avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
             user = new Document("NID", NID)
                     .append("phone", phone)
@@ -780,6 +782,8 @@ public class ManageUserController {
 
             Document config = Utility.getConfig();
             Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+            avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+            avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
             ObjectId oId = doAddStudent(jsonObject, avatar, System.currentTimeMillis(),
                     config.getInteger("init_money"),
@@ -929,6 +933,7 @@ public class ManageUserController {
 
                 jsonObject1.put("password", getEncPassStatic(password));
 
+                avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
                 doAddStudent(jsonObject1,
                         avatar, curr,
                         config.getInteger("init_money"),
@@ -945,6 +950,8 @@ public class ManageUserController {
             } catch (Exception x) {
                 excepts.put(rowIdx);
             }
+
+            avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
         }
 
         return generateSuccessMsg("password", passwords);

@@ -402,6 +402,8 @@ public class UserController {
 
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+        avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+        avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
         Document newDoc = new Document("status", "active")
                 .append("level", false)
@@ -788,7 +790,7 @@ public class UserController {
                 return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + avatar.getString("file"));
 
             Document oldAvatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-            if (oldAvatar == null) {
+            if (oldAvatar != null) {
                 oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
                 avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
             }

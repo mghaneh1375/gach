@@ -316,7 +316,9 @@ public class AdminReportController {
                     )
             ));
 
-            Object[] stat = QuizAbstract.decodeFormatGeneral(studentGeneralStat.get("stat", Binary.class).getData());
+            Object[] stat = QuizAbstract.decodeFormatGeneral(
+                    studentGeneralStat.get("stat", Binary.class).getData()
+            );
 
             JSONObject jsonObject = new JSONObject()
                     .put("taraz", stat[0])
