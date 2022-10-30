@@ -78,7 +78,8 @@ public class UserAPIRoutes extends Router {
                     continue;
 
                 city = cityRepository.findOne(
-                        eq("name", school), null
+                        eq("name",
+                                school.getString("city_name")), null
                 );
 
                 if(city == null) {
