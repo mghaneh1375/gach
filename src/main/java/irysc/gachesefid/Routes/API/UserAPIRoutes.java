@@ -67,24 +67,50 @@ public class UserAPIRoutes extends Router {
 
             ArrayList<Document> schools = schoolRepository.find(null, null);
             for (Document school : schools) {
-                ObjectId cityId = school.getObjectId("city_id");
 
-                Document city = cityRepository.findById(cityId);
+                String schoolName = school.getString("city_name");
+
+                Document city = cityRepository.findById(
+                        school.getObjectId("_id")
+                );
+
+                if(city != null)
+                    continue;
+
+                city = cityRepository.findOne(
+                        eq("name", school), null
+                );
+
                 if(city == null) {
-                    int idx = school.getString("city_name").indexOf("ناحیه");
-                    if(idx == -1) {
-                        idx = school.getString("city_name").indexOf("-منطقه");
-                    }
-                    city = cityRepository.findOne(eq("name",
-                            school.getString("city_name").substring(0, idx)), null
-                    );
-                    if(city == null)
-                        city = cityRepository.findOne(eq("name",
-                                school.getString("city_name").substring(0, idx - 1)), null
-                        );
+                    System.out.println("Heyyyy");
+                    continue;
                 }
-                school.put("city_name", city.getString("name"));
-                schoolRepository.replaceOne(school.getObjectId("_id"), school);
+
+                school.put("city_id", city.getObjectId("_id"));
+
+                schoolRepository.replaceOne(
+                        school.getObjectId("_id"),
+                        school
+                );
+
+//                ObjectId cityId = school.getObjectId("city_id");
+
+//                Document city = cityRepository.findById(cityId);
+//                if(city == null) {
+//                    int idx = school.getString("city_name").indexOf("ناحیه");
+//                    if(idx == -1) {
+//                        idx = school.getString("city_name").indexOf("-منطقه");
+//                    }
+//                    city = cityRepository.findOne(eq("name",
+//                            school.getString("city_name").substring(0, idx)), null
+//                    );
+//                    if(city == null)
+//                        city = cityRepository.findOne(eq("name",
+//                                school.getString("city_name").substring(0, idx - 1)), null
+//                        );
+//                }
+//                school.put("city_name", city.getString("name"));
+//                schoolRepository.replaceOne(school.getObjectId("_id"), school);
             }
 
             return "ok";
