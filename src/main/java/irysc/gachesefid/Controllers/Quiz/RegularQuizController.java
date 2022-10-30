@@ -49,7 +49,7 @@ public class RegularQuizController extends QuizAbstract {
         try {
 
             Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
-            jsonObject.put("mode", mode);
+            jsonObject.put("mode", "regular");
             Document newDoc = QuizController.store(userId, jsonObject);
             iryscQuizRepository.insertOne(newDoc);
 

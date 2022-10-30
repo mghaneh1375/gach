@@ -63,59 +63,8 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-        if(1 == 1) {
-
-            ArrayList<Document> schools = schoolRepository.find(null, null);
-            for (Document school : schools) {
-
-                String schoolName = school.getString("city_name");
-
-                Document city = cityRepository.findById(
-                        school.getObjectId("_id")
-                );
-
-                if(city != null)
-                    continue;
-
-                city = cityRepository.findOne(
-                        eq("name",
-                                school.getString("city_name")), null
-                );
-
-                if(city == null) {
-                    System.out.println("Heyyyy");
-                    continue;
-                }
-
-                school.put("city_id", city.getObjectId("_id"));
-
-                schoolRepository.replaceOne(
-                        school.getObjectId("_id"),
-                        school
-                );
-
-//                ObjectId cityId = school.getObjectId("city_id");
-
-//                Document city = cityRepository.findById(cityId);
-//                if(city == null) {
-//                    int idx = school.getString("city_name").indexOf("ناحیه");
-//                    if(idx == -1) {
-//                        idx = school.getString("city_name").indexOf("-منطقه");
-//                    }
-//                    city = cityRepository.findOne(eq("name",
-//                            school.getString("city_name").substring(0, idx)), null
-//                    );
-//                    if(city == null)
-//                        city = cityRepository.findOne(eq("name",
-//                                school.getString("city_name").substring(0, idx - 1)), null
-//                        );
-//                }
-//                school.put("city_name", city.getString("name"));
-//                schoolRepository.replaceOne(school.getObjectId("_id"), school);
-            }
-
+        if(1 == 1)
             return "ok";
-        }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");
         for(int i = 0; i < tags2.length(); i++) {
