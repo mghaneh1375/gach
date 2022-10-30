@@ -65,19 +65,26 @@ public class UserAPIRoutes extends Router {
 
         if(1 == 1) {
 
-            ArrayList<Document> cities = cityRepository.find(
-                    regex("name", Pattern.compile(Pattern.quote("ناحیه"), Pattern.CASE_INSENSITIVE)),
-                    null
-            );
+            ArrayList<Document> schools = schoolRepository.find(null, null);
+            for (Document school : schools) {
+                ObjectId cityId = school.getObjectId("city_id");
 
-            for(Document city : cities) {
-                if(city.getString("name").contains("ناحیه 1")) {
-                    city.put("name", city.getString("name").replace("ناحیه 1", ""));
-                    cityRepository.replaceOne(city.getObjectId("_id"), city);
+                Document city = cityRepository.findById(cityId);
+                if(city == null) {
+                    int idx = school.getString("city_name").indexOf("ناحیه");
+                    if(idx == -1) {
+                        idx = school.getString("city_name").indexOf("-منطقه");
+                    }
+                    city = cityRepository.findOne(eq("name",
+                            school.getString("city_name").substring(0, idx)), null
+                    );
+                    if(city == null)
+                        city = cityRepository.findOne(eq("name",
+                                school.getString("city_name").substring(0, idx - 1)), null
+                        );
                 }
-                else {
-                    cityRepository.deleteOne(city.getObjectId("_id"));
-                }
+                school.put("city_name", city.getString("name"));
+                schoolRepository.replaceOne(school.getObjectId("_id"), school);
             }
 
             return "ok";
