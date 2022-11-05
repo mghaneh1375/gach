@@ -120,8 +120,21 @@ public class StudentReportController {
                     jsonObject.put("state", stateNames.get(cityId));
                 }
 
-                jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
-                jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+                if(
+                        !studentsInfo.get(k).containsKey("city") ||
+                                studentsInfo.get(k).get("city") == null
+                )
+                    jsonObject.put("city", "نامشخص");
+                else
+                    jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+
+                if(
+                        !studentsInfo.get(k).containsKey("school") ||
+                                studentsInfo.get(k).get("school") == null
+                )
+                    jsonObject.put("school", "آیریسک");
+                else
+                    jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
 
                 jsonArray.put(jsonObject);
                 k++;

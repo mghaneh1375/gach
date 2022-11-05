@@ -723,11 +723,33 @@ public class RegularQuizController extends QuizAbstract {
         private void initTarazRankingLists() {
 
             int k = 0;
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
+            ObjectId iryscSchool = cityRepository.findOne(
+                    eq("name", "آیریسک تهران"), null
+            ).getObjectId("_id");
 
             for (QuestionStat itr : studentsStat) {
 
-                ObjectId cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
-                ObjectId schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
+                ObjectId cityId;
+                ObjectId schoolId;
+
+                if(!studentsData.get(k).containsKey("city") ||
+                        studentsData.get(k).get("city") == null
+                )
+                    cityId = unknownCity;
+                else
+                    cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
+
+                if(!studentsData.get(k).containsKey("school") ||
+                        studentsData.get(k).get("school") == null
+                )
+                    schoolId = iryscSchool;
+                else
+                    schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
+
                 ObjectId stateId;
 
                 if (statesDic.containsKey(cityId))

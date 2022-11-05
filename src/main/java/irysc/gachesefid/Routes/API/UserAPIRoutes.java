@@ -63,8 +63,20 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-        if(1 == 1)
+        if(1 == 1) {
+
+            Document newState = new Document(
+                    "name", "نامشخص"
+            );
+
+            ObjectId stateId = stateRepository.insertOneWithReturnId(newState);
+            Document newCity = new Document(
+                    "name", "نامشخص"
+            ).append("state_id", stateId);
+
+            cityRepository.insertOne(newCity);
             return "ok";
+        }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");
         for(int i = 0; i < tags2.length(); i++) {
