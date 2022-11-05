@@ -1124,9 +1124,16 @@ public class RegularQuizController extends QuizAbstract {
                 if(!doc.containsKey("cum_sum_last_three"))
                     doc.put("cum_sum_last_three", 0);
 
-                ObjectId gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
+                ObjectId gradeId;
 
-                if(!doc.containsKey("grade_id")) {
+                if(!studentsData.get(idx).containsKey("grade") ||
+                        studentsData.get(idx).get("grade") == null
+                )
+                    gradeId = null;
+                else
+                    gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
+
+                if(!doc.containsKey("grade_id") && gradeId != null) {
                     doc.put("grade_id", gradeId);
                     update.append("grade_id", gradeId);
                 }
@@ -1174,7 +1181,8 @@ public class RegularQuizController extends QuizAbstract {
 
                     doc.put("cum_sum_last_three", cumSum);
                     update.append("cum_sum_last_three", cumSum);
-                    if(!gradesNeedUpdate.contains(gradeId))
+                    if(gradeId != null &&
+                            !gradesNeedUpdate.contains(gradeId))
                         gradesNeedUpdate.add(gradeId);
                 }
 
