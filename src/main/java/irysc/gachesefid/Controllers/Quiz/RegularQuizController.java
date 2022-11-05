@@ -727,7 +727,7 @@ public class RegularQuizController extends QuizAbstract {
                     eq("name", "نامشخص"), null
             ).getObjectId("_id");
 
-            ObjectId iryscSchool = cityRepository.findOne(
+            ObjectId iryscSchool = schoolRepository.findOne(
                     eq("name", "آیریسک تهران"), null
             ).getObjectId("_id");
 
