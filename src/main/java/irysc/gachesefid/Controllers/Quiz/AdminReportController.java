@@ -775,6 +775,7 @@ public class AdminReportController {
 
         ArrayList<Integer> maleTaraz = new ArrayList<>();
         ArrayList<Integer> femaleTaraz = new ArrayList<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -790,7 +791,11 @@ public class AdminReportController {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
 
-            if (studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
+            if(!studentsInfo.get(k).containsKey("sex") ||
+                    studentsInfo.get(k).get("sex") == null
+            )
+                unknownTaraz.add((int) stats[0]);
+            else if (studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
                 maleTaraz.add((int) stats[0]);
             else
                 femaleTaraz.add((int) stats[0]);
@@ -819,6 +824,20 @@ public class AdminReportController {
                 .put("count", femaleTaraz.size())
                 .put("avg", femaleTaraz.size() == 0 ? 0 : sum / femaleTaraz.size())
         );
+
+        if(unknownTaraz.size() > 0) {
+
+            sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
 
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
