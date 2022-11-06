@@ -107,6 +107,15 @@ public class QuizController {
         if (newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
             newDoc.put("correctors", new ArrayList<>());
 
+        if(newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
+            try {
+                newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
+            }
+            catch (Exception x) {
+                newDoc.put("price", 0);
+            }
+        }
+
         return newDoc;
     }
 
@@ -739,6 +748,9 @@ public class QuizController {
                 rowIdx++;
 
                 try {
+
+                    if(row.getCell(0) == null)
+                        break;
 
                     if (row.getLastCellNum() < 2) {
                         excepts.put(rowIdx);

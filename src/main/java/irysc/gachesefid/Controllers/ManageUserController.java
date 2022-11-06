@@ -902,6 +902,9 @@ public class ManageUserController {
 
             try {
 
+                if(row.getCell(1) == null)
+                    break;
+
                 if (row.getLastCellNum() < neededCols) {
                     excepts.put(rowIdx);
                     continue;
