@@ -971,9 +971,14 @@ public class RegularQuizController extends QuizAbstract {
 
         private void prepareForCityRanking() {
 
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
             for (Document itr : studentsData) {
 
-                ObjectId cityId = itr.get("city", Document.class).getObjectId("_id");
+                ObjectId cityId = itr.get("city") == null ? unknownCity :
+                        itr.get("city", Document.class).getObjectId("_id");
                 ObjectId stateId;
 
                 if (states.containsKey(cityId))

@@ -1,41 +1,26 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.model.Sorts;
-import irysc.gachesefid.Controllers.Config.GiftController;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.InvalidFieldsException;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
-import irysc.gachesefid.Utility.Authorization;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
 
-import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Filters.in;
-import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Quiz.Utility.checkFields;
-import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.*;
 
 public class OpenQuizController {
 
     private final static String[] mandatoryFields = {
-            "price", "duration"
+            "price"
     };
 
     private final static String[] forbiddenFields = {
             "startRegistry", "start",
-            "end", "isOnline", "showResultsAfterCorrection",
+            "end", "launchMode", "showResultsAfterCorrection",
             "topStudentsGiftCoin", "topStudentsGiftMoney",
             "topStudentsCount", "paperTheme", "database",
     };
@@ -53,10 +38,15 @@ public class OpenQuizController {
         try {
 
             checkFields(mandatoryFields, forbiddenFields, jsonObject);
-            jsonObject.put("mode", KindQuiz.OPEN.getName());
             Document newDoc = QuizController.store(userId, jsonObject);
+            openQuizRepository.insertOne(newDoc);
 
-            return iryscQuizRepository.insertOneWithReturn(newDoc);
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "quiz", new OpenQuiz()
+                            .convertDocToJSON(newDoc, false, true,
+                                    false, false
+                            )
+            );
 
         } catch (InvalidFieldsException e) {
             return irysc.gachesefid.Utility.Utility.generateErr(e.getMessage());

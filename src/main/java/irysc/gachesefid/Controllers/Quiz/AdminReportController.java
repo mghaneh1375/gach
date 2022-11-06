@@ -530,10 +530,9 @@ public class AdminReportController {
     }
 
     //todo : other accesses
-    public static String getStateReport(ObjectId quizId) {
+    public static String getStateReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -544,6 +543,7 @@ public class AdminReportController {
 
         HashMap<ObjectId, ArrayList<Integer>> stateTaraz = new HashMap<>();
         HashMap<ObjectId, ObjectId> citiesState = new HashMap<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -559,27 +559,32 @@ public class AdminReportController {
         for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
-            ObjectId cityId = studentsInfo.get(k)
-                    .get("city", Document.class).getObjectId("_id");
 
-            ObjectId stateId;
-
-            if (citiesState.containsKey(cityId))
-                stateId = citiesState.get(cityId);
+            if(studentsInfo.get(k).get("city") == null)
+                unknownTaraz.add((Integer) stats[0]);
             else {
-                Document city = cityRepository.findById(cityId);
-                stateId = city.getObjectId("state_id");
-                citiesState.put(cityId, stateId);
+                ObjectId cityId = studentsInfo.get(k)
+                        .get("city", Document.class).getObjectId("_id");
+
+                ObjectId stateId;
+
+                if (citiesState.containsKey(cityId))
+                    stateId = citiesState.get(cityId);
+                else {
+                    Document city = cityRepository.findById(cityId);
+                    stateId = city.getObjectId("state_id");
+                    citiesState.put(cityId, stateId);
+                }
+
+                ArrayList<Integer> tmp;
+                if (stateTaraz.containsKey(stateId))
+                    tmp = stateTaraz.get(stateId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                stateTaraz.put(stateId, tmp);
             }
-
-            ArrayList<Integer> tmp;
-            if (stateTaraz.containsKey(stateId))
-                tmp = stateTaraz.get(stateId);
-            else
-                tmp = new ArrayList<>();
-
-            tmp.add((Integer) stats[0]);
-            stateTaraz.put(stateId, tmp);
             k++;
         }
 
@@ -600,6 +605,20 @@ public class AdminReportController {
             );
         }
 
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -612,10 +631,9 @@ public class AdminReportController {
 
     }
 
-    public static String getCityReport(ObjectId quizId) {
+    public static String getCityReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -626,6 +644,7 @@ public class AdminReportController {
 
         HashMap<ObjectId, ArrayList<Integer>> cityTaraz = new HashMap<>();
         HashMap<ObjectId, String> cities = new HashMap<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -640,22 +659,28 @@ public class AdminReportController {
         for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+
             Document city = studentsInfo.get(k)
                     .get("city", Document.class);
 
-            ObjectId cityId = city.getObjectId("_id");
+            if(city == null)
+                unknownTaraz.add((Integer) stats[0]);
+            else {
 
-            if (!cities.containsKey(cityId))
-                cities.put(cityId, city.getString("name"));
+                ObjectId cityId = city.getObjectId("_id");
 
-            ArrayList<Integer> tmp;
-            if (cityTaraz.containsKey(cityId))
-                tmp = cityTaraz.get(cityId);
-            else
-                tmp = new ArrayList<>();
+                if (!cities.containsKey(cityId))
+                    cities.put(cityId, city.getString("name"));
 
-            tmp.add((Integer) stats[0]);
-            cityTaraz.put(cityId, tmp);
+                ArrayList<Integer> tmp;
+                if (cityTaraz.containsKey(cityId))
+                    tmp = cityTaraz.get(cityId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                cityTaraz.put(cityId, tmp);
+            }
             k++;
         }
 
@@ -675,6 +700,20 @@ public class AdminReportController {
             );
         }
 
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -687,10 +726,9 @@ public class AdminReportController {
 
     }
 
-    public static String getSchoolReport(ObjectId quizId) {
+    public static String getSchoolReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -783,10 +821,10 @@ public class AdminReportController {
 
     }
 
-    public static String getGenderReport(ObjectId quizId) {
+    public static String getGenderReport(Common db, ObjectId quizId) {
 
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -873,9 +911,9 @@ public class AdminReportController {
 
     }
 
-    public static String getAuthorReport(ObjectId quizId) {
+    public static String getAuthorReport(Common db, ObjectId quizId) {
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -977,9 +1015,9 @@ public class AdminReportController {
         );
     }
 
-    public static String getParticipantReport(ObjectId quizId, Document user) {
+    public static String getParticipantReport(Common db, ObjectId quizId, Document user) {
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -1026,8 +1064,11 @@ public class AdminReportController {
 
             long curr = System.currentTimeMillis();
 
-            if (quiz.getLong("end") > curr || !quiz.containsKey("report_status") ||
-                    !quiz.getString("report_status").equals("ready"))
+            if (
+                    (quiz.containsKey("end") && quiz.getLong("end") > curr) ||
+                            !quiz.containsKey("report_status") ||
+                    !quiz.getString("report_status").equals("ready")
+            )
                 return JSON_NOT_ACCESS;
 
             Document questionsDoc = quiz.get("questions", Document.class);
@@ -1090,7 +1131,7 @@ public class AdminReportController {
     }
 
     public static String getKarnameReport(Common db, boolean isAdmin,
-                                                       ObjectId userId, ObjectId quizId) {
+                                          ObjectId userId, ObjectId quizId) {
 
         try {
             Document quiz = hasAccess(db, isAdmin ? null : userId, quizId);

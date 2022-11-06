@@ -335,8 +335,11 @@ public class QuizController {
             Document quiz = hasPublicAccess(db, user, quizId);
             QuizAbstract quizAbstract = null;
 
-            if (quiz.getString("mode").equals(KindQuiz.REGULAR.getName()))
+            if (db instanceof IRYSCQuizRepository)
                 quizAbstract = new RegularQuizController();
+
+            else if (db instanceof OpenQuizRepository)
+                quizAbstract = new OpenQuiz();
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
@@ -643,7 +646,10 @@ public class QuizController {
 
             long current = System.currentTimeMillis();
 
-            if (doc.getLong("start") < current)
+            if (doc.containsKey("start") && doc.getLong("start") < current)
+                return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
+
+            if (!doc.containsKey("start") && doc.getList("students", Document.class).size() > 0)
                 return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
 
             JSONArray questionIds = jsonObject.getJSONArray("questionIds");
@@ -1267,10 +1273,13 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             long curr = System.currentTimeMillis();
 
-            if (quiz.getLong("end") > curr)
+            if (quiz.containsKey("end") && quiz.getLong("end") > curr)
                 return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
 
-            new RegularQuizController().createTaraz(quiz);
+            if(db instanceof OpenQuizRepository)
+                new RegularQuizController.Taraz(quiz, openQuizRepository);
+            else
+                new RegularQuizController().createTaraz(quiz);
 
             return JSON_OK;
         } catch (Exception x) {

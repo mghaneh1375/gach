@@ -147,13 +147,35 @@ public class PayPing {
                 }
                 else if(transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
-                    if (!transaction.containsKey("student_ids"))
-                        new RegularQuizController()
-                                .registry(studentId,
-                                        user.getString("phone"),
-                                        user.getString("mail"),
-                                        products,
-                                        transaction.getInteger("amount"));
+                    if (!transaction.containsKey("student_ids")) {
+
+                        List<ObjectId> iryscQuizIds = new ArrayList<>();
+                        List<ObjectId> openQuizIds = new ArrayList<>();
+
+                        for(ObjectId id : products) {
+
+                            if(iryscQuizRepository.findById(id) != null)
+                                iryscQuizIds.add(id);
+                            else if(openQuizRepository.findById(id) != null)
+                                openQuizIds.add(id);
+                        }
+
+                        if(iryscQuizIds.size() > 0)
+                            new RegularQuizController()
+                                    .registry(studentId,
+                                            user.getString("phone"),
+                                            user.getString("mail"),
+                                            iryscQuizIds,
+                                            transaction.getInteger("amount"));
+
+                        if(openQuizIds.size() > 0)
+                            new OpenQuiz()
+                                    .registry(studentId,
+                                            user.getString("phone"),
+                                            user.getString("mail"),
+                                            openQuizIds,
+                                            transaction.getInteger("amount"));
+                    }
                     else
                         new RegularQuizController()
                                 .registry(transaction.getList("student_ids", ObjectId.class),
