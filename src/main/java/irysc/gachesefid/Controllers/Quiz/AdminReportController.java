@@ -700,6 +700,8 @@ public class AdminReportController {
         HashMap<ObjectId, ArrayList<Integer>> schoolTaraz = new HashMap<>();
         HashMap<ObjectId, String> schools = new HashMap<>();
 
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
+
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
 
@@ -717,19 +719,24 @@ public class AdminReportController {
             Document school = studentsInfo.get(k)
                     .get("school", Document.class);
 
-            ObjectId schoolId = school.getObjectId("_id");
+            if(school == null)
+                unknownTaraz.add((Integer) stats[0]);
+            else {
 
-            if (!schools.containsKey(schoolId))
-                schools.put(schoolId, school.getString("name"));
+                ObjectId schoolId = school.getObjectId("_id");
 
-            ArrayList<Integer> tmp;
-            if (schoolTaraz.containsKey(schoolId))
-                tmp = schoolTaraz.get(schoolId);
-            else
-                tmp = new ArrayList<>();
+                if (!schools.containsKey(schoolId))
+                    schools.put(schoolId, school.getString("name"));
 
-            tmp.add((Integer) stats[0]);
-            schoolTaraz.put(schoolId, tmp);
+                ArrayList<Integer> tmp;
+                if (schoolTaraz.containsKey(schoolId))
+                    tmp = schoolTaraz.get(schoolId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                schoolTaraz.put(schoolId, tmp);
+            }
             k++;
         }
 
@@ -746,6 +753,19 @@ public class AdminReportController {
                     .put("label", schools.get(schoolId))
                     .put("count", allTaraz.size())
                     .put("avg", sum / allTaraz.size())
+            );
+        }
+
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
             );
         }
 
