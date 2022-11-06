@@ -4,7 +4,6 @@ import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
@@ -12,6 +11,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
+import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;
@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import java.io.ByteArrayInputStream;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
@@ -163,6 +166,38 @@ public class ReportAPIRoutes extends Router {
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, userId, false
+        );
+    }
+
+
+    @GetMapping(value = "/karnameReport/{mode}/{quizId}")
+    @ResponseBody
+    public String karnameReport(
+            HttpServletRequest request,
+//            HttpServletResponse response,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+//        try {
+//            ByteArrayInputStream byteArrayInputStream = AdminReportController.getRankingExcel(
+//                    mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+//                            mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+//                                    schoolQuizRepository, isAdmin, user.getObjectId("_id"), quizId
+//            );
+//            response.setContentType("application/octet-stream");
+//            response.setHeader("Content-Disposition", "attachment; filename=tags.xlsx");
+//            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+//        } catch (Exception x) {
+//            System.out.println(x.getMessage());
+//        }
+        return AdminReportController.getKarnameReport(
+                mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository, isAdmin, user.getObjectId("_id"), quizId
         );
     }
 }

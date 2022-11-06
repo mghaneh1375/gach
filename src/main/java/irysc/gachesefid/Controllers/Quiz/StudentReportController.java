@@ -5,6 +5,7 @@ import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.BSON;
@@ -33,12 +34,11 @@ import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 public class StudentReportController {
 
+
     public static String getRanking(Common db, boolean isAdmin,
                                     ObjectId userId, ObjectId quizId) {
 
         try {
-            System.out.println(isAdmin);
-            System.out.println(userId);
             Document quiz = db instanceof IRYSCQuizRepository ?
                     hasAccess(db, userId, quizId) :
                     hasProtectedAccess(db, isAdmin ? null : userId, quizId);
@@ -150,4 +150,5 @@ public class StudentReportController {
 
 
     }
+
 }
