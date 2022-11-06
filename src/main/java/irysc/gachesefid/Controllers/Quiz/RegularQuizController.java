@@ -134,7 +134,7 @@ public class RegularQuizController extends QuizAbstract {
         } else
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
-                    .put("price", quiz.getInteger("price"));
+                    .put("price", quiz.get("price"));
 
         if (isAdmin) {
             jsonObject

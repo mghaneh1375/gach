@@ -1089,7 +1089,6 @@ public class AdminReportController {
         }
     }
 
-
     public static String getKarnameReport(Common db, boolean isAdmin,
                                                        ObjectId userId, ObjectId quizId) {
 
