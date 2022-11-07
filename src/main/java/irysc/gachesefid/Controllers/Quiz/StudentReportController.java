@@ -25,8 +25,6 @@ import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Main.GachesefidApplication.stateRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
@@ -37,8 +35,6 @@ public class StudentReportController {
                                     ObjectId userId, ObjectId quizId) {
 
         try {
-            System.out.println(isAdmin);
-            System.out.println(userId);
             Document quiz = db instanceof IRYSCQuizRepository ?
                     hasAccess(db, userId, quizId) :
                     hasProtectedAccess(db, isAdmin ? null : userId, quizId);
