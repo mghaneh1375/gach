@@ -5,6 +5,7 @@ import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.BSON;
@@ -30,6 +31,7 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 public class StudentReportController {
+
 
     public static String getRanking(Common db, boolean isAdmin,
                                     ObjectId userId, ObjectId quizId) {
@@ -96,7 +98,6 @@ public class StudentReportController {
 
             for (Document doc : quiz.getList("ranking_list", Document.class)) {
 
-                ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
                 Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
                 JSONObject jsonObject = new JSONObject()
@@ -107,17 +108,35 @@ public class StudentReportController {
                         .put("stateRank", stat[2])
                         .put("rank", stat[1]);
 
-                if (stateNames.containsKey(cityId))
-                    jsonObject.put("state", stateNames.get(cityId));
+
+                if(!studentsInfo.get(k).containsKey("city") ||
+                        studentsInfo.get(k).get("city") == null) {
+                    jsonObject.put("state", "نامشخص");
+                    jsonObject.put("city", "نامشخص");
+                }
                 else {
-                    Document city = cityRepository.findById(cityId);
-                    Document state = stateRepository.findById(city.getObjectId("state_id"));
-                    stateNames.put(cityId, state.getString("name"));
-                    jsonObject.put("state", stateNames.get(cityId));
+
+                    ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
+
+                    if (stateNames.containsKey(cityId))
+                        jsonObject.put("state", stateNames.get(cityId));
+                    else {
+                        Document city = cityRepository.findById(cityId);
+                        Document state = stateRepository.findById(city.getObjectId("state_id"));
+                        stateNames.put(cityId, state.getString("name"));
+                        jsonObject.put("state", stateNames.get(cityId));
+                    }
+
+                    jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
                 }
 
-                jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
-                jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+                if(
+                        !studentsInfo.get(k).containsKey("school") ||
+                                studentsInfo.get(k).get("school") == null
+                )
+                    jsonObject.put("school", "آیریسک");
+                else
+                    jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
 
                 jsonArray.put(jsonObject);
                 k++;
@@ -133,4 +152,5 @@ public class StudentReportController {
 
 
     }
+
 }

@@ -153,6 +153,12 @@ public class Utilities {
             if (doc.containsKey("mark"))
                 jsonObject.put("mark", doc.get("mark"));
 
+            if (doc.containsKey("year"))
+                jsonObject.put("year", doc.get("year"));
+
+            if (doc.containsKey("tags"))
+                jsonObject.put("tags", doc.get("tags"));
+
             if (doc.containsKey("choices_count"))
                 jsonObject.put("choicesCount", doc.get("choices_count"));
 

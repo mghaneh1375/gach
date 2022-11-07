@@ -4,7 +4,6 @@ import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
@@ -12,6 +11,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
+import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;
@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import java.io.ByteArrayInputStream;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
@@ -34,69 +37,87 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 public class ReportAPIRoutes extends Router {
 
 
-    @GetMapping(value = "/stateReport/{quizId}")
+    @GetMapping(value = "/stateReport/{quizMode}/{quizId}")
     @ResponseBody
     public String getStateReport(HttpServletRequest request,
+                                 @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getStateReport(quizId);
+        return AdminReportController.getStateReport(quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                        schoolQuizRepository, quizId);
     }
 
-    @GetMapping(value = "/cityReport/{quizId}")
+    @GetMapping(value = "/cityReport/{quizMode}/{quizId}")
     @ResponseBody
     public String cityReport(HttpServletRequest request,
+                             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getCityReport(quizId);
+        return AdminReportController.getCityReport(quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                        schoolQuizRepository, quizId);
     }
 
-    @GetMapping(value = "/schoolReport/{quizId}")
+    @GetMapping(value = "/schoolReport/{quizMode}/{quizId}")
     @ResponseBody
     public String getSchoolReport(HttpServletRequest request,
+                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                                   @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getSchoolReport(quizId);
+        return AdminReportController.getSchoolReport(
+                quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository, quizId);
     }
 
-    @GetMapping(value = "/genderReport/{quizId}")
+    @GetMapping(value = "/genderReport/{quizMode}/{quizId}")
     @ResponseBody
     public String genderReport(HttpServletRequest request,
+                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getGenderReport(quizId);
+        return AdminReportController.getGenderReport(
+                quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository, quizId);
     }
 
-    @GetMapping(value = "/authorReport/{quizId}")
+    @GetMapping(value = "/authorReport/{quizMode}/{quizId}")
     @ResponseBody
     public String authorReport(HttpServletRequest request,
+                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId) {
-        return AdminReportController.getAuthorReport(quizId);
+        return AdminReportController.getAuthorReport(
+                quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                        schoolQuizRepository, quizId);
     }
 
-    @GetMapping(value = "/participantReport/{quizId}")
+    @GetMapping(value = "/participantReport/{quizMode}/{quizId}")
     @ResponseBody
     public String participantReport(HttpServletRequest request,
+                                    @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
                                     @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getPrivilegeUser(request);
         return AdminReportController.getParticipantReport(
-                quizId, user
+                quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository, quizId, user
         );
     }
 
     @GetMapping(value = "/A1/{mode}/{quizId}")
     @ResponseBody
     public String A1(HttpServletRequest request,
-                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                     @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                      @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return AdminReportController.A1(
-                    iryscQuizRepository, null, quizId
-            );
-
         return AdminReportController.A1(
-                iryscQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
 
@@ -163,6 +184,25 @@ public class ReportAPIRoutes extends Router {
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, userId, false
+        );
+    }
+
+
+    @GetMapping(value = "/karnameReport/{mode}/{quizId}")
+    @ResponseBody
+    public String karnameReport(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return AdminReportController.getKarnameReport(
+                mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository, isAdmin, user.getObjectId("_id"), quizId
         );
     }
 }

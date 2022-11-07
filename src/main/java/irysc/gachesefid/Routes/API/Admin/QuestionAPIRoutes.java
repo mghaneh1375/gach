@@ -193,11 +193,13 @@ public class QuestionAPIRoutes extends Router {
                                         "sentencesCount", "telorance",
                                         "choicesCount", "neededLine",
                                         "visibility", "authorId",
+                                        "year", "tags"
                                 },
                                 optionalsType = {
                                         Positive.class, Number.class,
                                         Positive.class, Positive.class,
                                         Boolean.class, ObjectId.class,
+                                        Positive.class, JSONArray.class
                                 }
                         ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {

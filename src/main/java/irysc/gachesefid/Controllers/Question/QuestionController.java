@@ -382,6 +382,9 @@ public class QuestionController extends Utilities {
 
             try {
 
+                if(row.getCell(1) == null)
+                    break;
+
                 if (row.getLastCellNum() < 9) {
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, "تعداد ستون ها نامعتیر است."));

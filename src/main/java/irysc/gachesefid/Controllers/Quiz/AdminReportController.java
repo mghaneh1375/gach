@@ -8,12 +8,14 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Excel;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -528,10 +530,9 @@ public class AdminReportController {
     }
 
     //todo : other accesses
-    public static String getStateReport(ObjectId quizId) {
+    public static String getStateReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -542,6 +543,7 @@ public class AdminReportController {
 
         HashMap<ObjectId, ArrayList<Integer>> stateTaraz = new HashMap<>();
         HashMap<ObjectId, ObjectId> citiesState = new HashMap<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -557,27 +559,32 @@ public class AdminReportController {
         for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
-            ObjectId cityId = studentsInfo.get(k)
-                    .get("city", Document.class).getObjectId("_id");
 
-            ObjectId stateId;
-
-            if (citiesState.containsKey(cityId))
-                stateId = citiesState.get(cityId);
+            if(studentsInfo.get(k).get("city") == null)
+                unknownTaraz.add((Integer) stats[0]);
             else {
-                Document city = cityRepository.findById(cityId);
-                stateId = city.getObjectId("state_id");
-                citiesState.put(cityId, stateId);
+                ObjectId cityId = studentsInfo.get(k)
+                        .get("city", Document.class).getObjectId("_id");
+
+                ObjectId stateId;
+
+                if (citiesState.containsKey(cityId))
+                    stateId = citiesState.get(cityId);
+                else {
+                    Document city = cityRepository.findById(cityId);
+                    stateId = city.getObjectId("state_id");
+                    citiesState.put(cityId, stateId);
+                }
+
+                ArrayList<Integer> tmp;
+                if (stateTaraz.containsKey(stateId))
+                    tmp = stateTaraz.get(stateId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                stateTaraz.put(stateId, tmp);
             }
-
-            ArrayList<Integer> tmp;
-            if (stateTaraz.containsKey(stateId))
-                tmp = stateTaraz.get(stateId);
-            else
-                tmp = new ArrayList<>();
-
-            tmp.add((Integer) stats[0]);
-            stateTaraz.put(stateId, tmp);
             k++;
         }
 
@@ -598,6 +605,20 @@ public class AdminReportController {
             );
         }
 
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -610,10 +631,9 @@ public class AdminReportController {
 
     }
 
-    public static String getCityReport(ObjectId quizId) {
+    public static String getCityReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -624,6 +644,7 @@ public class AdminReportController {
 
         HashMap<ObjectId, ArrayList<Integer>> cityTaraz = new HashMap<>();
         HashMap<ObjectId, String> cities = new HashMap<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -638,22 +659,28 @@ public class AdminReportController {
         for (Document itr : rankingList) {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
+
             Document city = studentsInfo.get(k)
                     .get("city", Document.class);
 
-            ObjectId cityId = city.getObjectId("_id");
+            if(city == null)
+                unknownTaraz.add((Integer) stats[0]);
+            else {
 
-            if (!cities.containsKey(cityId))
-                cities.put(cityId, city.getString("name"));
+                ObjectId cityId = city.getObjectId("_id");
 
-            ArrayList<Integer> tmp;
-            if (cityTaraz.containsKey(cityId))
-                tmp = cityTaraz.get(cityId);
-            else
-                tmp = new ArrayList<>();
+                if (!cities.containsKey(cityId))
+                    cities.put(cityId, city.getString("name"));
 
-            tmp.add((Integer) stats[0]);
-            cityTaraz.put(cityId, tmp);
+                ArrayList<Integer> tmp;
+                if (cityTaraz.containsKey(cityId))
+                    tmp = cityTaraz.get(cityId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                cityTaraz.put(cityId, tmp);
+            }
             k++;
         }
 
@@ -673,6 +700,20 @@ public class AdminReportController {
             );
         }
 
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -685,10 +726,9 @@ public class AdminReportController {
 
     }
 
-    public static String getSchoolReport(ObjectId quizId) {
+    public static String getSchoolReport(Common db, ObjectId quizId) {
 
-
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -699,6 +739,8 @@ public class AdminReportController {
 
         HashMap<ObjectId, ArrayList<Integer>> schoolTaraz = new HashMap<>();
         HashMap<ObjectId, String> schools = new HashMap<>();
+
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -717,19 +759,24 @@ public class AdminReportController {
             Document school = studentsInfo.get(k)
                     .get("school", Document.class);
 
-            ObjectId schoolId = school.getObjectId("_id");
+            if(school == null)
+                unknownTaraz.add((Integer) stats[0]);
+            else {
 
-            if (!schools.containsKey(schoolId))
-                schools.put(schoolId, school.getString("name"));
+                ObjectId schoolId = school.getObjectId("_id");
 
-            ArrayList<Integer> tmp;
-            if (schoolTaraz.containsKey(schoolId))
-                tmp = schoolTaraz.get(schoolId);
-            else
-                tmp = new ArrayList<>();
+                if (!schools.containsKey(schoolId))
+                    schools.put(schoolId, school.getString("name"));
 
-            tmp.add((Integer) stats[0]);
-            schoolTaraz.put(schoolId, tmp);
+                ArrayList<Integer> tmp;
+                if (schoolTaraz.containsKey(schoolId))
+                    tmp = schoolTaraz.get(schoolId);
+                else
+                    tmp = new ArrayList<>();
+
+                tmp.add((Integer) stats[0]);
+                schoolTaraz.put(schoolId, tmp);
+            }
             k++;
         }
 
@@ -749,6 +796,19 @@ public class AdminReportController {
             );
         }
 
+        if(unknownTaraz.size() > 0) {
+
+            int sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -761,10 +821,10 @@ public class AdminReportController {
 
     }
 
-    public static String getGenderReport(ObjectId quizId) {
+    public static String getGenderReport(Common db, ObjectId quizId) {
 
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -775,6 +835,7 @@ public class AdminReportController {
 
         ArrayList<Integer> maleTaraz = new ArrayList<>();
         ArrayList<Integer> femaleTaraz = new ArrayList<>();
+        ArrayList<Integer> unknownTaraz = new ArrayList<>();
 
         List<Document> rankingList = quiz.getList("ranking_list", Document.class);
         ArrayList<ObjectId> studentIds = new ArrayList<>();
@@ -790,7 +851,11 @@ public class AdminReportController {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
 
-            if (studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
+            if(!studentsInfo.get(k).containsKey("sex") ||
+                    studentsInfo.get(k).get("sex") == null
+            )
+                unknownTaraz.add((int) stats[0]);
+            else if (studentsInfo.get(k).getString("sex").equalsIgnoreCase("male"))
                 maleTaraz.add((int) stats[0]);
             else
                 femaleTaraz.add((int) stats[0]);
@@ -820,6 +885,20 @@ public class AdminReportController {
                 .put("avg", femaleTaraz.size() == 0 ? 0 : sum / femaleTaraz.size())
         );
 
+        if(unknownTaraz.size() > 0) {
+
+            sum = 0;
+            for (int itr : unknownTaraz)
+                sum += itr;
+
+            list.add(new JSONObject()
+                    .put("label", "نامشخص")
+                    .put("count", unknownTaraz.size())
+                    .put("avg", sum / unknownTaraz.size())
+            );
+
+        }
+
         list.sort(Comparator.comparingDouble(o -> o.getDouble("avg")));
 
         k = 1;
@@ -832,9 +911,9 @@ public class AdminReportController {
 
     }
 
-    public static String getAuthorReport(ObjectId quizId) {
+    public static String getAuthorReport(Common db, ObjectId quizId) {
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -936,9 +1015,9 @@ public class AdminReportController {
         );
     }
 
-    public static String getParticipantReport(ObjectId quizId, Document user) {
+    public static String getParticipantReport(Common db, ObjectId quizId, Document user) {
 
-        Document quiz = iryscQuizRepository.findById(quizId);
+        Document quiz = db.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
 
@@ -985,8 +1064,11 @@ public class AdminReportController {
 
             long curr = System.currentTimeMillis();
 
-            if (quiz.getLong("end") > curr || !quiz.containsKey("report_status") ||
-                    !quiz.getString("report_status").equals("ready"))
+            if (
+                    (quiz.containsKey("end") && quiz.getLong("end") > curr) ||
+                            !quiz.containsKey("report_status") ||
+                    !quiz.getString("report_status").equals("ready")
+            )
                 return JSON_NOT_ACCESS;
 
             Document questionsDoc = quiz.get("questions", Document.class);
@@ -1047,4 +1129,107 @@ public class AdminReportController {
             return null;
         }
     }
+
+    public static String getKarnameReport(Common db, boolean isAdmin,
+                                          ObjectId userId, ObjectId quizId) {
+
+        try {
+            Document quiz = hasAccess(db, isAdmin ? null : userId, quizId);
+
+            if (
+                    !quiz.containsKey("report_status") ||
+                            !quiz.containsKey("ranking_list") ||
+                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("زمان رویت نتایج هنوز فرانرسیده است.");
+
+            JSONArray jsonArray = new JSONArray();
+            ArrayList<ObjectId> userIds = new ArrayList<>();
+
+            for (Document doc : quiz.getList("ranking_list", Document.class))
+                userIds.add(doc.getObjectId("_id"));
+
+            ArrayList<Document> studentsInfo = userRepository.findByIds(
+                    userIds, true
+            );
+
+            List<Document> studentResults = quiz.getList("students", Document.class);
+
+            HashMap<ObjectId, String> stateNames = new HashMap<>();
+            int k = 0;
+
+            for (Document doc : quiz.getList("ranking_list", Document.class)) {
+
+                Document studentResult = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        studentResults, "_id", doc.getObjectId("_id")
+                );
+                if(studentResult == null)
+                    continue;
+
+                Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", doc.getObjectId("_id").toString())
+                        .put("name", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
+                        .put("taraz", stat[0])
+                        .put("cityRank", stat[3])
+                        .put("stateRank", stat[2])
+                        .put("rank", stat[1]);
+
+                JSONArray lessonsStats = new JSONArray();
+
+                for(Document lessonStat : studentResult.getList("lessons", Document.class)) {
+                    Object[] lessonStats = QuizAbstract.decode(lessonStat.get("stat", Binary.class).getData());
+                    lessonsStats.put(
+                            new JSONObject()
+                                    .put("name", lessonStat.getString("name"))
+                                    .put("percent", lessonStats[4])
+                    );
+                }
+
+                jsonObject.put("lessonsStats", lessonsStats);
+
+                if(!studentsInfo.get(k).containsKey("city") ||
+                        studentsInfo.get(k).get("city") == null) {
+                    jsonObject.put("state", "نامشخص");
+                    jsonObject.put("city", "نامشخص");
+                }
+                else {
+
+                    ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
+
+                    if (stateNames.containsKey(cityId))
+                        jsonObject.put("state", stateNames.get(cityId));
+                    else {
+                        Document city = cityRepository.findById(cityId);
+                        Document state = stateRepository.findById(city.getObjectId("state_id"));
+                        stateNames.put(cityId, state.getString("name"));
+                        jsonObject.put("state", stateNames.get(cityId));
+                    }
+
+                    jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+                }
+
+                if(
+                        !studentsInfo.get(k).containsKey("school") ||
+                                studentsInfo.get(k).get("school") == null
+                )
+                    jsonObject.put("school", "آیریسک");
+                else
+                    jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+
+                jsonArray.put(jsonObject);
+                k++;
+            }
+
+            return generateSuccessMsg(
+                    "data", jsonArray
+            );
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
+
 }

@@ -134,7 +134,7 @@ public class RegularQuizController extends QuizAbstract {
         } else
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
-                    .put("price", quiz.getInteger("price"));
+                    .put("price", quiz.get("price"));
 
         if (isAdmin) {
             jsonObject
@@ -723,11 +723,33 @@ public class RegularQuizController extends QuizAbstract {
         private void initTarazRankingLists() {
 
             int k = 0;
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
+            ObjectId iryscSchool = schoolRepository.findOne(
+                    eq("name", "آیریسک تهران"), null
+            ).getObjectId("_id");
 
             for (QuestionStat itr : studentsStat) {
 
-                ObjectId cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
-                ObjectId schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
+                ObjectId cityId;
+                ObjectId schoolId;
+
+                if(!studentsData.get(k).containsKey("city") ||
+                        studentsData.get(k).get("city") == null
+                )
+                    cityId = unknownCity;
+                else
+                    cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
+
+                if(!studentsData.get(k).containsKey("school") ||
+                        studentsData.get(k).get("school") == null
+                )
+                    schoolId = iryscSchool;
+                else
+                    schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
+
                 ObjectId stateId;
 
                 if (statesDic.containsKey(cityId))
@@ -949,9 +971,14 @@ public class RegularQuizController extends QuizAbstract {
 
         private void prepareForCityRanking() {
 
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
             for (Document itr : studentsData) {
 
-                ObjectId cityId = itr.get("city", Document.class).getObjectId("_id");
+                ObjectId cityId = itr.get("city") == null ? unknownCity :
+                        itr.get("city", Document.class).getObjectId("_id");
                 ObjectId stateId;
 
                 if (states.containsKey(cityId))
@@ -1102,9 +1129,16 @@ public class RegularQuizController extends QuizAbstract {
                 if(!doc.containsKey("cum_sum_last_three"))
                     doc.put("cum_sum_last_three", 0);
 
-                ObjectId gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
+                ObjectId gradeId;
 
-                if(!doc.containsKey("grade_id")) {
+                if(!studentsData.get(idx).containsKey("grade") ||
+                        studentsData.get(idx).get("grade") == null
+                )
+                    gradeId = null;
+                else
+                    gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
+
+                if(!doc.containsKey("grade_id") && gradeId != null) {
                     doc.put("grade_id", gradeId);
                     update.append("grade_id", gradeId);
                 }
@@ -1152,7 +1186,8 @@ public class RegularQuizController extends QuizAbstract {
 
                     doc.put("cum_sum_last_three", cumSum);
                     update.append("cum_sum_last_three", cumSum);
-                    if(!gradesNeedUpdate.contains(gradeId))
+                    if(gradeId != null &&
+                            !gradesNeedUpdate.contains(gradeId))
                         gradesNeedUpdate.add(gradeId);
                 }
 

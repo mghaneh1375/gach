@@ -264,7 +264,7 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String forceRegistry(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {"items", "paid"},
                                         paramsType = {JSONArray.class, Positive.class}
@@ -278,12 +278,9 @@ public class QuizAPIRoutes extends Router {
         JSONArray jsonArray = jsonObject.getJSONArray("items");
         int paid = jsonObject.getInt("paid");
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.forceRegistry(iryscQuizRepository, null, quizId,
-                    jsonArray, paid
-            );
-
-        return QuizController.forceRegistry(schoolQuizRepository,
+        return QuizController.forceRegistry(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? openQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
                 jsonArray, paid
         );
@@ -433,7 +430,7 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(value = "/arrangeQuestions/{mode}/{quizId}")
     @ResponseBody
     public String arrangeQuestions(HttpServletRequest request,
-                                   @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @NotBlank @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
                                    @RequestBody @StrongJSONConstraint(params = {"questionIds"},
                                            paramsType = JSONArray.class) @NotBlank String jsonStr)
@@ -443,7 +440,9 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.arrangeQuestions(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                        schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
         );
     }
@@ -859,7 +858,7 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getQuizAnswerSheet/{mode}/{quizId}")
     @ResponseBody
     public String getQuizAnswerSheet(HttpServletRequest request,
-                                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                     @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                      @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
@@ -867,15 +866,10 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.getQuizAnswerSheet(
-                    iryscQuizRepository, null, quizId
-            );
-
         return QuizController.getQuizAnswerSheet(
-                schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
 
@@ -939,7 +933,7 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(value = "/createTaraz/{mode}/{quizId}")
     @ResponseBody
     public String createTaraz(HttpServletRequest request,
-                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                              @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                               @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
@@ -949,7 +943,9 @@ public class QuizAPIRoutes extends Router {
 
 //        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
         return QuizController.createTaraz(
-                iryscQuizRepository, null, quizId
+                mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId
         );
 
     }

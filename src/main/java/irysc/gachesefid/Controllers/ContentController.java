@@ -57,6 +57,9 @@ public class ContentController {
 
             try {
 
+                if(row.getCell(1) == null)
+                    break;
+
                 if (row.getLastCellNum() < 4)
                     continue;
 
