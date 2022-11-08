@@ -28,6 +28,7 @@ public class OpenQuizController {
     private final static String[] forbiddenTransferFields = {
             "start_registry", "start", "_id",
             "end", "end_registry", "show_results_after_correction", "launch_mode",
+            "show_results_after_correction_not_login_users",
             "permute", "visibility", "back_en", "mysql_id", "created_by",
             "created_at", "top_students_count", "students", "registered",
             "ranking_list", "report_status", "general_stat", "question_stat"

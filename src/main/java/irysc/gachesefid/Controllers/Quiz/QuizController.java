@@ -104,7 +104,7 @@ public class QuizController {
 //                newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
 //        )
 
-        if (newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+        if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
             newDoc.put("correctors", new ArrayList<>());
 
         if(newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
@@ -130,6 +130,15 @@ public class QuizController {
 
             if (!data.has("tags"))
                 quiz.put("tags", new ArrayList<>());
+
+            if(quiz.containsKey("price") && quiz.get("price") instanceof String) {
+                try {
+                    quiz.put("price", Integer.parseInt(quiz.getString("price")));
+                }
+                catch (Exception x) {
+                    quiz.put("price", 0);
+                }
+            }
 
             db.replaceOne(quizId, quiz);
 

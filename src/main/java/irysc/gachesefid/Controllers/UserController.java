@@ -1064,6 +1064,8 @@ public class UserController {
                                         )
                                 )
                         )
+                ) + openQuizRepository.count(
+                        nin("students._id", user.getObjectId("_id"))
                 ))
                 .put("activeQuizzes", iryscQuizRepository.count(
                         and(

@@ -285,7 +285,7 @@ public class StudentQuizController {
 
         boolean isSchool = Authorization.isSchool(accesses);
         if (isSchool && !user.containsKey("students"))
-            return JSON_NOT_UNKNOWN;
+            return generateSuccessMsg("data", new ArrayList<>());
 
         JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();

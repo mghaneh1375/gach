@@ -85,7 +85,7 @@ public class OpenQuiz extends QuizAbstract {
             jsonObject
                     .put("status", "inProgress");
         else
-            jsonObject.put("price", quiz.getInteger("price"));
+            jsonObject.put("price", quiz.get("price"));
 
         if (isAdmin) {
             jsonObject

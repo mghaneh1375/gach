@@ -392,20 +392,19 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String addAttach(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId quizId,
-                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                             @RequestBody(required = false) MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.addAttach(iryscQuizRepository, null, quizId,
-                    file);
-
-        return QuizController.addAttach(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId,
-                file);
+        return QuizController.addAttach(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, file
+        );
     }
 
     @DeleteMapping(path = "removeAttach/{mode}/{quizId}")
@@ -653,15 +652,15 @@ public class QuizAPIRoutes extends Router {
     public String createPackage(HttpServletRequest request,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {
-                                                "minSelect", "offPercent", "title",
-                                                "gradeId", "lessonId"
+                                                "minSelect", "offPercent",
+                                                "title", "gradeId"
                                         },
                                         paramsType = {
-                                                Positive.class, Positive.class, String.class,
-                                                ObjectId.class, ObjectId.class
+                                                Positive.class, Positive.class,
+                                                String.class, ObjectId.class,
                                         },
-                                        optionals = {"description"},
-                                        optionalsType = {String.class}
+                                        optionals = {"description", "lessonId"},
+                                        optionalsType = {String.class, ObjectId.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);

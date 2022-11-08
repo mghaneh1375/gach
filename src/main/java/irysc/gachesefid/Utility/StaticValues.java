@@ -30,6 +30,7 @@ public class StaticValues {
     public final static int SMS_RESEND_SEC = 60; // 300
     public final static int SMS_RESEND_MSEC = 1000 * SMS_RESEND_SEC;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
+    public final static int SMS_VALIDATION_EXPIRATION_MSEC_LONG = 1000 * SMS_RESEND_SEC * 3;
 
     public final static int USER_LIMIT_CACHE_SIZE = 3000;
     public final static int USER_EXPIRATION_SEC = 60 * 60 * 24 * 7;
