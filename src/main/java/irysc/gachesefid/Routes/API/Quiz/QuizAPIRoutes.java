@@ -653,15 +653,15 @@ public class QuizAPIRoutes extends Router {
     public String createPackage(HttpServletRequest request,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {
-                                                "minSelect", "offPercent", "title",
-                                                "gradeId", "lessonId"
+                                                "minSelect", "offPercent",
+                                                "title", "gradeId"
                                         },
                                         paramsType = {
-                                                Positive.class, Positive.class, String.class,
-                                                ObjectId.class, ObjectId.class
+                                                Positive.class, Positive.class,
+                                                String.class, ObjectId.class,
                                         },
-                                        optionals = {"description"},
-                                        optionalsType = {String.class}
+                                        optionals = {"description", "lessonId"},
+                                        optionalsType = {String.class, ObjectId.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);

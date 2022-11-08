@@ -35,23 +35,29 @@ public class PackageController {
         if (grade == null)
             return JSON_NOT_VALID_PARAMS;
 
-        ObjectId lessonId = new ObjectId(jsonObject.getString("lessonId"));
+        ObjectId lessonId = null;
 
-        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                grade.getList("lessons", Document.class),
-                "_id", lessonId
-        ) == -1)
-            return JSON_NOT_VALID_PARAMS;
+        if(jsonObject.has("lessonId")) {
+            lessonId = new ObjectId(jsonObject.getString("lessonId"));
+
+            if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    grade.getList("lessons", Document.class),
+                    "_id", lessonId
+            ) == -1)
+                return JSON_NOT_VALID_PARAMS;
+        }
 
         Document newDoc = new Document("title", jsonObject.getString("title"))
                 .append("off_percent", jsonObject.getInt("offPercent"))
                 .append("min_select", jsonObject.getInt("minSelect"))
                 .append("description", jsonObject.has("description") ? jsonObject.getString("description") : "")
                 .append("quizzes", new ArrayList<>())
-                .append("lesson_id", lessonId)
                 .append("grade_id", gradeId)
                 .append("buyers", 0)
                 .append("expire_at", System.currentTimeMillis());
+
+        if(lessonId != null)
+            newDoc.append("lesson_id", lessonId);
 
         return packageRepository.insertOneWithReturn(newDoc);
     }
@@ -210,7 +216,10 @@ public class PackageController {
             filters.add(eq("grade_id", gradeId));
 
         if (lessonId != null)
-            filters.add(eq("lesson_id", lessonId));
+            filters.add(and(
+                    exists("lesson_id"),
+                    eq("lesson_id", lessonId)
+            ));
 
         ArrayList<Document> packages = packageRepository.find(
                 and(filters), null
@@ -229,10 +238,13 @@ public class PackageController {
             if (grade == null)
                 continue;
 
-            Document lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                    grade.getList("lessons", Document.class),
-                    "_id", packageDoc.getObjectId("lesson_id")
-            );
+            Document lesson = null;
+
+            if(packageDoc.containsKey("lesson_id"))
+                lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        grade.getList("lessons", Document.class),
+                        "_id", packageDoc.getObjectId("lesson_id")
+                );
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", packageDoc.getObjectId("_id").toString())
@@ -243,16 +255,18 @@ public class PackageController {
                             .put("id", grade.getObjectId("_id").toString())
                             .put("name", grade.getString("name"))
                     )
-                    .put("lesson", new JSONObject()
-                            .put("id", lesson.getObjectId("_id").toString())
-                            .put("name", lesson.getString("name"))
-                    )
                     .put("type", "package")
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
 
-            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
+            if(lesson != null) {
+                jsonObject.put("lesson", new JSONObject()
+                        .put("id", lesson.getObjectId("_id").toString())
+                        .put("name", lesson.getString("name"))
+                );
+            }
 
+            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
 
             ArrayList<String> subTags;
             if (tags.containsKey(grade.getString("name")))
@@ -260,13 +274,16 @@ public class PackageController {
             else
                 subTags = new ArrayList<>();
 
-            if (!subTags.contains(lesson.getString("name")))
+            if (lesson != null && !subTags.contains(lesson.getString("name")))
                 subTags.add(lesson.getString("name"));
 
             tags.put(grade.getString("name"), subTags);
-            jsonObject.put("tags", new ArrayList<>() {{
-                add(lesson.getString("name"));
-            }});
+            if(lesson != null) {
+                Document finalLesson = lesson;
+                jsonObject.put("tags", new ArrayList<>() {{
+                    add(finalLesson.getString("name"));
+                }});
+            }
 
             JSONArray quizzesDoc = new JSONArray();
             int totalPrice = 0;
@@ -424,15 +441,16 @@ public class PackageController {
             filters.add(eq("grade_id", gradeId));
 
         if (lessonId != null)
-            filters.add(eq("lesson_id", lessonId));
+            filters.add(and(
+                    exists("lesson_id"),
+                    eq("lesson_id", lessonId)
+            ));
 
         ArrayList<Document> packages = packageRepository.find(
                 filters.size() == 0 ? null : and(filters), null
         );
 
         JSONArray jsonArray = new JSONArray();
-        long curr = System.currentTimeMillis();
-
         JSONObject data = new JSONObject();
 
         for (Document packageDoc : packages) {
@@ -441,10 +459,12 @@ public class PackageController {
             if (grade == null)
                 continue;
 
-            Document lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                    grade.getList("lessons", Document.class),
-                    "_id", packageDoc.getObjectId("lesson_id")
-            );
+            Document lesson = null;
+            if(packageDoc.containsKey("lesson_id"))
+                lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        grade.getList("lessons", Document.class),
+                        "_id", packageDoc.getObjectId("lesson_id")
+                );
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", packageDoc.getObjectId("_id").toString())
@@ -455,13 +475,16 @@ public class PackageController {
                             .put("id", grade.getObjectId("_id").toString())
                             .put("name", grade.getString("name"))
                     )
-                    .put("lesson", new JSONObject()
-                            .put("id", lesson.getObjectId("_id").toString())
-                            .put("name", lesson.getString("name"))
-                    )
                     .put("type", "package")
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
+
+            if(lesson != null) {
+                jsonObject.put("lesson", new JSONObject()
+                        .put("id", lesson.getObjectId("_id").toString())
+                        .put("name", lesson.getString("name"))
+                );
+            }
 
             List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
             jsonObject

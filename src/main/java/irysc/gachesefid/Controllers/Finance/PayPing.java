@@ -67,7 +67,7 @@ public class PayPing {
         if(
                 mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
         )
-            amount /= 1000.0;
+            amount /= 10000.0;
 
         double finalVal = amount * exchangeCoef;
 
@@ -76,7 +76,7 @@ public class PayPing {
         if(
                 mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
         )
-            update.append("money", Math.round((money - amount * 1000) * 100.0) / 100.0)
+            update.append("money", Math.round((money - amount * 10000) * 100.0) / 100.0)
                     .append("coin", Math.round((coin + finalVal) * 100.0) / 100.0);
         else {
             update.append("money", Math.round((money + finalVal) * 100.0) / 100.0)
