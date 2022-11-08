@@ -550,8 +550,8 @@ public class UserAPIRoutes extends Router {
         if (!jsonObject.getString("newPass").equals(jsonObject.getString("rNewPass")))
             return Utility.generateErr("رمزجدید و تکرار آن یکسان نیستند.");
 
-        if (!Utility.isValidPassword(jsonObject.getString("newPass")))
-            return Utility.generateErr("رمزجدید انتخاب شده قوی نیست.");
+//        if (!Utility.isValidPassword(jsonObject.getString("newPass")))
+//            return Utility.generateErr("رمزجدید انتخاب شده قوی نیست.");
 
         Document doc = activationRepository.findOneAndDelete(
                 and(
@@ -564,7 +564,7 @@ public class UserAPIRoutes extends Router {
         if (doc == null)
             return generateErr("کد وارد شده معتبر نیست و یا توکن شما منقضی شده است.");
 
-        if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
+        if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC_LONG)
             return Utility.generateErr("توکن موردنظر منقضی شده است.");
 
         userRepository.updateOne(
@@ -722,8 +722,8 @@ public class UserAPIRoutes extends Router {
             if (!newPass.equals(confirmNewPass))
                 return generateErr("رمزعبور جدید و تکرار آن یکسان نیستند.");
 
-            if (!Utility.isValidPassword(newPass))
-                return generateErr("رمزعبور جدید قوی نیست.");
+//            if (!Utility.isValidPassword(newPass))
+//                return generateErr("رمزعبور جدید قوی نیست.");
 
             newPass = Utility.convertPersianDigits(newPass);
             if(!isAdmin) {
