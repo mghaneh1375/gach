@@ -387,7 +387,7 @@ public class PackageController {
                 filtersForQuizzes.add(nin("students._id", userId));
 
             ArrayList<Document> docs = iryscQuizRepository.find(
-                    and(filters), null
+                    and(filtersForQuizzes), null
             );
 
             if(!isSchool)
