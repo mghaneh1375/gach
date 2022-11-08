@@ -356,23 +356,26 @@ public class PackageController {
                 );
             }
 
-            ArrayList<Document> docs = iryscQuizRepository.find(
-                    and(
-                            nin("_id", fetched),
-                            eq("visibility", true),
-                            lte("start_registry", curr),
-                            or(
-                                    exists("end_registry", false),
-                                    gt("end_registry", curr)
-                            ),
-                            gt("end", curr)
+            ArrayList<Bson> filtersForQuizzes = new ArrayList<>();
+            filtersForQuizzes.add(nin("_id", fetched));
+            filtersForQuizzes.add(eq("visibility", true));
+            filtersForQuizzes.add(lte("start_registry", curr));
+            filtersForQuizzes.add(or(
+                    exists("end_registry", false),
+                    gt("end_registry", curr)
+            ));
+            filtersForQuizzes.add(gt("end", curr));
 
-                    ), null
+            if(userId != null)
+                filtersForQuizzes.add(nin("students._id", userId));
+
+            ArrayList<Document> docs = iryscQuizRepository.find(
+                    and(filters), null
             );
 
             if(!isSchool)
                 docs.addAll(openQuizRepository.find(
-                        userId == null ? null : nin("students", userId), null
+                        userId == null ? null : nin("students._id", userId), null
                 ));
 
             RegularQuizController quizController = new RegularQuizController();
