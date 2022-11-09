@@ -5,9 +5,11 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -27,6 +29,26 @@ import static irysc.gachesefid.Utility.Utility.convertPersian;
 @Validated
 public class AdminContentAPIRoutes extends Router {
 
+    @GetMapping(value = "getAll")
+    @ResponseBody
+    public String getAll(HttpServletRequest request,
+                         @RequestParam(required = false) String tag,
+                         @RequestParam(required = false) String title,
+                         @RequestParam(required = false) String teacher,
+                         @RequestParam(required = false) Boolean visibility,
+                         @RequestParam(required = false) Boolean hasCert,
+                         @RequestParam(required = false) Integer minPrice,
+                         @RequestParam(required = false) Integer maxPrice
+                         ) {
+
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user == null ? false : Authorization.isAdmin(user.getList("accesses", String.class));
+        return AdminContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
+                tag, title, teacher, visibility, hasCert, minPrice, maxPrice
+        );
+    }
+
+
     @PostMapping(value = "store")
     @ResponseBody
     public String store(HttpServletRequest request,
@@ -43,10 +65,12 @@ public class AdminContentAPIRoutes extends Router {
                                 optionals = {
                                         "teacherBio", "certId", "preReq",
                                         "duration", "finalExamId", "finalExamMinMark",
+                                        "tags"
                                 },
                                 optionalsType = {
                                         String.class, ObjectId.class, String.class,
                                         Positive.class, ObjectId.class, Positive.class,
+                                        JSONArray.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -57,11 +81,11 @@ public class AdminContentAPIRoutes extends Router {
     @PutMapping(value = "setImg/{id}")
     @ResponseBody
     public String setImg(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId id,
-                        @RequestBody MultipartFile file
+                         @PathVariable @ObjectIdConstraint ObjectId id,
+                         @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
@@ -72,42 +96,74 @@ public class AdminContentAPIRoutes extends Router {
     @PutMapping(value = "addSession/{id}")
     @ResponseBody
     public String addSession(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId id,
-                        @RequestBody @StrongJSONConstraint(
-                                params = {
-                                        "title", "duration", "description",
-                                        "visibility", "priority"
+                             @PathVariable @ObjectIdConstraint ObjectId id,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {
+                                             "title", "duration", "description",
+                                             "visibility", "priority"
 
-                                },
-                                paramsType = {
-                                        String.class, Positive.class, String.class,
-                                        Boolean.class, Positive.class
-                                },
-                                optionals = {
-                                        "price", "examId", "minMark",
-                                },
-                                optionalsType = {
-                                        Positive.class, ObjectId.class, Positive.class,
-                                }
-                        ) @NotBlank String jsonStr
+                                     },
+                                     paramsType = {
+                                             String.class, Positive.class, String.class,
+                                             Boolean.class, Positive.class
+                                     },
+                                     optionals = {
+                                             "price", "examId", "minMark",
+                                     },
+                                     optionalsType = {
+                                             Positive.class, ObjectId.class, Positive.class,
+                                     }
+                             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return AdminContentController.addSession(id, convertPersian(new JSONObject(jsonStr)));
     }
 
+
+    @PutMapping(value = "addٰVideoToSession/{id}/{sessionId}")
+    @ResponseBody
+    public String addٰVideoToSession(HttpServletRequest request,
+                                     @PathVariable @ObjectIdConstraint ObjectId id,
+                                     @PathVariable @ObjectIdConstraint ObjectId sessionId,
+                                     @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.addٰVideoToSession(id, sessionId, file);
+    }
+
+
+    @PutMapping(value = "addٰAttachToSession/{id}/{sessionId}")
+    @ResponseBody
+    public String addٰAttachToSession(HttpServletRequest request,
+                                      @PathVariable @ObjectIdConstraint ObjectId id,
+                                      @PathVariable @ObjectIdConstraint ObjectId sessionId,
+                                      @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.addٰAttachToSession(id, sessionId, file);
+    }
+
     @DeleteMapping(value = "removeSession/{id}")
     @ResponseBody
     public String removeSession(HttpServletRequest request,
-                             @PathVariable @ObjectIdConstraint ObjectId id,
-                             @RequestBody @StrongJSONConstraint(
-                                     params = {
-                                             "items"
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {
+                                                "items"
 
-                                     },
-                                     paramsType = {
-                                             JSONArray.class
-                                     }
-                             ) @NotBlank String jsonStr
+                                        },
+                                        paramsType = {
+                                                JSONArray.class
+                                        }
+                                ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return AdminContentController.removeSession(

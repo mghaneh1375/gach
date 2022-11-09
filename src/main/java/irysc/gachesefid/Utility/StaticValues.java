@@ -48,7 +48,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -90,6 +90,19 @@ public class StaticValues {
             ;
 
     public final static BasicDBObject JUST_RANK = new BasicDBObject("rank", 1);
+
+    public final static BasicDBObject CONTENT_DIGEST = new BasicDBObject("_id", 1)
+            .append("title", 1).append("teacher", 1)
+            .append("cert_id", 1).append("img", 1)
+            .append("created_at", 1).append("tags", 1)
+            .append("duration", 1);
+
+    public final static BasicDBObject CONTENT_DIGEST_FOR_ADMIN = new BasicDBObject("_id", 1)
+            .append("title", 1).append("teacher", 1)
+            .append("cert_id", 1).append("img", 1)
+            .append("created_at", 1).append("tags", 1)
+            .append("duration", 1).append("students", 1)
+            .append("sessions", 1).append("visibility", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
             .append("first_name", 1)

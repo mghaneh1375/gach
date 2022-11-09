@@ -195,6 +195,23 @@ public class FileUtils {
     }
 
     @Nullable
+    public static String uploadMultimediaFile(MultipartFile file) {
+
+        try {
+
+            String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+
+            if (!fileType.equals("video"))
+                return null;
+
+            return fileType;
+
+        } catch (InvalidFileTypeException e) {
+            return null;
+        }
+    }
+
+    @Nullable
     public static String uploadPdfOrMultimediaFile(MultipartFile file) {
 
         try {

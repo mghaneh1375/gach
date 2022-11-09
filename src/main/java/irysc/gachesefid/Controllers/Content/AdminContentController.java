@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,7 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
@@ -22,10 +25,61 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class AdminContentController {
 
+    public static String getAll(ObjectId userId,
+                                boolean isAdmin,
+                                String tag,
+                                String title,
+                                String teacher,
+                                Boolean visibility,
+                                Boolean hasCert,
+                                Integer minPrice,
+                                Integer maxPrice) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        if(!isAdmin)
+            filters.add(eq("visibility", true));
+
+        if(!isAdmin && userId != null)
+            filters.add(nin("users._id", userId));
+
+        if(title != null)
+            filters.add(regex("title", Pattern.compile(Pattern.quote(title), Pattern.CASE_INSENSITIVE)));
+
+        if(tag != null)
+            filters.add(in("tags", tag));
+
+        if(hasCert != null)
+            filters.add(exists("cert_id", hasCert));
+
+        if(minPrice != null)
+            filters.add(lte("price", minPrice));
+
+        if(maxPrice != null)
+            filters.add(gte("price", maxPrice));
+
+        if(isAdmin) {
+
+            if(visibility != null)
+                filters.add(eq("visibility", visibility));
+
+            if(teacher != null)
+                filters.add(eq("teacher", teacher));
+
+        }
+
+        JSONArray data = new JSONArray();
+        ArrayList<Document> docs = contentRepository.find(filters.size() == 0 ? null : and(filters), CONTENT_DIGEST);
+
+        for(Document doc : docs)
+            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc));
+
+        return generateSuccessMsg("data", data);
+    }
+
     public static String store(JSONObject data) {
 
         Document newDoc = new Document("created_at", System.currentTimeMillis())
-                .append("users", new ArrayList<>())
+                .append("c", new ArrayList<>())
                 .append("sessions", new ArrayList<>());
 
         for(String key : data.keySet()) {
@@ -41,6 +95,15 @@ public class AdminContentController {
         if(newDoc.containsKey("duration") && !newDoc.containsKey("certId"))
             return JSON_NOT_VALID_PARAMS;
 
+        if(newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
+            try {
+                newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
+            }
+            catch (Exception x) {
+                newDoc.put("price", 0);
+            }
+        }
+
         ObjectId oId = contentRepository.insertOneWithReturnId(newDoc);
         return generateSuccessMsg("id", oId.toString());
     }
@@ -54,7 +117,9 @@ public class AdminContentController {
         List<Document> sessions = doc.getList("sessions", Document.class);
 
         ObjectId oId = new ObjectId();
-        Document newDoc = new Document("_id", oId);
+        Document newDoc = new Document("_id", oId)
+                .append("videos", new ArrayList<>())
+                .append("attaches", new ArrayList<>());
 
         for(String key : data.keySet()) {
             newDoc.put(
@@ -90,6 +155,67 @@ public class AdminContentController {
             FileUtils.removeFile(doc.getString("img"), ContentRepository.FOLDER);
 
         doc.put("img", filename);
+        contentRepository.replaceOne(id, doc);
+
+        return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
+    }
+
+
+    public static String addٰVideoToSession(ObjectId id, ObjectId sessionId, MultipartFile file) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document session = Utility.searchInDocumentsKeyVal(
+                doc.getList("sessions", Document.class), "_id", sessionId
+        );
+
+        if(session == null)
+            return JSON_NOT_VALID_ID;
+
+        String type = FileUtils.uploadMultimediaFile(file);
+        if(type == null)
+            return JSON_NOT_VALID_FILE;
+
+        String filename = FileUtils.uploadFile(file, ContentRepository.FOLDER);
+        if(filename == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<String> videos = session.getList("videos", String.class);
+        videos.add(filename);
+        session.put("videos", videos);
+
+        contentRepository.replaceOne(id, doc);
+
+        return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
+    }
+
+    public static String addٰAttachToSession(ObjectId id, ObjectId sessionId, MultipartFile file) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document session = Utility.searchInDocumentsKeyVal(
+                doc.getList("sessions", Document.class), "_id", sessionId
+        );
+
+        if(session == null)
+            return JSON_NOT_VALID_ID;
+
+        String type = FileUtils.uploadDocOrMultimediaFile(file);
+        if(type == null)
+            return JSON_NOT_VALID_FILE;
+
+        String filename = FileUtils.uploadFile(file, ContentRepository.FOLDER);
+        if(filename == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<String> attaches = session.getList("attaches", String.class);
+        attaches.add(filename);
+        session.put("attaches", attaches);
+
         contentRepository.replaceOne(id, doc);
 
         return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
