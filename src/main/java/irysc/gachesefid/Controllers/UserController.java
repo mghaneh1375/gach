@@ -1208,8 +1208,13 @@ public class UserController {
     public static String getRankingList(ObjectId gradeId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
+
         filters.add(
-                lt("rank", 50)
+                and(
+                        ne("user_id", new ObjectId("632bf8f3bd5b8c48dae0a12e")),
+                        ne("user_id", new ObjectId("6354d7c7ec057f4ff5cdc88f")),
+                        ne("user_id", new ObjectId("63550a10ec057f4ff5cdc8a2"))
+                )
         );
 
         if(gradeId != null) {
@@ -1219,6 +1224,10 @@ public class UserController {
 
             ));
         }
+        else
+            filters.add(
+                    lt("rank", 50)
+            );
 
         ArrayList<Document> docs = tarazRepository.find(and(filters), null,
                 gradeId == null ?
