@@ -1246,15 +1246,28 @@ public class UserController {
         JSONArray jsonArray = new JSONArray();
 
         int i = 0;
+
+        int rank = 0;
+        int oldSum = -1;
+        int skip = 1;
+
         for(Document user : users) {
+
+            int currSum = docs.get(i).getInteger("cum_sum_last_five");
+
+            if (oldSum != currSum) {
+                rank += skip;
+                skip = 1;
+            } else
+                skip++;
+
             JSONObject jsonObject = new JSONObject()
                     .put("totalQuizzes", docs.get(i).getList("quizzes", Document.class).size())
-                    .put("cumSum", docs.get(i).getInteger("cum_sum_last_five"))
-                    ;
-            user.put("rank", gradeId == null ?
-                    docs.get(i).getInteger("rank") :
-                    docs.get(i).getInteger("grade_rank")
-            );
+                    .put("cumSum", currSum);
+
+            user.put("rank", rank);
+            oldSum = currSum;
+
             Utility.fillJSONWithUser(jsonObject, user);
             jsonArray.put(jsonObject);
             i++;
