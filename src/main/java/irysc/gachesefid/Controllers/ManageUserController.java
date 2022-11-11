@@ -97,14 +97,14 @@ public class ManageUserController {
 
         if(gradeId != null)
             filters.add(and(
-                    exists("grade"),
-                    eq("grade._id", gradeId)
+                    exists("branches"),
+                    eq("branches._id", gradeId)
             ));
 
         if(branchId != null)
             filters.add(and(
-                    exists("branches"),
-                    eq("branches._id", branchId)
+                    exists("grade"),
+                    eq("grade._id", branchId)
             ));
 
 
