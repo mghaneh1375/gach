@@ -1262,7 +1262,11 @@ public class RegularQuizController extends QuizAbstract {
 
                     for (Document tarazRanking : tarazRankingList) {
 
-                        if(!tarazRanking.get("grade_id").equals(gradeId))
+                        if(
+                                gradeId == null || tarazRanking == null ||
+                                !tarazRanking.containsKey("grade_id") ||
+                                tarazRanking.get("grade_id") == null ||
+                                !tarazRanking.get("grade_id").equals(gradeId))
                             continue;
 
                         int index = searchInDocumentsKeyValIdx(

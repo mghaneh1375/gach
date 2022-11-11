@@ -90,6 +90,9 @@ public class PackageController {
 
         }
 
+        if(!jsonObject.has("lessonId"))
+            packageDoc.remove("lesson_id");
+
         if (jsonObject.has("title"))
             packageDoc.put("title", jsonObject.getString("title"));
 

@@ -68,12 +68,29 @@ public class AdminContentController {
         }
 
         JSONArray data = new JSONArray();
-        ArrayList<Document> docs = contentRepository.find(filters.size() == 0 ? null : and(filters), CONTENT_DIGEST);
+        ArrayList<Document> docs = contentRepository.find(
+                filters.size() == 0 ? null : and(filters),
+                isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST
+        );
 
         for(Document doc : docs)
-            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc));
+            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
 
         return generateSuccessMsg("data", data);
+    }
+
+    public static String get(boolean isAdmin, ObjectId userId, ObjectId contentId) {
+
+        Document content = contentRepository.findById(contentId);
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convert(
+                content, isAdmin,
+                isAdmin || userId != null && Utility.searchInDocumentsKeyValIdx(
+                        content.getList("users", Document.class), "_id", userId
+                ) != -1)
+        );
     }
 
     public static String store(JSONObject data) {

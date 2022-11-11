@@ -49,7 +49,8 @@ public class Jobs implements Runnable {
     private static class SiteStatsHandler extends TimerTask {
 
         public void run() {
-            SCHOOLS = schoolRepository.count(exists("user_id"));
+//            SCHOOLS = schoolRepository.count(exists("user_id"));
+            SCHOOLS = schoolRepository.count(null);
             QUESTIONS = questionRepository.count(null);
             STUDENTS = userRepository.count(eq("level", false));
         }

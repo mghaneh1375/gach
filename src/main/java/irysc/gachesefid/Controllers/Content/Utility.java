@@ -33,14 +33,45 @@ public class Utility {
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
                 .put("hasCert", doc.containsKey("cert_id"))
-                .put("duration", doc.get("duration"));
+                .put("hasFinalExam", doc.containsKey("final_exam_id"))
+                .put("duration", doc.getOrDefault("duration", ""))
+                .put("sessionsCount", doc.getInteger("sessions_count"));
+
+        if(!isAdmin && doc.containsKey("img"))
+            jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
+
+        if(isAdmin) {
+            jsonObject.put("visibility", doc.getBoolean("visibility"))
+                    .put("createdAt", irysc.gachesefid.Utility.Utility.getSolarDate(doc.getLong("created_at")))
+                    .put("buyers", doc.getList("users", Document.class).size());
+        }
+
+        return jsonObject;
+    }
+
+    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("price", doc.get("price"))
+                .put("description", doc.getString("description"))
+                .put("teacherBio", doc.getOrDefault("teacher_bio", ""))
+                .put("title", doc.get("title"))
+                .put("tags", doc.get("tags"))
+                .put("id", doc.getObjectId("_id").toString())
+                .put("teacher", doc.getString("teacher"))
+                .put("hasFinalExam", doc.containsKey("final_exam_id"))
+                .put("hasCert", doc.containsKey("cert_id"))
+                .put("duration", doc.getOrDefault("duration", ""))
+                .put("preReq", doc.get("pre_req"))
+                .put("sessionsCount", doc.getInteger("sessions_count"));
 
         if(doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
         if(isAdmin) {
-//            jsonObject.put("visibility", doc.getBoolean("visibility"))
-//                    .put("");
+            jsonObject.put("visibility", doc.getBoolean("visibility"))
+                    .put("finalExamMinMark", doc.getOrDefault("final_exam_min_mark", -1))
+                    .put("buyers", doc.getList("users", Document.class).size());
         }
 
         return jsonObject;

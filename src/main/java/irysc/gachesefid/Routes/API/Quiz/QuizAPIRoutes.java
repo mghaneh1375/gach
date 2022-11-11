@@ -940,7 +940,6 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-//        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
         return QuizController.createTaraz(
                 mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                 mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,

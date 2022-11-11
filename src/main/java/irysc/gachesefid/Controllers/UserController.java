@@ -58,7 +58,7 @@ public class UserController {
     };
 
     private static FormField[] fieldsNeededForStudent = new FormField[]{
-            new FormField(true, "invitationCode", "کد معرف", "اختیاری", false),
+            new FormField(true, "invitationCode", "کد معرف", "این فیلد اختیاری است و در صورت نداشتن کد معرف این فیلد را خالی رها کنید.", false),
     };
 
     private static FormField[] fieldsNeededForAgent = new FormField[]{

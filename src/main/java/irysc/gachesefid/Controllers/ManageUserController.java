@@ -67,7 +67,8 @@ public class ManageUserController {
 
     public static String fetchTinyUser(String level, String name,
                                        String lastname, String phone,
-                                       String mail, String NID
+                                       String mail, String NID,
+                                       ObjectId gradeId, ObjectId branchId
     ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
@@ -93,6 +94,19 @@ public class ManageUserController {
 
         if (lastname != null)
             filters.add(regex("last_name", Pattern.compile(Pattern.quote(lastname), Pattern.CASE_INSENSITIVE)));
+
+        if(gradeId != null)
+            filters.add(and(
+                    exists("grade"),
+                    eq("grade._id", gradeId)
+            ));
+
+        if(branchId != null)
+            filters.add(and(
+                    exists("branches"),
+                    eq("branches._id", branchId)
+            ));
+
 
         ArrayList<Document> docs = userRepository.find(
                 filters.size() == 0 ? null : and(filters), USER_MANAGEMENT_INFO_DIGEST
