@@ -2,12 +2,14 @@ package irysc.gachesefid.Routes.API;
 
 
 import irysc.gachesefid.Controllers.AlertController;
+import irysc.gachesefid.Controllers.Certification.AdminCertification;
 import irysc.gachesefid.Controllers.Config.CityController;
 import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
+import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -24,6 +26,7 @@ import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -156,6 +159,23 @@ public class GeneralAPIRoutes extends Router {
         return TransactionController.fetchInvoice(
                 getUser(request).getObjectId("_id"), refId
         );
+    }
+
+
+    @GetMapping(value = "/getAllCertsDigest")
+    @ResponseBody
+    public String getAllCertsDigest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminCertification.getAllCertsDigest();
+    }
+
+    @GetMapping(value = "/getAllQuizzesDigest")
+    @ResponseBody
+    public String getAllQuizzesDigest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.getAllQuizzesDigest();
     }
 
     @GetMapping(value = "/getMySummary")

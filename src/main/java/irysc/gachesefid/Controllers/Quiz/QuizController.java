@@ -52,6 +52,36 @@ public class QuizController {
         );
     }
 
+    public static String getAllQuizzesDigest() {
+
+        JSONArray all = new JSONArray();
+        ArrayList<Document> quizzes = iryscQuizRepository.find(null, null);
+
+        for(Document quiz : quizzes) {
+
+            JSONObject jsonObject1 = new JSONObject()
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("name", quiz.getString("title") + " در آزمون های آیریسک")
+                    .put("mode", "irysc");
+
+            all.put(jsonObject1);
+        }
+
+        quizzes = openQuizRepository.find(null, null);
+
+        for(Document quiz : quizzes) {
+
+            JSONObject jsonObject1 = new JSONObject()
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("name", quiz.getString("title") + " در آزمون های باز")
+                    .put("mode", "open");
+
+            all.put(jsonObject1);
+        }
+
+        return generateSuccessMsg("data", all);
+    }
+
     public static Document store(ObjectId userId, JSONObject data
     ) throws InvalidFieldsException {
 

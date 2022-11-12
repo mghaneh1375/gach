@@ -72,6 +72,16 @@ public class Utility {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
                     .put("finalExamMinMark", doc.getOrDefault("final_exam_min_mark", -1))
                     .put("buyers", doc.getList("users", Document.class).size());
+
+            if(doc.containsKey("cert_id"))
+                jsonObject.put("certId", doc.getObjectId("cert_id").toString());
+
+            if(doc.containsKey("final_exam_id"))
+                jsonObject.put("finalExamId", doc.getObjectId("final_exam_id").toString());
+
+            if(doc.containsKey("final_exam_min_mark"))
+                jsonObject.put("finalExamMinMark", doc.get("final_exam_min_mark"));
+
         }
 
         return jsonObject;

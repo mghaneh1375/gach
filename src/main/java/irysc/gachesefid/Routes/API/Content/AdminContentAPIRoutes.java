@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Content;
 
 import irysc.gachesefid.Controllers.Content.AdminContentController;
+import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -28,26 +29,6 @@ import static irysc.gachesefid.Utility.Utility.convertPersian;
 @RequestMapping(path = "/api/package_content/manage")
 @Validated
 public class AdminContentAPIRoutes extends Router {
-
-    @GetMapping(value = "getAll")
-    @ResponseBody
-    public String getAll(HttpServletRequest request,
-                         @RequestParam(required = false) String tag,
-                         @RequestParam(required = false) String title,
-                         @RequestParam(required = false) String teacher,
-                         @RequestParam(required = false) Boolean visibility,
-                         @RequestParam(required = false) Boolean hasCert,
-                         @RequestParam(required = false) Integer minPrice,
-                         @RequestParam(required = false) Integer maxPrice
-                         ) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user == null ? false : Authorization.isAdmin(user.getList("accesses", String.class));
-        return AdminContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
-                tag, title, teacher, visibility, hasCert, minPrice, maxPrice
-        );
-    }
-
 
     @PostMapping(value = "store")
     @ResponseBody

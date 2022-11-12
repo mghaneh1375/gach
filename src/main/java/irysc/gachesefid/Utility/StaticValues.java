@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-//    public final static String STATICS_SERVER = "http://192.168.0.106/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "no-reply@okft.org";
@@ -48,7 +48,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -94,6 +94,7 @@ public class StaticValues {
     public final static BasicDBObject CONTENT_DIGEST = new BasicDBObject("_id", 1)
             .append("title", 1).append("teacher", 1)
             .append("cert_id", 1).append("img", 1)
+            .append("price", 1)
             .append("created_at", 1).append("tags", 1)
             .append("final_exam_id", 1)
             .append("duration", 1).append("sessions_count", 1);
@@ -103,7 +104,7 @@ public class StaticValues {
             .append("cert_id", 1).append("img", 1)
             .append("created_at", 1).append("tags", 1)
             .append("duration", 1).append("users", 1)
-            .append("final_exam_id", 1)
+            .append("final_exam_id", 1).append("price", 1)
             .append("sessions_count", 1).append("visibility", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)

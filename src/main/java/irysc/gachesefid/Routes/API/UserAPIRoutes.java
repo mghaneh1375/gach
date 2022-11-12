@@ -247,45 +247,6 @@ public class UserAPIRoutes extends Router {
     }
 
 
-    @GetMapping(path = "getCertificate")
-    @ResponseBody
-    public String getCertificate(HttpServletRequest request,
-                                 @RequestBody(required = false) @JSONConstraint(params = {}, optionals = {
-                                         "name", "competition", "date"
-                                 }) String jsonStr)
-            throws NotAccessException, UnAuthException, NotActivateAccountException {
-        JSONObject jsonObject = (jsonStr != null) ? new JSONObject(jsonStr) : new JSONObject();
-//        PDFUtils.getCertificate(jsonObject.getString("name"),
-//                jsonObject.getString("competition"),
-//                jsonObject.getString("date")
-//        );
-//        PDFUtils.getCertificate("محمد قانع",
-//                "المپیاد آزمایشی زیست",
-//                "1399/04/12"
-//        );
-        return JSON_OK;
-    }
-
-
-    @GetMapping(path = "getCertificate2")
-    @ResponseBody
-    public String getCertificate2(HttpServletRequest request,
-                                  @RequestBody(required = false) @JSONConstraint(params = {}, optionals = {
-                                          "course", "hours", "date"
-                                  }) String jsonStr)
-            throws NotAccessException, UnAuthException, NotActivateAccountException {
-        JSONObject jsonObject = (jsonStr != null) ? new JSONObject(jsonStr) : new JSONObject();
-//        PDFUtils.getCertificate(jsonObject.getString("name"),
-//                jsonObject.getString("competition"),
-//                jsonObject.getString("date")
-//        );
-        PDFUtils.getCertificate2("آمادگی مرحله اول المپیاد شیمی",
-                60,
-                "1399/04/12"
-        );
-        return JSON_OK;
-    }
-
     @PostMapping(value = "clearCache/{table}")
     @ResponseBody
     public String clearCache(HttpServletRequest request,

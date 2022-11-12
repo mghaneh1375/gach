@@ -1,10 +1,8 @@
 package irysc.gachesefid.Controllers.Certification;
 
-import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.CertificateRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -12,7 +10,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +20,23 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminCertification {
+
+    public static String getAllCertsDigest() {
+
+        JSONArray all = new JSONArray();
+        ArrayList<Document> certifications = certificateRepository.find(null, null);
+
+        for(Document cert : certifications) {
+
+            JSONObject jsonObject1 = new JSONObject()
+                    .put("id", cert.getObjectId("_id").toString())
+                    .put("item", cert.getString("title"));
+
+            all.put(jsonObject1);
+        }
+
+        return generateSuccessMsg("data", all);
+    }
 
     public static String store(JSONObject jsonObject) {
 
