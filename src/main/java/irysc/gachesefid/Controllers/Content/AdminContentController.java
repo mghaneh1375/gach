@@ -6,7 +6,6 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,9 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Pattern;
 
-import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
@@ -54,6 +51,46 @@ public class AdminContentController {
         }
 
         contentRepository.insertOne(newDoc);
+        return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertDigest(
+                newDoc, true
+        ));
+    }
+
+    public static String update(ObjectId id, JSONObject data) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document newDoc = new Document("created_at", doc.getLong("created_at"))
+                .append("users", doc.getList("users", Document.class))
+                .append("_id", id)
+                .append("sessions", doc.getList("sessions", Document.class));
+
+        for(String key : data.keySet()) {
+            newDoc.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    data.get(key)
+            );
+        }
+
+        if(newDoc.containsKey("final_exam_id") != newDoc.containsKey("final_exam_min_mark"))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(newDoc.containsKey("duration") && !newDoc.containsKey("cert_id"))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
+            try {
+                newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
+            }
+            catch (Exception x) {
+                newDoc.put("price", 0);
+            }
+        }
+
+        contentRepository.replaceOne(id, newDoc);
+
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertDigest(
                 newDoc, true
         ));

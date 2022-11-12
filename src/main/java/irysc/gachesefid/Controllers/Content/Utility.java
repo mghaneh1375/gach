@@ -6,6 +6,8 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
@@ -56,7 +58,7 @@ public class Utility {
                 .put("description", doc.getString("description"))
                 .put("teacherBio", doc.getOrDefault("teacher_bio", ""))
                 .put("title", doc.get("title"))
-                .put("tags", doc.get("tags"))
+                .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))

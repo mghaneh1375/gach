@@ -59,6 +59,37 @@ public class AdminContentAPIRoutes extends Router {
         return AdminContentController.store(convertPersian(new JSONObject(jsonStr)));
     }
 
+
+    @PutMapping(value = "update/{id}")
+    @ResponseBody
+    public String update(HttpServletRequest request,
+                        @PathVariable @ObjectIdConstraint ObjectId id,
+                        @RequestBody @StrongJSONConstraint(
+                                params = {
+                                        "title", "description", "teacher",
+                                        "price", "sessionsCount", "visibility"
+
+                                },
+                                paramsType = {
+                                        String.class, String.class, String.class,
+                                        Positive.class, Positive.class, Boolean.class,
+                                },
+                                optionals = {
+                                        "teacherBio", "certId", "preReq",
+                                        "duration", "finalExamId", "finalExamMinMark",
+                                        "tags"
+                                },
+                                optionalsType = {
+                                        String.class, ObjectId.class, String.class,
+                                        Positive.class, ObjectId.class, Positive.class,
+                                        JSONArray.class
+                                }
+                        ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.update(id, convertPersian(new JSONObject(jsonStr)));
+    }
+
     @PutMapping(value = "setImg/{id}")
     @ResponseBody
     public String setImg(HttpServletRequest request,
