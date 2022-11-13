@@ -50,6 +50,12 @@ public class AdminContentController {
             }
         }
 
+        if(newDoc.containsKey("cert_id"))
+            newDoc.put("cert_id", new ObjectId(newDoc.getString("cert_id")));
+
+        if(newDoc.containsKey("final_exam_id"))
+            newDoc.put("final_exam_id", new ObjectId(newDoc.getString("final_exam_id")));
+
         contentRepository.insertOne(newDoc);
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertDigest(
                 newDoc, true
@@ -89,8 +95,13 @@ public class AdminContentController {
             }
         }
 
-        contentRepository.replaceOne(id, newDoc);
+        if(newDoc.containsKey("cert_id"))
+            newDoc.put("cert_id", new ObjectId(newDoc.getString("cert_id")));
 
+        if(newDoc.containsKey("final_exam_id"))
+            newDoc.put("final_exam_id", new ObjectId(newDoc.getString("final_exam_id")));
+
+        contentRepository.replaceOne(id, newDoc);
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertDigest(
                 newDoc, true
         ));
