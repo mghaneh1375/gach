@@ -11,8 +11,8 @@ public class StaticValues {
     public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
-    public final static String mailUserName = "no-reply@okft.org";
-    public final static String mailPassword = "ASDFG12345!@#$%^assa"; //wb1DPR8PZ
+    public final static String mailUserName = "noreply@irysc.com";
+    public final static String mailPassword = "wb1DPR8PZ"; //wb1DPR8PZ
 
     public static final String KEY = "okfbogendesignmohammadghane1375!";
 
@@ -35,7 +35,7 @@ public class StaticValues {
     public final static int USER_LIMIT_CACHE_SIZE = 3000;
     public final static int USER_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
-    public final static int CLASS_LIMIT_CACHE_SIZE = 100;
+    public final static int CLASS_LIMIT_CACHE_SIZE = 1000;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
     public final static int MAX_TICKET_FILE_SIZE = 1024 * 1024 * 6;

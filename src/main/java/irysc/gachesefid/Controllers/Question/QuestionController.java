@@ -431,8 +431,6 @@ public class QuestionController extends Utilities {
                     continue;
                 }
 
-                ObjectId authorId = author.getObjectId("_id");
-
                 String kindQuestion = row.getCell(4).getStringCellValue();
                 if (!EnumValidatorImp.isValid(kindQuestion, QuestionType.class)) {
                     errs.put(batchRowErr(rowIdx, "نوع سوال نامعتیر است."));
@@ -565,7 +563,7 @@ public class QuestionController extends Utilities {
         }
 
         if (addAtLeastOne)
-            new Jobs.CalcSubjectQuestions().run();
+            new Thread(() -> new Jobs.CalcSubjectQuestions().run()).start();
 
         if (excepts.length() == 0)
             return generateSuccessMsg(
@@ -795,6 +793,7 @@ public class QuestionController extends Utilities {
                     .put("desc", subject.getString("name") + " در " +
                             lesson + " در " + grade)
                     .put("id", subject.getObjectId("_id").toString())
+                    .put("lessonId", lessonId.toString())
                     .put("section", "subject")
             );
 
@@ -809,6 +808,7 @@ public class QuestionController extends Utilities {
                                 .append("q_no_easy", qNoEasy)
                                 .append("q_no_mid", qNoMid)
                                 .append("q_no_hard", qNoHard)
+                                .append("grade_id", gradeId.toString())
                                 .append("desc", lesson + " در " + grade)
                 );
             }
@@ -839,6 +839,7 @@ public class QuestionController extends Utilities {
                     .put("limitMid", lessons.get(lessonId).getInteger("q_no_mid"))
                     .put("limitHard", lessons.get(lessonId).getInteger("q_no_hard"))
                     .put("name", lessons.get(lessonId).getString("name"))
+                    .put("gradeId", lessons.get(lessonId).getString("grade_id"))
                     .put("id", lessonId.toString())
                     .put("desc", lessons.get(lessonId).getString("desc"))
                     .put("section", "lesson")

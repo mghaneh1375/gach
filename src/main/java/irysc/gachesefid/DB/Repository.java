@@ -53,8 +53,9 @@ public class Repository {
 
             if (cached.get(i).equals(id)) {
 
-                if (cached.get(i).checkExpiration())
+                if (cached.get(i).checkExpiration()) {
                     return (Document) cached.get(i).getValue();
+                }
 
                 cached.remove(i);
                 return null;
@@ -88,6 +89,7 @@ public class Repository {
             generalCached.put(section, new ArrayList<>());
 
         ArrayList<Cache> cached = generalCached.get(section);
+
         if (cached.size() >= limit)
             cached.remove(0);
 

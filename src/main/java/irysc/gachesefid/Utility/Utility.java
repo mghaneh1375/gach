@@ -375,13 +375,13 @@ public class Utility {
 
     public static boolean sendMail(String to, String msg, String subject, String mode, String username) {
 
-        if (DEV_MODE)
-            return true;
+//        if (DEV_MODE)
+//            return true;
 
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);
         prop.put("mail.smtp.starttls.enable", "false");
-        prop.put("mail.smtp.host", "mail.okft.org");
+        prop.put("mail.smtp.host", "mail.irysc.com");
         prop.put("mail.smtp.port", "587");
 
         try {
@@ -394,7 +394,7 @@ public class Utility {
             });
 
             Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress("no-reply@okft.org", "Ökft"));
+            message.setFrom(new InternetAddress("noreply@irysc.com", "noreply@irysc.com"));
 
             message.setRecipients(
                     Message.RecipientType.TO, InternetAddress.parse(to));
@@ -403,15 +403,45 @@ public class Utility {
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
 
             String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
-            html += "<div style='height: 8px; margin-bottom: 5px; background-color: #BB0000; width: 100%'></div>";
-            html += "<img style='width: 200px; margin-bottom: 5px;' src='https://statics.okft.org/logo.png'>";
-            html += "<h3 style='font-size: 1.4em'>Österreichisches Kulturforums Teheran</h3>";
-            html += "<div style='height: 8px; margin-top: 10px; background-color: #BB0000; width: 100%'></div>";
+            html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
+                    "border-color: rgb(255, 102, 0);\n" +
+                    "max-width: 700px;\n" +
+                    "width: 100%;\n" +
+                    "align-self: center;\n" +
+                    "padding: 40px;'>";
+            html += "<div style='\n" +
+                    "-moz-box-direction: normal;\n" +
+                    "-moz-box-orient: vertical;\n" +
+                    "align-items: stretch;\n" +
+                    "border: 0px solid black;\n" +
+                    "box-sizing: border-box;\n" +
+                    "display: flex;\n" +
+                    "flex-basis: auto;\n" +
+                    "flex-direction: column;\n" +
+                    "flex-shrink: 0;\n" +
+                    "margin: 0px;\n" +
+                    "min-height: 0px;\n" +
+                    "min-width: 0px;\n" +
+                    "padding: 0px;\n" +
+                    "position: relative;\n" +
+                    "z-index: unset; flex-flow: row wrap; flex-shrink: 1; justify-content: space-between; -moz-box-align: stretch;'>";
+
+            html += "<h3 style='color: rgb(1, 50, 67);\n" +
+                    "font-family: IRANSans;\n" +
+                    "font-size: 20px;\n" +
+                    "margin-top: 20px;'>" + subject +  "</h3>";
+
+            html += "<img style='height: 60px;\n" +
+                    "margin-bottom: 20px;\n" +
+                    "width: 104px;' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
+
+            html += "</div>";
+
             html += "<div style='margin: 20px'>";
             if (username == null)
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>Hello, </p>";
+                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>";
             else
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>Hello, Dear " + username + "</p>";
+                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + "عزیز</p>";
 
             if (mode.equals("signUp"))
                 html += "<p>We are happy you signed up for ÖKF Teheran LMS. To start exploring, please use this verification code:</p>";
@@ -474,14 +504,16 @@ public class Utility {
 
 
             html += "</div>";
-            html += "<div style='height: 200px; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: #2A2A2A; width: 100%'>";
-            html += "<p style='color: white'>Österreichisches Kulturforums Teheran</p>";
-            html += "<p style='color: white; margin-top: 60px; font-size: 0.9em'>Need any help? Please visit our website: </p>";
-            html += "<div style='color: white; font-size: 0.9em'>https://okft.org</div>";
-            html += "<p style='color: white; margin-top: 10px; font-size: 0.9em'>This message was sent to you by okft.org</p>";
-            html += "<p style='color: white; font-size: 0.9em'>North Sohrevardi St., Khorramshahr St., Arabali St., Alley 6th, Sibouyeh, No. 1 +982188765525</p>";
+
+//            html += "<div style='height: 200px; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: #2A2A2A; width: 100%'>";
+//            html += "<p style='color: white'>Österreichisches Kulturforums Teheran</p>";
+//            html += "<p style='color: white; margin-top: 60px; font-size: 0.9em'>Need any help? Please visit our website: </p>";
+//            html += "<div style='color: white; font-size: 0.9em'>https://okft.org</div>";
+//            html += "<p style='color: white; margin-top: 10px; font-size: 0.9em'>This message was sent to you by okft.org</p>";
+//            html += "<p style='color: white; font-size: 0.9em'>North Sohrevardi St., Khorramshahr St., Arabali St., Alley 6th, Sibouyeh, No. 1 +982188765525</p>";
+//            html += "</div>";
             html += "</div>";
-            html += "</div>";
+
             mimeBodyPart.setContent(html, "text/html; charset=UTF-8");
 
             Multipart multipart = new MimeMultipart();

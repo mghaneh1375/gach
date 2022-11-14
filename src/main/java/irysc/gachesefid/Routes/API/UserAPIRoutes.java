@@ -64,18 +64,9 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if(1 == 1) {
+            sendMail("mghaneh1375@yahoo.com", "salam", "test mail", "signUp", "mamad");
+            return "pk";
 
-            Document newState = new Document(
-                    "name", "نامشخص"
-            );
-
-            ObjectId stateId = stateRepository.insertOneWithReturnId(newState);
-            Document newCity = new Document(
-                    "name", "نامشخص"
-            ).append("state_id", stateId);
-
-            cityRepository.insertOne(newCity);
-            return "ok";
         }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");

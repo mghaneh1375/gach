@@ -195,7 +195,7 @@ public abstract class Common extends Repository {
             Document doc = cursor.iterator().next();
 
             if (!table.isEmpty())
-                addToCache(table, doc, secKey, CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
+                addToCache(table, doc, val, CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
 
             return doc;
         }
