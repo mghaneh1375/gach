@@ -83,6 +83,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static TransactionRepository transactionRepository;
     public static UserRepository userRepository;
     public static MailRepository mailRepository;
+    public static MailQueueRepository mailQueueRepository;
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
 
@@ -118,6 +119,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
             mailRepository = new MailRepository();
+            mailQueueRepository = new MailQueueRepository();
             offcodeRepository = new OffcodeRepository();
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();

@@ -24,9 +24,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_UNKNOWN;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class PayPing {
@@ -116,8 +114,19 @@ public class PayPing {
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
         if(user != null) {
-            if(transaction.getString("section").equalsIgnoreCase("charge"))
-                user.put("money", ((Number)user.get("money")).doubleValue() + transaction.getInteger("amount"));
+            if(transaction.getString("section").equalsIgnoreCase("charge")) {
+
+                if(user.containsKey("mail")) {
+                    new Thread(() -> sendMail(
+                            user.getString("mail"),
+                            SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+                            "successTransaction",
+                            user.getString("first_name") + " " + user.getString("last_name")
+                    )).start();
+                }
+
+                user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
+            }
             else {
                 user.put("money", 0);
             }
@@ -143,6 +152,16 @@ public class PayPing {
                         quiz.put("start_at", null);
 
                         customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+                        if(user.containsKey("mail")) {
+                            new Thread(() -> sendMail(
+                                    user.getString("mail"),
+                                    SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+                                    "successQuiz",
+                                    user.getString("first_name") + " " + user.getString("last_name")
+                            )).start();
+                        }
+
                     }
                 }
                 else if(transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
@@ -166,7 +185,10 @@ public class PayPing {
                                             user.getString("phone"),
                                             user.getString("mail"),
                                             iryscQuizIds,
-                                            transaction.getInteger("amount"));
+                                            transaction.getInteger("amount"),
+                                            transaction.getObjectId("_id"),
+                                            user.getString("first_name") + " " + user.getString("last_name")
+                                    );
 
                         if(openQuizIds.size() > 0)
                             new OpenQuiz()
@@ -174,7 +196,10 @@ public class PayPing {
                                             user.getString("phone"),
                                             user.getString("mail"),
                                             openQuizIds,
-                                            transaction.getInteger("amount"));
+                                            transaction.getInteger("amount"),
+                                            transaction.getObjectId("_id"),
+                                            user.getString("first_name") + " " + user.getString("last_name")
+                                    );
                     }
                     else
                         new RegularQuizController()
@@ -193,7 +218,10 @@ public class PayPing {
                                     user.getString("phone"),
                                     user.getString("mail"),
                                     products,
-                                    transaction.getInteger("amount"));
+                                    transaction.getInteger("amount"),
+                                    transaction.getObjectId("_id"),
+                                    user.getString("first_name") + " " + user.getString("last_name")
+                            );
 
                 }
 
@@ -356,6 +384,7 @@ public class PayPing {
         for (Document transaction : transactions) {
 
             JSONObject jsonObject = new JSONObject()
+                    .put("id", transaction.getObjectId("_id").toString())
                     .put("for", getTransactionTitle(transaction))
                     .put("account", transaction.getOrDefault("account_money", 0))
                     .put("offAmount", transaction.getOrDefault("off_amount", 0))

@@ -659,7 +659,7 @@ public class StudentQuizController {
     public static String buy(ObjectId userId, ObjectId packageId,
                              JSONArray ids, JSONArray studentIds,
                              double money, String phone, String mail,
-                             String offcode) {
+                             String name, String offcode) {
 
         Document quizPackage = null;
         Document off = null;
@@ -750,19 +750,22 @@ public class StudentQuizController {
                 studentOIds.add(studentId);
             }
 
-            return doBuy(userId, phone, mail, money,
+            return doBuy(userId, phone, mail, name, money,
                     quizPackage, off, quizzes, null, studentOIds
             );
         }
 
-        return doBuy(userId, phone, mail, money,
+        return doBuy(userId, phone, mail, name, money,
                 quizPackage, off, quizzes, openQuizzes, null
         );
     }
 
 
-    private static String doBuy(ObjectId studentId, String phone,
-                                String mail, double money,
+    private static String doBuy(ObjectId studentId,
+                                String phone,
+                                String mail,
+                                String stdName,
+                                double money,
                                 Document quizPackage,
                                 Document off,
                                 ArrayList<Document> quizzes,
@@ -845,16 +848,37 @@ public class StudentQuizController {
             double finalOffAmount = offAmount;
             new Thread(() -> {
 
+                Document doc = new Document("user_id", studentId)
+                        .append("amount", 0)
+                        .append("account_money", shouldPay)
+                        .append("created_at", curr)
+                        .append("status", "success")
+                        .append("section", OffCodeSections.GACH_EXAM.getName())
+                        .append("products", allQuizzesIds);
+
+                if (finalUsePackageOff)
+                    doc.put("package_id", quizPackage.getObjectId("_id"));
+
+                if (studentIds != null)
+                    doc.append("student_ids", studentIds);
+
+                if (finalOff != null) {
+                    doc.append("off_code", finalOff.getObjectId("_id"));
+                    doc.append("off_amount", (int) finalOffAmount);
+                }
+
+                transactionRepository.insertOne(doc);
+
                 if (studentIds != null)
                     new RegularQuizController()
                             .registry(studentIds, phone, mail, quizIds, 0);
                 else {
 
                     new RegularQuizController()
-                            .registry(studentId, phone, mail, quizIds, 0);
+                            .registry(studentId, phone, mail, quizIds, 0, doc.getObjectId("_id"), stdName);
 
                     new OpenQuiz()
-                            .registry(studentId, phone, mail, openQuizIds, 0);
+                            .registry(studentId, phone, mail, openQuizIds, 0, doc.getObjectId("_id"), stdName);
                 }
 
                 if (finalOff != null) {
@@ -888,26 +912,6 @@ public class StudentQuizController {
                     );
                 }
 
-                Document doc = new Document("user_id", studentId)
-                        .append("amount", 0)
-                        .append("account_money", shouldPay)
-                        .append("created_at", curr)
-                        .append("status", "success")
-                        .append("section", OffCodeSections.GACH_EXAM.getName())
-                        .append("products", allQuizzesIds);
-
-                if (finalUsePackageOff)
-                    doc.put("package_id", quizPackage.getObjectId("_id"));
-
-                if (studentIds != null)
-                    doc.append("student_ids", studentIds);
-
-                if (finalOff != null) {
-                    doc.append("off_code", finalOff.getObjectId("_id"));
-                    doc.append("off_amount", (int) finalOffAmount);
-                }
-
-                transactionRepository.insertOne(doc);
             }).start();
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
@@ -1222,6 +1226,14 @@ public class StudentQuizController {
             }
 
             transactionRepository.insertOne(transaction);
+            if(user.containsKey("mail")) {
+                new Thread(() -> sendMail(
+                        user.getString("mail"),
+                        SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+                        "successQuiz",
+                        user.getString("first_name") + " " + user.getString("last_name")
+                )).start();
+            }
 
             return generateSuccessMsg(
                     "action", "success",

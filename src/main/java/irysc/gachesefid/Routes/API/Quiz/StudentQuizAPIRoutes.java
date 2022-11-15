@@ -204,6 +204,7 @@ public class StudentQuizAPIRoutes extends Router {
                 ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
+                user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
                         jsonObject.getString("code") : null
         );
@@ -237,6 +238,7 @@ public class StudentQuizAPIRoutes extends Router {
                 ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
+                user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
                         jsonObject.getString("code") : null
         );

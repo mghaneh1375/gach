@@ -42,10 +42,10 @@ public class AlertController {
                         .append("created_at", System.currentTimeMillis())
         );
 
-        if(mail != null)
-            Utility.sendMail((String) mail.getValue(), mailMsg,
-                subject, (String)mail.getKey(), username
-            );
+//        if(mail != null)
+//            Utility.sendMail((String) mail.getValue(), mailMsg,
+//                subject, (String)mail.getKey(), username
+//            );
 
     }
 

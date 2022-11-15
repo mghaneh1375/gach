@@ -10,14 +10,17 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.mailQueueRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
+import static irysc.gachesefid.Utility.StaticValues.SERVER;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 public class OpenQuiz extends QuizAbstract {
 
     @Override
     public List<Document> registry(ObjectId studentId, String phone,
-                                   String mail, List<ObjectId> quizIds, int paid
+                                   String mail, List<ObjectId> quizIds, int paid,
+                                   ObjectId transactionId, String stdName
     ) {
 
         ArrayList<Document> added = new ArrayList<>();
@@ -47,6 +50,18 @@ public class OpenQuiz extends QuizAbstract {
                 openQuizRepository.replaceOne(
                         quizId, quiz
                 );
+
+                if(transactionId != null && mail != null) {
+                    mailQueueRepository.insertOne(
+                            new Document("created_at", System.currentTimeMillis())
+                                    .append("status", "pending")
+                                    .append("mail", mail)
+                                    .append("name", stdName)
+                                    .append("mode", "successQuiz")
+                                    .append("msg", SERVER + "recp/" + transactionId)
+                    );
+                }
+
 
                 //todo : send notif
             } catch (Exception ignore) {}

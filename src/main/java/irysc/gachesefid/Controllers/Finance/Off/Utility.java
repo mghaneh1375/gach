@@ -11,10 +11,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import static irysc.gachesefid.Controllers.Config.GiftController.translateUseFor;
+import static irysc.gachesefid.Main.GachesefidApplication.mailQueueRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Statics.Alerts.createOffCode;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.SERVER;
 import static irysc.gachesefid.Utility.Utility.*;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
@@ -45,6 +47,7 @@ public class Utility {
 
         JSONArray added = new JSONArray();
         long curr = System.currentTimeMillis();
+        final String route = SERVER + "myOffs";
 
         for (int i = 0; i < jsonArray.length(); i++) {
 
@@ -73,13 +76,13 @@ public class Utility {
             offcodeRepository.insertOne(newDoc);
             added.put(convertDocToJSON(Document.parse(newDoc.toJson()).append("user", user)));
 
-            new Thread(() -> AlertController.store(
-                    newDoc.getObjectId("user_id"),
-                    createOffCode(amount, type, section, getSolarDate(expireAt)), false,
-                    new PairValue("createOffCode", user.getString("mail")),
-                    irysc.gachesefid.Utility.Utility.formatPrice(amount) + "__" + expireAt,
-                    user.getString("name_fa") + " " + user.getString("last_name_fa"),
-                    "کد تخفیف"
+            new Thread(() -> mailQueueRepository.insertOne(
+                    new Document("created_at", System.currentTimeMillis())
+                            .append("status", "pending")
+                            .append("mail", user.getString("mail"))
+                            .append("name", user.getString("first_name") + " " + user.getString("last_name"))
+                            .append("mode", "offcode")
+                            .append("msg", route)
             )).start();
         }
 

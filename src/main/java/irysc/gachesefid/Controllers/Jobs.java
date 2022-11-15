@@ -1,10 +1,12 @@
 package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Utility.FileUtils;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -27,6 +29,7 @@ public class Jobs implements Runnable {
         timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
         timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
+        timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
@@ -296,6 +299,47 @@ public class Jobs implements Runnable {
 
         }
 
+    }
+
+    private static class SendMails extends TimerTask {
+
+        @Override
+        public void run() {
+
+            ArrayList<Document> mails =
+                    mailQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
+
+            if(mails.size() == 0)
+                return;
+
+            int limit = mails.size() > 30 ? 30 : mails.size();
+            ArrayList<ObjectId> ids = new ArrayList<>();
+
+            for(int i = 0; i < limit; i++) {
+
+                try {
+                    Document mail = mails.get(i);
+
+                    if(Utility.sendMail(
+                            mail.getString("mail"),
+                            (String) mail.getOrDefault("msg", ""),
+                            mail.getString("mode"),
+                            (String) mail.getOrDefault("name", "")
+                    ))
+                        ids.add(mail.getObjectId("_id"));
+                    else {
+                        mail.put("status", "failed");
+                        mailQueueRepository.replaceOne(mail.getObjectId("_id"), mail);
+                    }
+
+                    Thread.sleep(1000);
+                }
+                catch (Exception ignore) {}
+            }
+
+            if(ids.size() > 0)
+                mailQueueRepository.deleteMany(in("_id", ids));
+        }
     }
 
 }

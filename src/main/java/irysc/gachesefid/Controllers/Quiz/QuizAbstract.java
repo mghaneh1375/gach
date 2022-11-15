@@ -18,7 +18,7 @@ public abstract class QuizAbstract {
 
     abstract List<Document> registry(ObjectId studentId, String phone,
                                           String mail, List<ObjectId> quizIds,
-                                          int paid);
+                                          int paid, ObjectId transactionId, String stdName);
 
     public int calcLen(Document quiz) {
 

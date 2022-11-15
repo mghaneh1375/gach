@@ -287,10 +287,10 @@ public class TicketController {
             sendRequest(studentId, ticketId);
             handleSendAns(ticket, userId, jsonObject.getString("description"));
 
-            new Thread(() -> Utility.sendMail(
-                    user.getString("mail"), "", "New ticket",
-                    "ticket", user.getString("name_en") + " " + user.getString("last_name_en")
-            )).start();
+//            new Thread(() -> Utility.sendMail(
+//                    user.getString("mail"), "", "New ticket",
+//                    "ticket", user.getString("name_en") + " " + user.getString("last_name_en")
+//            )).start();
 
             try {
                 Document tmp = Document.parse(ticket.toJson());

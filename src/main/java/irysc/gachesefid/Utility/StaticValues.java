@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-    public final static String STATICS_SERVER = "http://192.168.0.106/";
+    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "noreply@irysc.com";
@@ -48,7 +48,7 @@ public class StaticValues {
     public final static int ITEMS_PER_PAGE = 20;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -56,7 +56,7 @@ public class StaticValues {
 
     public final static String SERVER = (StaticValues.DEV_MODE) ?
             (StaticValues.LOCAL) ? "http://localhost:3000/" :
-                    "http://185.239.106.26:8085/" : "https://okft.org/";
+                    "http://185.239.106.26:8085/" : "https://e.irysc.com/";
 
     public final static int MAX_OBJECT_ID_SIZE = 100;
     public final static int MIN_OBJECT_ID_SIZE = 20;

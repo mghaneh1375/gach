@@ -179,8 +179,7 @@ public class UserController {
             Utility.sendSMS(username, code + "", "", "", "activationCode");
         else
             Utility.sendMail(
-                    username, code + "", "کد اعتبارسنجی",
-                    "signUp", doc.getString("first_name") + " " + doc.getString("last_name")
+                    username, code + "","signUp", doc.getString("first_name") + " " + doc.getString("last_name")
             );
 
         doc.put("code", code);
@@ -431,6 +430,12 @@ public class UserController {
             newDoc.append("mail", username);
 
         userRepository.insertOne(newDoc);
+        if(doc.getString("auth_via").equals(AuthVia.MAIL.getName()))
+            sendMail(
+                    username, "", "successSignUp",
+                    doc.getString("first_name") + " " + doc.getString("last_name")
+            );
+
         STUDENTS++;
 
         return doc.getString("password");

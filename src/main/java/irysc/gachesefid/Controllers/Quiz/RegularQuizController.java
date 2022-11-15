@@ -187,7 +187,7 @@ public class RegularQuizController extends QuizAbstract {
     @Override
     public List<Document> registry(ObjectId studentId, String phone,
                                    String mail, List<ObjectId> quizIds,
-                                   int paid
+                                   int paid, ObjectId transactionId, String stdName
     ) {
 
         ArrayList<Document> added = new ArrayList<>();
@@ -220,6 +220,17 @@ public class RegularQuizController extends QuizAbstract {
                 iryscQuizRepository.replaceOne(
                         quizId, quiz
                 );
+
+                if(transactionId != null && mail != null) {
+                    mailQueueRepository.insertOne(
+                            new Document("created_at", System.currentTimeMillis())
+                                    .append("status", "pending")
+                                    .append("mail", mail)
+                                    .append("name", stdName)
+                                    .append("mode", "successQuiz")
+                                    .append("msg", SERVER + "recp/" + transactionId)
+                    );
+                }
 
                 //todo : send notif
             } catch (Exception ignore) {}

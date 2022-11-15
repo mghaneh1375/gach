@@ -373,7 +373,7 @@ public class Utility {
         return -1;
     }
 
-    public static boolean sendMail(String to, String msg, String subject, String mode, String username) {
+    public static boolean sendMail(String to, String msg, String mode, String username) {
 
 //        if (DEV_MODE)
 //            return true;
@@ -396,6 +396,22 @@ public class Utility {
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress("noreply@irysc.com", "noreply@irysc.com"));
 
+            String subject = "";
+
+            if(mode.equalsIgnoreCase("signUp")
+                || mode.equalsIgnoreCase("forget"))
+                subject = "کد تایید";
+            else if(mode.equalsIgnoreCase("successTransaction"))
+                subject = "شارژ حساب";
+            else if(mode.equalsIgnoreCase("successSignUp"))
+                subject = "ثبت نام موفق در سایت";
+            else if(mode.equalsIgnoreCase("successQuiz"))
+                subject = "خرید/ساخت آزمون";
+            else if(mode.equalsIgnoreCase("offcode"))
+                subject = "ایجاد کد تخفیف";
+            else if(mode.equalsIgnoreCase("karname"))
+                subject = "ایجاد کارنامه / ساخت تراز ";
+
             message.setRecipients(
                     Message.RecipientType.TO, InternetAddress.parse(to));
             message.setSubject(subject);
@@ -410,108 +426,81 @@ public class Utility {
                     "align-self: center;\n" +
                     "padding: 40px;'>";
             html += "<div style='\n" +
-                    "-moz-box-direction: normal;\n" +
-                    "-moz-box-orient: vertical;\n" +
-                    "align-items: stretch;\n" +
-                    "border: 0px solid black;\n" +
-                    "box-sizing: border-box;\n" +
-                    "display: flex;\n" +
-                    "flex-basis: auto;\n" +
-                    "flex-direction: column;\n" +
-                    "flex-shrink: 0;\n" +
-                    "margin: 0px;\n" +
-                    "min-height: 0px;\n" +
-                    "min-width: 0px;\n" +
-                    "padding: 0px;\n" +
-                    "position: relative;\n" +
-                    "z-index: unset; flex-flow: row wrap; flex-shrink: 1; justify-content: space-between; -moz-box-align: stretch;'>";
+                    "clear: both;\n" +
+                    "height: 80px;'>";
 
             html += "<h3 style='color: rgb(1, 50, 67);\n" +
                     "font-family: IRANSans;\n" +
                     "font-size: 20px;\n" +
-                    "margin-top: 20px;'>" + subject +  "</h3>";
+                    "margin-top: 20px; float: right;'>" + subject +  "</h3>";
 
             html += "<img style='height: 60px;\n" +
                     "margin-bottom: 20px;\n" +
-                    "width: 104px;' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
+                    "width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
 
             html += "</div>";
 
-            html += "<div style='margin: 20px'>";
+            html += "<div style='margin: 20px; font-family: IRANSans; direction: rtl; text-align: right'>";
             if (username == null)
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>";
             else
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + "عزیز</p>";
+                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
-            if (mode.equals("signUp"))
-                html += "<p>We are happy you signed up for ÖKF Teheran LMS. To start exploring, please use this verification code:</p>";
-            else if (mode.equals("certReqRes"))
-                html += "<p>You have requested us to determine your level of language proficiency.</p>";
-            else if (mode.equals("setInterviewReqTime"))
-                html += "<p>Your enrollment request for language proficiency exam have been approved.</p>";
-            else if (mode.equals("forget"))
-                html += "<p>There was a request to change your password, please use this verification code:</p>";
+            if (mode.equalsIgnoreCase("signUp") ||
+                    mode.equalsIgnoreCase("forget")) {
+                html += "<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>";
+                html += "<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>" + msg + "</p>";
+            }
+            else if (mode.equalsIgnoreCase("successSignUp"))
+                html += "<p>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>";
+            else if (mode.equalsIgnoreCase("successTransaction")) {
+                String[] splited = msg.split("_");
+                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>حساب شما در آیریسک " + Utility.formatPrice(Integer.parseInt(splited[0])) + " تومان شارژ شد.</p>";
+                html += "<p>" +
+                        "<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>" +
+                        "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
+                        + "</p>";
+            }
+            else if (mode.equalsIgnoreCase("offcode")) {
+                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شارژ تشویقی شما به صورت اختصاصی در پیشخوان کاربری تان قرار گرفت. از بخش تخفیف ها آن را ببینید</p>";
+                html += "<p>" +
+                        "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
+                        "<br /><a href='" + msg + "'>" + msg + "</a>"
+                        + "</p>";
+            }
+            else if (mode.equalsIgnoreCase("karname")) {
+                String[] splited = msg.split("_");
+                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون " + splited[0] + " در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ های تشریحی را هم بررسی کنی</p>";
+                html += "<p>" +
+                        "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
+                        "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
+                        + "</p>";
+            }
             else if (mode.equals("changeMail"))
                 html += "<p>You have requested to change your email account in ÖKF LMS, tap the button below to change your email:</p>";
-            else if (mode.equals("createOffCode")) {
-                String[] splited = msg.split("__");
-                html += "<p>You have earned " + splited[0] + " IRR credit on okft.org valid until " + splited[1] + "</p>";
+            else if (mode.equalsIgnoreCase("successQuiz")) {
+                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شما موفق شدی در آزمون ثبت نام کنی.</p>";
+                html += "<p>" +
+                        "<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>" +
+                        "<br /><a href='" + msg + "'>" + msg + "</a>"
+                        + "</p>";
+
             }
 
-            if (mode.equals("signUp") || mode.equals("forget"))
-                html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>Your verification code is : </p>";
-            else if (mode.equals("certReqRes"))
-                html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>your level of language proficiency is</p>";
-            else if (mode.equals("examReqRes"))
+            if (mode.equals("examReqRes"))
                 html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>Your language proficiency exam result is:</p>";
-            else if (mode.equals("setInterviewReqTime"))
-                html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>Time and Date</p>";
             else if (mode.equals("changeMail"))
                 html += "<a target='_blank' style='background-color: #BB0000; color: white; font-size: 1.4em; font-weight: bolder; padding-top: 10px; padding-bottom: 10px; padding-left: 20px; padding-right: 20px; text-decoration: none' href='" + msg + "'>Change Email</a>";
             else if (mode.equals("createOffCode"))
                 html += "<p>This credit will be automatically deducted from all your payments on the website until it expires.</p>";
 
-            if (!mode.equals("changeMail") && !mode.equals("createOffCode"))
-                html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>" + msg + "</p>";
-            else if (!mode.equals("createOffCode")) {
-                html += "<p style='font-size: 1.4em; font-weight: bolder;'>You have to use the same browser as you have requested to change your Email. If not, your Email will not change.<br/>";
-                html += "<span style='color: #BB0000;'>This button is valid for 5 minutes.</span></p>";
-                html += "<p style='margin-top: 20px; font-size: 1.4em; font-weight: bolder;'>If you don't want to change your Email, Simply ignore this mail.</p>";
-            }
-
-            if (mode.equals("signUp"))
-                html += "<p style='margin-top: 10px; font-size: 1.1em'>You must enter this code on the sign up page, as requested.</p>";
-            else if (mode.equals("forget"))
-                html += "<p style='margin-top: 10px; font-size: 1.1em'>You must enter this code on the forget password page, as requested.</p>";
-            else if (mode.equals("certReqRes") || mode.equals("examReqRes"))
-                html += "<p style='margin-top: 10px; font-size: 1.1em'>If you have any complaints or objections, please share them with us. You can go to your LMS panel to do so.</p>";
-            else if (mode.equals("setInterviewReqTime"))
-                html += "<p style='font-size: 1.1em; color: black;'>North Sohrevardi St., Khorramshahr St., Arabali St., Alley 6th, Sibouyeh, No. 1</p>";
-
-            html += "<p style='margin-top: 20px; font-size: 1.1em; font-weight: bolder;'>What is this email?</p>";
-
-            if (mode.equals("signUp")) {
-                html += "<p style='font-size: 1.1em'>We sent this email to verify that this address is your email address.</p>";
-                html += "<p style='font-size: 1.1em'>If you didn't try to sign up or request this email, simply ignore or delete this email and don't worry. </p>";
-            } else if (mode.equals("forget")) {
-                html += "<p style='font-size: 1.1em'>We sent this email to reset your password as you requested.</p>";
-                html += "<p style='font-size: 1.1em'>If you didn't forget your password or request this email, simply ignore or delete this email. Don't worry, your email address may have been entered by mistake.</p>";
-            } else if (mode.equals("setInterviewReqTime") || mode.equals("createOffCode") ||
-                    mode.equals("certReqRes") || mode.equals("examReqRes")) {
-                html += "<p style='font-size: 1.1em'>We sent this email to inform you about the latest notifications.</p>";
-                html += "<p style='font-size: 1.1em'>If you didn't ask for this mail, simply ignore or delete this email. Don't worry, your email address may have been entered by mistake.</p>";
-            }
-
-
             html += "</div>";
 
-//            html += "<div style='height: 200px; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: #2A2A2A; width: 100%'>";
-//            html += "<p style='color: white'>Österreichisches Kulturforums Teheran</p>";
-//            html += "<p style='color: white; margin-top: 60px; font-size: 0.9em'>Need any help? Please visit our website: </p>";
-//            html += "<div style='color: white; font-size: 0.9em'>https://okft.org</div>";
-//            html += "<p style='color: white; margin-top: 10px; font-size: 0.9em'>This message was sent to you by okft.org</p>";
-//            html += "<p style='color: white; font-size: 0.9em'>North Sohrevardi St., Khorramshahr St., Arabali St., Alley 6th, Sibouyeh, No. 1 +982188765525</p>";
-//            html += "</div>";
+            html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
+            html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
+            html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
+            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>تهران، میدان انقلاب، ابتدای خیابان آزادی، بن بست قائم مقام ، پلاک 5 - 02166917230</p>";
+            html += "</div>";
             html += "</div>";
 
             mimeBodyPart.setContent(html, "text/html; charset=UTF-8");
@@ -523,7 +512,9 @@ public class Utility {
 
             Transport.send(message);
 
-            new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", to).append("subject", subject))).start();
+            String finalSubject = subject;
+            new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", to).append("subject", finalSubject))).start();
+
         } catch (Exception x) {
             printException(x);
             return false;

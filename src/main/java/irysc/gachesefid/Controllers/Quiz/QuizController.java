@@ -292,7 +292,8 @@ public class QuizController {
 
                 List<Document> added = quizAbstract.registry(
                         student.getObjectId("_id"), student.getString("phone"),
-                        student.getString("mail"), quizIds, paid
+                        student.getString("mail"), quizIds, paid,
+                        null, null
                 );
 
                 if (added.size() > 0)
@@ -1317,8 +1318,37 @@ public class QuizController {
 
             if(db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
-            else
+            else {
                 new RegularQuizController().createTaraz(quiz);
+
+                new Thread(() -> {
+
+                    ArrayList<ObjectId> userIds = new ArrayList<>();
+
+                    for(Document doc : quiz.getList("students", Document.class))
+                        userIds.add(doc.getObjectId("_id"));
+
+                    List<Document> students = userRepository.findByIds(userIds, false);
+
+                    String prefix = quiz.getString("title") + "_" + SERVER + "result/irysc/" + quiz.getObjectId("_id").toString() + "/";
+
+                    for(Document student : students) {
+
+                        if(!student.containsKey("mail"))
+                            continue;
+
+                        mailQueueRepository.insertOne(
+                                new Document("created_at", System.currentTimeMillis())
+                                        .append("status", "pending")
+                                        .append("mail", student.getString("mail"))
+                                        .append("name", student.getString("first_name") + " " + student.getString("last_name"))
+                                        .append("mode", "karname")
+                                        .append("msg", prefix + student.getObjectId("_id").toString())
+                        );
+                    }
+
+                }).start();
+            }
 
             return JSON_OK;
         } catch (Exception x) {
