@@ -14,6 +14,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.mailQueueRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.SERVER;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
+import static irysc.gachesefid.Utility.Utility.sendMail;
 
 public class OpenQuiz extends QuizAbstract {
 
@@ -52,14 +53,7 @@ public class OpenQuiz extends QuizAbstract {
                 );
 
                 if(transactionId != null && mail != null) {
-                    mailQueueRepository.insertOne(
-                            new Document("created_at", System.currentTimeMillis())
-                                    .append("status", "pending")
-                                    .append("mail", mail)
-                                    .append("name", stdName)
-                                    .append("mode", "successQuiz")
-                                    .append("msg", SERVER + "recp/" + transactionId)
-                    );
+                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
                 }
 
 

@@ -26,11 +26,69 @@ public class Jobs implements Runnable {
     public void run() {
         Timer timer = new Timer();
         timer.schedule(new TokenHandler(), 0, 86400000); // 1 day
+        timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
         timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
         timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
+    }
+
+    private static class QuizReminder extends TimerTask {
+
+        @Override
+        public void run() {
+
+            long curr = System.currentTimeMillis();
+            long tomorrow = curr + 86400000;
+            long next8H = curr + 28800000;
+
+            ArrayList<Document> quizzes = iryscQuizRepository.find(
+                    and(
+                            gt("start", curr),
+                            lt("start", tomorrow),
+                            gt("start", next8H),
+                            exists("students.0")
+                    ), new BasicDBObject("students", 1).append("title", 1)
+            );
+
+            for(Document quiz : quizzes) {
+
+                ObjectId quizId = quiz.getObjectId("_id");
+
+                for(Document student : quiz.getList("students", Document.class)) {
+
+                    ObjectId userId = student.getObjectId("_id");
+
+                    Document user = userRepository.findById(userId);
+
+                    if (user == null || !user.containsKey("mail"))
+                        continue;
+
+                    if(mailQueueRepository.exist(and(
+                            eq("mode", "quizReminder"),
+                            eq("quiz_id", quizId),
+                            eq("user_id", userId)
+                    )))
+                        continue;
+
+                    mailQueueRepository.insertOne(
+                            new Document("created_at", curr)
+                                    .append("status", "pending")
+                                    .append("mail", user.getString("mail"))
+                                    .append("name", user.getString("first_name") + " " + user.getString("last_name"))
+                                    .append("mode", "quizReminder")
+                                    .append("quiz_id", quizId)
+                                    .append("user_id", userId)
+                                    .append("msg", quiz.getString("title"))
+                    );
+
+                }
+
+            }
+
+        }
+
     }
 
     private static class TokenHandler extends TimerTask {
@@ -312,6 +370,8 @@ public class Jobs implements Runnable {
             if(mails.size() == 0)
                 return;
 
+            long yesterday = System.currentTimeMillis() - 86400000;
+
             int limit = mails.size() > 30 ? 30 : mails.size();
             ArrayList<ObjectId> ids = new ArrayList<>();
 
@@ -325,8 +385,18 @@ public class Jobs implements Runnable {
                             (String) mail.getOrDefault("msg", ""),
                             mail.getString("mode"),
                             (String) mail.getOrDefault("name", "")
-                    ))
-                        ids.add(mail.getObjectId("_id"));
+                    )) {
+                        if(
+                                !mail.getString("mode").equalsIgnoreCase("quizReminder") ||
+                                        mail.getLong("created_at") < yesterday
+                        )
+                            ids.add(mail.getObjectId("_id"));
+                        else if(mail.getString("mode").equalsIgnoreCase("quizReminder")) {
+                            mail.put("status", "success");
+                            mailQueueRepository.replaceOne(mail.getObjectId("_id"), mail);
+                        }
+
+                    }
                     else {
                         mail.put("status", "failed");
                         mailQueueRepository.replaceOne(mail.getObjectId("_id"), mail);

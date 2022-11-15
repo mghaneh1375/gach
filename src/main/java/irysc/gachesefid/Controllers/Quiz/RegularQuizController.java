@@ -222,14 +222,7 @@ public class RegularQuizController extends QuizAbstract {
                 );
 
                 if(transactionId != null && mail != null) {
-                    mailQueueRepository.insertOne(
-                            new Document("created_at", System.currentTimeMillis())
-                                    .append("status", "pending")
-                                    .append("mail", mail)
-                                    .append("name", stdName)
-                                    .append("mode", "successQuiz")
-                                    .append("msg", SERVER + "recp/" + transactionId)
-                    );
+                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
                 }
 
                 //todo : send notif

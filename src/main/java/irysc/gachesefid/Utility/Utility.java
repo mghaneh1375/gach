@@ -407,6 +407,8 @@ public class Utility {
                 subject = "ثبت نام موفق در سایت";
             else if(mode.equalsIgnoreCase("successQuiz"))
                 subject = "خرید/ساخت آزمون";
+            else if(mode.equalsIgnoreCase("quizReminder"))
+                subject = "یادآوری آزمون";
             else if(mode.equalsIgnoreCase("offcode"))
                 subject = "ایجاد کد تخفیف";
             else if(mode.equalsIgnoreCase("karname"))
@@ -452,7 +454,11 @@ public class Utility {
                 html += "<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>" + msg + "</p>";
             }
             else if (mode.equalsIgnoreCase("successSignUp"))
-                html += "<p>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>";
+                html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>";
+            else if (mode.equalsIgnoreCase("quizReminder")) {
+                html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>فردا آزمون " + msg + " در سامانه آیریسک برگزار میشود.</p>";
+                html += "<p>فراموش نکنی!</p>";
+            }
             else if (mode.equalsIgnoreCase("successTransaction")) {
                 String[] splited = msg.split("_");
                 html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>حساب شما در آیریسک " + Utility.formatPrice(Integer.parseInt(splited[0])) + " تومان شارژ شد.</p>";
