@@ -515,8 +515,9 @@ public class Utility {
             multipart.addBodyPart(mimeBodyPart);
 
             message.setContent(multipart, "text/html; charset=UTF-8");
-
+            System.out.println("sending mail");
             Transport.send(message);
+            System.out.println("send");
 
             String finalSubject = subject;
             new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", to).append("subject", finalSubject))).start();

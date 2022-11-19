@@ -64,10 +64,10 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if(1 == 1) {
-//            sendMail("mghaneh1375@yahoo.com", "30000_http://localhost:3000/recp/63063293aeea383bc9904468", "successTransaction", "محمد قانع");
-//            sendMail("mghaneh1375@yahoo.com", "salam", "successSignUp", "محمد قانع");
+            sendMail("mghaneh1375@gmail.com", "30000_http://localhost:3000/recp/63063293aeea383bc9904468", "successTransaction", "محمد قانع");
+            sendMail("mghaneh1375@ut.ac.ir", "30000_http://localhost:3000/recp/63063293aeea383bc9904468", "successTransaction", "محمد قانع");
+            sendMail("mghaneh1375@yahoo.com", "salam", "successSignUp", "محمد قانع");
             return "pk";
-
         }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");

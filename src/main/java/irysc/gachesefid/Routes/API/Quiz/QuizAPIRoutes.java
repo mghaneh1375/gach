@@ -274,7 +274,7 @@ public class QuizAPIRoutes extends Router {
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        JSONObject jsonObject = new JSONObject(jsonStr);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
         JSONArray jsonArray = jsonObject.getJSONArray("items");
         int paid = jsonObject.getInt("paid");
 
