@@ -1252,7 +1252,7 @@ public class StudentQuizController {
         Document transaction =
                 new Document("user_id", userId)
                         .append("account_money", money)
-                        .append("amount", shouldPay - money)
+                        .append("amount", (int) (shouldPay - money))
                         .append("created_at", curr)
                         .append("status", "init")
                         .append("order_id", orderId)
