@@ -930,7 +930,7 @@ public class StudentQuizController {
         Document doc =
                 new Document("user_id", studentId)
                         .append("account_money", money)
-                        .append("amount", shouldPay - money)
+                        .append("amount", (int) (shouldPay - money))
                         .append("created_at", curr)
                         .append("status", "init")
                         .append("order_id", orderId)
