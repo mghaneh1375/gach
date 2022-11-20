@@ -1110,8 +1110,9 @@ public class UserController {
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
         String sex = jsonObject.getString("sex");
+        boolean dontCheckNID = user.containsKey("NID") && user.getString("NID").equals(NID);
 
-        if (userRepository.exist(and(
+        if (!dontCheckNID && userRepository.exist(and(
                 eq("NID", NID),
                 ne("_id", user.getObjectId("_id"))
         )))
