@@ -101,8 +101,8 @@ public class UserService {
 
         try {
 
-            if(checkPass) {
-                PairValue p = new PairValue(username, password);
+//            if(checkPass) {
+//                PairValue p = new PairValue(username, password);
 
 //                for (int i = 0; i < cachedToken.size(); i++) {
 //                    if (cachedToken.get(i).equals(p)) {
@@ -113,7 +113,7 @@ public class UserService {
 //                        break;
 //                    }
 //                }
-            }
+//            }
 
             Document user = userRepository.findByUnique(username, false);
 

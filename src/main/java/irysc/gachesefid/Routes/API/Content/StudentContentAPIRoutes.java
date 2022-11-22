@@ -1,6 +1,5 @@
 package irysc.gachesefid.Routes.API.Content;
 
-import irysc.gachesefid.Controllers.Content.AdminContentController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
