@@ -17,8 +17,7 @@ import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminContentController {
 
@@ -73,6 +72,9 @@ public class AdminContentController {
                 .append("_id", id)
                 .append("sessions", doc.getList("sessions", Document.class));
 
+        if(doc.containsKey("img"))
+            newDoc.put("img", doc.get("img"));
+
         for(String key : data.keySet()) {
             newDoc.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
@@ -105,6 +107,46 @@ public class AdminContentController {
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertDigest(
                 newDoc, true
         ));
+    }
+
+    public static String remove(JSONArray jsonArray) {
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            try {
+                String id = jsonArray.getString(i);
+
+                if(!ObjectId.isValid(id)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                ObjectId oId = new ObjectId(id);
+                Document doc = contentRepository.findById(oId);
+                if(doc == null) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                if(doc.getList("users", Document.class).size() > 0) {
+                    excepts.put((i + 1) + " " + "نفراتی این بسته را خریداری کرده اند و امکان حذف آن وجود ندارد.");
+                    continue;
+                }
+
+                contentRepository.cleanRemove(doc);
+                doneIds.put(oId);
+
+            }
+            catch (Exception x) {
+                excepts.put(i + 1);
+            }
+
+        }
+
+        return returnRemoveResponse(excepts, doneIds);
     }
 
     public static String addSession(ObjectId id, JSONObject data) {
@@ -159,6 +201,35 @@ public class AdminContentController {
         return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
     }
 
+    public static String removeImg(ObjectId id) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        if(doc.containsKey("img"))
+            FileUtils.removeFile(doc.getString("img"), ContentRepository.FOLDER);
+
+        doc.remove("img");
+        contentRepository.replaceOne(id, doc);
+
+        return JSON_OK;
+    }
+
+    public static String fetchSessions(ObjectId id) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> sessions = doc.getList("sessions", Document.class);
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document session : sessions)
+            jsonArray.put(irysc.gachesefid.Controllers.Content.Utility.sessionDigest(session, true, false));
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 
     public static String addٰVideoToSession(ObjectId id, ObjectId sessionId, MultipartFile file) {
 
@@ -240,16 +311,19 @@ public class AdminContentController {
 
                 ObjectId oId = new ObjectId(tmpId);
 
-                int idx = Utility.searchInDocumentsKeyValIdx(
+                Document session = Utility.searchInDocumentsKeyVal(
                         sessions, "_id", oId
                 );
 
-                if(idx == -1) {
+                if(session == null) {
                     excepts.put(i + 1);
                     continue;
                 }
 
-                sessions.remove(idx);
+                contentRepository.removeSession(session);
+                sessions.remove(Utility.searchInDocumentsKeyValIdx(
+                        sessions, "_id", oId
+                ));
                 removeIds.put(oId);
             }
 

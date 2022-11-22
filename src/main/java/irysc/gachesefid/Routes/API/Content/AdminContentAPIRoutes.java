@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API.Content;
 
 import irysc.gachesefid.Controllers.Content.AdminContentController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -63,28 +64,28 @@ public class AdminContentAPIRoutes extends Router {
     @PutMapping(value = "update/{id}")
     @ResponseBody
     public String update(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId id,
-                        @RequestBody @StrongJSONConstraint(
-                                params = {
-                                        "title", "description", "teacher",
-                                        "price", "sessionsCount", "visibility"
+                         @PathVariable @ObjectIdConstraint ObjectId id,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {
+                                         "title", "description", "teacher",
+                                         "price", "sessionsCount", "visibility"
 
-                                },
-                                paramsType = {
-                                        String.class, String.class, String.class,
-                                        Positive.class, Positive.class, Boolean.class,
-                                },
-                                optionals = {
-                                        "teacherBio", "certId", "preReq",
-                                        "duration", "finalExamId", "finalExamMinMark",
-                                        "tags"
-                                },
-                                optionalsType = {
-                                        String.class, ObjectId.class, String.class,
-                                        Positive.class, ObjectId.class, Positive.class,
-                                        JSONArray.class
-                                }
-                        ) @NotBlank String jsonStr
+                                 },
+                                 paramsType = {
+                                         String.class, String.class, String.class,
+                                         Positive.class, Positive.class, Boolean.class,
+                                 },
+                                 optionals = {
+                                         "teacherBio", "certId", "preReq",
+                                         "duration", "finalExamId", "finalExamMinMark",
+                                         "tags"
+                                 },
+                                 optionalsType = {
+                                         String.class, ObjectId.class, String.class,
+                                         Positive.class, ObjectId.class, Positive.class,
+                                         JSONArray.class
+                                 }
+                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return AdminContentController.update(id, convertPersian(new JSONObject(jsonStr)));
@@ -104,6 +105,45 @@ public class AdminContentAPIRoutes extends Router {
 
         return AdminContentController.setImg(id, file);
     }
+
+    @DeleteMapping(value = "removeImg/{id}")
+    @ResponseBody
+    public String removeImg(HttpServletRequest request,
+                            @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.removeImg(id);
+    }
+
+
+    @DeleteMapping(value = "remove")
+    @ResponseBody
+    public String remove(HttpServletRequest request,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {
+                                         "items"
+                                 },
+                                 paramsType = {
+                                         JSONArray.class
+                                 }
+                         ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.remove(
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
+
+
+    @GetMapping(value = "fetchSessions/{id}")
+    @ResponseBody
+    public String fetchSessions(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.fetchSessions(id);
+    }
+
 
     @PutMapping(value = "addSession/{id}")
     @ResponseBody

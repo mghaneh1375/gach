@@ -4,9 +4,11 @@ import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
@@ -87,6 +89,48 @@ public class Utility {
         }
 
         return jsonObject;
+    }
+
+    static JSONObject sessionDigest(Document doc, boolean isAdmin, boolean afterBuy) {
+
+        List<String> attaches = doc.containsKey("attaches") ? doc.getList("attaches", String.class)
+                : new ArrayList<>();
+
+        JSONObject jsonObject = new JSONObject()
+                .put("title", doc.get("title"))
+                .put("duration", doc.get("duration"))
+                .put("price", doc.getOrDefault("price", -1))
+                .put("minMark", doc.getOrDefault("min_mark", -1))
+                .put("description", doc.get("description"))
+                .put("attachesCount", attaches.size());
+
+        if(doc.containsKey("exam_id"))
+            jsonObject.put("examId", doc.getObjectId("exam_id").toString());
+
+        if(isAdmin)
+            jsonObject.put("visibility", doc.get("visibility"))
+                    .put("priority", doc.get("priority"));
+
+        if(isAdmin || afterBuy) {
+
+            JSONArray attachesJSONArr = new JSONArray();
+            for(String itr : attaches)
+                attachesJSONArr.put(itr);
+
+            jsonObject.put("attaches", attachesJSONArr);
+
+            List<String> videos = doc.containsKey("videos") ? doc.getList("videos", String.class)
+                    : new ArrayList<>();
+
+            JSONArray videosJSONArr = new JSONArray();
+            for(String itr : videos)
+                videosJSONArr.put(itr);
+
+            jsonObject.put("videos", attachesJSONArr);
+        }
+
+        return jsonObject;
+
     }
 
 }
