@@ -201,6 +201,41 @@ public class AdminContentController {
         return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
     }
 
+
+    public static String setSessionImg(ObjectId id, ObjectId sessionId, MultipartFile file) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> sessions = doc.getList("sessions", Document.class);
+
+        Document session = Utility.searchInDocumentsKeyVal(
+                sessions, "_id", sessionId
+        );
+
+        if(session == null)
+            return JSON_NOT_VALID_ID;
+
+        String type = FileUtils.uploadImageFile(file);
+        if(type == null)
+            return JSON_NOT_VALID_FILE;
+
+        String filename = FileUtils.uploadFile(file, ContentRepository.FOLDER);
+        if(filename == null)
+            return JSON_NOT_UNKNOWN;
+
+        if(session.containsKey("img"))
+            FileUtils.removeFile(session.getString("img"), ContentRepository.FOLDER);
+
+        session.put("img", filename);
+        doc.put("sessions", sessions);
+
+        contentRepository.replaceOne(id, doc);
+
+        return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
+    }
+
     public static String removeImg(ObjectId id) {
 
         Document doc = contentRepository.findById(id);

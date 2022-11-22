@@ -106,6 +106,22 @@ public class AdminContentAPIRoutes extends Router {
         return AdminContentController.setImg(id, file);
     }
 
+
+    @PutMapping(value = "setSessionImg/{id}/{sessionId}")
+    @ResponseBody
+    public String setImg(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId id,
+                         @PathVariable @ObjectIdConstraint ObjectId sessionId,
+                         @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.setSessionImg(id, sessionId, file);
+    }
+
     @DeleteMapping(value = "removeImg/{id}")
     @ResponseBody
     public String removeImg(HttpServletRequest request,

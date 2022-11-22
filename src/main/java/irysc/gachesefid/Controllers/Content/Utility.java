@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
+import static irysc.gachesefid.Utility.StaticValues.SERVER;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 public class Utility {
@@ -100,12 +101,21 @@ public class Utility {
                 .put("title", doc.get("title"))
                 .put("duration", doc.get("duration"))
                 .put("price", doc.getOrDefault("price", -1))
-                .put("minMark", doc.getOrDefault("min_mark", -1))
                 .put("description", doc.get("description"))
                 .put("attachesCount", attaches.size());
 
-        if(doc.containsKey("exam_id"))
-            jsonObject.put("examId", doc.getObjectId("exam_id").toString());
+        if(doc.containsKey("exam_id")) {
+            jsonObject
+                    .put("examId", doc.getObjectId("exam_id").toString())
+                    .put("hasExam", true)
+                    .put("minMark", doc.getOrDefault("min_mark", -1))
+            ;
+        }
+        else
+            jsonObject.put("hasExam", false);
+
+        if(doc.containsKey("img"))
+            jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.getString("img"));
 
         if(isAdmin)
             jsonObject.put("visibility", doc.get("visibility"))
