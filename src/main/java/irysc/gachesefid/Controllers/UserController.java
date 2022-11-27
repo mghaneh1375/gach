@@ -1221,7 +1221,11 @@ public class UserController {
                         ne("user_id", new ObjectId("6354d7c7ec057f4ff5cdc88f")),
                         ne("user_id", new ObjectId("63550a10ec057f4ff5cdc8a2")),
                         ne("user_id", new ObjectId("6337334dd975897a8007aa5a")),
-                        ne("user_id", new ObjectId("632ec8e2bd5b8c48dae0a130"))
+                        ne("user_id", new ObjectId("632ec8e2bd5b8c48dae0a130")),
+                        ne("user_id", new ObjectId("6332c72257aa3143056e6767")),
+                        ne("user_id", new ObjectId("635520c2ec057f4ff5cdc8ad"))
+
+
                 )
         );
 

@@ -11,14 +11,12 @@ import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -40,6 +38,9 @@ import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+
 
 @Controller
 @RequestMapping(path = "/api/general")
@@ -47,17 +48,38 @@ import java.util.Map;
 public class GeneralAPIRoutes extends Router {
 
 
-    @PostMapping(value = "/chargeAccount")
+    @PostMapping(value = {"/chargeAccount", "/chargeAccount/{userId}"})
     @ResponseBody
     public String chargeAccount(HttpServletRequest request,
+                                @PathVariable(required = false) String userId,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {"amount"},
-                                        paramsType = {Integer.class}
+                                        paramsType = {Integer.class},
+                                        optionals = {"coin"},
+                                        optionalsType = {Number.class}
                                 ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+
+        Document user = getUserWithAdminAccess(request, false, true, userId);
+
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        if(userId != null) {
+
+            Document doc = user.get("user", Document.class);
+            doc.put("money", jsonObject.getInt("amount"));
+
+            if(jsonObject.has("coin"))
+                doc.put("coin", jsonObject.getNumber("coin").doubleValue());
+
+            userRepository.replaceOne(doc.getObjectId("_id"), doc);
+            userRepository.clearFromCache(doc.getObjectId("_id"));
+            return JSON_OK;
+        }
+
         return PayPing.chargeAccount(
                 getUser(request).getObjectId("_id"),
-                new JSONObject(jsonStr).getInt("amount")
+                 jsonObject.getInt("amount")
         );
     }
 

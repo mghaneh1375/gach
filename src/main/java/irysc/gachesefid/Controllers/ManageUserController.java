@@ -127,6 +127,7 @@ public class ManageUserController {
                         .put("phone", user.getOrDefault("phone", ""))
                         .put("NID", user.getString("NID"))
                         .put("coin", user.get("coin"))
+                        .put("money", user.get("money"))
                         .put("status", user.getString("status"))
                         .put("statusFa", user.getString("status").equals("active") ? "فعال" : "غیرفعال")
                         .put("accesses", user.getList("accesses", String.class))
