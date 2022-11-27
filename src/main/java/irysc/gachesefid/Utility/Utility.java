@@ -245,8 +245,8 @@ public class Utility {
                                   String template
     ) {
 
-        if(DEV_MODE)
-            return true;
+//        if(DEV_MODE)
+//            return true;
 
         receptor = convertPersianDigits(receptor);
 
@@ -375,8 +375,8 @@ public class Utility {
 
     public static boolean sendMail(String to, String msg, String mode, String username) {
 
-//        if (DEV_MODE)
-//            return true;
+        if (DEV_MODE)
+            return true;
 
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);
