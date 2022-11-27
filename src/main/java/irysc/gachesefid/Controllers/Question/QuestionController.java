@@ -900,23 +900,23 @@ public class QuestionController extends Utilities {
             );
         }
 
-        ArrayList<Document> authors = authorRepository.find(
-                config.containsKey("min_question_for_custom_quiz") ?
-                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
-                        gt("q_no", 0)
-                , null);
-
-        for (Document doc : authors) {
-            jsonArray.put(new JSONObject()
-                    .put("id", doc.getObjectId("_id").toString())
-                    .put("name", doc.getString("name"))
-                    .put("desc", doc.getString("name"))
-                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
-                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
-                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
-                    .put("section", "author")
-            );
-        }
+//        ArrayList<Document> authors = authorRepository.find(
+//                config.containsKey("min_question_for_custom_quiz") ?
+//                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+//                        gt("q_no", 0)
+//                , null);
+//
+//        for (Document doc : authors) {
+//            jsonArray.put(new JSONObject()
+//                    .put("id", doc.getObjectId("_id").toString())
+//                    .put("name", doc.getString("name"))
+//                    .put("desc", doc.getString("name"))
+//                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
+//                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
+//                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
+//                    .put("section", "author")
+//            );
+//        }
 
         return generateSuccessMsg("data", jsonArray);
     }
