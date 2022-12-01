@@ -231,7 +231,9 @@ public class PackageController {
         JSONArray jsonArray = new JSONArray();
         long curr = System.currentTimeMillis();
 
-        HashMap<String, ArrayList<String>> tags = new HashMap<>();
+//        HashMap<String, ArrayList<String>> tags = new HashMap<>();
+
+        ArrayList<String> tags = new ArrayList<>();
         ArrayList<ObjectId> fetched = new ArrayList<>();
         JSONObject data = new JSONObject();
 
@@ -271,22 +273,23 @@ public class PackageController {
 
             List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
 
-            ArrayList<String> subTags;
-            if (tags.containsKey(grade.getString("name")))
-                subTags = tags.get(grade.getString("name"));
-            else
-                subTags = new ArrayList<>();
+//            ArrayList<String> subTags;
+//            if (tags.containsKey(grade.getString("name")))
+//                subTags = tags.get(grade.getString("name"));
+//            else
+//                subTags = new ArrayList<>();
+//
+//            if (lesson != null && !subTags.contains(lesson.getString("name")))
+//                subTags.add(lesson.getString("name"));
+//
+//            tags.put(grade.getString("name"), subTags);
 
-            if (lesson != null && !subTags.contains(lesson.getString("name")))
-                subTags.add(lesson.getString("name"));
-
-            tags.put(grade.getString("name"), subTags);
-            if(lesson != null) {
-                Document finalLesson = lesson;
-                jsonObject.put("tags", new ArrayList<>() {{
-                    add(finalLesson.getString("name"));
-                }});
-            }
+//            if(lesson != null) {
+//                Document finalLesson = lesson;
+//                jsonObject.put("tags", new ArrayList<>() {{
+//                    add(finalLesson.getString("name"));
+//                }});
+//            }
 
             JSONArray quizzesDoc = new JSONArray();
             int totalPrice = 0;
@@ -345,8 +348,18 @@ public class PackageController {
                     .put("quizzesDoc", quizzesDoc);
 
             if(jsonObject.has("registrable") &&
-                    jsonObject.getInt("registrable") > 0)
+                    jsonObject.getInt("registrable") > 0) {
+
+                if(!tags.contains(grade.getString("name"))) {
+                    tags.add(grade.getString("name"));
+                    jsonObject.put("tags", new ArrayList<>() {{
+                        add(grade.getString("name"));
+                    }});
+                }
+
                 jsonArray.put(jsonObject.put("type", "package"));
+
+            }
             else if(!jsonObject.has("registrable"))
                 jsonArray.put(jsonObject);
         }
@@ -406,32 +419,43 @@ public class PackageController {
                 if (doc.containsKey("tags")) {
                     List<String> t = doc.getList("tags", String.class);
                     if (t.size() > 0) {
-                        ArrayList<String> subTags;
-                        if (tags.containsKey("المپیاد"))
-                            subTags = tags.get("المپیاد");
-                        else
-                            subTags = new ArrayList<>();
-
                         for (String itr : t) {
-                            if (!subTags.contains(itr))
-                                subTags.add(itr);
+                            if (!tags.contains(itr))
+                                tags.add(itr);
                         }
 
-                        tags.put("المپیاد", subTags);
+//                        ArrayList<String> subTags;
+//
+//                        if (tags.containsKey("المپیاد"))
+//                            subTags = tags.get("المپیاد");
+//                        else
+//                            subTags = new ArrayList<>();
+//
+//                        for (String itr : t) {
+//                            if (!subTags.contains(itr))
+//                                subTags.add(itr);
+//                        }
+//
+//                        tags.put("المپیاد", subTags);
                     }
                 }
+                JSONObject object;
 
                 if(doc.containsKey("launch_mode"))
-                    jsonArray.put(quizController.convertDocToJSON(
+                    object = quizController.convertDocToJSON(
                             doc, true, false, false, true
-                    ).put("type", "quiz"));
+                    ).put("type", "quiz");
                 else
-                    jsonArray.put(openQuiz.convertDocToJSON(
+                    object = openQuiz.convertDocToJSON(
                             doc, true, false, false, true
-                    ).put("type", "quiz"));
+                    ).put("type", "quiz");
+
+                jsonArray.put(object);
             }
 
-            data.put("tags", tags);
+            HashMap<String, ArrayList<String>> tmpHash = new HashMap<>();
+            tmpHash.put("تگ ها", tags);
+            data.put("tags", tmpHash);
         }
 
         data.put("items", jsonArray);
