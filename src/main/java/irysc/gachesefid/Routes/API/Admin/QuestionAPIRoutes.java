@@ -48,11 +48,12 @@ public class QuestionAPIRoutes extends Router {
                                    @RequestParam(required = false) Integer criticalThresh,
                                    @RequestParam(required = false) ObjectId subjectId,
                                    @RequestParam(required = false) ObjectId lessonId,
-                                   @RequestParam(required = false) ObjectId gradeId
+                                   @RequestParam(required = false) ObjectId gradeId,
+                                   @RequestParam(required = false) String organizationCode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return QuestionController.subjectQuestions(
-                isQuestionNeeded, criticalThresh, subjectId, lessonId, gradeId
+                isQuestionNeeded, criticalThresh, organizationCode, subjectId, lessonId, gradeId
         );
     }
 

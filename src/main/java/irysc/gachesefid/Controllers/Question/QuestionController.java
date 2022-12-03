@@ -663,31 +663,55 @@ public class QuestionController extends Utilities {
 
     public static String subjectQuestions(Boolean isQuestionNeeded,
                                           Integer criticalThresh,
+                                          String organizationCode,
                                           ObjectId subjectId,
                                           ObjectId lessonId,
                                           ObjectId gradeId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
+        ArrayList<Document> docs;
 
-        if (subjectId != null)
-            filters.add(eq("_id", subjectId));
+        if(organizationCode != null) {
 
-        if (lessonId != null)
-            filters.add(eq("lesson._id", lessonId));
+            Document question = questionRepository.findOne(eq("organization_id", organizationCode.replaceAll("\\s+", "")),
+                    new BasicDBObject("subject_id", true)
+            );
 
-        if (gradeId != null)
-            filters.add(eq("grade._id", gradeId));
+            if(question == null)
+                return generateSuccessMsg("data", new JSONArray());
 
-        if (criticalThresh != null)
-            filters.add(or(
-                    exists("q_no", false),
-                    lte("q_no", criticalThresh)
-            ));
+            Document doc = subjectRepository.findById(
+                    question.getObjectId("subject_id")
+            );
 
-        ArrayList<Document> docs = subjectRepository.find(
-                filters.size() == 0 ? null : and(filters),
-                null
-        );
+            if(doc == null)
+                return generateSuccessMsg("data", new JSONArray());
+
+            docs = new ArrayList<>();
+            docs.add(doc);
+        }
+        else {
+
+            if (subjectId != null)
+                filters.add(eq("_id", subjectId));
+
+            if (lessonId != null)
+                filters.add(eq("lesson._id", lessonId));
+
+            if (gradeId != null)
+                filters.add(eq("grade._id", gradeId));
+
+            if (criticalThresh != null)
+                filters.add(or(
+                        exists("q_no", false),
+                        lte("q_no", criticalThresh)
+                ));
+
+            docs = subjectRepository.find(
+                    filters.size() == 0 ? null : and(filters),
+                    null
+            );
+        }
 
         JSONArray jsonArray = new JSONArray();
 
@@ -876,23 +900,23 @@ public class QuestionController extends Utilities {
             );
         }
 
-        ArrayList<Document> authors = authorRepository.find(
-                config.containsKey("min_question_for_custom_quiz") ?
-                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
-                        gt("q_no", 0)
-                , null);
-
-        for (Document doc : authors) {
-            jsonArray.put(new JSONObject()
-                    .put("id", doc.getObjectId("_id").toString())
-                    .put("name", doc.getString("name"))
-                    .put("desc", doc.getString("name"))
-                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
-                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
-                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
-                    .put("section", "author")
-            );
-        }
+//        ArrayList<Document> authors = authorRepository.find(
+//                config.containsKey("min_question_for_custom_quiz") ?
+//                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+//                        gt("q_no", 0)
+//                , null);
+//
+//        for (Document doc : authors) {
+//            jsonArray.put(new JSONObject()
+//                    .put("id", doc.getObjectId("_id").toString())
+//                    .put("name", doc.getString("name"))
+//                    .put("desc", doc.getString("name"))
+//                    .put("limitEasy", doc.getOrDefault("q_no_easy", 1))
+//                    .put("limitMid", doc.getOrDefault("q_no_mid", 1))
+//                    .put("limitHard", doc.getOrDefault("q_no_hard", 1))
+//                    .put("section", "author")
+//            );
+//        }
 
         return generateSuccessMsg("data", jsonArray);
     }

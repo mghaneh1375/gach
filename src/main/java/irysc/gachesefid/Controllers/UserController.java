@@ -921,7 +921,7 @@ public class UserController {
             else if (kind.equals(KindSchool.DOLATI.getName()))
                 name += "دولتی";
             else if (kind.equals(KindSchool.HEYAT.getName()))
-                name += "هیت امنایی";
+                name += "هیئت امنایی";
             else if (kind.equals(KindSchool.SHAHED.getName()))
                 name += "شاهد";
             else if (kind.equals(KindSchool.NEMONE.getName()))
@@ -1026,7 +1026,7 @@ public class UserController {
             else if (kind.equals(KindSchool.DOLATI.getName()))
                 kindStr = "دولتی";
             else if (kind.equals(KindSchool.HEYAT.getName()))
-                kindStr = "هیت امنایی";
+                kindStr = "هیئت امنایی";
             else if (kind.equals(KindSchool.SHAHED.getName()))
                 kindStr = "شاهد";
             else
@@ -1219,7 +1219,13 @@ public class UserController {
                 and(
                         ne("user_id", new ObjectId("632bf8f3bd5b8c48dae0a12e")),
                         ne("user_id", new ObjectId("6354d7c7ec057f4ff5cdc88f")),
-                        ne("user_id", new ObjectId("63550a10ec057f4ff5cdc8a2"))
+                        ne("user_id", new ObjectId("63550a10ec057f4ff5cdc8a2")),
+                        ne("user_id", new ObjectId("6337334dd975897a8007aa5a")),
+                        ne("user_id", new ObjectId("632ec8e2bd5b8c48dae0a130")),
+                        ne("user_id", new ObjectId("6332c72257aa3143056e6767")),
+                        ne("user_id", new ObjectId("635520c2ec057f4ff5cdc8ad")),
+                        ne("user_id", new ObjectId("6342dd6fe282850402604d1c")),
+                        ne("user_id", new ObjectId("635e26430c9ba5235788b6f7"))
                 )
         );
 
