@@ -107,21 +107,6 @@ public class AdminContentAPIRoutes extends Router {
     }
 
 
-    @PutMapping(value = "setSessionImg/{id}/{sessionId}")
-    @ResponseBody
-    public String setImg(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId id,
-                         @PathVariable @ObjectIdConstraint ObjectId sessionId,
-                         @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        if (file == null)
-            return JSON_NOT_VALID_PARAMS;
-
-        getAdminPrivilegeUserVoid(request);
-        return AdminContentController.setSessionImg(id, sessionId, file);
-    }
-
     @DeleteMapping(value = "removeImg/{id}")
     @ResponseBody
     public String removeImg(HttpServletRequest request,
@@ -188,9 +173,9 @@ public class AdminContentAPIRoutes extends Router {
     }
 
 
-    @PutMapping(value = "addٰVideoToSession/{id}/{sessionId}")
+    @PutMapping(value = "setSessionVideo/{id}/{sessionId}")
     @ResponseBody
-    public String addٰVideoToSession(HttpServletRequest request,
+    public String setSessionVideo(HttpServletRequest request,
                                      @PathVariable @ObjectIdConstraint ObjectId id,
                                      @PathVariable @ObjectIdConstraint ObjectId sessionId,
                                      @RequestBody MultipartFile file
@@ -200,7 +185,7 @@ public class AdminContentAPIRoutes extends Router {
             return JSON_NOT_VALID_PARAMS;
 
         getAdminPrivilegeUserVoid(request);
-        return AdminContentController.addٰVideoToSession(id, sessionId, file);
+        return AdminContentController.setSessionVideo(id, sessionId, file);
     }
 
 
