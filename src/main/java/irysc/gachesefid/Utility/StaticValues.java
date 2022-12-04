@@ -121,7 +121,11 @@ public class StaticValues {
             .append("money", 1)
             .append("accesses", 1)
             .append("status", 1)
-            .append("school", 1);
+            .append("school", 1)
+            .append("sex", 1)
+            .append("city", 1)
+            .append("branches", 1)
+            .append("grade", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
 

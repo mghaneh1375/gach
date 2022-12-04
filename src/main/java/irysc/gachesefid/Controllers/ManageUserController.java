@@ -113,12 +113,23 @@ public class ManageUserController {
         );
 
         try {
-//            if (cursor == null || !cursor.iterator().hasNext())
-//                return Utility.generateSuccessMsg("user", "");
 
             JSONArray jsonArray = new JSONArray();
 
             for (Document user : docs) {
+
+                StringBuilder branchBuilder = new StringBuilder();
+                String branch = "";
+                List<Document> branches = user.containsKey("branches") ?
+                        user.getList("branches", Document.class) : null;
+
+                if(branches != null && branches.size() > 0) {
+
+                    for (Document itr : branches)
+                        branchBuilder.append(itr.getString("name")).append("-");
+
+                    branch = branchBuilder.substring(0, branchBuilder.length() - 1);
+                }
 
                 JSONObject jsonObject = new JSONObject()
                         .put("id", user.getObjectId("_id").toString())
@@ -128,12 +139,23 @@ public class ManageUserController {
                         .put("NID", user.getString("NID"))
                         .put("coin", user.get("coin"))
                         .put("money", user.get("money"))
+                        .put("sex", user.containsKey("sex") ?
+                                user.getString("sex").equalsIgnoreCase("male") ? "آقا" : "خانم" :
+                                ""
+                        )
                         .put("status", user.getString("status"))
                         .put("statusFa", user.getString("status").equals("active") ? "فعال" : "غیرفعال")
                         .put("accesses", user.getList("accesses", String.class))
                         .put("school", user.containsKey("school") ?
                                 ((Document) user.get("school")).getString("name") : ""
-                        );
+                        )
+                        .put("grade", user.containsKey("grade") ?
+                                ((Document) user.get("grade")).getString("name") : ""
+                        )
+                        .put("city", user.containsKey("city") ?
+                                ((Document) user.get("city")).getString("name") : ""
+                        )
+                        .put("branch", branch);
 
                 jsonArray.put(jsonObject);
             }
