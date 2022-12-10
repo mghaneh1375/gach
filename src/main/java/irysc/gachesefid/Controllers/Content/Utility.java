@@ -98,6 +98,7 @@ public class Utility {
                 : new ArrayList<>();
 
         JSONObject jsonObject = new JSONObject()
+                .put("id", doc.getObjectId("_id").toString())
                 .put("title", doc.get("title"))
                 .put("duration", doc.get("duration"))
                 .put("price", doc.getOrDefault("price", -1))
@@ -114,12 +115,10 @@ public class Utility {
         else
             jsonObject.put("hasExam", false);
 
-        if(doc.containsKey("img"))
-            jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.getString("img"));
-
         if(isAdmin)
             jsonObject.put("visibility", doc.get("visibility"))
-                    .put("priority", doc.get("priority"));
+                    .put("priority", doc.get("priority"))
+                    .put("hasVideo", doc.containsKey("video") && doc.get("video") != null);
 
         if(isAdmin || afterBuy) {
 
@@ -129,14 +128,8 @@ public class Utility {
 
             jsonObject.put("attaches", attachesJSONArr);
 
-            List<String> videos = doc.containsKey("videos") ? doc.getList("videos", String.class)
-                    : new ArrayList<>();
-
-            JSONArray videosJSONArr = new JSONArray();
-            for(String itr : videos)
-                videosJSONArr.put(itr);
-
-            jsonObject.put("videos", attachesJSONArr);
+            String video = doc.containsKey("video") ? doc.getString("video") : null;
+            jsonObject.put("video", video);
         }
 
         return jsonObject;

@@ -149,6 +149,55 @@ public class AdminContentController {
         return returnRemoveResponse(excepts, doneIds);
     }
 
+    public static String updateSession(ObjectId id, ObjectId sessionId, JSONObject data) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> sessions = doc.getList("sessions", Document.class);
+        Document session = Utility.searchInDocumentsKeyVal(
+                sessions, "_id", sessionId
+        );
+
+        if(session == null)
+            return JSON_NOT_VALID_ID;
+
+        int idx = Utility.searchInDocumentsKeyValIdx(
+                sessions, "_id", sessionId
+        );
+
+        Document newDoc = new Document()
+                .append("_id", session.getObjectId("_id"))
+                .append("attaches", session.get("attaches"));
+
+        if(session.containsKey("video"))
+            newDoc.put("video", session.get("video"));
+
+        for(String key : data.keySet()) {
+            if(key.equalsIgnoreCase("examId"))
+                newDoc.put(
+                        "exam_id",
+                        new ObjectId(data.getString(key))
+                );
+            else
+                newDoc.put(
+                        CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                        data.get(key)
+                );
+        }
+
+        sessions.set(idx, newDoc);
+        sessions.sort(Comparator.comparing(o -> o.getInteger("priority")));
+
+        doc.put("sessions", sessions);
+        contentRepository.replaceOne(id, doc);
+
+        return generateSuccessMsg("data",
+                irysc.gachesefid.Controllers.Content.Utility.sessionDigest(newDoc, true, false)
+        );
+    }
+
     public static String addSession(ObjectId id, JSONObject data) {
 
         Document doc = contentRepository.findById(id);
@@ -162,10 +211,16 @@ public class AdminContentController {
                 .append("attaches", new ArrayList<>());
 
         for(String key : data.keySet()) {
-            newDoc.put(
-                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
-                    data.get(key)
-            );
+            if(key.equalsIgnoreCase("examId"))
+                newDoc.put(
+                        "exam_id",
+                        new ObjectId(data.getString(key))
+                );
+            else
+                newDoc.put(
+                        CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                        data.get(key)
+                );
         }
 
         sessions.add(newDoc);
@@ -174,7 +229,9 @@ public class AdminContentController {
         doc.put("sessions", sessions);
         contentRepository.replaceOne(id, doc);
 
-        return generateSuccessMsg("id", oId);
+        return generateSuccessMsg("data",
+                irysc.gachesefid.Controllers.Content.Utility.sessionDigest(newDoc, true, false)
+        );
     }
 
     public static String setImg(ObjectId id, MultipartFile file) {
@@ -261,6 +318,28 @@ public class AdminContentController {
         return generateSuccessMsg("link", STATICS_SERVER + ContentRepository.FOLDER + "/" + filename);
     }
 
+    public static String removeVideoFromSession(ObjectId id, ObjectId sessionId) {
+
+        Document doc = contentRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document session = Utility.searchInDocumentsKeyVal(
+                doc.getList("sessions", Document.class), "_id", sessionId
+        );
+
+        if(session == null)
+            return JSON_NOT_VALID_ID;
+
+        if(session.containsKey("video"))
+            FileUtils.removeFile(session.getString("video"), ContentRepository.FOLDER);
+
+        session.remove("video");
+        contentRepository.replaceOne(id, doc);
+
+        return JSON_OK;
+    }
+
     public static String addٰAttachToSession(ObjectId id, ObjectId sessionId, MultipartFile file) {
 
         Document doc = contentRepository.findById(id);
@@ -326,6 +405,9 @@ public class AdminContentController {
                 ));
                 removeIds.put(oId);
             }
+
+            if(removeIds.length() > 0)
+                contentRepository.replaceOne(id, doc);
 
             return Utility.returnRemoveResponse(excepts, removeIds);
 

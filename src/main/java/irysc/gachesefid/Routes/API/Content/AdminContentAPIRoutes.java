@@ -172,6 +172,43 @@ public class AdminContentAPIRoutes extends Router {
         return AdminContentController.addSession(id, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PutMapping(value = "updateSession/{id}/{sessionId}")
+    @ResponseBody
+    public String updateSession(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId id,
+                                @PathVariable @ObjectIdConstraint ObjectId sessionId,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {
+                                             "title", "duration", "description",
+                                             "visibility", "priority"
+
+                                     },
+                                     paramsType = {
+                                             String.class, Positive.class, String.class,
+                                             Boolean.class, Positive.class
+                                     },
+                                     optionals = {
+                                             "price", "examId", "minMark",
+                                     },
+                                     optionalsType = {
+                                             Positive.class, ObjectId.class, Positive.class,
+                                     }
+                             ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.updateSession(id, sessionId, convertPersian(new JSONObject(jsonStr)));
+    }
+
+    @DeleteMapping(value = "removeVideoFromSession/{id}/{sessionId}")
+    @ResponseBody
+    public String removeVideoFromSession(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @PathVariable @ObjectIdConstraint ObjectId sessionId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.removeVideoFromSession(id, sessionId);
+    }
+
 
     @PutMapping(value = "setSessionVideo/{id}/{sessionId}")
     @ResponseBody
@@ -211,7 +248,6 @@ public class AdminContentAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {
                                                 "items"
-
                                         },
                                         paramsType = {
                                                 JSONArray.class
