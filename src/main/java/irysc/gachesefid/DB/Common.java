@@ -335,8 +335,10 @@ public abstract class Common extends Repository {
                 infos.add(doc);
         }
 
-        if (infos.size() != objectIds.size())
+        if (infos.size() != objectIds.size()) {
+            System.out.println(infos.size() + " " + objectIds.size());
             return null;
+        }
 
         return infos;
     }
