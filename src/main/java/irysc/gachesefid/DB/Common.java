@@ -340,12 +340,16 @@ public abstract class Common extends Repository {
             System.out.println(infos.size() + " " + objectIds.size());
             if(!preserveOrder) {
 
-                System.out.println();
-                System.out.println();
-                System.out.println();
-
                 for(ObjectId oId : objectIds) {
-                    if(!infos.contains(oId))
+                    boolean find = false;
+                    for (Document doc : infos) {
+                        if(doc.getObjectId("_id").equals(oId)) {
+                            find = true;
+                            break;
+                        }
+                    }
+
+                    if(!find)
                         System.out.println("not found " +  oId);
                 }
 
