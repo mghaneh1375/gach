@@ -39,7 +39,7 @@ public abstract class QuizAbstract {
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
         ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
 
-        if(questionsDoc.size() == 0)
+        if(questionsDoc == null || questionsDoc.size() == 0)
             return 0;
 
         int total = 0;
