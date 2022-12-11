@@ -327,18 +327,17 @@ public abstract class Common extends Repository {
 
         for(ObjectId oId : objectIds) {
 
-            Document d = null;
+            boolean find = false;
             for (Document doc : tmp) {
                 if(doc.getObjectId("_id").equals(oId)) {
-                    d = doc;
+                    infos.add(doc);
+                    find = true;
                     break;
                 }
             }
 
-            if(d == null)
+            if(!find)
                 return null;
-
-            infos.add(d);
         }
 
         if(1 == 1)
