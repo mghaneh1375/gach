@@ -37,7 +37,8 @@ public abstract class QuizAbstract {
             return 0;
 
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
-        ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, true);
+        System.out.println(questionIds.size());
+        ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
 
         if(questionsDoc == null || questionsDoc.size() == 0) {
             System.out.println(quiz.getObjectId("_id"));

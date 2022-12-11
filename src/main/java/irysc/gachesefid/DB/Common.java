@@ -332,13 +332,24 @@ public abstract class Common extends Repository {
         }
         else {
             for (Document doc : cursor) {
-                System.out.println(doc.getObjectId("_id"));
                 infos.add(doc);
             }
         }
 
         if (infos.size() != objectIds.size()) {
             System.out.println(infos.size() + " " + objectIds.size());
+            if(!preserveOrder) {
+                for (Document doc : cursor) {
+                    System.out.println(doc.getObjectId("_id"));
+                }
+            }
+            System.out.println();
+            System.out.println();
+            System.out.println();
+            for(ObjectId oId : objectIds) {
+                if(!infos.contains(oId))
+                    System.out.println(oId);
+            }
             return null;
         }
 
