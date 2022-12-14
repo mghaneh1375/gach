@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.*;
@@ -73,6 +75,8 @@ public class ManageUserController {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
+        filters.add(exists("remove_at", false));
+
         if (level != null) {
             if (!EnumValidatorImp.isValid(level, Access.class))
                 return JSON_NOT_VALID_PARAMS;
@@ -109,7 +113,7 @@ public class ManageUserController {
 
 
         ArrayList<Document> docs = userRepository.find(
-                filters.size() == 0 ? null : and(filters), USER_MANAGEMENT_INFO_DIGEST
+                and(filters), USER_MANAGEMENT_INFO_DIGEST
         );
 
         try {
@@ -1050,5 +1054,43 @@ public class ManageUserController {
         ticketUpgradeRequest(user.getObjectId("_id"));
 
         return generateSuccessMsg("msg", "درخواست شما برای تایید ادمین ارسال گردید.");
+    }
+
+    public static String deleteStudents(JSONArray list) {
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        long curr = System.currentTimeMillis();
+        List<WriteModel<Document>> writes = new ArrayList<>();
+
+        for(int i = 0; i < list.length(); i++) {
+
+            String id = list.getString(i);
+
+            if(!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            Document user = userRepository.findById(new ObjectId(id));
+            if(user == null || Authorization.isAdmin(user.getList("accesses", String.class))) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            user.put("remove_at", curr);
+            doneIds.put(id);
+
+            writes.add(new UpdateOneModel<>(
+                    eq("_id", user.getObjectId("_id")),
+                    new BasicDBObject("$set",
+                            new BasicDBObject("remove_at", curr)
+                    )
+            ));
+        }
+
+        userRepository.bulkWrite(writes);
+        return Utility.returnRemoveResponse(excepts, doneIds);
     }
 }

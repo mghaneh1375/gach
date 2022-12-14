@@ -66,6 +66,18 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.addAccess(userId, newRole, schoolId);
     }
 
+    @DeleteMapping(value = "/removeUsers")
+    @ResponseBody
+    public String removeAccess(HttpServletRequest request,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"items"},
+                                       paramsType = {JSONArray.class}
+                               ) String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return ManageUserController.deleteStudents(new JSONObject(jsonStr).getJSONArray("items"));
+    }
+
     @DeleteMapping(value = "/removeAccess/{userId}/{role}")
     @ResponseBody
     public String removeAccess(HttpServletRequest request,
