@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-//    public final static String STATICS_SERVER = "http://192.168.0.106/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "http://192.168.0.106/";
 //    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
 
     public final static String mailUserName = "noreply@irysc.com";
@@ -46,7 +46,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -121,7 +121,11 @@ public class StaticValues {
             .append("money", 1)
             .append("accesses", 1)
             .append("status", 1)
-            .append("school", 1);
+            .append("school", 1)
+            .append("sex", 1)
+            .append("city", 1)
+            .append("branches", 1)
+            .append("grade", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
 

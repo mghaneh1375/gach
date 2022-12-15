@@ -39,6 +39,9 @@ public abstract class QuizAbstract {
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
         ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
 
+        if(questionsDoc == null || questionsDoc.size() == 0)
+            return 0;
+
         int total = 0;
         for(Document question : questionsDoc)
             total += question.getInteger("needed_time");

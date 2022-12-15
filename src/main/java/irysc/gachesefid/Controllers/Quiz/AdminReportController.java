@@ -301,9 +301,9 @@ public class AdminReportController {
                         .put("cityRank", stats[7])
                         .put("schoolRank", stats[8])
                         .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
-                        .put("avg", df_obj.format(generalStat.getDouble("avg")))
-                        .put("max", df_obj.format(generalStat.getDouble("max")))
-                        .put("min", df_obj.format(generalStat.getDouble("min")));
+                        .put("avg", df_obj.format(generalStat.get("avg")))
+                        .put("max", df_obj.format(generalStat.get("max")))
+                        .put("min", df_obj.format(generalStat.get("min")));
 
                 subjects.put(jsonObject);
             }

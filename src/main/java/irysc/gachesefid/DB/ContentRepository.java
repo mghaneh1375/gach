@@ -39,19 +39,13 @@ public class ContentRepository extends Common {
 
     public void removeSession(Document session) {
 
-        if(session.containsKey("img"))
-            FileUtils.removeFile(session.getString("img"), FOLDER);
-
         if(session.containsKey("attaches")) {
             List<String> attaches = session.getList("attaches", String.class);
             for(String attach : attaches)
                 FileUtils.removeFile(attach, FOLDER);
         }
 
-        if(session.containsKey("videos")) {
-            List<String> videos= session.getList("videos", String.class);
-            for(String video : videos)
-                FileUtils.removeFile(video, FOLDER);
-        }
+        if(session.containsKey("video"))
+            FileUtils.removeFile(session.getString("video"), FOLDER);
     }
 }

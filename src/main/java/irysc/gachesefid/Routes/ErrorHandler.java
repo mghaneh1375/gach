@@ -137,7 +137,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
             return new ResponseEntity<>(
                     new JSONObject().put("status", "nok").put("msg", ex.getLocalizedMessage()).toString(),
                     headers,
-                    HttpStatus.OK);
+                    HttpStatus.UNAUTHORIZED);
         }
 
 

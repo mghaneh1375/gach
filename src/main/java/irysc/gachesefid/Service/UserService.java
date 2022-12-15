@@ -117,11 +117,11 @@ public class UserService {
 
             Document user = userRepository.findByUnique(username, false);
 
-            if (DEV_MODE || !checkPass) {
-                if (user == null)
-                    throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
-            } else {
-                if (user == null || !passwordEncoder.matches(password, user.getString("password")))
+            if(user == null || user.containsKey("remove_at"))
+                throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
+
+            if (!DEV_MODE && checkPass) {
+                if (!passwordEncoder.matches(password, user.getString("password")))
                     throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
             }
 
@@ -158,15 +158,17 @@ public class UserService {
 
     public Document whoAmI(HttpServletRequest req) {
         try {
-            return userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+
+            Document u = userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+
+            if(u == null || u.containsKey("remove_at"))
+                return null;
+
+            return u;
         }
         catch (Exception x) {
             return null;
         }
-    }
-
-    public Document whoAmI(String token) {
-        return userRepository.findByUsername(jwtTokenProvider.getUsername(token));
     }
 
 }

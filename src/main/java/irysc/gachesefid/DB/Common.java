@@ -312,13 +312,36 @@ public abstract class Common extends Repository {
     public ArrayList<Document> findByIds(List<ObjectId> objectIds, boolean preserveOrder) {
 
         ArrayList<Document> infos = new ArrayList<>();
-        if(preserveOrder) {
-            for(int i = 0; i < objectIds.size(); i++)
-                infos.add(null);
-        }
+        ArrayList<Document> tmp = new ArrayList<>();
+
+//        if(preserveOrder) {
+//            for(int i = 0; i < objectIds.size(); i++)
+//                infos.add(null);
+//        }
 
         FindIterable<Document> cursor =
                 documentMongoCollection.find(in("_id", objectIds));
+
+        for (Document doc : cursor)
+            tmp.add(doc);
+
+        for(ObjectId oId : objectIds) {
+
+            boolean find = false;
+            for (Document doc : tmp) {
+                if(doc.getObjectId("_id").equals(oId)) {
+                    infos.add(doc);
+                    find = true;
+                    break;
+                }
+            }
+
+            if(!find)
+                return null;
+        }
+
+        if(1 == 1)
+            return infos;
 
         if(preserveOrder) {
             int idx, counter = 0;
@@ -331,8 +354,7 @@ public abstract class Common extends Repository {
                 return null;
         }
         else {
-            for (Document doc : cursor)
-                infos.add(doc);
+
         }
 
         if (infos.size() != objectIds.size())
