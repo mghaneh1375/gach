@@ -599,14 +599,29 @@ public class StudentQuizController {
 
     public static String storeAnswers(Common db, ObjectId quizId,
                                       ObjectId studentId, JSONArray answers) {
+
+        long allowedDelay = 3600000; // 1hour
+
         try {
             Document doc = hasProtectedAccess(db, studentId, quizId);
+
+            long end = doc.containsKey("end") ?
+                    doc.getLong("end") + allowedDelay : -1;
+
             long curr = System.currentTimeMillis();
+
+//            if (doc.containsKey("start") &&
+//                    (
+//                            doc.getLong("start") > curr ||
+//                            doc.getLong("end") < curr
+//                    )
+//            )
+//                return generateErr("در زمان ارزیابی قرار نداریم.");
 
             if (doc.containsKey("start") &&
                     (
                             doc.getLong("start") > curr ||
-                            doc.getLong("end") < curr
+                                    end < curr
                     )
             )
                 return generateErr("در زمان ارزیابی قرار نداریم.");
@@ -625,13 +640,13 @@ public class StudentQuizController {
             long startAt = student.getLong("start_at");
             int delay = doc.containsKey("end") ? Math.max(
                     0,
-                    (int) (startAt + neededTime * 1000L - doc.getLong("end")) / 1000
+                    (int) (startAt + neededTime * 1000L - end) / 1000
             ) : 0;
 
             int reminder = neededTime -
                     (int) ((curr - startAt) / 1000) - delay;
 
-            if (reminder <= 0)
+            if (reminder + allowedDelay / 1000 <= 0)
                 return generateErr("شما در این آزمون شرکت کرده اید.");
 
 //            int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
@@ -647,7 +662,7 @@ public class StudentQuizController {
                 return result;
 
             return generateSuccessMsg("reminder", reminder,
-                    new PairValue("refresh", Math.abs(new Random().nextInt(5)) + 5)
+                    new PairValue("refresh", Math.abs(new Random().nextInt(3)) + 3)
             );
 
         } catch (Exception x) {
