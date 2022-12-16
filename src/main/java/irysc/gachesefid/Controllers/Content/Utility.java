@@ -39,7 +39,8 @@ public class Utility {
                 .put("teacher", doc.getString("teacher"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
-                .put("duration", doc.getOrDefault("duration", ""))
+                .put("certDuration", doc.getOrDefault("cert_duration", ""))
+                .put("duration", 800 * 60)
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
         if(!isAdmin && doc.containsKey("img"))
