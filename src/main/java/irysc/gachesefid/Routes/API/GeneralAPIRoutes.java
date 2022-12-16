@@ -38,6 +38,7 @@ import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 
+import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
@@ -46,6 +47,18 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @RequestMapping(path = "/api/general")
 @Validated
 public class GeneralAPIRoutes extends Router {
+
+
+    @PostMapping(value = "clearVideoCache/{contentId}")
+    @ResponseBody
+    public String clearVideoCache(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId contentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        contentRepository.clearFromCache(contentId);
+        return JSON_OK;
+    }
+
 
 
     @PostMapping(value = {"/chargeAccount", "/chargeAccount/{userId}"})

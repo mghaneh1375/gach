@@ -67,7 +67,8 @@ public class Utility {
                 .put("teacher", doc.getString("teacher"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
-                .put("duration", doc.getOrDefault("duration", ""))
+                .put("certDuration", doc.getOrDefault("duration", ""))
+                .put("duration", 800 * 60)
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
@@ -88,6 +89,16 @@ public class Utility {
             if(doc.containsKey("final_exam_min_mark"))
                 jsonObject.put("finalExamMinMark", doc.get("final_exam_min_mark"));
 
+        }
+        else {
+            List<Document> sessions = doc.getList("sessions", Document.class);
+            JSONArray sessionsJSON = new JSONArray();
+
+            for (Document session : sessions) {
+                sessionsJSON.put(sessionDigest(session, false, false));
+            }
+
+            jsonObject.put("sessions", sessionsJSON);
         }
 
         return jsonObject;
