@@ -7,9 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
-//    public final static String STATICS_SERVER = "http://192.168.1.100/static/assets/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 
     public final static String mailUserName = "noreply@irysc.com";
     public final static String mailPassword = "wb1DPR8PZ"; //wb1DPR8PZ
@@ -46,7 +45,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -92,7 +91,7 @@ public class StaticValues {
     public final static BasicDBObject CONTENT_DIGEST = new BasicDBObject("_id", 1)
             .append("title", 1).append("teacher", 1)
             .append("cert_id", 1).append("img", 1)
-            .append("price", 1)
+            .append("price", 1).append("slug", 1)
             .append("created_at", 1).append("tags", 1)
             .append("final_exam_id", 1)
             .append("duration", 1).append("sessions_count", 1);
@@ -103,6 +102,7 @@ public class StaticValues {
             .append("created_at", 1).append("tags", 1)
             .append("duration", 1).append("users", 1)
             .append("final_exam_id", 1).append("price", 1)
+            .append("slug", 1)
             .append("sessions_count", 1).append("visibility", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)
@@ -136,7 +136,6 @@ public class StaticValues {
     public static final String JSON_NOT_VALID_ID = new JSONObject().put("status", "nok").put("msg", "id is not valid").toString();
     public static final String JSON_NOT_VALID_PARAMS = new JSONObject().put("status", "nok").put("msg", "params is not valid").toString();
     public static final String JSON_NOT_UNKNOWN = new JSONObject().put("status", "nok").put("msg", "unknown exception has been occurred").toString();
-    public static final String JSON_NOT_VERSION = new JSONObject().put("status", "nok").put("msg", "ورژن جدیدی از این api در دسترس است که باید از آن استفاده کنید.").toString();
     public static final String JSON_NOT_VALID_FILE = new JSONObject().put("status", "nok").put("msg", "شما در این قسمت می توانید تنها فایل PDF و یا یک فایل صوتی و یا یک تصویر آپلود نمایید.").toString();
     public static final String JSON_NOT_VALID_6_MB_SIZE = new JSONObject().put("status", "nok").put("msg", "حداکثر حجم مجاز، 6 مگ است.").toString();
     public static final String JSON_UNKNOWN_UPLOAD_FILE = new JSONObject().put("status", "nok").put("msg", "مشکلی در آپلود فایل مورد نظر رخ داده است. لطفا با پشتیبانی تماس بگیرید.").toString();

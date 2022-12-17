@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotBlank;
 
 @Controller
 @RequestMapping(path = "/api/package_content/public")
@@ -36,16 +37,15 @@ public class StudentContentAPIRoutes extends Router {
         );
     }
 
-    @GetMapping(value = "get/{id}")
+    @GetMapping(value = "get/{slug}")
     @ResponseBody
     public String get(HttpServletRequest request,
-                      @PathVariable @ObjectIdConstraint ObjectId id
+                      @PathVariable @NotBlank String slug
     ) {
-
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.get(isAdmin, user == null ? null : user.getObjectId("_id"),
-                id
+                slug
         );
     }
 

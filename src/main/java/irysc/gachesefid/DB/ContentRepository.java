@@ -17,6 +17,7 @@ public class ContentRepository extends Common {
     @Override
     void init() {
         table = "content";
+        secKey = "slug";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 

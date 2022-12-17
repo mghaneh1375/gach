@@ -78,9 +78,9 @@ public class StudentContentController {
         return generateSuccessMsg("data", data);
     }
 
-    public static String get(boolean isAdmin, ObjectId userId, ObjectId contentId) {
+    public static String get(boolean isAdmin, ObjectId userId, String slug) {
 
-        Document content = contentRepository.findById(contentId);
+        Document content = contentRepository.findBySecKey(slug);
         if(content == null)
             return JSON_NOT_VALID_ID;
 
@@ -88,7 +88,7 @@ public class StudentContentController {
                 content, isAdmin,
                 isAdmin || userId != null && irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                         content.getList("users", Document.class), "_id", userId
-                ) != -1)
+                ) != -1, true)
         );
     }
 

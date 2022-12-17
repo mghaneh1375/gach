@@ -73,7 +73,7 @@ public class GeneralAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
 
-        Document user = getUserWithAdminAccess(request, false, true, userId);
+        Document user = getUserWithAdminAccess(request, false, false, userId);
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 

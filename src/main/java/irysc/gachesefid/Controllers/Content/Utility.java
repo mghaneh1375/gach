@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.contentConfigRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Utility.StaticValues.SERVER;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
@@ -29,18 +30,34 @@ public class Utility {
 
     }
 
+    static JSONObject convertFAQDigest(Document item, boolean isAdmin) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("question", item.get("question"))
+                .put("answer", item.get("answer"));
+
+        if(isAdmin) {
+            jsonObject.put("id", item.getObjectId("_id").toString())
+                    .put("priority", item.get("priority"))
+                    .put("visibility", item.get("visibility"));
+        }
+
+        return jsonObject;
+    }
+
     static JSONObject convertDigest(Document doc, boolean isAdmin) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
                 .put("title", doc.get("title"))
+                .put("slug", doc.get("slug"))
                 .put("tags", doc.get("tags"))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("certDuration", doc.getOrDefault("cert_duration", ""))
-                .put("duration", 800 * 60)
+                .put("duration", doc.getInteger("duration") * 60)
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
         if(!isAdmin && doc.containsKey("img"))
@@ -55,22 +72,42 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy) {
+    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy, boolean includeFAQ) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
                 .put("description", doc.getString("description"))
                 .put("teacherBio", doc.getOrDefault("teacher_bio", ""))
                 .put("title", doc.get("title"))
+                .put("slug", doc.get("slug"))
                 .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("certDuration", doc.getOrDefault("duration", ""))
-                .put("duration", 800 * 60)
+                .put("duration", doc.getInteger("duration") * 60)
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
+
+        if(includeFAQ) {
+            Document config = contentConfigRepository.findBySecKey("first");
+            if(config != null) {
+
+                List<Document> faqs = config.getList("faq", Document.class);
+                JSONArray faqJSON = new JSONArray();
+
+                for(Document faq : faqs) {
+
+                    if(!faq.getBoolean("visibility") && !isAdmin)
+                        continue;
+
+                    faqJSON.put(convertFAQDigest(faq, isAdmin));
+                }
+
+                jsonObject.put("faqs", faqJSON);
+            }
+        }
 
         if(doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
