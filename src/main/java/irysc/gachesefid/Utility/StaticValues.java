@@ -7,8 +7,8 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 
     public final static String mailUserName = "noreply@irysc.com";
     public final static String mailPassword = "wb1DPR8PZ"; //wb1DPR8PZ

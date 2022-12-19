@@ -51,6 +51,9 @@ public class GiftController {
         if (useFor.equalsIgnoreCase(OffCodeSections.CLASSES.getName()))
             return "کلاس ها و همایش ها";
 
+        if (useFor.equalsIgnoreCase(OffCodeSections.CONTENT.getName()))
+            return "بسته های آموزشی";
+
         if (useFor.equalsIgnoreCase(OffCodeSections.RAVAN_EXAM.getName()))
             return "آزمون های روان شناسی";
 

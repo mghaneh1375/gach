@@ -1,11 +1,16 @@
 package irysc.gachesefid.Routes.API.Content;
 
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
+import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
+import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +39,34 @@ public class StudentContentAPIRoutes extends Router {
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
                 tag, title, teacher, visibility, hasCert, minPrice, maxPrice
+        );
+    }
+
+    @GetMapping(value = "getMy")
+    @ResponseBody
+    public String getMy(HttpServletRequest request
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentContentController.getMy(getUser(request).getObjectId("_id"));
+    }
+
+    @PostMapping(value = "buy/{id}")
+    @ResponseBody
+    public String buy(HttpServletRequest request,
+                      @PathVariable @ObjectIdConstraint ObjectId id,
+                      @RequestBody @StrongJSONConstraint(
+                              params = {},
+                              paramsType = {},
+                              optionals = {
+                                      "off"
+                              },
+                              optionalsType = {
+                                      String.class
+                              }
+                      ) String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        Document user = getUser(request);
+        return StudentContentController.buy(id, new JSONObject(jsonStr), user.getObjectId("_id"),
+                user.getDouble("money"), user.getString("phone"), user.getString("mail")
         );
     }
 

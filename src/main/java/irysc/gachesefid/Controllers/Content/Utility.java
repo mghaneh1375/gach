@@ -132,7 +132,7 @@ public class Utility {
             JSONArray sessionsJSON = new JSONArray();
 
             for (Document session : sessions) {
-                sessionsJSON.put(sessionDigest(session, false, false));
+                sessionsJSON.put(sessionDigest(session, false, afterBuy));
             }
 
             jsonObject.put("sessions", sessionsJSON);
@@ -176,8 +176,15 @@ public class Utility {
                 attachesJSONArr.put(itr);
 
             jsonObject.put("attaches", attachesJSONArr);
+            String video = null;
 
-            String video = doc.containsKey("video") ? doc.getString("video") : null;
+            if(isAdmin)
+                video = doc.containsKey("video") ? doc.getString("video") : null;
+            else if(doc.containsKey("chunk_at") && doc.containsKey("video")) {
+                String folderName = doc.getString("video").split("\\.mp4")[0];
+                video = STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
+            }
+
             jsonObject.put("video", video);
         }
 

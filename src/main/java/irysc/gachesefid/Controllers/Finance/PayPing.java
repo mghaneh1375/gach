@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -163,6 +164,20 @@ public class PayPing {
                         }
 
                     }
+                }
+                else if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
+                ) {
+                    Document content = contentRepository.findById(transaction.getObjectId("products"));
+                    if(content != null) {
+
+                        StudentContentController.registry(
+                                content.getObjectId("_id"),
+                                studentId, transaction.getInteger("amount"),
+                                user.getString("phone"), user.getString("mail")
+                        );
+                    }
+
                 }
                 else if(transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
