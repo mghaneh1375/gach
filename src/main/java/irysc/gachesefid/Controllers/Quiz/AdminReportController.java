@@ -483,7 +483,7 @@ public class AdminReportController {
     public static String getStudentAnswerSheet(Common db, ObjectId userId,
                                                ObjectId quizId, ObjectId studentId) {
         try {
-            Document doc = hasAccess(db, userId, quizId);
+            Document doc = hasPublicAccess(db, userId, quizId);
 
             if(!(boolean)doc.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج فرانرسیده است.");

@@ -99,7 +99,7 @@ public class StudentReportController {
 
             for (Document doc : quiz.getList("ranking_list", Document.class)) {
 
-                if(counter > 5)
+                if(counter >= 5)
                     break;
 
                 Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
