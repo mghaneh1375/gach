@@ -46,6 +46,7 @@ public class StudentContentController {
                                 Integer maxPrice) {
 
         ArrayList<Bson> filters = new ArrayList<>();
+
         if(!isAdmin)
             filters.add(eq("visibility", true));
 
@@ -83,8 +84,47 @@ public class StudentContentController {
                 isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST
         );
 
-        for(Document doc : docs)
-            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
+        if(!isAdmin && filters.size() == 2) {
+
+            int min = 1000000000;
+            int max = -1;
+
+            int maxDuration = -1;
+            int minDuration = 10000000;
+
+            for(Document doc : docs) {
+
+                int price = doc.getInteger("price");
+                int duration = doc.getInteger("duration");
+
+                if(price < min)
+                    min = price;
+
+                if(price > max)
+                    max = price;
+
+                if(duration < minDuration)
+                    minDuration = duration;
+
+                if(duration > maxDuration)
+                    maxDuration = duration;
+
+                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
+            }
+
+            return generateSuccessMsg("data", data,
+                    new PairValue("min", min),
+                    new PairValue("max", max),
+                    new PairValue("minDuration", minDuration),
+                    new PairValue("maxDuration", maxDuration),
+                    new PairValue("tags", contentRepository.distinctTags("tags"))
+            );
+        }
+
+        else {
+            for (Document doc : docs)
+                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
+        }
 
         return generateSuccessMsg("data", data);
     }

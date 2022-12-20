@@ -57,7 +57,7 @@ public class Utility {
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("certDuration", doc.getOrDefault("cert_duration", ""))
-                .put("duration", doc.getInteger("duration") * 60)
+                .put("duration", isAdmin ? doc.getInteger("duration") : doc.getInteger("duration") * 60)
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
         if(!isAdmin && doc.containsKey("img"))
@@ -86,7 +86,7 @@ public class Utility {
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("certDuration", doc.getOrDefault("duration", ""))
-                .put("duration", doc.getInteger("duration") * 60)
+                .put("duration", isAdmin ? doc.getInteger("duration") : doc.getInteger("duration") * 60)
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
