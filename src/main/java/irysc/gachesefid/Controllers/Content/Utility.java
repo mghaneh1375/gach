@@ -131,10 +131,10 @@ public class Utility {
             List<Document> sessions = doc.getList("sessions", Document.class);
             JSONArray sessionsJSON = new JSONArray();
 
-            for (Document session : sessions) {
+            for (Document session : sessions)
                 sessionsJSON.put(sessionDigest(session, false, afterBuy));
-            }
 
+            jsonObject.put("afterBuy", afterBuy);
             jsonObject.put("sessions", sessionsJSON);
         }
 
