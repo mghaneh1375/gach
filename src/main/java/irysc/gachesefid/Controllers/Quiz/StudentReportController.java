@@ -95,8 +95,12 @@ public class StudentReportController {
 
             HashMap<ObjectId, String> stateNames = new HashMap<>();
             int k = 0;
+            int counter = 0;
 
             for (Document doc : quiz.getList("ranking_list", Document.class)) {
+
+                if(counter > 5)
+                    break;
 
                 Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
@@ -140,6 +144,7 @@ public class StudentReportController {
 
                 jsonArray.put(jsonObject);
                 k++;
+                counter++;
             }
 
             return generateSuccessMsg(
