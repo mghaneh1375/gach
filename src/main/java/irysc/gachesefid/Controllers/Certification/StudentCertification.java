@@ -65,7 +65,8 @@ public class StudentCertification {
                 certificate.getBoolean("is_landscape"),
                 certificate.getInteger("qr_x"),
                 certificate.getInteger("qr_y"),
-                certificate.getInteger("qr_size")
+                certificate.getInteger("qr_size"),
+                certId
         );
     }
 

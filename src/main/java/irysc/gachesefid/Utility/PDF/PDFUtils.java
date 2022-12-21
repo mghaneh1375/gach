@@ -7,6 +7,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -130,7 +131,7 @@ public class PDFUtils {
 
     public static File getCertificate(List<Document> params, List<String> values,
                                       String img, boolean isLandscape,
-                                      int qrX, int qrY, int qrSize) {
+                                      int qrX, int qrY, int qrSize, ObjectId certId) {
 
         PDDocument document = new PDDocument();
         try {
@@ -180,7 +181,8 @@ public class PDFUtils {
 //            myShowText(bidiReorder(competition), contentStream, mediaBox, 9, 260, 380, false);
 //            myShowText(bidiReorder(date), contentStream, mediaBox, 9, 260, 530, false);
 
-            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://google.com");
+//            "https://e.irysc.com/checkCert/" + certId.toString()
+            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://192.168.0.106/checkCert/" + certId.toString());
 
             contentStream.close();
 

@@ -230,6 +230,16 @@ public class GeneralAPIRoutes extends Router {
         return UserController.getRankingList(gradeId);
     }
 
+    @GetMapping(value = "/checkCert/{certId}/{NID}")
+    @ResponseBody
+    public String getRankingList(
+            @PathVariable @ObjectIdConstraint ObjectId certId,
+            @PathVariable @NotBlank String NID
+    ) {
+        return AdminCertification.checkCert(certId, NID);
+    }
+
+
     @GetMapping(value = "/getSiteStats")
     @ResponseBody
     public String getSiteStats() {

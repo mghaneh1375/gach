@@ -21,6 +21,23 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminCertification {
 
+    public static String checkCert(ObjectId certId, String NID) {
+
+        Document cert = certificateRepository.findById(certId);
+        if(cert == null)
+            return JSON_NOT_VALID_ID;
+
+        Document d = Utility.searchInDocumentsKeyVal(
+                cert.getList("users", Document.class), "NID", NID
+        );
+
+        if(d == null)
+            return JSON_NOT_VALID_PARAMS;
+
+
+        return generateSuccessMsg("data", "");
+    }
+
     public static String getAllCertsDigest() {
 
         JSONArray all = new JSONArray();

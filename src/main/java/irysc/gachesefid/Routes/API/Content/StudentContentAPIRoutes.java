@@ -26,19 +26,21 @@ public class StudentContentAPIRoutes extends Router {
     @GetMapping(value = "getAll")
     @ResponseBody
     public String getAll(HttpServletRequest request,
-                         @RequestParam(required = false) String tag,
-                         @RequestParam(required = false) String title,
-                         @RequestParam(required = false) String teacher,
-                         @RequestParam(required = false) Boolean visibility,
-                         @RequestParam(required = false) Boolean hasCert,
-                         @RequestParam(required = false) Integer minPrice,
-                         @RequestParam(required = false) Integer maxPrice
+                         @RequestParam(required = false, value = "tag") String tag,
+                         @RequestParam(required = false, value = "title") String title,
+                         @RequestParam(required = false, value = "teacher") String teacher,
+                         @RequestParam(required = false, value = "visibility") Boolean visibility,
+                         @RequestParam(required = false, value = "hasCert") Boolean hasCert,
+                         @RequestParam(required = false, value = "minPrice") Integer minPrice,
+                         @RequestParam(required = false, value = "maxPrice") Integer maxPrice,
+                         @RequestParam(required = false, value = "minDuration") Integer minDuration,
+                         @RequestParam(required = false, value = "maxDuration") Integer maxDuration
     ) {
 
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
-                tag, title, teacher, visibility, hasCert, minPrice, maxPrice
+                tag, title, teacher, visibility, hasCert, minPrice, maxPrice, minDuration, maxDuration
         );
     }
 

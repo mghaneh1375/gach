@@ -43,7 +43,9 @@ public class StudentContentController {
                                 Boolean visibility,
                                 Boolean hasCert,
                                 Integer minPrice,
-                                Integer maxPrice) {
+                                Integer maxPrice,
+                                Integer minDurationFilter,
+                                Integer maxDurationFilter) {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
@@ -63,10 +65,16 @@ public class StudentContentController {
             filters.add(exists("cert_id", hasCert));
 
         if(minPrice != null)
-            filters.add(lte("price", minPrice));
+            filters.add(gte("price", minPrice));
 
         if(maxPrice != null)
-            filters.add(gte("price", maxPrice));
+            filters.add(lte("price", maxPrice));
+
+        if(minDurationFilter != null)
+            filters.add(gte("duration", minDurationFilter));
+
+        if(maxDurationFilter != null)
+            filters.add(lte("duration", maxDurationFilter));
 
         if(isAdmin) {
 
@@ -79,6 +87,7 @@ public class StudentContentController {
         }
 
         JSONArray data = new JSONArray();
+
         ArrayList<Document> docs = contentRepository.find(
                 filters.size() == 0 ? null : and(filters),
                 isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST
