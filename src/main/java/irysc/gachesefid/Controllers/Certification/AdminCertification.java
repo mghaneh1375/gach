@@ -21,23 +21,6 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminCertification {
 
-    public static String checkCert(ObjectId certId, String NID) {
-
-        Document cert = certificateRepository.findById(certId);
-        if(cert == null)
-            return JSON_NOT_VALID_ID;
-
-        Document d = Utility.searchInDocumentsKeyVal(
-                cert.getList("users", Document.class), "NID", NID
-        );
-
-        if(d == null)
-            return JSON_NOT_VALID_PARAMS;
-
-
-        return generateSuccessMsg("data", "");
-    }
-
     public static String getAllCertsDigest() {
 
         JSONArray all = new JSONArray();
@@ -74,6 +57,26 @@ public class AdminCertification {
         }
 
         return certificateRepository.insertOneWithReturn(newDoc);
+    }
+
+    public static String checkCert(ObjectId certId) {
+
+        Document cert = certificateRepository.findOne(in("users._id", certId), null);
+        if(cert == null)
+            return JSON_NOT_VALID_ID;
+
+        Document d = Utility.searchInDocumentsKeyVal(
+                cert.getList("users", Document.class), "_id", certId
+        );
+
+        if(d == null)
+            return JSON_NOT_VALID_ID;
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("issueAt", Utility.getSolarDate(d.getLong("created_at")))
+                .put("NID", d.get("NID"))
+                .put("certId", cert.getObjectId("_id").toString())
+        );
     }
 
     // overwrite all old data
@@ -206,6 +209,7 @@ public class AdminCertification {
 
         users.add(new Document("NID", NID)
                 .append("_id", new ObjectId())
+                .append("created_at", System.currentTimeMillis())
                 .append("params", values)
         );
 

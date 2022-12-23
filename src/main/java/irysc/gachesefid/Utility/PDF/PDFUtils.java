@@ -131,7 +131,7 @@ public class PDFUtils {
 
     public static File getCertificate(List<Document> params, List<String> values,
                                       String img, boolean isLandscape,
-                                      int qrX, int qrY, int qrSize, ObjectId certId) {
+                                      int qrX, int qrY, int qrSize, String certId) {
 
         PDDocument document = new PDDocument();
         try {
@@ -181,8 +181,9 @@ public class PDFUtils {
 //            myShowText(bidiReorder(competition), contentStream, mediaBox, 9, 260, 380, false);
 //            myShowText(bidiReorder(date), contentStream, mediaBox, 9, 260, 530, false);
 
-//            "https://e.irysc.com/checkCert/" + certId.toString()
-            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://192.168.0.106/checkCert/" + certId.toString());
+//            "https://e.irysc.com/checkCert/" + certId
+            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "http://192.168.43.157:3000/checkCert/" + certId );
+            System.out.println("http://192.168.43.157:3000/checkCert/" + certId);
 
             contentStream.close();
 

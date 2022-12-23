@@ -25,14 +25,24 @@ public class StudentCertification {
                         in("users.NID", NID),
                         eq("visibility", true)
                 ),
-                new BasicDBObject("_id", 1).append("title", 1)
+                new BasicDBObject("_id", 1).append("title", 1).append("users", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
 
         for (Document doc : docs) {
+
+            Document userDoc = Utility.searchInDocumentsKeyVal(
+                doc.getList("users", Document.class),
+                "NID", NID
+            );
+
+            if(userDoc == null)
+                continue;
+
             jsonArray.put(new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
+                    .put("createdAt", Utility.getSolarDate(userDoc.getLong("created_at")))
                     .put("title", doc.getString("title"))
             );
         }
@@ -66,7 +76,7 @@ public class StudentCertification {
                 certificate.getInteger("qr_x"),
                 certificate.getInteger("qr_y"),
                 certificate.getInteger("qr_size"),
-                certId
+                userCert.getObjectId("_id").toString()
         );
     }
 

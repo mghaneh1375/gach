@@ -301,8 +301,10 @@ public class PayPing {
 //            );
 //
 //            new Thread(() -> completePay(transaction)).start();
-//
-//            return refId;
+//            return new String[] {
+//                    refId, transaction.getString("section"),
+//                    transaction.getObjectId("_id").toString()
+//            };
 //        }
 
         if (refCode.equalsIgnoreCase("0")) {

@@ -37,7 +37,7 @@ public class GiftController {
     public static String translateUseFor(String useFor) {
 
         if (useFor.equalsIgnoreCase("charge"))
-            return "شارژ حساب";
+            return "افزایش شارژ حساب";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()))
             return "آزمون های آیریسک";

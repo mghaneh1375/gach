@@ -28,8 +28,7 @@ public class StudentCertificateAPIRoutes extends Router {
 
     @GetMapping(path = "/issueMyCert/{certificateId}/{NID}")
     @ResponseBody
-    public ResponseEntity<InputStreamResource> issueMyCert(HttpServletRequest request,
-                                                           @PathVariable @ObjectIdConstraint ObjectId certificateId,
+    public ResponseEntity<InputStreamResource> issueMyCert(@PathVariable @ObjectIdConstraint ObjectId certificateId,
                                                            @PathVariable @NotBlank String NID) {
 
         File f = StudentCertification.issueMyCert(certificateId, NID);
@@ -54,8 +53,7 @@ public class StudentCertificateAPIRoutes extends Router {
 
     @GetMapping(path = "/getMyCerts/{NID}")
     @ResponseBody
-    public String getMyCerts(HttpServletRequest request,
-                             @PathVariable @NotBlank String NID) {
+    public String getMyCerts(@PathVariable @NotBlank String NID) {
         return StudentCertification.getMyCerts(NID);
     }
 

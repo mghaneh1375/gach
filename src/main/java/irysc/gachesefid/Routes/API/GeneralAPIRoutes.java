@@ -36,10 +36,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
+import java.util.List;
 import java.util.Map;
 
-import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
 
@@ -164,18 +165,62 @@ public class GeneralAPIRoutes extends Router {
 
                     modelAndView.addObject("status", "success");
                     modelAndView.addObject("refId", referenceId);
-                    modelAndView.addObject("section", section);
 
                     String transactionId = p[2];
 
                     modelAndView.addObject("financeUrl", frontEndUrl + "financeHistory");
                     modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + transactionId);
-                    modelAndView.addObject("myQuizzesUrl",
-                            section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
-                                    frontEndUrl + "myIRYSCQuizzes" :
-                                    section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()) ?
-                                            frontEndUrl + "myCustomQuizzes" : frontEndUrl
-                    );
+
+                    if(section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ||
+                            section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName())
+                    ) {
+
+                        String forWhat = "آزمون آیریسک";
+                        modelAndView.addObject("section", "quiz");
+
+                        if(section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName())) {
+                            Document transaction = transactionRepository.findById(
+                                    new ObjectId(transactionId)
+                            );
+                            if (transaction != null && transaction.containsKey("products")) {
+
+                                List<ObjectId> products = transaction.getList("products", ObjectId.class);
+                                boolean hasAnyGachExam = false;
+
+                                for (ObjectId id : products) {
+                                    if (iryscQuizRepository.findById(id) != null) {
+                                        hasAnyGachExam = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!hasAnyGachExam)
+                                    forWhat = "آزمون باز";
+
+                            }
+                        }
+                        else
+                            forWhat = "آزمون شخصی ساز";
+
+                        modelAndView.addObject("forWhat", forWhat);
+                        modelAndView.addObject("myQuizzesUrl",
+                                section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ?
+                                        frontEndUrl + "myIRYSCQuizzes" :
+                                        section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()) ?
+                                                frontEndUrl + "myCustomQuizzes" : frontEndUrl
+                        );
+
+                    }
+
+                    else if(section.equalsIgnoreCase("charge"))
+                        modelAndView.addObject("section", section);
+                    else if(section.equalsIgnoreCase(OffCodeSections.CONTENT.toString())) {
+                        modelAndView.addObject("section", section);
+                        modelAndView.addObject("forWhat", "بسته آموزشی");
+                        modelAndView.addObject("myQuizzesUrl",
+                                        frontEndUrl + "myPackages"
+                        );
+                    }
                 }
             }
         }
@@ -230,13 +275,12 @@ public class GeneralAPIRoutes extends Router {
         return UserController.getRankingList(gradeId);
     }
 
-    @GetMapping(value = "/checkCert/{certId}/{NID}")
+    @GetMapping(value = "/checkCert/{certId}")
     @ResponseBody
-    public String getRankingList(
-            @PathVariable @ObjectIdConstraint ObjectId certId,
-            @PathVariable @NotBlank String NID
+    public String checkCert(
+            @PathVariable @ObjectIdConstraint ObjectId certId
     ) {
-        return AdminCertification.checkCert(certId, NID);
+        return AdminCertification.checkCert(certId);
     }
 
 
