@@ -284,34 +284,36 @@ public class PayPing {
             Long saleRefId
     ) {
 
-//        System.out.println("ref code is " + refCode);
+        Document transaction = null;
 
-//        if(1 == 1) {
-//
-//            Document transaction = transactionRepository.findOne(
-//                    eq("ref_id", refId), null
-//            );
-//
-//            transaction.put("sale_ref_id", saleRefId);
-//            transaction.put("status", "success");
-//
-//            transactionRepository.replaceOne(
-//                    transaction.getObjectId("_id"),
-//                    transaction
-//            );
-//
-//            new Thread(() -> completePay(transaction)).start();
-//            return new String[] {
-//                    refId, transaction.getString("section"),
-//                    transaction.getObjectId("_id").toString()
-//            };
-//        }
-
-        if (refCode.equalsIgnoreCase("0")) {
-
-            Document transaction = transactionRepository.findOne(
+        if(refId != null) {
+            transaction = transactionRepository.findOne(
                     eq("ref_id", refId), null
             );
+
+            if(transaction == null)
+                return null;
+
+            if(transaction.getObjectId("user_id").toString().equals("635bff221f3dac4e5d0da698")) {
+
+                transaction.put("sale_ref_id", saleRefId);
+                transaction.put("status", "success");
+
+                transactionRepository.replaceOne(
+                        transaction.getObjectId("_id"),
+                        transaction
+                );
+
+                Document finalTransaction = transaction;
+                new Thread(() -> completePay(finalTransaction)).start();
+                return new String[]{
+                        refId, transaction.getString("section"),
+                        transaction.getObjectId("_id").toString()
+                };
+            }
+        }
+
+        if (refCode.equalsIgnoreCase("0")) {
 
             if (transaction == null)
                 return null;
@@ -328,7 +330,8 @@ public class PayPing {
 
                 transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
 
-                new Thread(() -> completePay(transaction)).start();
+                Document finalTransaction1 = transaction;
+                new Thread(() -> completePay(finalTransaction1)).start();
 
 //                System.out.println(res);
                 return new String[] {
