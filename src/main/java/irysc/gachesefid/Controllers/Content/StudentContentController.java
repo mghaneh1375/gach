@@ -167,17 +167,19 @@ public class StudentContentController {
         );
     }
 
-    public static String registry(ObjectId contentId, ObjectId userId,
+    public static Document registry(ObjectId contentId, ObjectId userId,
                                   double paid, String phone, String mail) {
 
         Document content = contentRepository.findById(contentId);
 
         if(content == null)
-            return JSON_NOT_VALID_ID;
+            return null;
 
         List<Document> users = content.getList("users", Document.class);
-        users.add(new Document("_id", userId)
-                .append("paid", paid));
+        Document tmp = new Document("_id", userId)
+                .append("paid", paid).append("register_at", System.currentTimeMillis());
+
+        users.add(tmp);
 
         contentRepository.replaceOne(contentId, content);
 
@@ -190,7 +192,7 @@ public class StudentContentController {
 //            )).start();
         }
 
-        return JSON_OK;
+        return tmp;
     }
 
     public static String buy(ObjectId contentId, JSONObject data, ObjectId userId,

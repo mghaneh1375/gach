@@ -18,12 +18,12 @@ public class TransactionAPIRoutes extends Router {
 
     @GetMapping(value = "/get")
     @ResponseBody
-    public String getOffs(HttpServletRequest request,
-                          @RequestParam(value = "userId", required = false) ObjectId userId,
-                          @RequestParam(value = "from", required = false) Long from,
-                          @RequestParam(value = "to", required = false) Long to,
-                          @RequestParam(value = "useOffCode", required = false) Boolean useOffCode,
-                          @RequestParam(value = "section", required = false) String section
+    public String get(HttpServletRequest request,
+                      @RequestParam(value = "userId", required = false) ObjectId userId,
+                      @RequestParam(value = "from", required = false) Long from,
+                      @RequestParam(value = "to", required = false) Long to,
+                      @RequestParam(value = "useOffCode", required = false) Boolean useOffCode,
+                      @RequestParam(value = "section", required = false) String section
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return TransactionController.get(userId, from, to, useOffCode, section);

@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Finance;
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -51,6 +52,9 @@ public class TransactionController {
         );
 
         JSONArray data = new JSONArray();
+        double sum = 0;
+        double accountMoneySum = 0;
+
         for(Document doc : docs) {
 
             if(!doc.containsKey("user") || doc.get("user") == null)
@@ -65,14 +69,21 @@ public class TransactionController {
                     .put("useOff", doc.containsKey("off_code"))
                     .put("section", GiftController.translateUseFor(doc.getString("section")))
                     .put("amount", doc.get("amount"))
+                    .put("accountMoney", doc.getOrDefault("account_money", 0))
                     .put("user", user.getString("first_name") + " " + user.getString("last_name"))
                     .put("userNID", user.getString("NID"))
                     .put("userPhone", user.getString("phone"));
 
+            sum += jsonObject.getNumber("amount").doubleValue();
+            accountMoneySum += jsonObject.getNumber("accountMoney").doubleValue();
+
             data.put(jsonObject);
         }
 
-        return generateSuccessMsg("data", data);
+        return generateSuccessMsg("data", data,
+                new PairValue("sum", sum),
+                new PairValue("accountMoneySum", accountMoneySum)
+        );
     }
 
     public static void fetchQuizInvoice(StringBuilder section,
@@ -134,6 +145,14 @@ public class TransactionController {
                 section.append(" - ").append("خرید ").append(
                         quiz.getList("questions", ObjectId.class).size()
                 ).append(" سوال ");
+        }
+        else if(transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.CONTENT.getName()
+        )) {
+            Document content = contentRepository.findById(transaction.getObjectId("products"));
+
+            if(content != null)
+                section.append(" - ").append(content.getString("title"));
         }
 
         return section.toString();
