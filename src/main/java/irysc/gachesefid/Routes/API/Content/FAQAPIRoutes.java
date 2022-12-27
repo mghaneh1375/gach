@@ -26,6 +26,7 @@ import javax.validation.constraints.NotBlank;
 @Validated
 public class FAQAPIRoutes extends Router {
 
+
     @GetMapping(value = "get")
     @ResponseBody
     public String get(HttpServletRequest request
