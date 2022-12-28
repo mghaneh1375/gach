@@ -1,23 +1,134 @@
 package irysc.gachesefid.Controllers.Content;
 
+import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.FileUtils.uploadMultimediaFile;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class ContentConfigController {
+
+    public static String getAdv() {
+
+        Document doc = contentConfigRepository.findBySecKey("first");
+        if(doc == null)
+            return JSON_NOT_UNKNOWN;
+
+        if(!doc.containsKey("advs"))
+            return generateSuccessMsg("data", new JSONArray());
+
+        List<Document> advs = doc.getList("advs", Document.class);
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document adv : advs) {
+            jsonArray.put(new JSONObject()
+                    .put("id", adv.getObjectId("_id").toString())
+                    .put("visibility", adv.getBoolean("visibility"))
+                    .put("title", adv.getString("title"))
+                    .put("file", STATICS_SERVER + ContentRepository.FOLDER + "/" + adv.getString("file"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String removeAdv(ObjectId id) {
+
+        Document doc = contentConfigRepository.findBySecKey("first");
+        if(doc == null)
+            return JSON_NOT_UNKNOWN;
+
+        if(!doc.containsKey("advs"))
+            return JSON_NOT_VALID_ID;
+
+        List<Document> advs = doc.getList("advs", Document.class);
+
+        int idx = Utility.searchInDocumentsKeyValIdx(advs, "_id", id);
+
+        if(idx == -1)
+            return JSON_NOT_VALID_ID;
+
+        FileUtils.removeFile(advs.get(idx).getString("file"), ContentRepository.FOLDER);
+        advs.remove(idx);
+        contentConfigRepository.replaceOne(doc.getObjectId("_id"), doc);
+
+        return JSON_OK;
+    }
+
+    public static String storeAdv(MultipartFile file, JSONObject jsonObject) {
+
+        if (file.getSize() > MAX_FILE_SIZE)
+            return generateErr("حداکثر حجم مجاز، " + MAX_FILE_SIZE + " مگ است.");
+
+        String fileType = uploadMultimediaFile(file);
+
+        if (fileType == null)
+            return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+
+        Document doc = contentConfigRepository.findBySecKey("first");
+        if(doc == null)
+            return JSON_NOT_UNKNOWN;
+
+        String filename = FileUtils.uploadFile(file, ContentRepository.FOLDER);
+
+        if (filename == null)
+            return JSON_NOT_VALID_FILE;
+
+        List<Document> advs = doc.containsKey("advs") ?
+                doc.getList("advs", Document.class) :
+                new ArrayList<>()
+        ;
+
+        ObjectId id = new ObjectId();
+
+        advs.add(new Document("file", filename)
+                .append("_id", id)
+                .append("visibility", jsonObject.getBoolean("visibility"))
+                .append("title", jsonObject.getString("title"))
+        );
+
+        doc.put("advs", advs);
+        contentConfigRepository.replaceOne(doc.getObjectId("_id"), doc);
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("filename", filename)
+                .put("id", id.toString())
+        );
+    }
+
+    public static String updateAdv(ObjectId id, JSONObject jsonObject) {
+
+        Document doc = contentConfigRepository.findBySecKey("first");
+        if(doc == null || !doc.containsKey("advs"))
+            return JSON_NOT_UNKNOWN;
+
+        List<Document> advs = doc.getList("advs", Document.class);
+        Document ad = Utility.searchInDocumentsKeyVal(advs, "_id", id);
+        if(ad == null)
+            return JSON_NOT_VALID_ID;
+
+        ad.put("visibility", jsonObject.getBoolean("visibility"));
+        ad.put("title", jsonObject.getString("title"));
+
+        contentConfigRepository.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+    }
 
     private static Document getSeoDoc(ObjectId packageId) throws InvalidFieldsException {
 
