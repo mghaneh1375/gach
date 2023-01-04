@@ -178,6 +178,10 @@ public abstract class Common extends Repository {
         return null;
     }
 
+    public synchronized void clearBatchFromCache(ArrayList<Object> ids) {
+        removeBatchFromCache(table, ids);
+    }
+
     public synchronized void clearFromCache(Object o) {
         removeFromCache(table, o);
     }

@@ -3,6 +3,7 @@ package irysc.gachesefid.Routes.API.Admin.Config;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Routes.Router;

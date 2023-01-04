@@ -4,6 +4,8 @@ package irysc.gachesefid.Routes.API;
 import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Certification.AdminCertification;
 import irysc.gachesefid.Controllers.Config.CityController;
+import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.Controllers.Content.AdminContentController;
 import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
@@ -12,11 +14,9 @@ import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -24,7 +24,6 @@ import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
 
@@ -61,7 +59,6 @@ public class GeneralAPIRoutes extends Router {
     }
 
 
-
     @PostMapping(value = {"/chargeAccount", "/chargeAccount/{userId}"})
     @ResponseBody
     public String chargeAccount(HttpServletRequest request,
@@ -78,12 +75,12 @@ public class GeneralAPIRoutes extends Router {
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
-        if(userId != null) {
+        if (userId != null) {
 
             Document doc = user.get("user", Document.class);
             doc.put("money", jsonObject.getInt("amount"));
 
-            if(jsonObject.has("coin"))
+            if (jsonObject.has("coin"))
                 doc.put("coin", jsonObject.getNumber("coin").doubleValue());
 
             userRepository.replaceOne(doc.getObjectId("_id"), doc);
@@ -93,7 +90,7 @@ public class GeneralAPIRoutes extends Router {
 
         return PayPing.chargeAccount(
                 getUser(request).getObjectId("_id"),
-                 jsonObject.getInt("amount")
+                jsonObject.getInt("amount")
         );
     }
 
@@ -171,14 +168,14 @@ public class GeneralAPIRoutes extends Router {
                     modelAndView.addObject("financeUrl", frontEndUrl + "financeHistory");
                     modelAndView.addObject("getRecpUrl", frontEndUrl + "invoice/" + transactionId);
 
-                    if(section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ||
+                    if (section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ||
                             section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName())
                     ) {
 
                         String forWhat = "آزمون آیریسک";
                         modelAndView.addObject("section", "quiz");
 
-                        if(section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName())) {
+                        if (section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName())) {
                             Document transaction = transactionRepository.findById(
                                     new ObjectId(transactionId)
                             );
@@ -198,8 +195,7 @@ public class GeneralAPIRoutes extends Router {
                                     forWhat = "آزمون باز";
 
                             }
-                        }
-                        else
+                        } else
                             forWhat = "آزمون شخصی ساز";
 
                         modelAndView.addObject("forWhat", forWhat);
@@ -210,15 +206,13 @@ public class GeneralAPIRoutes extends Router {
                                                 frontEndUrl + "myCustomQuizzes" : frontEndUrl
                         );
 
-                    }
-
-                    else if(section.equalsIgnoreCase("charge"))
+                    } else if (section.equalsIgnoreCase("charge"))
                         modelAndView.addObject("section", section);
-                    else if(section.equalsIgnoreCase(OffCodeSections.CONTENT.toString())) {
+                    else if (section.equalsIgnoreCase(OffCodeSections.CONTENT.toString())) {
                         modelAndView.addObject("section", section);
                         modelAndView.addObject("forWhat", "بسته آموزشی");
                         modelAndView.addObject("myQuizzesUrl",
-                                        frontEndUrl + "myPackages"
+                                frontEndUrl + "myPackages"
                         );
                     }
                 }
@@ -252,10 +246,11 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/getAllQuizzesDigest")
     @ResponseBody
-    public String getAllQuizzesDigest(HttpServletRequest request
+    public String getAllQuizzesDigest(HttpServletRequest request,
+                                      @RequestParam(required = false, value = "isOpenQuizzesNeeded") Boolean isOpenQuizzesNeeded
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
-        return QuizController.getAllQuizzesDigest();
+        return QuizController.getAllQuizzesDigest(isOpenQuizzesNeeded);
     }
 
     @GetMapping(value = "/getMySummary")
@@ -369,6 +364,30 @@ public class GeneralAPIRoutes extends Router {
         }
     }
 
+
+    @GetMapping(value = "/buildSpinner")
+    @ResponseBody
+    public String buildSpinner(HttpServletRequest request,
+                               @RequestParam(value = "mode") String mode
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return GiftController.buildSpinner(mode, getUser(request).getObjectId("_id"));
+    }
+
+    @PostMapping(value = "/giveMyGift")
+    @ResponseBody
+    public String giveMyGift(HttpServletRequest request,
+                             @RequestParam(value = "gift") String gift
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return GiftController.giveMyGift(getUser(request).getObjectId("_id"));
+    }
+
+    @GetMapping(value = "/giveMyGifts")
+    @ResponseBody
+    public String giveMyGifts(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return GiftController.giveMyGifts(getUser(request).getObjectId("_id"));
+    }
+
     @GetMapping(value = "/fetchStates")
     @ResponseBody
     public String fetchStates() {
@@ -381,6 +400,19 @@ public class GeneralAPIRoutes extends Router {
             @RequestParam(required = false) Boolean justUnsets
     ) {
         return UserController.fetchSchoolsDigest(justUnsets);
+    }
+
+    @GetMapping(value = "/fetchContentDigests")
+    @ResponseBody
+    public String fetchContentDigests() {
+        return AdminContentController.fetchContentDigests();
+    }
+
+    @GetMapping(value = "/getMyAlerts")
+    @ResponseBody
+    public String getMyAlerts(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return AlertController.getMyAlerts(getUser(request));
     }
 
     @GetMapping(value = "/getNewAlerts")

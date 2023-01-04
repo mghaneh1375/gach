@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers.Config;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.GiftType;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
@@ -12,14 +14,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.giftRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class GiftController {
 
@@ -194,6 +196,7 @@ public class GiftController {
         }
 
         if(id == null) {
+            newDoc.put("reminder", data.getInt("count"));
             giftRepository.insertOne(newDoc);
             return generateSuccessMsg("data", convertDocToJSON(newDoc));
         }
@@ -232,6 +235,182 @@ public class GiftController {
         }
 
         return Utility.generateSuccessMsg("data", jsonObject);
+    }
+
+    public static String buildSpinner(String mode, ObjectId userId) {
+
+        if(!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
+            return JSON_NOT_VALID_PARAMS;
+
+        long curr = System.currentTimeMillis();
+        Document config = Utility.getConfig();
+        boolean isForSite = mode.equalsIgnoreCase("site");
+
+        if(
+                (isForSite && !config.containsKey("web_gift_days")) ||
+                (!isForSite && !config.containsKey("app_gift_days"))
+        )
+            return JSON_NOT_ACCESS;
+
+        List<Long> dates = isForSite ? config.getList("web_gift_days", Long.class) :
+                config.getList("app_gift_days", Long.class);
+
+        boolean findAppropriateDate = false;
+
+        for(Long date : dates) {
+
+            if(curr > date)
+                continue;
+
+            if(date - curr > ONE_DAY_MIL_SEC)
+                continue;
+
+            findAppropriateDate = true;
+            break;
+        }
+
+        if(!findAppropriateDate)
+            return JSON_NOT_ACCESS;
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(exists("deleted_at", false));
+        filters.add(gt("reminder", 0));
+        filters.add(eq("is_for_site", isForSite));
+
+        ArrayList<Document> gifts = giftRepository.find(and(filters), null, Sorts.ascending("priority"));
+
+        JSONArray jsonArray = new JSONArray();
+        int limit = Math.min(gifts.size(), (Integer) config.getOrDefault(isForSite ? "max_web_gift_slot" : "max_app_gift_slot", 8));
+        int totalW = 0;
+        ArrayList<Integer> upperBounds = new ArrayList<>();
+
+        for(int i = 0; i < limit; i++) {
+
+            Document gift = gifts.get(i);
+
+            totalW += gift.getInteger("prob");
+            upperBounds.add(totalW);
+
+            jsonArray.put(new JSONObject()
+                    .put("id", gift.getObjectId("_id").toString())
+                    .put("created_at", curr - getRandIntForGift(100000))
+                    .put("label", getGiftString(gift))
+            );
+        }
+
+        int r = getRandIntForGift(totalW);
+
+        int selectedGiftIdx = -1;
+
+        for(int i = 0; i < upperBounds.size(); i++) {
+            if(upperBounds.get(i) > r) {
+                selectedGiftIdx = i;
+                break;
+            }
+        }
+
+        if(selectedGiftIdx != -1) {
+            System.out.println(gifts.get(selectedGiftIdx).getString("type"));
+            jsonArray.getJSONObject(selectedGiftIdx).put("created_at", curr - 400000);
+        }
+
+        userGiftRepository.insertOneWithReturnId(new Document("created_at", curr)
+                .append("status", "init")
+                .append("user_id", userId)
+                .append("mode", mode)
+                .append("gift", gifts.get(selectedGiftIdx).getObjectId("_id"))
+        );
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    private static String getGiftString(Document gift) {
+
+        if(gift.getString("type").equalsIgnoreCase("offcode")) {
+            if(gift.getString("off_code_type").equalsIgnoreCase("percent"))
+                return "کد تخفیف " + gift.getInteger("amount") + "% " + translateUseFor(gift.getString("use_for"));
+
+            return "تخفیف " + gift.getInteger("amount") + " تومان " + translateUseFor(gift.getString("use_for"));
+        }
+
+        if(gift.getString("type").equalsIgnoreCase("coin"))
+            return  gift.get("amount") + " ایکس پول";
+
+        if(gift.getString("type").equalsIgnoreCase("money"))
+            return  gift.get("amount") + " تومان اعتبار";
+
+        return "";
+    }
+
+    public static String giveMyGift(ObjectId userId) {
+
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        Document doc = userGiftRepository.findOne(and(
+                eq("user_id", userId),
+                eq("status", "init"),
+                gt("created_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC)
+        ), null);
+
+        if(doc == null)
+            return JSON_NOT_ACCESS;
+
+        doc.put("status", "finish");
+        userGiftRepository.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+
+    }
+
+    private static JSONObject offGift(Document gift) {
+        return new JSONObject()
+                .put("amount", gift.getInteger("amount"))
+                .put("type", gift.getString("off_code_type"))
+                .put("section", gift.getString("use_for"))
+                .put("sectionFa", translateUseFor(gift.getString("use_for")))
+                .put("expireAtTs", gift.getLong("expire_at"))
+                .put("expireAt", gift.getLong("expire_at"));
+    }
+
+    public static String giveMyGifts(ObjectId userId) {
+
+        ArrayList<Document> docs = userGiftRepository.find(and(
+                eq("user_id", userId),
+                eq("status", "finish")
+        ), null);
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            Document gift = giftRepository.findById(doc.getObjectId("gift"));
+            if(gift == null)
+                continue;
+
+            if(gift.getString("type").equalsIgnoreCase("offcode"))
+                jsonArray.put(new JSONObject()
+                        .put("type", "off")
+                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
+                        .put("obj", offGift(gift))
+                );
+            else if(gift.getString("type").equalsIgnoreCase("coin"))
+                jsonArray.put(new JSONObject()
+                        .put("type", "coin")
+                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
+                        .put("label", getGiftString(gift))
+                );
+            else if(gift.getString("type").equalsIgnoreCase("money"))
+                jsonArray.put(new JSONObject()
+                        .put("type", "money")
+                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
+                        .put("label", getGiftString(gift))
+                );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 
 }

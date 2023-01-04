@@ -83,9 +83,11 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static TarazRepository tarazRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
+    public static UserGiftRepository userGiftRepository;
     public static UserRepository userRepository;
     public static MailRepository mailRepository;
     public static MailQueueRepository mailQueueRepository;
+    public static NotifRepository notifRepository;
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
 
@@ -138,7 +140,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
             tarazRepository = new TarazRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();
+            userGiftRepository = new UserGiftRepository();
             userRepository = new UserRepository();
+            notifRepository = new NotifRepository();
 
 //            SCHOOLS = schoolRepository.count(exists("user_id"));
             SCHOOLS = schoolRepository.count(null);

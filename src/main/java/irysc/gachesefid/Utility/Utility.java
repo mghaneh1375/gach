@@ -805,6 +805,10 @@ public class Utility {
         return number;
     }
 
+    public static int getRandIntForGift(int upper) {
+        return Math.abs(random.nextInt(upper));
+    }
+
     public static String getSolarDate(long time) {
 
         if(time < 1610494635)

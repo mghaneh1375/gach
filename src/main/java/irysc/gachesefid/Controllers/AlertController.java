@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers;
 
+import irysc.gachesefid.DB.NotifRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -7,8 +8,10 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import static irysc.gachesefid.Main.GachesefidApplication.alertsRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.newThingsCache;
+import java.util.ArrayList;
+import java.util.List;
+
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 
 public class AlertController {
 
@@ -67,5 +70,31 @@ public class AlertController {
         alertsRepository.insertOne(
                 new Document("msg", msg).append("owner", "admin").append("seen", false).append("created_at", System.currentTimeMillis())
         );
+    }
+
+    public static String getMyAlerts(Document user) {
+
+        if(!user.containsKey("events"))
+            return Utility.generateSuccessMsg("data", new JSONArray());
+
+        List<Document> events = user.getList("events", Document.class);
+        JSONArray data = new JSONArray();
+
+        for (Document event : events) {
+            if(!event.getBoolean("seen")) {
+
+                Document notif = notifRepository.findById(event.getObjectId("notif_id"));
+                if(notif == null)
+                    continue;
+
+                data.put(new JSONObject()
+                        .put("value", notif.getString("title"))
+                        .put("id", event.getObjectId("notif_id").toString())
+                        .put("key", "notif")
+                );
+            }
+        }
+
+        return Utility.generateSuccessMsg("data", data);
     }
 }

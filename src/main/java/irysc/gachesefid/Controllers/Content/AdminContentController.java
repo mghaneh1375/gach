@@ -1,20 +1,39 @@
 package irysc.gachesefid.Controllers.Content;
 
-import irysc.gachesefid.Exception.InvalidFieldsException;
+import com.mongodb.BasicDBObject;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
 public class AdminContentController {
+
+    public static String fetchContentDigests() {
+
+        ArrayList<Document> docs = contentRepository.find(null,
+                new BasicDBObject("_id", 1).append("title", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        for(Document doc : docs) {
+            jsonArray.put(
+                    new JSONObject()
+                            .put("title", doc.getString("title"))
+                            .put("id", doc.getObjectId("_id").toString())
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 
     private static JSONObject convertStudentDocToJSON(
             Document student, Document user

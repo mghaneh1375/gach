@@ -89,7 +89,7 @@ public class Utility {
         return returnAddResponse(excepts, added);
     }
 
-    static JSONObject convertDocToJSON(Document off) {
+    public static JSONObject convertDocToJSON(Document off) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("amount", off.getInteger("amount"))

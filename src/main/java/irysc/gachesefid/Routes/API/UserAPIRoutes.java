@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Updates;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.Question.Utilities;
@@ -67,10 +68,20 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if(1 == 1) {
-            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
-                    .append("ads", new ArrayList<>())
-                    .append("seo", new ArrayList<>())
-            );
+
+            ArrayList<ObjectId> removed = new ArrayList<>();
+            removed.add(new ObjectId("63b53b06145f74328cdc2d50"));
+
+            for(ObjectId objectId : removed) {
+                Bson update = Updates.pull("events", eq("notif_id", objectId));
+                userRepository.updateMany(exists("events.0"), update);
+            }
+
+//            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
+//                    .append("ads", new ArrayList<>())
+//                    .append("seo", new ArrayList<>())
+//            );
+
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "", "regexam");
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "1400/02/04", "newQuiz");
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "", "quizRemember");

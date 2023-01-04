@@ -83,6 +83,17 @@ public class Repository {
         }
     }
 
+
+    static void removeBatchFromCache(String section, ArrayList<Object> ids) {
+
+        if (!generalCached.containsKey(section))
+            return;
+
+        ArrayList<Cache> cached = generalCached.get(section);
+        cached.removeIf(itr -> ids.contains(itr.getKey()));
+    }
+
+
     static void addToCache(String section, Document doc, Object secKey, int limit, int expirationSec) {
 
         if (!generalCached.containsKey(section))

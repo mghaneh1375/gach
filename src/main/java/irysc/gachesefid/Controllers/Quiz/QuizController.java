@@ -52,7 +52,7 @@ public class QuizController {
         );
     }
 
-    public static String getAllQuizzesDigest() {
+    public static String getAllQuizzesDigest(Boolean isOpenQuizzesNeeded) {
 
         JSONArray all = new JSONArray();
         ArrayList<Document> quizzes = iryscQuizRepository.find(null, null);
@@ -67,16 +67,20 @@ public class QuizController {
             all.put(jsonObject1);
         }
 
-        quizzes = openQuizRepository.find(null, null);
+        if(isOpenQuizzesNeeded == null || isOpenQuizzesNeeded) {
 
-        for(Document quiz : quizzes) {
+            quizzes = openQuizRepository.find(null, null);
 
-            JSONObject jsonObject1 = new JSONObject()
-                    .put("id", quiz.getObjectId("_id").toString())
-                    .put("name", quiz.getString("title") + " در آزمون های باز")
-                    .put("mode", "open");
+            for(Document quiz : quizzes) {
 
-            all.put(jsonObject1);
+                JSONObject jsonObject1 = new JSONObject()
+                        .put("id", quiz.getObjectId("_id").toString())
+                        .put("name", quiz.getString("title") + " در آزمون های باز")
+                        .put("mode", "open");
+
+                all.put(jsonObject1);
+            }
+
         }
 
         return generateSuccessMsg("data", all);
