@@ -31,6 +31,7 @@ public class Jobs implements Runnable {
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
         timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
         timer.schedule(new SendMails(), 0, 300000);
+        timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
@@ -381,7 +382,9 @@ public class Jobs implements Runnable {
                     Document mail = mails.get(i);
 
                     if(Utility.sendMail(
-                            mail.getString("mail"),
+                            mail.containsKey("title") ?
+                                    mail.getString("title") + "___" + mail.getString("mail") :
+                                    mail.getString("mail"),
                             (String) mail.getOrDefault("msg", ""),
                             mail.getString("mode"),
                             (String) mail.getOrDefault("name", "")
@@ -409,6 +412,44 @@ public class Jobs implements Runnable {
 
             if(ids.size() > 0)
                 mailQueueRepository.deleteMany(in("_id", ids));
+        }
+    }
+
+    private static class SendSMS extends TimerTask {
+
+        @Override
+        public void run() {
+
+            ArrayList<Document> allSms =
+                    smsQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
+
+            if(allSms.size() == 0)
+                return;
+
+            int limit = allSms.size() > 30 ? 30 : allSms.size();
+            ArrayList<ObjectId> ids = new ArrayList<>();
+
+            for(int i = 0; i < limit; i++) {
+
+                try {
+                    Document sms = allSms.get(i);
+
+                    if(Utility.sendSMSWithoutTemplate(
+                            sms.getString("phone"), sms.getString("msg")
+                    ))
+                        ids.add(sms.getObjectId("_id"));
+                    else {
+                        sms.put("status", "failed");
+                        smsQueueRepository.replaceOne(sms.getObjectId("_id"), sms);
+                    }
+
+                    Thread.sleep(1000);
+                }
+                catch (Exception ignore) {}
+            }
+
+            if(ids.size() > 0)
+                smsQueueRepository.deleteMany(in("_id", ids));
         }
     }
 

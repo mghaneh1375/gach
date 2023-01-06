@@ -8,7 +8,10 @@ import irysc.gachesefid.Models.NotifVia;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -26,20 +29,41 @@ public class NotifAPIRoutes extends Router {
     @GetMapping(value = "getAll")
     @ResponseBody
     public String getAll(HttpServletRequest request,
-                             @RequestParam(required = false, value = "from") Long from,
-                             @RequestParam(required = false, value = "to") Long to
+                         @RequestParam(value = "sendVia") @EnumValidator(enumClazz = NotifVia.class) String sendVia,
+                         @RequestParam(required = false, value = "from") Long from,
+                         @RequestParam(required = false, value = "to") Long to
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return NotifController.getAll(from, to);
+        return NotifController.getAll(sendVia, from, to);
     }
+
+
+    @GetMapping(value = "getStudents/{id}")
+    @ResponseBody
+    public String getStudents(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return NotifController.getStudents(id);
+    }
+
+    @GetMapping(value = "get/{id}")
+    @ResponseBody
+    public String get(HttpServletRequest request,
+                      @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return NotifController.getNotif(id, null);
+    }
+
 
     @DeleteMapping(value = "remove")
     @ResponseBody
     public String remove(HttpServletRequest request,
-                        @RequestBody @StrongJSONConstraint(
-                                params = {"items"},
-                                paramsType = {JSONArray.class}
-                        ) String jsonStr
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {"items"},
+                                 paramsType = {JSONArray.class}
+                         ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return NotifController.remove(new JSONObject(jsonStr).getJSONArray("items"));
@@ -49,8 +73,11 @@ public class NotifAPIRoutes extends Router {
     @ResponseBody
     public String store(HttpServletRequest request,
                         @RequestBody @StrongJSONConstraint(
-                                params = {"via", "title", "text"},
-                                paramsType = {NotifVia.class, String.class, String.class},
+                                params = {"via", "title", "text", "sendSMS", "sendMail"},
+                                paramsType = {
+                                        NotifVia.class, String.class, String.class,
+                                        Boolean.class, Boolean.class
+                                },
                                 optionals = {
                                         "cities", "states", "nids", "phones",
                                         "branches", "sex", "schools", "grades",
@@ -68,7 +95,7 @@ public class NotifAPIRoutes extends Router {
                                         Positive.class
                                 }
                         ) @NotBlank String jsonStr
-                        ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return NotifController.store(new JSONObject(jsonStr));
     }

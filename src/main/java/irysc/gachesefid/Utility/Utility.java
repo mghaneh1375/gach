@@ -245,8 +245,8 @@ public class Utility {
                                   String template
     ) {
 
-//        if(DEV_MODE)
-//            return true;
+        if(DEV_MODE)
+            return true;
 
         receptor = convertPersianDigits(receptor);
 
@@ -258,6 +258,40 @@ public class Utility {
         try {
             KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
             SendResult Result = api.verifyLookup(receptor, token, token2, token3, template);
+
+            if(Result.getStatus() == 6 ||
+                    Result.getStatus() == 11 ||
+                    Result.getStatus() == 13 ||
+                    Result.getStatus() == 14 ||
+                    Result.getStatus() == 100
+            )
+                return false;
+
+            return true;
+        } catch (HttpException ex) {
+            System.out.print("HttpException  : " + ex.getMessage());
+        } catch (ApiException ex) {
+            System.out.print("ApiException : " + ex.getMessage());
+        }
+
+        return false;
+    }
+
+    public static boolean sendSMSWithoutTemplate(String receptor, String msg) {
+
+        if(DEV_MODE)
+            return true;
+
+        receptor = convertPersianDigits(receptor);
+
+        if(!PhoneValidator.isValid(receptor)) {
+            System.out.println("not valid phone num");
+            return false;
+        }
+
+        try {
+            KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
+            SendResult Result = api.send("000", receptor, msg);
 
             if(Result.getStatus() == 6 ||
                     Result.getStatus() == 11 ||
@@ -375,8 +409,8 @@ public class Utility {
 
     public static boolean sendMail(String to, String msg, String mode, String username) {
 
-        if (DEV_MODE)
-            return true;
+//        if (DEV_MODE)
+//            return true;
 
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);
@@ -395,6 +429,7 @@ public class Utility {
 
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress("noreply@irysc.com", "noreply@irysc.com"));
+            String title = null;
 
             String subject = "";
 
@@ -407,6 +442,12 @@ public class Utility {
                 subject = "ثبت نام موفق در سایت";
             else if(mode.equalsIgnoreCase("successQuiz"))
                 subject = "خرید/ساخت آزمون";
+            else if(mode.equalsIgnoreCase("notif")) {
+                subject = "پیام جدید";
+                String[] splited = to.split("___");
+                title = splited[0];
+                to = splited[1];
+            }
             else if(mode.equalsIgnoreCase("quizReminder"))
                 subject = "یادآوری آزمون";
             else if(mode.equalsIgnoreCase("offcode"))
@@ -431,10 +472,17 @@ public class Utility {
                     "clear: both;\n" +
                     "height: 80px;'>";
 
-            html += "<h3 style='color: rgb(1, 50, 67);\n" +
-                    "font-family: IRANSans;\n" +
-                    "font-size: 20px;\n" +
-                    "margin-top: 20px; float: right;'>" + subject +  "</h3>";
+            if(title == null)
+                html += "<h3 style='color: rgb(1, 50, 67);\n" +
+                        "font-family: IRANSans;\n" +
+                        "font-size: 20px;\n" +
+                        "margin-top: 20px; float: right;'>" + subject +  "</h3>";
+            else
+                html += "<h3 style='color: rgb(1, 50, 67);\n" +
+                        "font-family: IRANSans;\n" +
+                        "font-size: 20px;\n" +
+                        "margin-top: 20px; float: right;'>" + title +  "</h3>";
+
 
             html += "<img style='height: 60px;\n" +
                     "margin-bottom: 20px;\n" +
@@ -448,7 +496,9 @@ public class Utility {
             else
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
-            if (mode.equalsIgnoreCase("signUp") ||
+            if(mode.equalsIgnoreCase("notif"))
+                html += msg;
+            else if (mode.equalsIgnoreCase("signUp") ||
                     mode.equalsIgnoreCase("forget")) {
                 html += "<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>";
                 html += "<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>" + msg + "</p>";
@@ -520,7 +570,8 @@ public class Utility {
             System.out.println("send");
 
             String finalSubject = subject;
-            new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", to).append("subject", finalSubject))).start();
+            String finalTo = to;
+            new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", finalTo).append("subject", finalSubject))).start();
 
         } catch (Exception x) {
             printException(x);
