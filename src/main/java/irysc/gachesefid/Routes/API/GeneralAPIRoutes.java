@@ -365,12 +365,13 @@ public class GeneralAPIRoutes extends Router {
     }
 
 
-    @GetMapping(value = "/buildSpinner")
+    @GetMapping(value = "/buildSpinner/{id}")
     @ResponseBody
     public String buildSpinner(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId id,
                                @RequestParam(value = "mode") String mode
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return GiftController.buildSpinner(mode, getUser(request).getObjectId("_id"));
+        return GiftController.buildSpinner(mode, getUser(request).getObjectId("_id"), id);
     }
 
     @PostMapping(value = "/giveMyGift")

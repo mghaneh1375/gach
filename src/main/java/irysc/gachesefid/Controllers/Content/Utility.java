@@ -138,6 +138,14 @@ public class Utility {
             jsonObject.put("sessions", sessionsJSON);
         }
 
+        Document config = contentConfigRepository.findBySecKey("first");
+        if(config != null) {
+            List<Document> advs = config.getList("advs", Document.class);
+            if(advs.size() > 0) {
+                jsonObject.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + advs.get(0).getString("file"));
+            }
+        }
+
         return jsonObject;
     }
 

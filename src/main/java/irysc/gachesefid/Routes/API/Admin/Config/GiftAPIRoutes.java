@@ -3,7 +3,6 @@ package irysc.gachesefid.Routes.API.Admin.Config;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Routes.Router;
@@ -40,6 +39,34 @@ public class GiftAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return GiftController.getConfig();
+    }
+
+    @PutMapping(value = "/updateConfig")
+    @ResponseBody
+    public String updateConfig(HttpServletRequest request,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {},
+                                       paramsType = {},
+                                       optionals = {
+                                               "coinForSecondTime",
+                                               "coinForThirdTime",
+                                               "coinForForthTime",
+                                               "coinForFifthTime",
+                                               "maxWebGiftSlot",
+                                               "maxAppGiftSlot",
+                                               "appGiftDays",
+                                               "webGiftDays",
+                                       },
+                                       optionalsType = {
+                                               Number.class, Number.class,
+                                               Number.class, Number.class,
+                                               Positive.class, Positive.class,
+                                               JSONArray.class, JSONArray.class
+                                       }
+                               ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return GiftController.updateConfig(new JSONObject(jsonStr));
     }
 
     @DeleteMapping(value = "/remove")

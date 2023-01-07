@@ -12,6 +12,7 @@ public class UserGiftRepository extends Common {
     @Override
     void init() {
         table = "user_gift";
+        secKey = "unique_key";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 }

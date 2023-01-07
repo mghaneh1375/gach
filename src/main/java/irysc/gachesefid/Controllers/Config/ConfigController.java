@@ -11,7 +11,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.in;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;

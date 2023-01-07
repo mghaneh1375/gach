@@ -2,11 +2,12 @@ package irysc.gachesefid.Controllers.Config;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.GiftTarget;
 import irysc.gachesefid.Models.GiftType;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -15,7 +16,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -209,13 +210,18 @@ public class GiftController {
 
         Document config = Utility.getConfig();
         JSONObject jsonObject = new JSONObject();
+        long curr = System.currentTimeMillis();
 
         for (String key : config.keySet()) {
 
             if (!key.equalsIgnoreCase("max_web_gift_slot") &&
                     !key.equalsIgnoreCase("max_app_gift_slot") &&
                     !key.equalsIgnoreCase("app_gift_days") &&
-                    !key.equalsIgnoreCase("web_gift_days")
+                    !key.equalsIgnoreCase("web_gift_days") &&
+                    !key.equalsIgnoreCase("coin_for_second_time") &&
+                    !key.equalsIgnoreCase("coin_for_third_time") &&
+                    !key.equalsIgnoreCase("coin_for_forth_time") &&
+                    !key.equalsIgnoreCase("coin_for_fifth_time")
             )
                 continue;
 
@@ -227,50 +233,122 @@ public class GiftController {
                 }
             }
 
-            if (hasLittleChar)
-                jsonObject.put(Utility.camel(key, false), config.get(key));
-            else
-                jsonObject.put(key, config.get(key));
+            Object val = config.get(key);
+
+            if(
+                    key.equalsIgnoreCase("web_gift_days") ||
+                            key.equalsIgnoreCase("app_gift_days")
+            ) {
+                List<Document> days = config.getList(key, Document.class);
+                val = days.stream().filter(itr -> itr.getLong("date") > curr).collect(Collectors.toList());
+
+                JSONArray finalList = new JSONArray();
+
+                for(Document itr : (List<Document>)val) {
+
+                    JSONObject jsonObject1 = new JSONObject();
+
+                    if(itr.containsKey("ref_id")) {
+
+                        ObjectId id = itr.getObjectId("ref_id");
+                        String title = null;
+
+                        if(itr.getString("target").equalsIgnoreCase(
+                                GiftTarget.QUIZ.getName()
+                        )) {
+                            Document ref = iryscQuizRepository.findById(id);
+                            if(ref == null)
+                                continue;
+
+                            title = ref.getString("title");
+                        }
+                        else if(itr.getString("target").equalsIgnoreCase(
+                                GiftTarget.PACKAGE.getName()
+                        )) {
+                            Document ref = contentRepository.findById(id);
+                            if(ref == null)
+                                continue;
+
+                            title = ref.getString("title");
+                        }
+
+                        if(title == null)
+                            continue;
+
+                        jsonObject1.put("additional", new JSONObject()
+                                .put("id", id.toString())
+                                .put("name", title)
+                        );
+                    }
+
+                    jsonObject1.put("date", itr.getLong("date"))
+                            .put("target", itr.getString("target"))
+                            .put("id", itr.getObjectId("_id").toString())
+                    ;
+
+                    finalList.put(jsonObject1);
+                }
+
+                if (hasLittleChar)
+                    jsonObject.put(Utility.camel(key, false), finalList);
+                else
+                    jsonObject.put(key, finalList);
+            }
+            else {
+
+                if (hasLittleChar)
+                    jsonObject.put(Utility.camel(key, false), val);
+                else
+                    jsonObject.put(key, val);
+            }
 
         }
 
         return Utility.generateSuccessMsg("data", jsonObject);
     }
 
-    public static String buildSpinner(String mode, ObjectId userId) {
+    public static String buildSpinner(String mode, ObjectId userId, ObjectId id) {
 
         if(!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
             return JSON_NOT_VALID_PARAMS;
 
-        long curr = System.currentTimeMillis();
-        Document config = Utility.getConfig();
-        boolean isForSite = mode.equalsIgnoreCase("site");
+        Document userGift = userGiftRepository.findById(id);
 
-        if(
-                (isForSite && !config.containsKey("web_gift_days")) ||
-                (!isForSite && !config.containsKey("app_gift_days"))
+        if(userGift == null ||
+                !userGift.getObjectId("user_id").equals(userId) ||
+                !userGift.getString("mode").equals(mode)
         )
+            return JSON_NOT_VALID_ID;
+
+        long curr = System.currentTimeMillis();
+        if(userGift.getString("status").equals("finish") ||
+                userGift.containsKey("gift") ||
+                userGift.getLong("expire_at") < curr)
             return JSON_NOT_ACCESS;
 
-        List<Long> dates = isForSite ? config.getList("web_gift_days", Long.class) :
-                config.getList("app_gift_days", Long.class);
+        JSONObject data = new JSONObject();
+        Document config = Utility.getConfig();
 
-        boolean findAppropriateDate = false;
+        if(config.containsKey("coin_for_second_time")) {
 
-        for(Long date : dates) {
+            data.put("coinForSecondTime", config.get("coin_for_second_time"));
 
-            if(curr > date)
-                continue;
+            if(config.containsKey("coin_for_third_time")) {
+                data.put("coinForThirdTime", config.get("coin_for_third_time"));
 
-            if(date - curr > ONE_DAY_MIL_SEC)
-                continue;
+                if(config.containsKey("coin_for_forth_time")) {
+                    data.put("coinForForthTime", config.get("coin_for_forth_time"));
 
-            findAppropriateDate = true;
-            break;
+                    if(config.containsKey("coin_for_fifth_time"))
+                        data.put("coinForFifthTime", config.get("coin_for_fifth_time"));
+
+                }
+
+            }
+
         }
 
-        if(!findAppropriateDate)
-            return JSON_NOT_ACCESS;
+        boolean isForSite = mode.equalsIgnoreCase("site");
 
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(exists("deleted_at", false));
@@ -314,14 +392,13 @@ public class GiftController {
             jsonArray.getJSONObject(selectedGiftIdx).put("created_at", curr - 400000);
         }
 
-        userGiftRepository.insertOneWithReturnId(new Document("created_at", curr)
-                .append("status", "init")
-                .append("user_id", userId)
-                .append("mode", mode)
-                .append("gift", gifts.get(selectedGiftIdx).getObjectId("_id"))
-        );
+        if(!userGift.containsKey("gift")) {
+            userGift.put("gift", gifts.get(selectedGiftIdx).getObjectId("_id"));
+        }
 
-        return generateSuccessMsg("data", jsonArray);
+
+        data.put("spins", jsonArray);
+        return generateSuccessMsg("data", data);
     }
 
     private static String getGiftString(Document gift) {
@@ -413,4 +490,93 @@ public class GiftController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String updateConfig(JSONObject jsonObject) {
+
+        Document config = Utility.getConfig();
+
+        if(jsonObject.has("maxWebGiftSlot")) {
+
+            config.put("max_web_gift_slot", jsonObject.getInt("maxWebGiftSlot"));
+
+            if(jsonObject.has("webGiftDays")) {
+
+                JSONArray webGiftDays = jsonObject.getJSONArray("webGiftDays");
+                ArrayList<Document> validated = new ArrayList<>();
+
+                for(int i = 0; i < webGiftDays.length(); i++) {
+
+                    JSONObject info = webGiftDays.getJSONObject(i);
+
+                    if(!info.has("target") || !info.has("date"))
+                        continue;
+
+                    String target = info.getString("target");
+                    try {
+
+                        if (!EnumValidatorImp.isValid(target, GiftTarget.class))
+                            continue;
+
+                        if (target.equalsIgnoreCase(GiftTarget.PACKAGE.getName()) ||
+                                target.equalsIgnoreCase(GiftTarget.QUIZ.getName())
+                        ) {
+
+                            if (!info.has("additional"))
+                                continue;
+
+                            if(!info.getJSONObject("additional").has("id"))
+                                continue;
+
+                            String id = info.getJSONObject("additional").getString("id");
+                            if(!ObjectId.isValid(id))
+                                continue;
+
+                            if(target.equalsIgnoreCase(GiftTarget.PACKAGE.getName()) &&
+                                contentRepository.findById(new ObjectId(id)) == null
+                            )
+                                continue;
+
+                            if(target.equalsIgnoreCase(GiftTarget.QUIZ.getName()) &&
+                                    iryscQuizRepository.findById(new ObjectId(id)) == null
+                            )
+                                continue;
+                        }
+
+                        Document newDoc = new Document("date", info.getLong("date"))
+                                .append("target", target).append("_id", new ObjectId());
+
+                        if (target.equalsIgnoreCase(GiftTarget.PACKAGE.getName()) ||
+                                target.equalsIgnoreCase(GiftTarget.QUIZ.getName())
+                        )
+                            newDoc.put("ref_id", new ObjectId(info.getJSONObject("additional").getString("id")));
+
+                        validated.add(newDoc);
+                    }
+                    catch (Exception ignore) {}
+
+                }
+
+                config.put("web_gift_days", validated);
+            }
+            else
+                config.put("web_gift_days", new ArrayList<>());
+
+        }
+
+        if(jsonObject.has("coinForSecondTime"))
+            config.put("coin_for_second_time", jsonObject.getNumber("coinForSecondTime").doubleValue());
+
+        if(jsonObject.has("coinForThirdTime"))
+            config.put("coin_for_third_time", jsonObject.getNumber("coinForThirdTime").doubleValue());
+
+        if(jsonObject.has("coinForForthTime"))
+            config.put("coin_for_forth_time", jsonObject.getNumber("coinForForthTime").doubleValue());
+
+        if(jsonObject.has("coinForFifthTime"))
+            config.put("coin_for_fifth_time", jsonObject.getNumber("coinForFifthTime").doubleValue());
+
+
+        configRepository.replaceOne(config.getObjectId("_id"), config);
+        configRepository.clearFromCache(config.getObjectId("_id"));
+        return JSON_OK;
+    }
 }
