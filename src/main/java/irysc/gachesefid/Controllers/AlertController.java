@@ -95,10 +95,10 @@ public class AlertController {
 
         for(Document itr : dates) {
 
-            if (curr > itr.getLong("date"))
+            if (curr < itr.getLong("date"))
                 continue;
 
-            if (itr.getLong("date") - curr > ONE_DAY_MIL_SEC)
+            if (curr - itr.getLong("date") > ONE_DAY_MIL_SEC)
                 continue;
 
             Document tmp = userGiftRepository.findBySecKey(itr.getObjectId("_id").toString() + "_" + userId.toString());

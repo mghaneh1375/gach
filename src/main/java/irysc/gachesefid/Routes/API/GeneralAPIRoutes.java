@@ -371,8 +371,25 @@ public class GeneralAPIRoutes extends Router {
                                @PathVariable @ObjectIdConstraint ObjectId id,
                                @RequestParam(value = "mode") String mode
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return GiftController.buildSpinner(mode, getUser(request).getObjectId("_id"), id);
+        Document user = getUser(request);
+        return GiftController.buildSpinner(mode, user.getObjectId("_id"), user.getDouble("coin"), id);
     }
+
+
+    @GetMapping(value = "/buildSpinnerAgain/{id}")
+    @ResponseBody
+    public String buildSpinnerAgain(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId id,
+                                    @RequestParam(value = "repeat") String repeat,
+                                    @RequestParam(value = "mode") String mode
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
+        return GiftController.buildSpinnerAgain(
+                mode, user.getObjectId("_id"),
+                user.getDouble("coin"), id, repeat
+        );
+    }
+
 
     @PostMapping(value = "/giveMyGift")
     @ResponseBody
