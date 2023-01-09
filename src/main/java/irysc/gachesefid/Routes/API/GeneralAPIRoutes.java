@@ -394,9 +394,10 @@ public class GeneralAPIRoutes extends Router {
     @PostMapping(value = "/giveMyGift")
     @ResponseBody
     public String giveMyGift(HttpServletRequest request,
-                             @RequestParam(value = "gift") String gift
+                             @RequestParam(value = "id") @ObjectIdConstraint ObjectId id,
+                             @RequestParam(value = "repeat", required = false) String repeat
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return GiftController.giveMyGift(getUser(request).getObjectId("_id"));
+        return GiftController.giveMyGift(id, repeat, getUser(request));
     }
 
     @GetMapping(value = "/giveMyGifts")

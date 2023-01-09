@@ -1,5 +1,9 @@
 package irysc.gachesefid.Utility;
 
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
@@ -279,33 +283,43 @@ public class Utility {
 
     public static boolean sendSMSWithoutTemplate(String receptor, String msg) {
 
-        if(DEV_MODE)
-            return true;
+//        if(DEV_MODE)
+//            return true;
 
         receptor = convertPersianDigits(receptor);
 
-        if(!PhoneValidator.isValid(receptor)) {
-            System.out.println("not valid phone num");
-            return false;
-        }
-
         try {
-            KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
-            SendResult Result = api.send("000", receptor, msg);
 
-            if(Result.getStatus() == 6 ||
-                    Result.getStatus() == 11 ||
-                    Result.getStatus() == 13 ||
-                    Result.getStatus() == 14 ||
-                    Result.getStatus() == 100
-            )
-                return false;
+//            HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/msgstatus")
+//                    .queryString("username", "gachesefid")
+//                    .queryString("password", "9DGr7JwEUXLtyVee")
+//                    .queryString("msgid", "3375157462") //"3375133058"
+//                    .header("content-type", "application/x-www-form-urlencoded")
+//                    .header("accept", "application/json")
+//                    .header("cache-control", "no-cache")
+//                    .asString();
+
+            HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/sendsms")
+                    .queryString("username", "gachesefid")
+                    .queryString("password", "9DGr7JwEUXLtyVee")
+                    .queryString("source", "2166591203")
+                    .queryString("destination", receptor)
+                    .queryString("message", msg)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("accept", "application/json")
+                    .header("cache-control", "no-cache")
+                    .asString();
+
+            if(response != null)
+                System.out.println(response.getBody());
 
             return true;
         } catch (HttpException ex) {
             System.out.print("HttpException  : " + ex.getMessage());
         } catch (ApiException ex) {
             System.out.print("ApiException : " + ex.getMessage());
+        } catch (UnirestException e) {
+            e.printStackTrace();
         }
 
         return false;

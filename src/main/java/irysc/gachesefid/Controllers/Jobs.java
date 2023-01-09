@@ -7,6 +7,7 @@ import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -426,30 +427,68 @@ public class Jobs implements Runnable {
             if(allSms.size() == 0)
                 return;
 
-            int limit = allSms.size() > 30 ? 30 : allSms.size();
-            ArrayList<ObjectId> ids = new ArrayList<>();
+            HashMap<ObjectId, ArrayList<String>> receivers = new HashMap<>();
+            HashMap<ObjectId, ArrayList<ObjectId>> ids = new HashMap<>();
+            HashMap<ObjectId, String> messages = new HashMap<>();
 
-            for(int i = 0; i < limit; i++) {
+            for(Document sms : allSms) {
 
-                try {
-                    Document sms = allSms.get(i);
+                if(!PhoneValidator.isValid(sms.getString("phone")))
+                    continue;
 
-                    if(Utility.sendSMSWithoutTemplate(
-                            sms.getString("phone"), sms.getString("msg")
-                    ))
-                        ids.add(sms.getObjectId("_id"));
-                    else {
-                        sms.put("status", "failed");
-                        smsQueueRepository.replaceOne(sms.getObjectId("_id"), sms);
-                    }
+                ObjectId notifId = sms.getObjectId("notif_id");
 
-                    Thread.sleep(1000);
+                if(!messages.containsKey(notifId)) {
+                    messages.put(notifId, sms.getString("msg"));
+                    receivers.put(notifId, new ArrayList<>(){{add(sms.getString("phone"));}});
+                    ids.put(notifId, new ArrayList<>(){{add(sms.getObjectId("_id"));}});
                 }
-                catch (Exception ignore) {}
+                else {
+                    receivers.get(notifId).add(sms.getString("phone"));
+                    ids.get(notifId).add(sms.getObjectId("_id"));
+                }
+
             }
 
-            if(ids.size() > 0)
-                smsQueueRepository.deleteMany(in("_id", ids));
+            for(ObjectId key : messages.keySet()) {
+
+                int reminder = ids.get(key).size();
+                int limit;
+                int curr = 0;
+
+                ArrayList<String> recv = receivers.get(key);
+
+                while (curr < ids.get(key).size()) {
+
+                    StringBuilder sb = new StringBuilder();
+                    limit = Math.min(reminder, 30);
+
+                    for (int i = curr; i < curr + limit; i++) {
+                        if (i == 0)
+                            sb.append(recv.get(i));
+                        else
+                            sb.append("-").append(recv.get(i));
+                    }
+
+                    Utility.sendSMSWithoutTemplate(
+                            sb.toString(), messages.get(key)
+                    );
+
+                    reminder -= limit;
+                    curr += limit;
+
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    smsQueueRepository.deleteMany(
+                            in("_id", ids.get(key).subList(curr, curr + limit))
+                    );
+                }
+
+            }
         }
     }
 

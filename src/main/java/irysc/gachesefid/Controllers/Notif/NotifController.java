@@ -13,6 +13,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -434,7 +435,7 @@ public class NotifController {
                                 .append("notif_id", notifId.toString())
                                 .append("phone", user.getString("phone"))
                                 .append("msg", sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ?
-                                        filtersJSON.getString("text") : "شما یک پیام جدید در سایت دارید")
+                                        Jsoup.parse(filtersJSON.getString("text")).text() : "شما یک پیام جدید در سایت دارید")
                                 .append("created_at", curr)
                 ));
             }

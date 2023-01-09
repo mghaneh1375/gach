@@ -30,6 +30,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -68,15 +69,16 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if(1 == 1) {
+//            "09224786125"
+            sendSMSWithoutTemplate("09214915905", "تست پیامک");
 
-            ArrayList<ObjectId> removed = new ArrayList<>();
-            removed.add(new ObjectId("63b53b06145f74328cdc2d50"));
+//            String s = "<p>test2</p>";
+//            String plainText= Jsoup.parse(s).text();
+//
+//            if(1 == 1)
+//                return plainText;
 
-            for(ObjectId objectId : removed) {
-                Bson update = Updates.pull("events", eq("notif_id", objectId));
-                userRepository.updateMany(exists("events.0"), update);
-            }
-
+//            -09224786125
 //            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
 //                    .append("ads", new ArrayList<>())
 //                    .append("seo", new ArrayList<>())

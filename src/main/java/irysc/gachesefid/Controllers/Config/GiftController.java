@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Config;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Models.GiftTarget;
 import irysc.gachesefid.Models.GiftType;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -553,7 +554,7 @@ public class GiftController {
         return "";
     }
 
-    public static String giveMyGift(ObjectId userId) {
+    public static String giveMyGift(ObjectId id, String repeat, Document user) {
 
         try {
             Thread.sleep(3000);
@@ -561,19 +562,121 @@ public class GiftController {
             e.printStackTrace();
         }
 
-        Document doc = userGiftRepository.findOne(and(
-                eq("user_id", userId),
-                eq("status", "init"),
-                gt("expire_at", System.currentTimeMillis())
-        ), null);
+        Document doc = userGiftRepository.findById(id);
+        ObjectId userId = user.getObjectId("_id");
+        long curr = System.currentTimeMillis();
 
-        if(doc == null)
+        if(doc == null ||
+                !doc.getObjectId("user_id").equals(userId) ||
+                doc.getLong("expire_at") < curr
+        )
             return JSON_NOT_ACCESS;
 
-        doc.put("status", "finish");
+        if(repeat == null && doc.getString("status").equalsIgnoreCase("finish"))
+            return JSON_NOT_ACCESS;
+
+        Document myGift;
+        double neededCoin = 0;
+
+        if(repeat != null) {
+
+            if(
+                    !repeat.equalsIgnoreCase("second") &&
+                    !repeat.equalsIgnoreCase("third") &&
+                    !repeat.equalsIgnoreCase("forth") &&
+                    !repeat.equalsIgnoreCase("fifth")
+            )
+                return JSON_NOT_ACCESS;
+
+            if(
+                    !doc.containsKey("needed_for_" + repeat) ||
+                    !doc.containsKey("gift_" + repeat) ||
+                    doc.containsKey("status_" + repeat)
+            )
+                return JSON_NOT_ACCESS;
+
+            neededCoin = doc.getDouble("needed_for_" + repeat);
+            if(neededCoin > user.getDouble("coin"))
+                return JSON_NOT_ACCESS;
+
+            myGift = giftRepository.findById(doc.getObjectId("gift_" + repeat));
+        }
+        else
+            myGift = giftRepository.findById(doc.getObjectId("gift"));
+
+        if(myGift == null)
+            return JSON_NOT_UNKNOWN;
+
+        boolean changeUser = false;
+
+        if(myGift.getString("type").equalsIgnoreCase("coin")) {
+            user.put("coin",
+                    Math.round((user.getDouble("coin") + ((Number)myGift.get("amount")).doubleValue() - neededCoin) * 100.0) / 100.0
+            );
+            changeUser = true;
+        }
+        else if(myGift.getString("type").equalsIgnoreCase("money")) {
+
+            if(neededCoin > 0)
+                user.put("coin", Math.round((user.getDouble("coin") - neededCoin) * 100.0) / 100.0);
+
+            user.put("money", Math.round((((Number)user.get("money")).doubleValue() + myGift.getInteger("amount")) * 100.0 / 100.0));
+            changeUser = true;
+        }
+        else if(myGift.getString("type").equalsIgnoreCase("offcode")) {
+
+            JSONObject res = new JSONObject(OffCodeController.store(new JSONObject()
+                    .put("expireAt", myGift.getLong("expire_at"))
+                    .put("type", myGift.getString("off_code_type"))
+                    .put("amount", myGift.getInteger("amount"))
+                    .put("section", myGift.getString("use_for"))
+                    .put("items", new JSONArray().put(user.getString("NID")))
+            ));
+
+            if(!res.getString("status").equalsIgnoreCase("ok"))
+                return JSON_NOT_UNKNOWN;
+
+            if(neededCoin > 0) {
+                user.put("coin", Math.round((user.getDouble("coin") - neededCoin) * 100.0) / 100.0);
+                changeUser = true;
+            }
+        }
+
+        if(repeat == null)
+            doc.put("status", "finish");
+        else
+            doc.put("status_" + repeat, "finish");
+
         userGiftRepository.replaceOne(doc.getObjectId("_id"), doc);
-        userGiftRepository.clearFromCache(doc.getObjectId("_id"));
-        return JSON_OK;
+
+        if(changeUser)
+            userRepository.replaceOne(userId, user);
+
+        myGift.put("reminder", myGift.getInteger("reminder") - 1);
+        giftRepository.replaceOne(myGift.getObjectId("_id"), myGift);
+
+        if(repeat == null)
+            return JSON_OK;
+
+        double coin = user.getDouble("coin");
+        Document config = Utility.getConfig();
+        JSONObject data = new JSONObject();
+
+        int counter = repeat.equalsIgnoreCase("second") ? 2 :
+                repeat.equalsIgnoreCase("third") ? 3 :
+                        repeat.equalsIgnoreCase("forth") ? 4 : 5;
+
+
+        if(counter < 3 && config.containsKey("coin_for_third_time") && coin > config.getDouble("coin_for_third_time"))
+            data.put("coinForThirdTime", config.get("coin_for_third_time"));
+
+        if(counter < 4 && config.containsKey("coin_for_forth_time") && coin > config.getDouble("coin_for_forth_time"))
+            data.put("coinForForthTime", config.get("coin_for_forth_time"));
+
+        if(counter < 5 && config.containsKey("coin_for_fifth_time") && coin > config.getDouble("coin_for_fifth_time"))
+            data.put("coinForFifthTime", config.get("coin_for_fifth_time"));
+
+        return generateSuccessMsg("data", data);
     }
 
     private static JSONObject offGift(Document gift) {
