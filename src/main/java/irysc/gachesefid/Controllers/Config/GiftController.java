@@ -307,6 +307,18 @@ public class GiftController {
 
         }
 
+        if(!jsonObject.has("max_web_gift_slot"))
+            jsonObject.put("max_web_gift_slot", 8);
+
+        if(!jsonObject.has("max_app_gift_slot"))
+            jsonObject.put("max_app_gift_slot", 8);
+
+        if(!jsonObject.has("web_gift_days"))
+            jsonObject.put("web_gift_days", new JSONArray());
+
+        if(!jsonObject.has("app_gift_days"))
+            jsonObject.put("app_gift_days", new JSONArray());
+
         return Utility.generateSuccessMsg("data", jsonObject);
     }
 
