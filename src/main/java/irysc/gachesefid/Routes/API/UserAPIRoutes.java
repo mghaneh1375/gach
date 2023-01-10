@@ -70,7 +70,7 @@ public class UserAPIRoutes extends Router {
 
         if(1 == 1) {
 //            09026021609
-            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
+//            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
 
 //            String s = "<p>test2</p>";
 //            String plainText= Jsoup.parse(s).text();
@@ -79,10 +79,11 @@ public class UserAPIRoutes extends Router {
 //                return plainText;
 
 //            -09224786125
-//            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
-//                    .append("ads", new ArrayList<>())
-//                    .append("seo", new ArrayList<>())
-//            );
+
+            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
+                    .append("ads", new ArrayList<>())
+                    .append("seo", new ArrayList<>())
+            );
 
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "", "regexam");
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "1400/02/04", "newQuiz");
