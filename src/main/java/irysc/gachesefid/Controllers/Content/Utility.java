@@ -141,8 +141,16 @@ public class Utility {
         Document config = contentConfigRepository.findBySecKey("first");
         if(config != null) {
             List<Document> advs = config.getList("advs", Document.class);
-            if(advs.size() > 0) {
-                jsonObject.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + advs.get(0).getString("file"));
+
+            List<Document> visible_advs = new ArrayList<>();
+            for(Document itr : advs) {
+                if(itr.getBoolean("visibility"))
+                    visible_advs.add(itr);
+            }
+
+            if(visible_advs.size() > 0) {
+                int idx = irysc.gachesefid.Utility.Utility.getRandIntForGift(visible_advs.size());
+                jsonObject.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + visible_advs.get(idx).getString("file"));
             }
         }
 
@@ -177,7 +185,7 @@ public class Utility {
                     .put("priority", doc.get("priority"))
                     .put("hasVideo", doc.containsKey("video") && doc.get("video") != null);
 
-        if(isAdmin || afterBuy) {
+        if(isAdmin || afterBuy || doc.getInteger("price") == 0) {
 
             JSONArray attachesJSONArr = new JSONArray();
             for(String itr : attaches)

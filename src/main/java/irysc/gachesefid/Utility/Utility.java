@@ -293,17 +293,18 @@ public class Utility {
 //            HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/msgstatus")
 //                    .queryString("username", "gachesefid")
 //                    .queryString("password", "9DGr7JwEUXLtyVee")
-//                    .queryString("msgid", "3375157462") //"3375133058"
+//                    .queryString("msgid", "3376025189,3376025190,3376025191,3376025192") //"3375133058"
 //                    .header("content-type", "application/x-www-form-urlencoded")
 //                    .header("accept", "application/json")
 //                    .header("cache-control", "no-cache")
 //                    .asString();
 
             HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/sendsms")
-                    .queryString("username", "gachesefid")
+                    .queryString("username", "bogenGach")
                     .queryString("password", "9DGr7JwEUXLtyVee")
-                    .queryString("source", "2166591203")
+                    .queryString("source", "982100013860625")
                     .queryString("destination", receptor)
+                    .queryString("send_to_blacklist", 1)
                     .queryString("message", msg)
                     .header("content-type", "application/x-www-form-urlencoded")
                     .header("accept", "application/json")

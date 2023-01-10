@@ -112,6 +112,22 @@ public class GiftAPIRoutes extends Router {
         return GiftController.store(giftId, new JSONObject(str));
     }
 
+
+    @GetMapping(value = "report")
+    @ResponseBody
+    public String report(HttpServletRequest request,
+                         @RequestParam(value = "from", required = false) Long from,
+                         @RequestParam(value = "to", required = false) Long to,
+                         @RequestParam(value = "giftId", required = false) ObjectId giftId,
+                         @RequestParam(value = "repeat", required = false) String repeat,
+                         @RequestParam(value = "userId", required = false) ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return GiftController.report(from, to, giftId, repeat, userId);
+    }
+
+
+
 //    @PostMapping(value = "edit/{authorId}")
 //    @ResponseBody
 //    public String edit(HttpServletRequest request,

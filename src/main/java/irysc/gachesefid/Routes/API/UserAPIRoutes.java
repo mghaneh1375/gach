@@ -69,8 +69,8 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if(1 == 1) {
-//            "09224786125"
-            sendSMSWithoutTemplate("09214915905", "تست پیامک");
+//            09026021609
+            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
 
 //            String s = "<p>test2</p>";
 //            String plainText= Jsoup.parse(s).text();

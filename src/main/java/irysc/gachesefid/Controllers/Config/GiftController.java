@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Config;
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.GiftTarget;
 import irysc.gachesefid.Models.GiftType;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -16,6 +17,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -815,5 +817,147 @@ public class GiftController {
         configRepository.replaceOne(config.getObjectId("_id"), config);
         configRepository.clearFromCache(config.getObjectId("_id"));
         return JSON_OK;
+    }
+
+    public static String report(Long from, Long to,
+                                ObjectId giftId, String repeat,
+                                ObjectId userId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(eq("status", "finish"));
+
+        if(from != null)
+            filters.add(gte("expire_at", from + ONE_DAY_MIL_SEC));
+
+        if(to != null)
+            filters.add(lte("expire_at", to + ONE_DAY_MIL_SEC));
+
+        if(userId != null)
+            filters.add(eq("user_id", userId));
+
+        if(giftId != null)
+            filters.add(or(
+                    eq("gift", giftId),
+                    eq("gift_second", giftId),
+                    eq("gift_third", giftId),
+                    eq("gift_forth", giftId),
+                    eq("gift_fifth", giftId)
+            ));
+
+        if(repeat != null) {
+            if(repeat.equalsIgnoreCase("second") ||
+                    repeat.equalsIgnoreCase("third") ||
+                    repeat.equalsIgnoreCase("forth") ||
+                    repeat.equalsIgnoreCase("fifth")
+            )
+                filters.add(exists("status_" + repeat));
+        }
+
+        ArrayList<Document> docs = userGiftRepository.find(and(filters), null);
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<ObjectId> userIds = new ArrayList<>();
+
+        for(Document doc : docs)
+            userIds.add(doc.getObjectId("user_id"));
+
+        ArrayList<Document> users = userRepository.findByIds(userIds, true);
+        if(users == null)
+            return JSON_NOT_UNKNOWN;
+
+        int i = 0;
+        String[] repeats = new String[] {"second", "third", "forth", "fifth"};
+        String[] repeatsFa = new String[] {"دوم", "سوم", "چهارم", "پنجم"};
+
+        HashMap<ObjectId, String> gifts = new HashMap<>();
+        String g;
+
+        for(Document doc : docs) {
+
+            JSONObject student = new JSONObject();
+            Utility.fillJSONWithUser(student, users.get(i));
+            String createdAt = Utility.getSolarDate(doc.getLong("expire_at") - ONE_DAY_MIL_SEC);
+
+            if(
+                    (giftId == null || giftId.equals(doc.getObjectId("gift"))) &&
+                    (repeat == null || repeat.equalsIgnoreCase("first"))
+            ) {
+
+                g = null;
+                if (gifts.containsKey(doc.getObjectId("gift")))
+                    g = gifts.get(doc.getObjectId("gift"));
+                else {
+                    Document gift = giftRepository.findById(doc.getObjectId("gift"));
+                    if (gift != null)
+                        g = getGiftString(gift);
+
+                    gifts.put(doc.getObjectId("gift"), g);
+                }
+
+                if (g != null) {
+                    jsonArray.put(new JSONObject()
+                            .put("student", student.getJSONObject("student"))
+                            .put("gift", g)
+                            .put("createdAt", createdAt)
+                            .put("repeat", "اول")
+                    );
+                }
+            }
+
+            int j = 0;
+            for(String r : repeats) {
+                if(doc.containsKey("status_" + r)) {
+
+                    if(
+                            (giftId == null || giftId.equals(doc.getObjectId("gift_" + r))) &&
+                                    (repeat == null || repeat.equalsIgnoreCase(repeats[j]))
+                    ) {
+
+                        g = null;
+
+                        if(gifts.containsKey(doc.getObjectId("gift_" + r)))
+                            g = gifts.get(doc.getObjectId("gift_" + r));
+                        else {
+                            Document gift = giftRepository.findById(doc.getObjectId("gift_" + r));
+                            if(gift != null)
+                                g = getGiftString(gift);
+
+                            gifts.put(doc.getObjectId("gift_" + r), g);
+                        }
+
+                        if(g != null)
+                            jsonArray.put(new JSONObject()
+                                    .put("student", student.getJSONObject("student"))
+                                    .put("gift", g)
+                                    .put("createdAt", createdAt)
+                                    .put("repeat", repeatsFa[j])
+                            );
+                    }
+
+                }
+                else break;
+                j++;
+            }
+
+            i++;
+        }
+
+        if(filters.size() == 1) {
+
+            JSONArray allGifts = new JSONArray();
+            for(ObjectId id : gifts.keySet())
+                allGifts.put(new JSONObject()
+                        .put("id", id.toString())
+                        .put("item", gifts.get(id))
+                );
+
+            return generateSuccessMsg("data", jsonArray,
+                    new PairValue("gifts", allGifts)
+            );
+        }
+
+
+        return generateSuccessMsg("data", jsonArray,
+                new PairValue("gifts", new JSONArray())
+        );
     }
 }

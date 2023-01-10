@@ -68,7 +68,7 @@ public class ManageUserAPIRoutes extends Router {
 
     @DeleteMapping(value = "/removeUsers")
     @ResponseBody
-    public String removeAccess(HttpServletRequest request,
+    public String removeUsers(HttpServletRequest request,
                                @RequestBody @StrongJSONConstraint(
                                        params = {"items"},
                                        paramsType = {JSONArray.class}

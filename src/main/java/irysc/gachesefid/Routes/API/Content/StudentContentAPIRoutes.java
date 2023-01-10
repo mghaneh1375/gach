@@ -84,6 +84,19 @@ public class StudentContentAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getSessions/{slug}/{sessionId}")
+    @ResponseBody
+    public String getSessions(HttpServletRequest request,
+                              @PathVariable @NotBlank String slug,
+                              @PathVariable @ObjectIdConstraint ObjectId sessionId
+    ) {
+        Document user = getUserIfLogin(request);
+        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+        return StudentContentController.getSessions(isAdmin, user == null ? null : user.getObjectId("_id"),
+                slug, sessionId
+        );
+    }
+
     @GetMapping(value = "distinctTeachers")
     @ResponseBody
     public String distinctTeachers() {

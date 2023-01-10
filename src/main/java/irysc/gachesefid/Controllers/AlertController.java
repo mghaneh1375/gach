@@ -173,9 +173,7 @@ public class AlertController {
         try {
             ObjectId refId = getGifts(user.getObjectId("_id"));
             data.put("gift_id", refId.toString());
-        } catch (InvalidFieldsException e) {
-            e.printStackTrace();
-        }
+        } catch (InvalidFieldsException ignore) {}
 
         if(!user.containsKey("events"))
             return Utility.generateSuccessMsg("data", data.put("events", new JSONArray()));

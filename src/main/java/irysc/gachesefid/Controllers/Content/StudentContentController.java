@@ -4,6 +4,7 @@ package irysc.gachesefid.Controllers.Content;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
+import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
@@ -165,6 +166,55 @@ public class StudentContentController {
                         content.getList("users", Document.class), "_id", userId
                 ) != -1, true)
         );
+    }
+
+    public static String getSessions(boolean isAdmin, ObjectId userId, String slug, ObjectId sessionId) {
+
+        Document content = contentRepository.findBySecKey(slug);
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> sessions = content.getList("sessions", Document.class);
+        if(irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                sessions, "_id", sessionId
+        ) == -1)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray jsonArray = new JSONArray();
+        boolean afterBuy = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                content.getList("users", Document.class), "_id", userId
+        ) != -1;
+
+        for(Document session : sessions) {
+
+            JSONObject jsonObject = Utility.sessionDigest(
+                    session, isAdmin, afterBuy
+            );
+
+            jsonObject.put("selected", session.getObjectId("_id").equals(sessionId));
+            jsonArray.put(jsonObject);
+        }
+
+        JSONObject data = new JSONObject().put("sessions", jsonArray);
+
+        Document config = contentConfigRepository.findBySecKey("first");
+        if(config != null) {
+            List<Document> advs = config.getList("advs", Document.class);
+
+            List<Document> visible_advs = new ArrayList<>();
+            for(Document itr : advs) {
+                if(itr.getBoolean("visibility"))
+                    visible_advs.add(itr);
+            }
+
+            if(visible_advs.size() > 0) {
+                int idx = irysc.gachesefid.Utility.Utility.getRandIntForGift(visible_advs.size());
+                data.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + visible_advs.get(idx).getString("file"));
+            }
+        }
+
+
+        return generateSuccessMsg("data", data);
     }
 
     public static Document registry(ObjectId contentId, ObjectId userId,
