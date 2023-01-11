@@ -200,8 +200,9 @@ public class GiftController {
             );
         }
 
+        newDoc.put("reminder", data.getInt("count"));
+
         if(id == null) {
-            newDoc.put("reminder", data.getInt("count"));
             giftRepository.insertOne(newDoc);
             return generateSuccessMsg("data", convertDocToJSON(newDoc));
         }
