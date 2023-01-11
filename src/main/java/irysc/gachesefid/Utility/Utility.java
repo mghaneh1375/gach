@@ -283,8 +283,8 @@ public class Utility {
 
     public static boolean sendSMSWithoutTemplate(String receptor, String msg) {
 
-//        if(DEV_MODE)
-//            return true;
+        if(DEV_MODE)
+            return true;
 
         receptor = convertPersianDigits(receptor);
 
@@ -300,9 +300,9 @@ public class Utility {
 //                    .asString();
 
             HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/sendsms")
-                    .queryString("username", "bogenGach")
+                    .queryString("username", "gachesefid") // bogenGach
                     .queryString("password", "9DGr7JwEUXLtyVee")
-                    .queryString("source", "982100013860625")
+                    .queryString("source", "982166591203") //982100013860625
                     .queryString("destination", receptor)
                     .queryString("send_to_blacklist", 1)
                     .queryString("message", msg)
