@@ -140,7 +140,7 @@ public class GiftController {
                 .put("priority", doc.getInteger("priority"))
                 .put("isForSite", doc.getBoolean("is_for_site"))
                 .put("isForSiteFa", doc.getBoolean("is_for_site") ? "سایت" : "اپ")
-                .put("reminder", doc.containsKey("reminder") ? doc.getList("reminder", Document.class).size() : 0)
+                .put("reminder", doc.getOrDefault("reminder", 0))
                 .put("used", doc.containsKey("users") ? doc.getList("users", Document.class).size() : 0);
 
         if (doc.getString("type").equalsIgnoreCase(GiftType.OFFCODE.getName()))
