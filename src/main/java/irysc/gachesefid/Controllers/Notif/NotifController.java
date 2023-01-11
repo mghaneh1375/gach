@@ -420,7 +420,7 @@ public class NotifController {
                             .append("mail", user.getString("mail"))
                             .append("title", filtersJSON.getString("title"))
                             .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
-                                    filtersJSON.getString("text") : "شما یک پیام جدید در سایت دارید" + "<br/>https://e.irysc.com")
+                                    filtersJSON.getString("text") : "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
                             .append("created_at", curr)
                             .append("name", user.getString("first_name") + " " + user.getString("last_name"))
                 ));
@@ -435,7 +435,7 @@ public class NotifController {
                                 .append("notif_id", notifId)
                                 .append("phone", user.getString("phone"))
                                 .append("msg", sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ?
-                                        Jsoup.parse(filtersJSON.getString("text")).text() : "شما یک پیام جدید در سایت دارید" + "\n" + "https://e.irysc.com")
+                                        Jsoup.parse(filtersJSON.getString("text")).text() : "پیام جدیدی در آیریسک داری" + "\n" + "https://e.irysc.com")
                                 .append("created_at", curr)
                 ));
             }
@@ -527,6 +527,8 @@ public class NotifController {
         if(notif == null)
             return JSON_NOT_VALID_ID;
 
+        boolean oldSeen = false;
+
         if(user != null) {
             ObjectId userId = user.getObjectId("_id");
 
@@ -539,6 +541,9 @@ public class NotifController {
                     events, "notif_id", id
             );
 
+            if(n != null)
+                oldSeen = n.getBoolean("seen");
+
             if (n != null && !n.getBoolean("seen")) {
                 n.put("seen", true);
                 userRepository.replaceOne(userId, user);
@@ -548,6 +553,7 @@ public class NotifController {
         return generateSuccessMsg("data", new JSONObject()
                 .put("title", notif.getString("title"))
                 .put("desc", notif.getString("text"))
+                .put("oldSeen", oldSeen)
                 .put("createdAt", Utility.getSolarDate(notif.getLong("created_at")))
         );
     }
