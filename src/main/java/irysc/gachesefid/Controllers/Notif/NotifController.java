@@ -420,7 +420,7 @@ public class NotifController {
                             .append("mail", user.getString("mail"))
                             .append("title", filtersJSON.getString("title"))
                             .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
-                                    filtersJSON.getString("text") : "شما یک پیام جدید در سایت دارید")
+                                    filtersJSON.getString("text") : "شما یک پیام جدید در سایت دارید" + "<br/>https://e.irysc.com")
                             .append("created_at", curr)
                             .append("name", user.getString("first_name") + " " + user.getString("last_name"))
                 ));
@@ -435,7 +435,7 @@ public class NotifController {
                                 .append("notif_id", notifId)
                                 .append("phone", user.getString("phone"))
                                 .append("msg", sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ?
-                                        Jsoup.parse(filtersJSON.getString("text")).text() : "شما یک پیام جدید در سایت دارید")
+                                        Jsoup.parse(filtersJSON.getString("text")).text() : "شما یک پیام جدید در سایت دارید" + "\n" + "https://e.irysc.com")
                                 .append("created_at", curr)
                 ));
             }

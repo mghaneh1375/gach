@@ -474,6 +474,10 @@ public class Jobs implements Runnable {
                             sb.toString(), messages.get(key)
                     );
 
+                    smsQueueRepository.deleteMany(
+                            in("_id", ids.get(key).subList(curr, curr + limit))
+                    );
+
                     reminder -= limit;
                     curr += limit;
 
@@ -482,10 +486,6 @@ public class Jobs implements Runnable {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-
-                    smsQueueRepository.deleteMany(
-                            in("_id", ids.get(key).subList(curr, curr + limit))
-                    );
                 }
 
             }
