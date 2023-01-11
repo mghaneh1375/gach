@@ -243,7 +243,7 @@ public class GiftController {
                             key.equalsIgnoreCase("app_gift_days")
             ) {
                 List<Document> days = config.getList(key, Document.class);
-                val = days.stream().filter(itr -> itr.getLong("date") > curr || curr - itr.getLong("date") < ONE_DAY_MIL_SEC).collect(Collectors.toList());
+                val = days.stream().filter(itr -> (itr.getLong("date") > curr) || (curr - itr.getLong("date") < TWO_DAY_MIL_SEC)).collect(Collectors.toList());
 
                 JSONArray finalList = new JSONArray();
 

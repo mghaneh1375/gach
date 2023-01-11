@@ -19,6 +19,7 @@ public class StaticValues {
     public static final String KEY = "okfbogendesignmohammadghane1375!";
 
     public static final long ONE_DAY_MIL_SEC = 86400000;
+    public static final long TWO_DAY_MIL_SEC = 86400000 * 2;
 
     public final static long TOKEN_EXPIRATION_MSEC = 60 * 60 * 24 * 7 * 1000;
     public final static int TOKEN_EXPIRATION = 60 * 60 * 24 * 7;

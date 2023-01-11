@@ -432,7 +432,7 @@ public class NotifController {
                 smsWrites.add(new InsertOneModel<>(
                         new Document("mode", "notif")
                                 .append("status", "pending")
-                                .append("notif_id", notifId.toString())
+                                .append("notif_id", notifId)
                                 .append("phone", user.getString("phone"))
                                 .append("msg", sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ?
                                         Jsoup.parse(filtersJSON.getString("text")).text() : "شما یک پیام جدید در سایت دارید")
