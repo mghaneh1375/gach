@@ -32,7 +32,7 @@ public class GiftController {
     private static String translateType(String type) {
 
         if (type.equalsIgnoreCase(GiftType.COIN.getName()))
-            return "ایکس پول";
+            return "ایکس پول    ";
 
         if (type.equalsIgnoreCase(GiftType.MONEY.getName()))
             return "پول";
