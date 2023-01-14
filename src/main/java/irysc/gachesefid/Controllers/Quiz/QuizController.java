@@ -1,11 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
@@ -16,7 +12,6 @@ import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.PDF.PDFUtils;
-import irysc.gachesefid.Validator.LinkValidator;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
@@ -29,8 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -81,6 +74,23 @@ public class QuizController {
                 all.put(jsonObject1);
             }
 
+        }
+
+        return generateSuccessMsg("data", all);
+    }
+
+    public static String getAllContentQuizzesDigest() {
+
+        JSONArray all = new JSONArray();
+        ArrayList<Document> quizzes = contentQuizRepository.find(null, null);
+
+        for(Document quiz : quizzes) {
+
+            JSONObject jsonObject1 = new JSONObject()
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("name", quiz.getString("title"));
+
+            all.put(jsonObject1);
         }
 
         return generateSuccessMsg("data", all);
@@ -238,6 +248,8 @@ public class QuizController {
 
         if (db instanceof IRYSCQuizRepository)
             quizAbstract = new RegularQuizController();
+        else if (db instanceof ContentQuizRepository)
+            quizAbstract = new ContentQuizController();
         else
             quizAbstract = new OpenQuiz();
 
@@ -384,6 +396,9 @@ public class QuizController {
 
             else if (db instanceof OpenQuizRepository)
                 quizAbstract = new OpenQuiz();
+
+            else if (db instanceof ContentQuizRepository)
+                quizAbstract = new ContentQuizController();
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",

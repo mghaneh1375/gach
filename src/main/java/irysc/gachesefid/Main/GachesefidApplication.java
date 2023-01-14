@@ -66,6 +66,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ConfigRepository configRepository;
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
+    public static ContentQuizRepository contentQuizRepository;
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
     public static OffcodeRepository offcodeRepository;
@@ -122,6 +123,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             configRepository = new ConfigRepository();
             contentConfigRepository = new ContentConfigRepository();
             contentRepository = new ContentRepository();
+            contentQuizRepository = new ContentQuizRepository();
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
             mailRepository = new MailRepository();

@@ -253,6 +253,14 @@ public class GeneralAPIRoutes extends Router {
         return QuizController.getAllQuizzesDigest(isOpenQuizzesNeeded);
     }
 
+    @GetMapping(value = "/getAllContentQuizzesDigest")
+    @ResponseBody
+    public String getAllContentQuizzesDigest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return QuizController.getAllContentQuizzesDigest();
+    }
+
     @GetMapping(value = "/getMySummary")
     @ResponseBody
     public String getMySummary(HttpServletRequest request

@@ -137,7 +137,7 @@ public class StudentQuizController {
         try {
             Document quiz = hasProtectedAccess(db, userId, quizId);
 
-            if (!(boolean)quiz.getOrDefault("show_results_after_correction", true))
+            if (!(boolean) quiz.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج فرانرسیده است.");
 
             long curr = System.currentTimeMillis();
@@ -157,7 +157,7 @@ public class StudentQuizController {
                         "_id", userId
                 );
 
-                if(db instanceof OpenQuizRepository) {
+                if (db instanceof OpenQuizRepository) {
 
                     long startAt = stdDoc.getLong("start_at");
 
@@ -362,7 +362,7 @@ public class StudentQuizController {
                             jsonObject.put("status", isIRYSCQuiz ? "waitForResult" : "finished");
                         else {
                             jsonObject.put("timeReminder", reminder);
-                            if(!isIRYSCQuiz)
+                            if (!isIRYSCQuiz)
                                 jsonObject.put("status", "continue");
                         }
                     }
@@ -654,7 +654,7 @@ public class StudentQuizController {
 //                return generateErr("شما در این آزمون شرکت کرده اید.");
 
             student.put("finish_at", curr);
-            if(db instanceof OpenQuizRepository)
+            if (db instanceof OpenQuizRepository)
                 doc.put("last_finished_at", curr);
 
             String result = saveStudentAnswers(doc, answers, student, db);
@@ -966,7 +966,7 @@ public class StudentQuizController {
         return goToPayment((int) (shouldPay - money), doc);
     }
 
-    private static String returnQuiz(Document quiz, Document stdDoc,
+    public static String returnQuiz(Document quiz, Document stdDoc,
                                      boolean isStatNeeded, JSONObject quizJSON) {
 
         Document questionsDoc = quiz.get("questions", Document.class);
@@ -1089,10 +1089,10 @@ public class StudentQuizController {
 
     }
 
-    private static String returnCustomQuiz(ArrayList<Document> questions,
-                                           ArrayList<PairValue> stdAnswers,
-                                           JSONObject quizJSON,
-                                           boolean isStatsNeeded) {
+    protected static String returnCustomQuiz(ArrayList<Document> questions,
+                                             ArrayList<PairValue> stdAnswers,
+                                             JSONObject quizJSON,
+                                             boolean isStatsNeeded) {
 
         int i = 0;
 
@@ -1118,7 +1118,6 @@ public class StudentQuizController {
         jsonObject.put("quizInfo", quizJSON);
 
         return generateSuccessMsg("data", jsonObject);
-
     }
 
 
@@ -1241,7 +1240,7 @@ public class StudentQuizController {
             }
 
             transactionRepository.insertOne(transaction);
-            if(user.containsKey("mail")) {
+            if (user.containsKey("mail")) {
                 new Thread(() -> sendMail(
                         user.getString("mail"),
                         SERVER + "recp/" + transaction.getObjectId("_id").toString(),

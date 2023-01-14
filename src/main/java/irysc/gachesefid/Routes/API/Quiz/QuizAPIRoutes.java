@@ -17,7 +17,6 @@ import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.FileUtils;
-import org.apache.xmlbeans.impl.xb.xsdschema.All;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -37,7 +36,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
@@ -116,6 +114,11 @@ public class QuizAPIRoutes extends Router {
                     jsonObject
             );
 
+        if (mode.equals(AllKindQuiz.CONTENT.getName()))
+            return ContentQuizController.create(user.getObjectId("_id"),
+                    jsonObject
+            );
+
         if (mode.equals(KindQuiz.TASHRIHI.getName()))
             return TashrihiQuizController.create(user.getObjectId("_id"),
                     jsonObject
@@ -173,7 +176,9 @@ public class QuizAPIRoutes extends Router {
                 isAdmin && mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
                 isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                openQuizRepository : schoolQuizRepository,
+                        openQuizRepository :
+                isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
+                        schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId,
                 Utility.convertPersian(new JSONObject(jsonStr))
@@ -206,6 +211,11 @@ public class QuizAPIRoutes extends Router {
                     name, null, null, null, null
             );
 
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
+            return QuizController.getAll(contentQuizRepository, null,
+                    name, null, null, null, null
+            );
+
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
                     name, startDateSolar, startDateSolarEndLimit,
@@ -226,10 +236,14 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equals(GeneralKindQuiz.IRYSC.getName()) ||
-                mode.equals(AllKindQuiz.OPEN.getName()))
+                mode.equals(AllKindQuiz.OPEN.getName()) ||
+                mode.equals(AllKindQuiz.CONTENT.getName())
+        )
             return QuizController.get(
                     mode.equals(AllKindQuiz.OPEN.getName()) ?
-                            openQuizRepository : iryscQuizRepository,
+                            openQuizRepository :
+                            mode.equals(AllKindQuiz.CONTENT.getName()) ?
+                            contentQuizRepository : iryscQuizRepository,
                     isAdmin ? null : "",
                     quizId
             );
@@ -441,7 +455,8 @@ public class QuizAPIRoutes extends Router {
         return QuizController.arrangeQuestions(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                        schoolQuizRepository,
+                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                        contentQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
         );
     }
@@ -465,13 +480,14 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin &&
                 (
                         mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
-                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
+                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
                 )
         )
             return QuizController.removeQuestions(
-                    mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                            openQuizRepository : iryscQuizRepository,
-                    quizId, jsonArray
+                    mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
+                                    iryscQuizRepository, quizId, jsonArray
             );
 
         else
@@ -508,6 +524,9 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, file);
 
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
+            return QuizController.addBatchQuestionsToQuiz(contentQuizRepository, null, quizId, file);
+
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
 
@@ -538,6 +557,9 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, jsonArray, mark);
+
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
+            return QuizController.addBatchQuestionsToQuiz(contentQuizRepository, null, quizId, jsonArray, mark);
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.SCHOOL.getName()))
             return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, jsonArray, mark);
@@ -636,11 +658,14 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
         ))
             return QuizController.fetchQuestions(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                            openQuizRepository : iryscQuizRepository, null,
+                            openQuizRepository :
+                    mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                            contentQuizRepository : iryscQuizRepository, null,
                     quizId
             );
 
@@ -867,7 +892,9 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.getQuizAnswerSheet(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                        contentQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }

@@ -2,8 +2,9 @@ package irysc.gachesefid.Controllers.Content;
 
 
 import com.mongodb.BasicDBObject;
-import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
-import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
+import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
+import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.DB.ContentQuizRepository;
 import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -22,7 +23,6 @@ import java.util.regex.Pattern;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Main.GachesefidApplication.packageRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -168,7 +168,10 @@ public class StudentContentController {
         );
     }
 
-    public static String getSessions(boolean isAdmin, ObjectId userId, String slug, ObjectId sessionId) {
+    public static String getSessions(
+            boolean isAdmin, ObjectId userId,
+            String slug, ObjectId sessionId
+    ) {
 
         Document content = contentRepository.findBySecKey(slug);
         if(content == null)
@@ -388,4 +391,63 @@ public class StudentContentController {
         return goToPayment((int) (shouldPay - money), doc);
 
     }
+
+    public static String startFinalQuiz(ObjectId contentId, ObjectId userId) {
+
+        Document content = contentRepository.findById(contentId);
+
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!content.containsKey("final_exam_id"))
+            return JSON_NOT_ACCESS;
+
+        Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("users", Document.class),
+                "_id", userId
+        );
+
+        if(std == null)
+            return JSON_NOT_ACCESS;
+
+        if(std.containsKey("final_result"))
+            return generateErr("شما یکبار در آزمون پایان دوره شرکت کرده اید.");
+
+        Document quiz = contentQuizRepository.findById(
+                content.getObjectId("final_exam_id")
+        );
+
+        if(quiz == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<ObjectId> questionIds = quiz.getList("questions", ObjectId.class);
+        int neededTime = ContentQuizController.calcLenStatic(quiz);
+        long curr = System.currentTimeMillis();
+        std.put("start_at", curr);
+
+        int reminder = neededTime;
+
+        JSONObject quizJSON = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("generalMode", "content")
+                .put("questionsNo", questionIds.size())
+                .put("description", quiz.getOrDefault("description", ""))
+                .put("mode", quiz.getString("mode"))
+                .put("refresh", 2)
+                .put("duration", neededTime)
+                .put("reminder", reminder)
+                .put("isNewPerson", true);
+
+        List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String attach : attaches)
+            jsonArray.put(STATICS_SERVER + ContentQuizRepository.FOLDER + "/" + attach);
+
+        quizJSON.put("attaches", jsonArray);
+
+        return StudentQuizController.returnQuiz(quiz, std, false, quizJSON);
+    }
+
 }
