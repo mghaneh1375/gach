@@ -54,6 +54,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static AccessRequestRepository accessRequestRepository;
     public static ActivationRepository activationRepository;
+    public static AdviseTagRepository adviseTagRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
     public static AlertsRepository alertsRepository;
     public static AuthorRepository authorRepository;
@@ -69,6 +70,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ContentQuizRepository contentQuizRepository;
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
+    public static LifeStyleTagRepository lifeStyleTagRepository;
     public static OffcodeRepository offcodeRepository;
     public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
@@ -111,6 +113,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
             accessRequestRepository = new AccessRequestRepository();
             activationRepository = new ActivationRepository();
+            adviseTagRepository = new AdviseTagRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
             alertsRepository = new AlertsRepository();
             authorRepository = new AuthorRepository();
@@ -126,6 +129,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             contentQuizRepository = new ContentQuizRepository();
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
+            lifeStyleTagRepository = new LifeStyleTagRepository();
             mailRepository = new MailRepository();
             mailQueueRepository = new MailQueueRepository();
             offcodeRepository = new OffcodeRepository();
