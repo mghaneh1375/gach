@@ -697,12 +697,13 @@ public class GiftController {
 
     private static JSONObject offGift(Document gift) {
         return new JSONObject()
+                .put("code", "")
                 .put("amount", gift.getInteger("amount"))
                 .put("type", gift.getString("off_code_type"))
                 .put("section", gift.getString("use_for"))
                 .put("sectionFa", translateUseFor(gift.getString("use_for")))
                 .put("expireAtTs", gift.getLong("expire_at"))
-                .put("expireAt", gift.getLong("expire_at"));
+                .put("expireAt", Utility.getSolarDate(gift.getLong("expire_at")));
     }
 
     public static String giveMyGifts(ObjectId userId) {
@@ -723,19 +724,18 @@ public class GiftController {
             if(gift.getString("type").equalsIgnoreCase("offcode"))
                 jsonArray.put(new JSONObject()
                         .put("type", "off")
-                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
                         .put("obj", offGift(gift))
                 );
             else if(gift.getString("type").equalsIgnoreCase("coin"))
                 jsonArray.put(new JSONObject()
                         .put("type", "coin")
-                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
+                        .put("createdAt", getSolarDate(doc.getLong("expire_at")))
                         .put("label", getGiftString(gift))
                 );
             else if(gift.getString("type").equalsIgnoreCase("money"))
                 jsonArray.put(new JSONObject()
                         .put("type", "money")
-                        .put("createdAt", getSolarDate(gift.getLong("created_at")))
+                        .put("createdAt", getSolarDate(doc.getLong("expire_at")))
                         .put("label", getGiftString(gift))
                 );
         }

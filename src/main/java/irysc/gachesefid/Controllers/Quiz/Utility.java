@@ -273,7 +273,6 @@ public class Utility {
 
         while (currIdx < bytes.length) {
 
-
             // TEST
 
             if (bytes[currIdx] == 0x00) {
@@ -754,8 +753,8 @@ public class Utility {
         return new PairValue(quiz, idx);
     }
 
-    static String saveStudentAnswers(Document doc, JSONArray answers,
-                                     Document student, Common db) {
+    public static String saveStudentAnswers(Document doc, JSONArray answers,
+                                            Document student, Common db) {
 
         ArrayList<PairValue> pairValues;
 

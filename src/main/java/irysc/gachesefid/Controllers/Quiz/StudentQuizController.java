@@ -1003,9 +1003,17 @@ public class StudentQuizController {
                 questionStats = null;
         }
 
-        ArrayList<PairValue> stdAnswers =
-                stdDoc == null ? new ArrayList<>() :
-                        Utility.getAnswers(((Binary) stdDoc.getOrDefault("answers", new byte[0])).getData());
+        Object tmp = null;
+
+        if(stdDoc != null) {
+            tmp = stdDoc.getOrDefault("answers", null);
+            if(tmp != null)
+                tmp = ((Binary) tmp).getData();
+            else
+                tmp = new byte[0];
+        }
+
+        ArrayList<PairValue> stdAnswers = tmp == null ? new ArrayList<>() : Utility.getAnswers((byte[]) tmp);
 
         i = 0;
 

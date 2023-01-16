@@ -72,6 +72,24 @@ public class StudentContentAPIRoutes extends Router {
         );
     }
 
+
+    @PostMapping(value = "startFinalQuiz/{id}")
+    @ResponseBody
+    public String startFinalQuiz(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentContentController.startFinalQuiz(id, getUser(request).getObjectId("_id"));
+    }
+
+
+    @PostMapping(value = "reviewFinalQuiz/{id}")
+    @ResponseBody
+    public String reviewFinalQuiz(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentContentController.reviewFinalQuiz(id, getUser(request).getObjectId("_id"));
+    }
+
     @GetMapping(value = "get/{slug}")
     @ResponseBody
     public String get(HttpServletRequest request,
@@ -80,7 +98,7 @@ public class StudentContentAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.get(isAdmin, user == null ? null : user.getObjectId("_id"),
-                slug
+                slug, user == null ? null : user.getString("NID")
         );
     }
 

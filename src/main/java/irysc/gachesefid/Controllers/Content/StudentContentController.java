@@ -3,9 +3,11 @@ package irysc.gachesefid.Controllers.Content;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.DB.ContentQuizRepository;
 import irysc.gachesefid.DB.ContentRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
@@ -22,6 +24,7 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
+import static irysc.gachesefid.Controllers.Quiz.Utility.saveStudentAnswers;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -154,18 +157,27 @@ public class StudentContentController {
     }
 
 
-    public static String get(boolean isAdmin, ObjectId userId, String slug) {
+    public static String get(boolean isAdmin, ObjectId userId, String slug, String NID) {
 
         Document content = contentRepository.findBySecKey(slug);
         if(content == null)
             return JSON_NOT_VALID_ID;
 
-        return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convert(
-                content, isAdmin,
-                isAdmin || userId != null && irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                        content.getList("users", Document.class), "_id", userId
-                ) != -1, true)
-        );
+        Document stdDoc = null;
+
+        if(!isAdmin && userId != null)
+            stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    content.getList("users", Document.class), "_id", userId
+            );
+
+        try {
+            return generateSuccessMsg("data", Utility.convert(
+                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, NID
+                    )
+            );
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
     }
 
     public static String getSessions(
@@ -410,7 +422,7 @@ public class StudentContentController {
         if(std == null)
             return JSON_NOT_ACCESS;
 
-        if(std.containsKey("final_result"))
+        if(std.containsKey("start_at"))
             return generateErr("شما یکبار در آزمون پایان دوره شرکت کرده اید.");
 
         Document quiz = contentQuizRepository.findById(
@@ -420,23 +432,38 @@ public class StudentContentController {
         if(quiz == null)
             return JSON_NOT_UNKNOWN;
 
-        List<ObjectId> questionIds = quiz.getList("questions", ObjectId.class);
         int neededTime = ContentQuizController.calcLenStatic(quiz);
         long curr = System.currentTimeMillis();
-        std.put("start_at", curr);
 
-        int reminder = neededTime;
+        if(!std.containsKey("start_at")) {
+
+            Document stdDoc = new Document("start_at", curr)
+                    .append("finish_at", null)
+                    .append("_id", userId)
+                    .append("expire_at", curr + neededTime * 1000L)
+                    .append("answers", new byte[0]);
+
+            if ((boolean) quiz.getOrDefault("permute", false))
+                stdDoc.append("question_indices", new ArrayList<>());
+
+            quiz.getList("students", Document.class).add(stdDoc);
+            quiz.put("registered", quiz.getInteger("registered") + 1);
+            contentQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+            std.put("start_at", curr);
+            contentRepository.replaceOne(contentId, content);
+        }
 
         JSONObject quizJSON = new JSONObject()
                 .put("title", quiz.getString("title"))
                 .put("id", quiz.getObjectId("_id").toString())
                 .put("generalMode", "content")
-                .put("questionsNo", questionIds.size())
+                .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                 .put("description", quiz.getOrDefault("description", ""))
                 .put("mode", quiz.getString("mode"))
                 .put("refresh", 2)
                 .put("duration", neededTime)
-                .put("reminder", reminder)
+                .put("reminder", neededTime)
                 .put("isNewPerson", true);
 
         List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
@@ -448,6 +475,104 @@ public class StudentContentController {
         quizJSON.put("attaches", jsonArray);
 
         return StudentQuizController.returnQuiz(quiz, std, false, quizJSON);
+    }
+
+
+    public static String storeAnswers(ObjectId quizId, ObjectId studentId, JSONArray answers) {
+
+        long allowedDelay = 1800000; // 0.5hour
+
+        try {
+            Document quiz = contentQuizRepository.findById(quizId);
+            if(quiz == null)
+                return JSON_NOT_VALID_ID;
+
+            Document stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class), "_id", studentId
+            );
+
+            if(stdDoc == null)
+                return JSON_NOT_ACCESS;
+
+            long curr = System.currentTimeMillis();
+            if(curr > stdDoc.getLong("expire_at") + allowedDelay)
+                return generateErr("فرصت شرکت در آزمون به اتمام رسیده است.");
+
+            int neededTime = QuizAbstract.calcLenStatic(quiz);
+            long startAt = stdDoc.getLong("start_at");
+
+            int reminder = neededTime - (int) ((curr - startAt) / 1000);
+
+            stdDoc.put("finish_at", curr);
+            quiz.put("last_finished_at", curr);
+
+            String result = saveStudentAnswers(quiz, answers, stdDoc, contentQuizRepository);
+            if (result.contains("nok"))
+                return result;
+
+            return generateSuccessMsg("reminder", reminder,
+                    new PairValue("refresh", Math.abs(new Random().nextInt(3)) + 3)
+            );
+
+        } catch (Exception x) {
+            x.printStackTrace();
+            return null;
+        }
+    }
+
+
+    public static String reviewFinalQuiz(ObjectId contentId, ObjectId userId) {
+
+        Document content = contentRepository.findById(contentId);
+
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!content.containsKey("final_exam_id"))
+            return JSON_NOT_ACCESS;
+
+        Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("users", Document.class),
+                "_id", userId
+        );
+
+        if(std == null)
+            return JSON_NOT_ACCESS;
+
+        if(!std.containsKey("start_at"))
+            return generateErr("شما در این آزمون شرکت نکرده اید.");
+
+        Document quiz = contentQuizRepository.findById(
+                content.getObjectId("final_exam_id")
+        );
+
+        if(quiz == null)
+            return JSON_NOT_UNKNOWN;
+
+        int neededTime = ContentQuizController.calcLenStatic(quiz);
+
+        JSONObject quizJSON = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("generalMode", "content")
+                .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                .put("description", quiz.getOrDefault("description", ""))
+                .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                .put("mode", quiz.getString("mode"))
+                .put("duration", neededTime);
+
+        List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String attach : attaches)
+            jsonArray.put(STATICS_SERVER + ContentQuizRepository.FOLDER + "/" + attach);
+
+        quizJSON.put("attaches", jsonArray);
+        Document stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                quiz.getList("students", Document.class), "_id", userId
+        );
+
+        return StudentQuizController.returnQuiz(quiz, stdDoc, true, quizJSON);
     }
 
 }

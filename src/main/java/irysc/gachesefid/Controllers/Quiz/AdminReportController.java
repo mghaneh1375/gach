@@ -8,14 +8,12 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.Excel;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayInputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,61 +28,7 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminReportController {
 
-    public static String getStudentStatCustomQuiz(ObjectId quizId, ObjectId userId) {
-
-        Document doc = customQuizRepository.findOne(
-                and(
-                        eq("_id", quizId),
-                        eq("user_id", userId),
-                        ne("status", "wait")
-                ), null
-        );
-
-        if(doc == null || !doc.containsKey("start_at") ||
-                doc.get("start_at") == null)
-            return JSON_NOT_ACCESS;
-
-        int neededTime = doc.getInteger("duration");
-        long curr = System.currentTimeMillis();
-
-        int untilYetInSecondFormat =
-                (int) ((curr - doc.getLong("start_at")) / 1000);
-
-        int reminder = neededTime - untilYetInSecondFormat;
-
-        if (reminder > 0)
-            return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
-
-        if(!doc.getString("status").equalsIgnoreCase("finished")) {
-            doc.put("status", "finished");
-
-            ArrayList<PairValue> studentAnswers = doc.containsKey("student_answers") ?
-                    Utility.getAnswers(
-                            doc.get("student_answers", Binary.class).getData()
-                    ) : new ArrayList<>();
-
-            ArrayList<Document> questions = questionRepository.findByIds(
-                    doc.getList("questions", ObjectId.class), true
-            );
-
-            if(questions == null)
-                return JSON_NOT_UNKNOWN;
-
-            RegularQuizController.Taraz t  = new RegularQuizController.Taraz(
-                    questions, userId, studentAnswers
-            );
-
-            doc.put("lessons", t.lessonsStatOutput);
-            doc.put("subjects", t.subjectsStatOutput);
-
-            customQuizRepository.replaceOne(quizId, doc);
-
-            Utilities.updateQuestionsStatWithByteArr(
-                    questions, t.questionStats
-            );
-
-            doc = customQuizRepository.findById(quizId);
-        }
+    private static String returnCustomQuizStats(Document std, ObjectId userId, String title) {
 
         Document config = getConfig();
 
@@ -92,7 +36,7 @@ public class AdminReportController {
         JSONArray lessons = new JSONArray();
 
         int totalCorrect = 0;
-        for (Document lesson : doc.getList("lessons", Document.class)) {
+        for (Document lesson : std.getList("lessons", Document.class)) {
 
             Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
             totalCorrect += (int) stats[2];
@@ -108,7 +52,7 @@ public class AdminReportController {
         }
 
         JSONArray subjects = new JSONArray();
-        for (Document subject : doc.getList("subjects", Document.class)) {
+        for (Document subject : std.getList("subjects", Document.class)) {
 
             Object[] stats = QuizAbstract.decodeCustomQuiz(subject.get("stat", Binary.class).getData());
 
@@ -126,7 +70,7 @@ public class AdminReportController {
         data.put("subjects", subjects);
         data.put("totalCorrects", totalCorrect);
 
-        data.put("quizName", doc.getString("name"));
+        data.put("quizName", title);
 
         if (config.containsKey("taraz_levels")) {
             List<Document> levels = config.getList("taraz_levels", Document.class);
@@ -147,6 +91,138 @@ public class AdminReportController {
         return generateSuccessMsg(
                 "data", data
         );
+
+    }
+
+
+    public static void buildContentQuizTaraz(Document doc, Document std
+    ) throws InvalidFieldsException {
+
+        ArrayList<PairValue> studentAnswers = std.containsKey("answers") ?
+                Utility.getAnswers(
+                        std.get("answers", Binary.class).getData()
+                ) : new ArrayList<>();
+
+        ArrayList<ObjectId> questionIds = new ArrayList<>(
+                doc.get("questions", Document.class).getList("_ids", ObjectId.class)
+        );
+
+        ArrayList<Document> questions = questionRepository.findByIds(
+                questionIds, true
+        );
+
+        if (questions == null)
+            throw new InvalidFieldsException("unknown");
+
+        RegularQuizController.Taraz t = new RegularQuizController.Taraz(
+                questions, std.getObjectId("_id"), studentAnswers
+        );
+
+        std.put("lessons", t.lessonsStatOutput);
+        std.put("subjects", t.subjectsStatOutput);
+
+        contentQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+
+        Utilities.updateQuestionsStatWithByteArr(
+                questions, t.questionStats
+        );
+
+    }
+
+    public static void buildCustomQuizTaraz(Document doc, ObjectId quizId, ObjectId userId
+    ) throws InvalidFieldsException {
+
+        ArrayList<PairValue> studentAnswers = doc.containsKey("student_answers") ?
+                Utility.getAnswers(
+                        doc.get("student_answers", Binary.class).getData()
+                ) : new ArrayList<>();
+
+        ArrayList<Document> questions = questionRepository.findByIds(
+                doc.getList("questions", ObjectId.class), true
+        );
+
+        if (questions == null)
+            throw new InvalidFieldsException("unknown");
+
+        RegularQuizController.Taraz t = new RegularQuizController.Taraz(
+                questions, userId, studentAnswers
+        );
+
+        doc.put("lessons", t.lessonsStatOutput);
+        doc.put("subjects", t.subjectsStatOutput);
+
+        customQuizRepository.replaceOne(quizId, doc);
+
+        Utilities.updateQuestionsStatWithByteArr(
+                questions, t.questionStats
+        );
+
+    }
+
+    public static String getStudentStatCustomQuiz(ObjectId quizId, ObjectId userId) {
+
+        Document doc = customQuizRepository.findOne(
+                and(
+                        eq("_id", quizId),
+                        eq("user_id", userId),
+                        ne("status", "wait")
+                ), null
+        );
+
+        if (doc == null || !doc.containsKey("start_at") ||
+                doc.get("start_at") == null)
+            return JSON_NOT_ACCESS;
+
+        int neededTime = doc.getInteger("duration");
+        long curr = System.currentTimeMillis();
+
+        int untilYetInSecondFormat =
+                (int) ((curr - doc.getLong("start_at")) / 1000);
+
+        int reminder = neededTime - untilYetInSecondFormat;
+
+        if (reminder > 0)
+            return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+
+        if (!doc.getString("status").equalsIgnoreCase("finished")) {
+            doc.put("status", "finished");
+            try {
+                buildCustomQuizTaraz(doc, quizId, userId);
+            } catch (InvalidFieldsException e) {
+                return generateErr(e.getMessage());
+            }
+            doc = customQuizRepository.findById(quizId);
+        }
+
+        return returnCustomQuizStats(doc, userId, doc.getString("name"));
+    }
+
+    public static String getStudentStatContentQuiz(ObjectId quizId, ObjectId userId) {
+
+        Document doc = contentQuizRepository.findById(quizId);
+
+        if (doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                doc.getList("students", Document.class), "_id", userId
+        );
+
+        if (std == null || !std.containsKey("start_at"))
+            return JSON_NOT_ACCESS;
+
+        long curr = System.currentTimeMillis();
+
+        if (!std.containsKey("last_build")) {
+            std.put("last_build", curr);
+            try {
+                buildContentQuizTaraz(doc, std);
+            } catch (InvalidFieldsException e) {
+                return generateErr(e.getMessage());
+            }
+        }
+
+        return returnCustomQuizStats(std, userId, doc.getString("title"));
     }
 
     public static String getStudentStat(Common db, Object user,
@@ -162,19 +238,19 @@ public class AdminReportController {
 
             boolean isIRYSCQuiz = db instanceof IRYSCQuizRepository;
 
-            if(userIsNotLogin && !isIRYSCQuiz)
+            if (userIsNotLogin && !isIRYSCQuiz)
                 return JSON_NOT_ACCESS;
 
             Document quiz = isIRYSCQuiz ?
                     hasPublicAccess(db, user, quizId) :
                     hasProtectedAccess(db, user == null ? null : (ObjectId) user, quizId);
 
-            if(user != null &&
-                    !(boolean)quiz.getOrDefault("show_results_after_correction", true))
+            if (user != null &&
+                    !(boolean) quiz.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج آزمون هنوز فرا نرسیده است.");
 
-            if(userIsNotLogin &&
-                    !(boolean)quiz.getOrDefault("show_results_after_correction_not_login_users", false))
+            if (userIsNotLogin &&
+                    !(boolean) quiz.getOrDefault("show_results_after_correction_not_login_users", false))
                 return generateErr("برای رویت نتایج باید وارد سامانه شوید.");
 
             List<Document> students = quiz.getList("students", Document.class);
@@ -188,13 +264,13 @@ public class AdminReportController {
 
             long curr = System.currentTimeMillis();
 
-            if(user != null && db instanceof OpenQuizRepository) {
+            if (user != null && db instanceof OpenQuizRepository) {
 
                 Document userDocInQuiz = searchInDocumentsKeyVal(
                         students, "_id", user
                 );
 
-                if(userDocInQuiz == null)
+                if (userDocInQuiz == null)
                     return JSON_NOT_ACCESS;
 
                 int neededTime = new RegularQuizController().calcLen(quiz);
@@ -203,10 +279,10 @@ public class AdminReportController {
                 int reminder = neededTime -
                         (int) ((curr - startAt) / 1000);
 
-                if(reminder > 0)
+                if (reminder > 0)
                     return generateErr("هنوز زمان مشاهده نتایج فرا نرسیده است.");
 
-                if(quiz.getLong("last_build_at") == null ||
+                if (quiz.getLong("last_build_at") == null ||
                         quiz.getLong("last_build_at") < quiz.getLong("last_finished_at")
                 ) {
                     new RegularQuizController.Taraz(quiz, openQuizRepository);
@@ -437,7 +513,7 @@ public class AdminReportController {
                 ), null
         );
 
-        if(doc == null || !doc.containsKey("start_at") ||
+        if (doc == null || !doc.containsKey("start_at") ||
                 doc.get("start_at") == null)
             return JSON_NOT_ACCESS;
 
@@ -457,7 +533,7 @@ public class AdminReportController {
         );
 
         ArrayList<Double> marks = new ArrayList<>();
-        for(int i = 0; i < doc.getList("questions", ObjectId.class).size(); i++)
+        for (int i = 0; i < doc.getList("questions", ObjectId.class).size(); i++)
             marks.add(3.0);
 
         JSONArray answersJsonArray = new JSONArray();
@@ -485,7 +561,7 @@ public class AdminReportController {
         try {
             Document doc = hasPublicAccess(db, userId, quizId);
 
-            if(!(boolean)doc.getOrDefault("show_results_after_correction", true))
+            if (!(boolean) doc.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج فرانرسیده است.");
 
             List<Document> students = doc.getList("students", Document.class);
@@ -560,7 +636,7 @@ public class AdminReportController {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
 
-            if(studentsInfo.get(k).get("city") == null)
+            if (studentsInfo.get(k).get("city") == null)
                 unknownTaraz.add((Integer) stats[0]);
             else {
                 ObjectId cityId = studentsInfo.get(k)
@@ -605,7 +681,7 @@ public class AdminReportController {
             );
         }
 
-        if(unknownTaraz.size() > 0) {
+        if (unknownTaraz.size() > 0) {
 
             int sum = 0;
             for (int itr : unknownTaraz)
@@ -663,7 +739,7 @@ public class AdminReportController {
             Document city = studentsInfo.get(k)
                     .get("city", Document.class);
 
-            if(city == null)
+            if (city == null)
                 unknownTaraz.add((Integer) stats[0]);
             else {
 
@@ -700,7 +776,7 @@ public class AdminReportController {
             );
         }
 
-        if(unknownTaraz.size() > 0) {
+        if (unknownTaraz.size() > 0) {
 
             int sum = 0;
             for (int itr : unknownTaraz)
@@ -759,7 +835,7 @@ public class AdminReportController {
             Document school = studentsInfo.get(k)
                     .get("school", Document.class);
 
-            if(school == null)
+            if (school == null)
                 unknownTaraz.add((Integer) stats[0]);
             else {
 
@@ -796,7 +872,7 @@ public class AdminReportController {
             );
         }
 
-        if(unknownTaraz.size() > 0) {
+        if (unknownTaraz.size() > 0) {
 
             int sum = 0;
             for (int itr : unknownTaraz)
@@ -851,7 +927,7 @@ public class AdminReportController {
 
             Object[] stats = QuizAbstract.decodeFormatGeneral(itr.get("stat", Binary.class).getData());
 
-            if(!studentsInfo.get(k).containsKey("sex") ||
+            if (!studentsInfo.get(k).containsKey("sex") ||
                     studentsInfo.get(k).get("sex") == null
             )
                 unknownTaraz.add((int) stats[0]);
@@ -885,7 +961,7 @@ public class AdminReportController {
                 .put("avg", femaleTaraz.size() == 0 ? 0 : sum / femaleTaraz.size())
         );
 
-        if(unknownTaraz.size() > 0) {
+        if (unknownTaraz.size() > 0) {
 
             sum = 0;
             for (int itr : unknownTaraz)
@@ -990,13 +1066,13 @@ public class AdminReportController {
         boolean isAdmin = Authorization.isAdmin(accesses);
         ArrayList<ObjectId> studentsIdAfterFilter = new ArrayList<>();
 
-        if(isAdmin)
+        if (isAdmin)
             studentsIdAfterFilter = students;
         else {
 
             if (Authorization.isSchool(accesses)) {
 
-                if(!user.containsKey("students"))
+                if (!user.containsKey("students"))
                     return null;
 
                 List<ObjectId> myStudentsId = user.getList("students", ObjectId.class);
@@ -1033,7 +1109,7 @@ public class AdminReportController {
                 user
         );
 
-        if(studentsInfo == null || studentsInfo.size() == 0)
+        if (studentsInfo == null || studentsInfo.size() == 0)
             return JSON_NOT_ACCESS;
 
         int i = 0;
@@ -1067,7 +1143,7 @@ public class AdminReportController {
             if (
                     (quiz.containsKey("end") && quiz.getLong("end") > curr) ||
                             !quiz.containsKey("report_status") ||
-                    !quiz.getString("report_status").equals("ready")
+                            !quiz.getString("report_status").equals("ready")
             )
                 return JSON_NOT_ACCESS;
 
@@ -1163,7 +1239,7 @@ public class AdminReportController {
                 Document studentResult = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                         studentResults, "_id", doc.getObjectId("_id")
                 );
-                if(studentResult == null)
+                if (studentResult == null)
                     continue;
 
                 Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
@@ -1178,7 +1254,7 @@ public class AdminReportController {
 
                 JSONArray lessonsStats = new JSONArray();
 
-                for(Document lessonStat : studentResult.getList("lessons", Document.class)) {
+                for (Document lessonStat : studentResult.getList("lessons", Document.class)) {
                     Object[] lessonStats = QuizAbstract.decode(lessonStat.get("stat", Binary.class).getData());
                     lessonsStats.put(
                             new JSONObject()
@@ -1189,12 +1265,11 @@ public class AdminReportController {
 
                 jsonObject.put("lessonsStats", lessonsStats);
 
-                if(!studentsInfo.get(k).containsKey("city") ||
+                if (!studentsInfo.get(k).containsKey("city") ||
                         studentsInfo.get(k).get("city") == null) {
                     jsonObject.put("state", "نامشخص");
                     jsonObject.put("city", "نامشخص");
-                }
-                else {
+                } else {
 
                     ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
 
@@ -1210,7 +1285,7 @@ public class AdminReportController {
                     jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
                 }
 
-                if(
+                if (
                         !studentsInfo.get(k).containsKey("school") ||
                                 studentsInfo.get(k).get("school") == null
                 )
