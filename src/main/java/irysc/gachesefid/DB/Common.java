@@ -10,6 +10,7 @@ import com.mongodb.client.model.UnwindOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Variable;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -209,9 +210,9 @@ public abstract class Common extends Repository {
 
     public String insertOneWithReturn(Document document) {
         documentMongoCollection.insertOne(document);
-        return new JSONObject().put("status", "ok")
-                .put("id", document.getObjectId("_id").toString())
-                .toString();
+        return Utility.generateSuccessMsg(
+                "id", document.getObjectId("_id").toString()
+        );
     }
 
     public ObjectId insertOneWithReturnId(Document document) {
