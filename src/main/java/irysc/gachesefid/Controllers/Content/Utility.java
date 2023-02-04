@@ -1,8 +1,10 @@
 package irysc.gachesefid.Controllers.Content;
 
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,10 +12,12 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import static irysc.gachesefid.Main.GachesefidApplication.contentConfigRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
-import static irysc.gachesefid.Utility.StaticValues.SERVER;
+import static irysc.gachesefid.Controllers.Certification.AdminCertification.addUserToCert;
+import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildContentQuizTaraz;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 
 public class Utility {
 
@@ -72,7 +76,8 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy, boolean includeFAQ) {
+    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy,
+                              boolean includeFAQ, Document stdDoc, String NID) throws InvalidFieldsException {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
@@ -111,6 +116,105 @@ public class Utility {
 
         if(doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
+
+        if(afterBuy && doc.containsKey("final_exam_id") && stdDoc != null) {
+
+            ObjectId quizId = doc.getObjectId("final_exam_id");
+            long curr = System.currentTimeMillis();
+            boolean oldCert = (boolean)stdDoc.getOrDefault("check_cert", false);
+
+            if(stdDoc.containsKey("start_at") &&
+                    !stdDoc.containsKey("check_cert") &&
+                    doc.containsKey("cert_id")
+            ) {
+
+                boolean needCheck = true;
+
+                if(doc.containsKey("cert_duration")) {
+
+                    long registerAt = stdDoc.getLong("register_at");
+                    int diffDay = (int) Math.floor((curr - registerAt) * 1.0 / ONE_DAY_MIL_SEC);
+
+                    if(diffDay > doc.getInteger("cert_duration")) {
+                        stdDoc.put("check_cert", false);
+                        contentRepository.replaceOne(doc.getObjectId("_id"), doc);
+                        needCheck = false;
+                    }
+
+                }
+
+                if(needCheck) {
+
+                    if(doc.containsKey("final_exam_min_mark")) {
+
+                        Document quiz = contentQuizRepository.findById(quizId);
+                        if (quiz == null)
+                            throw new InvalidFieldsException("unknown2");
+
+                        ObjectId userId = stdDoc.getObjectId("_id");
+
+                        Document stdDocInQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                                quiz.getList("students", Document.class), "_id", userId
+                        );
+
+                        if (stdDocInQuiz == null)
+                            throw new InvalidFieldsException("unknown3");
+
+                        if (!stdDocInQuiz.containsKey("last_build")) {
+
+                            stdDocInQuiz.put("last_build", curr);
+                            buildContentQuizTaraz(quiz, stdDocInQuiz);
+
+                            int totalCorrect = 0;
+                            int totalInCorrect = 0;
+                            int totalWhites = 0;
+
+                            for (Document lesson : stdDocInQuiz.getList("lessons", Document.class)) {
+                                Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
+                                totalWhites += (int) stats[0];
+                                totalCorrect += (int) stats[1];
+                                totalInCorrect += (int) stats[2];
+                            }
+
+                            double percent;
+                            if ((boolean) quiz.getOrDefault("minus_mark", true))
+                                percent = ((totalCorrect * 3.0 - totalInCorrect) * 100.0) / (totalInCorrect + totalWhites + totalCorrect);
+                            else
+                                percent = totalCorrect * 100.0 / (totalInCorrect + totalWhites + totalCorrect);
+
+                            stdDoc.put("check_cert", percent >= doc.getInteger("final_exam_min_mark"));
+                            contentRepository.replaceOne(doc.getObjectId("_id"), doc);
+                        }
+                    }
+                    else {
+                        stdDoc.put("check_cert", true);
+                        contentRepository.replaceOne(doc.getObjectId("_id"), doc);
+                    }
+                }
+            }
+
+            jsonObject
+                    .put("quizStatus", stdDoc.containsKey("start_at") ? "result" : "start")
+                    .put("finalExamId", quizId.toString())
+            ;
+
+            if((boolean)stdDoc.getOrDefault("check_cert", false)) {
+                if(!oldCert) {
+
+//                    JSONArray params = new JSONArray();
+//                    params.put(user.getString("first_name") + " " + user.getString("last_name"));
+//                    params.put(doc.getString("title"));
+//                    params.put(stdDoc.getLong(""));
+//                    params.put(rank + "");
+
+//                    addUserToCert(null, doc.getObjectId("cert_id"),
+//                            NID, params);
+                }
+
+                jsonObject.put("certStatus", "ready");
+            }
+
+        }
 
         if(isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))

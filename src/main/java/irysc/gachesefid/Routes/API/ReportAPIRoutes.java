@@ -165,6 +165,14 @@ public class ReportAPIRoutes extends Router {
             return AdminReportController.getStudentStatCustomQuiz(quizId, user.getObjectId("_id"));
         }
 
+        if(mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())) {
+
+            if(user == null)
+                return JSON_NOT_ACCESS;
+
+            return AdminReportController.getStudentStatContentQuiz(quizId, user.getObjectId("_id"));
+        }
+
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
