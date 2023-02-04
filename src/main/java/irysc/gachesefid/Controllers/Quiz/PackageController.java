@@ -205,7 +205,8 @@ public class PackageController {
     }
 
     public static String getPackages(List<String> accesses, ObjectId userId,
-                                     ObjectId gradeId, ObjectId lessonId
+                                     ObjectId gradeId, ObjectId lessonId, ObjectId id,
+                                     ObjectId quizIdFilter
     ) {
 
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
@@ -214,6 +215,9 @@ public class PackageController {
         ArrayList<Bson> filters = new ArrayList<>();
 
         filters.add(gt("expire_at", System.currentTimeMillis()));
+
+        if (id != null)
+            filters.add(eq("_id", id));
 
         if (gradeId != null)
             filters.add(eq("grade_id", gradeId));
@@ -224,7 +228,7 @@ public class PackageController {
                     eq("lesson_id", lessonId)
             ));
 
-        ArrayList<Document> packages = packageRepository.find(
+        ArrayList<Document> packages = quizIdFilter != null ? new ArrayList<>() : packageRepository.find(
                 and(filters), null
         );
 
@@ -389,40 +393,54 @@ public class PackageController {
                 );
             }
 
-            ArrayList<Bson> filtersForQuizzes = new ArrayList<>();
-            filtersForQuizzes.add(nin("_id", fetched));
-            filtersForQuizzes.add(eq("visibility", true));
-            filtersForQuizzes.add(lte("start_registry", curr));
-            filtersForQuizzes.add(or(
-                    exists("end_registry", false),
-                    gt("end_registry", curr)
-            ));
-            filtersForQuizzes.add(gt("end", curr));
+            if(id == null) {
+                ArrayList<Bson> filtersForQuizzes = new ArrayList<>();
+                filtersForQuizzes.add(nin("_id", fetched));
+                filtersForQuizzes.add(eq("visibility", true));
+                filtersForQuizzes.add(lte("start_registry", curr));
 
-            if(userId != null)
-                filtersForQuizzes.add(nin("students._id", userId));
+                if(quizIdFilter != null)
+                    filtersForQuizzes.add(eq("_id", quizIdFilter));
 
-            ArrayList<Document> docs = iryscQuizRepository.find(
-                    and(filtersForQuizzes), null
-            );
-
-            if(!isSchool)
-                docs.addAll(openQuizRepository.find(
-                        userId == null ? null : nin("students._id", userId), null
+                filtersForQuizzes.add(or(
+                        exists("end_registry", false),
+                        gt("end_registry", curr)
                 ));
+                filtersForQuizzes.add(gt("end", curr));
 
-            RegularQuizController quizController = new RegularQuizController();
-            OpenQuiz openQuiz = new OpenQuiz();
+                if (userId != null)
+                    filtersForQuizzes.add(nin("students._id", userId));
 
-            for (Document doc : docs) {
+                ArrayList<Document> docs = iryscQuizRepository.find(
+                        and(filtersForQuizzes), null
+                );
 
-                if (doc.containsKey("tags")) {
-                    List<String> t = doc.getList("tags", String.class);
-                    if (t.size() > 0) {
-                        for (String itr : t) {
-                            if (!tags.contains(itr))
-                                tags.add(itr);
-                        }
+                if (!isSchool) {
+                    ArrayList<Bson> openQuizFilter = new ArrayList<>();
+
+                    if(quizIdFilter != null)
+                        openQuizFilter.add(eq("_id", quizIdFilter));
+
+                    if(userId != null)
+                        openQuizFilter.add(nin("students._id", userId));
+
+                    docs.addAll(openQuizRepository.find(
+                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null
+                    ));
+                }
+
+                RegularQuizController quizController = new RegularQuizController();
+                OpenQuiz openQuiz = new OpenQuiz();
+
+                for (Document doc : docs) {
+
+                    if (doc.containsKey("tags")) {
+                        List<String> t = doc.getList("tags", String.class);
+                        if (t.size() > 0) {
+                            for (String itr : t) {
+                                if (!tags.contains(itr))
+                                    tags.add(itr);
+                            }
 
 //                        ArrayList<String> subTags;
 //
@@ -437,25 +455,26 @@ public class PackageController {
 //                        }
 //
 //                        tags.put("المپیاد", subTags);
+                        }
                     }
+                    JSONObject object;
+
+                    if (doc.containsKey("launch_mode"))
+                        object = quizController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else
+                        object = openQuiz.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+
+                    jsonArray.put(object);
                 }
-                JSONObject object;
 
-                if(doc.containsKey("launch_mode"))
-                    object = quizController.convertDocToJSON(
-                            doc, true, false, false, true
-                    ).put("type", "quiz");
-                else
-                    object = openQuiz.convertDocToJSON(
-                            doc, true, false, false, true
-                    ).put("type", "quiz");
-
-                jsonArray.put(object);
+                HashMap<String, ArrayList<String>> tmpHash = new HashMap<>();
+                tmpHash.put("تگ ها", tags);
+                data.put("tags", tmpHash);
             }
-
-            HashMap<String, ArrayList<String>> tmpHash = new HashMap<>();
-            tmpHash.put("تگ ها", tags);
-            data.put("tags", tmpHash);
         }
 
         data.put("items", jsonArray);

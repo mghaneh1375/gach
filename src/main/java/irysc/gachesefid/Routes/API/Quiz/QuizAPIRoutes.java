@@ -765,15 +765,31 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getPackages")
     @ResponseBody
     public String getPackages(HttpServletRequest request,
-                              @RequestParam(required = false) ObjectId gradeId,
-                              @RequestParam(required = false) ObjectId lessonId
+                              @RequestParam(required = false, value = "quizId") ObjectId quizId,
+                              @RequestParam(required = false, value = "gradeId") ObjectId gradeId,
+                              @RequestParam(required = false, value = "lessonId") ObjectId lessonId
     ) {
         Document user = getUserIfLogin(request);
 
         return PackageController.getPackages(
                 user == null ? null : user.getList("accesses", String.class),
                 user == null ? null : user.getObjectId("_id"),
-                gradeId, lessonId
+                gradeId, lessonId, null, quizId
+        );
+    }
+
+
+    @GetMapping(value = "/getPackage/{id}")
+    @ResponseBody
+    public String getPackages(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId id
+    ) {
+        Document user = getUserIfLogin(request);
+
+        return PackageController.getPackages(
+                user == null ? null : user.getList("accesses", String.class),
+                user == null ? null : user.getObjectId("_id"),
+                null, null, id, null
         );
     }
 
