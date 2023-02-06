@@ -12,6 +12,7 @@ import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.PDF.PDFUtils;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
@@ -102,7 +103,7 @@ public class QuizController {
         Document newDoc = new Document();
 
         for (String key : data.keySet()) {
-            if (key.equalsIgnoreCase("tags"))
+            if (key.equalsIgnoreCase("tags") || key.equalsIgnoreCase("kind"))
                 continue;
             newDoc.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
@@ -215,7 +216,8 @@ public class QuizController {
                                 Long startDateSolar,
                                 Long startDateSolarEndLimit,
                                 Long startRegistryDateSolar,
-                                Long startRegistrySolarEndLimit
+                                Long startRegistrySolarEndLimit,
+                                String kind
     ) {
 
         ArrayList<Document> docs;
@@ -225,6 +227,9 @@ public class QuizController {
 
         if(name != null)
             filters.add(regex("title", Pattern.compile(Pattern.quote(name), Pattern.CASE_INSENSITIVE)));
+
+        if(kind != null && EnumValidatorImp.isValid(kind, KindQuiz.class))
+            filters.add(eq("mode", kind));
 
         if(startDateSolar != null)
             filters.add(gte("start", startDateSolar));
@@ -430,6 +435,12 @@ public class QuizController {
                     "marks", new ArrayList<Double>()
             );
 
+            List<Boolean> uploadableList = null;
+            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
+                        "uploadable_list", new ArrayList<Double>()
+                );
+
             if (questionsMark.size() != questions.size())
                 return JSON_NOT_UNKNOWN;
 
@@ -443,12 +454,24 @@ public class QuizController {
                     continue;
                 }
 
-                questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+                if(uploadableList != null && uploadableList.size() > i)
+                    questionsList.add(
+                            Document.parse(question.toJson())
+                                    .append("no", i + 1)
+                                    .append("mark", questionsMark.get(i))
+                                    .append("can_upload", uploadableList.get(i))
+                    );
+                else
+                    questionsList.add(
+                            Document.parse(question.toJson())
+                                    .append("no", i + 1)
+                                    .append("mark", questionsMark.get(i))
+                    );
+
                 i++;
             }
 
             JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true, true);
-
             return generateSuccessMsg("data", jsonArray);
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -833,7 +856,10 @@ public class QuizController {
                 }
             }
 
-            return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3);
+            return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3,
+                    quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                            true : null
+            );
 
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -850,10 +876,15 @@ public class QuizController {
 
             Document quiz = hasAccess(db, userId, quizId);
 
+            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return doAddQuestionsToQuiz(db, quiz, jsonArray,
+                        new JSONArray(), mark, true
+                );
+
             //todo: check edit access
             //todo: check school access to questions
             return doAddQuestionsToQuiz(db, quiz, jsonArray,
-                    new JSONArray(), mark
+                    new JSONArray(), mark, null
             );
 
         } catch (InvalidFieldsException x) {
@@ -866,7 +897,7 @@ public class QuizController {
     private static String doAddQuestionsToQuiz(Common db, Document quiz,
                                                Object questionsList,
                                                JSONArray excepts,
-                                               double mark) {
+                                               double mark, Boolean can_upload) {
 
         ArrayList<Document> addedItems = new ArrayList<>();
 
@@ -874,8 +905,14 @@ public class QuizController {
 
         List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
         List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
+        List<Boolean> uploadable_list = null;
+
+        if(can_upload != null)
+            uploadable_list = questions.containsKey("uploadable_list") ?
+                    questions.getList("uploadable_list", Boolean.class) : new ArrayList<>();
 
         if (questionsList instanceof JSONArray) {
+
             JSONArray jsonArray = (JSONArray) questionsList;
 
             for (int i = 0; i < jsonArray.length(); i++) {
@@ -909,16 +946,26 @@ public class QuizController {
 
                     ids.add(question.getObjectId("_id"));
                     marks.add(tmpMark);
+                    if(can_upload != null) {
+                        uploadable_list.add(can_upload);
 
-                    addedItems.add(
-                            Document.parse(question.toJson()).append("mark", mark)
-                    );
+                        addedItems.add(
+                                Document.parse(question.toJson()).append("mark", mark)
+                                    .append("canUpload", true)
+                        );
+
+                    }
+                    else
+                        addedItems.add(
+                                Document.parse(question.toJson()).append("mark", mark)
+                        );
 
                 } catch (Exception x) {
                     excepts.put(i + 1);
                 }
             }
 
+            questions.put("uploadable_list", uploadable_list);
             questions.put("marks", marks);
             questions.put("_ids", ids);
             questions.put("answers",
@@ -995,8 +1042,9 @@ public class QuizController {
             ObjectId quizId = new ObjectId(id);
             try {
                 Document quiz = hasAccess(db, userId, quizId);
+                // todo heyyy
                 doAddQuestionsToQuiz(db, quiz,
-                        question, null, mark
+                        question, null, mark, null
                 );
                 addedItems.put(
                         QuestionController.convertDocToJSON(question)
@@ -1022,22 +1070,29 @@ public class QuizController {
 
     public static String updateQuestionMark(Common db, ObjectId userId,
                                             ObjectId quizId, ObjectId questionId,
-                                            Number mark) {
+                                            Number mark, String canUpload) {
 
         try {
             Document quiz = hasAccess(db, userId, quizId);
-            List<Document> questions = quiz.getList("questions", Document.class);
+            Document questions = quiz.get("questions", Document.class);
+            List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
-            Document question = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                    questions, "_id", questionId
-            );
-
-            if (question == null)
+            int idx = ids.indexOf(questionId);
+            if(idx < 0)
                 return JSON_NOT_VALID_ID;
 
-            question.put("mark", mark.doubleValue());
-            quiz.put("questions", questions);
+            List<Double> marks = questions.getList("marks", Double.class);
+            marks.set(idx, mark.doubleValue());
 
+            if(canUpload != null && questions.containsKey("uploadable_list") && (
+                    canUpload.equalsIgnoreCase("yes") ||
+                            canUpload.equalsIgnoreCase("no")
+            )) {
+                List<Boolean> uploadableList = questions.getList("uploadable_list", Boolean.class);
+                uploadableList.set(idx, canUpload.equalsIgnoreCase("yes"));
+            }
+
+            quiz.put("questions", questions);
             db.replaceOne(quizId, quiz);
             return JSON_OK;
         } catch (Exception x) {
@@ -1434,7 +1489,9 @@ public class QuizController {
 
         if(db instanceof IRYSCQuizRepository) {
 
-            if(quiz.getLong("start") < System.currentTimeMillis())
+            if(quiz.containsKey("start") &&
+                    quiz.getLong("start") < System.currentTimeMillis()
+            )
                 return generateErr("زمان آزمون موردنظر رسیده است و امکان حذف سوال از آزمون وجود ندارد.");
 
         }

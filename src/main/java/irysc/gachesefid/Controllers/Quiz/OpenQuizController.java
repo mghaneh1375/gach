@@ -31,7 +31,8 @@ public class OpenQuizController {
             "show_results_after_correction_not_login_users",
             "permute", "visibility", "back_en", "mysql_id", "created_by",
             "created_at", "top_students_count", "students", "registered",
-            "ranking_list", "report_status", "general_stat", "question_stat"
+            "ranking_list", "report_status", "general_stat", "question_stat",
+            "isRegistrable", "isUploadable", "kind"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject) {

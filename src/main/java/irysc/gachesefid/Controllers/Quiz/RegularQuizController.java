@@ -41,7 +41,8 @@ public class RegularQuizController extends QuizAbstract {
     };
 
     private final static String[] forbiddenFields = {
-            "paperTheme", "database"
+            "paperTheme", "database", "isRegistrable", "isUploadable",
+            "kind"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject, String mode) {

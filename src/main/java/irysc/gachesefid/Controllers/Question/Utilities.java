@@ -165,6 +165,9 @@ public class Utilities {
             if (doc.containsKey("sentences_count"))
                 jsonObject.put("sentencesCount", doc.get("sentences_count"));
 
+            if(doc.containsKey("can_upload"))
+                jsonObject.put("canUpload", doc.get("can_upload"));
+
             if (isQuestionFileNeeded && doc.containsKey("question_file"))
                 jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
 

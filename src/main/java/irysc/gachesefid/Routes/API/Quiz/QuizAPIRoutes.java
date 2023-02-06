@@ -82,7 +82,9 @@ public class QuizAPIRoutes extends Router {
                                         "paperTheme", "database",
                                         "descAfter", "desc",
                                         "duration", // duration is in min format
-                                        "showResultsAfterCorrectionNotLoginUsers"
+                                        "showResultsAfterCorrectionNotLoginUsers",
+                                        "isRegistrable", "isUploadable",
+                                        "kind"
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -95,7 +97,9 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Positive.class,
                                         String.class, Boolean.class,
                                         String.class, String.class,
-                                        Positive.class, Boolean.class
+                                        Positive.class, Boolean.class,
+                                        Boolean.class, Boolean.class,
+                                        KindQuiz.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -103,11 +107,21 @@ public class QuizAPIRoutes extends Router {
         Document user = getAdminPrivilegeUser(request);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
-        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
+
+            if(jsonObject.has("kind") &&
+                    jsonObject.getString("kind").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())
+            )
+                return TashrihiQuizController.create(
+                        user.getObjectId("_id"),
+                        jsonObject, mode
+                );
+
             return RegularQuizController.create(
                     user.getObjectId("_id"),
                     jsonObject, mode
             );
+        }
 
         if (mode.equals(AllKindQuiz.OPEN.getName()))
             return OpenQuizController.create(user.getObjectId("_id"),
@@ -116,11 +130,6 @@ public class QuizAPIRoutes extends Router {
 
         if (mode.equals(AllKindQuiz.CONTENT.getName()))
             return ContentQuizController.create(user.getObjectId("_id"),
-                    jsonObject
-            );
-
-        if (mode.equals(KindQuiz.TASHRIHI.getName()))
-            return TashrihiQuizController.create(user.getObjectId("_id"),
                     jsonObject
             );
 
@@ -190,6 +199,7 @@ public class QuizAPIRoutes extends Router {
     public String getAll(HttpServletRequest request,
                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) @NotBlank String mode,
                          @RequestParam(required = false, value = "name") String name,
+                         @RequestParam(required = false, value = "kind") String kind,
                          @RequestParam(required = false, value = "startDateSolar") Long startDateSolar,
                          @RequestParam(required = false, value = "startDateSolarEndLimit") Long startDateSolarEndLimit,
                          @RequestParam(required = false, value = "startRegistryDateSolar") Long startRegistryDateSolar,
@@ -203,23 +213,25 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
             return QuizController.getAll(iryscQuizRepository, null,
                     name, startDateSolar, startDateSolarEndLimit,
-                    startRegistryDateSolar, startRegistrySolarEndLimit
+                    startRegistryDateSolar, startRegistrySolarEndLimit,
+                    kind
             );
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return QuizController.getAll(openQuizRepository, null,
-                    name, null, null, null, null
+                    name, null, null, null, null,
+                    kind
             );
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return QuizController.getAll(contentQuizRepository, null,
-                    name, null, null, null, null
+                    name, null, null, null, null, null
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
                     name, startDateSolar, startDateSolarEndLimit,
-                    startRegistryDateSolar, startRegistrySolarEndLimit
+                    startRegistryDateSolar, startRegistrySolarEndLimit, kind
             );
 
         return JSON_NOT_VALID_PARAMS;
@@ -632,7 +644,8 @@ public class QuizAPIRoutes extends Router {
                                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
                                      @PathVariable @ObjectIdConstraint ObjectId questionId,
-                                     @PathVariable Number mark
+                                     @PathVariable Number mark,
+                                     @RequestParam(required = false, value = "canUpload") String canUpload
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getAdminPrivilegeUser(request);
@@ -640,9 +653,9 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.updateQuestionMark(iryscQuizRepository, null, quizId, questionId, mark);
+            return QuizController.updateQuestionMark(iryscQuizRepository, null, quizId, questionId, mark, canUpload);
 
-        return QuizController.updateQuestionMark(schoolQuizRepository, user.getObjectId("_id"), quizId, questionId, mark);
+        return QuizController.updateQuestionMark(schoolQuizRepository, user.getObjectId("_id"), quizId, questionId, mark, canUpload);
     }
 
     @GetMapping(value = "/fetchQuestions/{mode}/{quizId}")

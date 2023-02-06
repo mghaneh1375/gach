@@ -395,7 +395,10 @@ public class PackageController {
 
             if(id == null) {
                 ArrayList<Bson> filtersForQuizzes = new ArrayList<>();
-                filtersForQuizzes.add(nin("_id", fetched));
+
+                if(fetched.size() > 0)
+                    filtersForQuizzes.add(nin("_id", fetched));
+
                 filtersForQuizzes.add(eq("visibility", true));
                 filtersForQuizzes.add(lte("start_registry", curr));
 
@@ -411,9 +414,13 @@ public class PackageController {
                 if (userId != null)
                     filtersForQuizzes.add(nin("students._id", userId));
 
+                System.out.println(and(filtersForQuizzes));
+
                 ArrayList<Document> docs = iryscQuizRepository.find(
                         and(filtersForQuizzes), null
                 );
+
+                System.out.println(docs.size());
 
                 if (!isSchool) {
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();

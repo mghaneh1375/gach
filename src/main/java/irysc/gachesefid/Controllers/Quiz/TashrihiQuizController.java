@@ -6,6 +6,7 @@ import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
@@ -23,6 +24,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
 
 public class TashrihiQuizController extends QuizAbstract {
@@ -30,8 +32,9 @@ public class TashrihiQuizController extends QuizAbstract {
     //duration is optional field and if exist entity will be a tashrihi quiz
     // and else will be a HW
     private final static String[] mandatoryFields = {
-            "startRegistry", "start", "price",
-            "end", "isOnline", "showResultsAfterCorrection",
+            "showResultsAfterCorrection",
+            "showResultsAfterCorrectionNotLoginUsers",
+            "isUploadable", "isRegistrable"
     };
 
     private final static String[] forbiddenFields = {
@@ -42,15 +45,38 @@ public class TashrihiQuizController extends QuizAbstract {
         return 0;
     }
 
-    public static String create(ObjectId userId, JSONObject jsonObject) {
+    public static String create(ObjectId userId, JSONObject jsonObject, String mode) {
 
         try {
 
-            irysc.gachesefid.Controllers.Quiz.Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
+            checkFields(mandatoryFields, forbiddenFields, jsonObject);
             jsonObject.put("mode", KindQuiz.TASHRIHI.getName());
-            Document newDoc = QuizController.store(userId, jsonObject);
 
-            return iryscQuizRepository.insertOneWithReturn(newDoc);
+            if(jsonObject.getBoolean("isRegistrable") && (
+                    !jsonObject.has("price") ||
+                            !jsonObject.has("startRegistry") ||
+                            !jsonObject.has("endRegistry")
+                )
+            )
+                return generateErr("لطفا تمام فیلدهای لازم را پر نمایید");
+
+            if(jsonObject.getBoolean("isUploadable") && (
+                    !jsonObject.has("duration") ||
+                            !jsonObject.has("start") ||
+                            !jsonObject.has("end")
+            ))
+                return generateErr("لطفا تمام فیلدهای لازم را پر نمایید");
+
+            Document newDoc = QuizController.store(userId, jsonObject);
+            iryscQuizRepository.insertOne(newDoc);
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "quiz", new TashrihiQuizController()
+                            .convertDocToJSON(newDoc, false, true,
+                                    false, false
+                            )
+            );
+
 
         } catch (InvalidFieldsException e) {
             return irysc.gachesefid.Utility.Utility.generateErr(
@@ -505,7 +531,127 @@ public class TashrihiQuizController extends QuizAbstract {
 
     @Override
     JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
-        return null;
+
+        JSONObject jsonObject = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("generalMode", AllKindQuiz.IRYSC.getName())
+                .put("mode", quiz.getString("mode"))
+                .put("tags", quiz.getList("tags", String.class))
+                .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
+                .put("id", quiz.getObjectId("_id").toString());
+
+        if(quiz.containsKey("start"))
+            jsonObject.put("start", quiz.getLong("start"));
+
+        if(quiz.containsKey("end"))
+            jsonObject.put("end", quiz.getLong("end"));
+
+        if(quiz.containsKey("launch_mode"))
+            jsonObject.put("launchMode", quiz.getString("launch_mode"));
+
+        int questionsCount = 0;
+        try {
+            questionsCount = quiz.get("questions", Document.class)
+                    .getList("_ids", ObjectId.class).size();
+        } catch (Exception ignore) {
+        }
+
+        boolean isUploadable = quiz.getBoolean("is_uploadable");
+
+        if (afterBuy) {
+
+            long curr = System.currentTimeMillis();
+
+            if (
+                    (quiz.containsKey("end") && quiz.getLong("end") < curr) ||
+                            (!quiz.containsKey("end") && quiz.containsKey("report_status"))
+            ) {
+                boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
+                        quiz.containsKey("report_status") &&
+                        quiz.getString("report_status").equalsIgnoreCase("ready");
+
+                if(canSeeResult)
+                    jsonObject.put("status", "finished")
+                            .put("questionsCount", questionsCount);
+                else
+                    jsonObject.put("status", "waitForResult")
+                            .put("questionsCount", questionsCount);
+            }
+            else if (quiz.getBoolean("is_uploadable") &&
+                    quiz.containsKey("start") &&
+                    quiz.containsKey("end") &&
+                    quiz.getLong("start") <= curr &&
+                    quiz.getLong("end") > curr
+            ) {
+                jsonObject
+                        .put("status", "inProgress")
+                        .put("duration", calcLen(quiz))
+                        .put("questionsCount", questionsCount);
+            }
+            else if(quiz.getBoolean("is_uploadable") &&
+                    quiz.containsKey("start") &&
+                    quiz.getLong("start") > curr
+            )
+                jsonObject.put("status", "notStart");
+            else
+                jsonObject.put("status", "wait");
+
+        } else if(quiz.containsKey("start_registry") &&
+            quiz.containsKey("price")
+        ) {
+            jsonObject.put("startRegistry", quiz.getLong("start_registry"))
+                    .put("endRegistry", quiz.getOrDefault("end_registry", ""))
+                    .put("price", quiz.get("price"));
+        }
+
+        if (isAdmin) {
+            jsonObject
+                    .put("studentsCount", quiz.getInteger("registered"))
+                    .put("visibility", quiz.getBoolean("visibility"))
+                    .put("questionsCount", questionsCount)
+                    .put("capacity", quiz.getOrDefault("capacity", 10000));
+        }
+
+        if (quiz.containsKey("capacity"))
+            jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
+
+        if(!isDigest || isDescNeeded)
+            jsonObject
+                    .put("description", quiz.getOrDefault("description", ""));
+
+        if (!isDigest) {
+            jsonObject
+                    .put("topStudentsCount", quiz.getInteger("top_students_count"))
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
+
+            if(isAdmin) {
+                JSONArray attaches = new JSONArray();
+                if(quiz.containsKey("attaches")) {
+                    for (String attach : quiz.getList("attaches", String.class))
+                        attaches.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+                }
+
+                if(isUploadable) {
+                    jsonObject.put("lenMode", quiz.containsKey("duration") ? "custom" : "question");
+                    if (quiz.containsKey("duration"))
+                        jsonObject.put("len", quiz.getInteger("duration"));
+
+                    jsonObject.put("backEn", quiz.getOrDefault("back_en", false));
+                    jsonObject.put("permute", quiz.getOrDefault("permute", false));
+                }
+
+
+                jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
+                jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+                jsonObject.put("attaches", attaches);
+
+                jsonObject.put("showResultsAfterCorrectionNotLoginUsers",
+                        quiz.getOrDefault("show_results_after_correction_not_login_users", false)
+                );
+            }
+        }
+
+        return jsonObject;
     }
 
 }
