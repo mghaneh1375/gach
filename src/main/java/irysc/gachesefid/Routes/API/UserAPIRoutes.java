@@ -78,13 +78,6 @@ public class UserAPIRoutes extends Router {
 //            if(1 == 1)
 //                return plainText;
 
-//            -09224786125
-
-            contentConfigRepository.insertOne(new Document("faq", new ArrayList<>())
-                    .append("ads", new ArrayList<>())
-                    .append("seo", new ArrayList<>())
-            );
-
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "", "regexam");
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "1400/02/04", "newQuiz");
 //            sendSMS("09214915905", "محمد قانع", "المپیاد زیست", "", "quizRemember");

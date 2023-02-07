@@ -1,11 +1,13 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
@@ -16,6 +18,7 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONString;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,8 +27,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class TashrihiQuizController extends QuizAbstract {
 
@@ -34,7 +36,8 @@ public class TashrihiQuizController extends QuizAbstract {
     private final static String[] mandatoryFields = {
             "showResultsAfterCorrection",
             "showResultsAfterCorrectionNotLoginUsers",
-            "isUploadable", "isRegistrable"
+            "isUploadable", "isRegistrable",
+            "isQRNeeded"
     };
 
     private final static String[] forbiddenFields = {
@@ -43,6 +46,175 @@ public class TashrihiQuizController extends QuizAbstract {
 
     public int calcLen(Document quiz) {
         return 0;
+    }
+
+    public static String corrector(Common db, ObjectId userId, ObjectId quizId, ObjectId correctorId) {
+//        Document questionsDoc = quiz.get("questions", Document.class);
+//
+//        ArrayList<Document> questionsList = new ArrayList<>();
+//        List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+//                "_ids", new ArrayList<ObjectId>()
+//        );
+//        List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+//                "marks", new ArrayList<Double>()
+//        );
+//
+//        List<Boolean> uploadableList = null;
+//        if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+//            uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
+//                    "uploadable_list", new ArrayList<Double>()
+//            );
+//
+//        if (questionsMark.size() != questions.size())
+//            return JSON_NOT_UNKNOWN;
+//
+//        int i = 0;
+//        for (ObjectId itr : questions) {
+//
+//            Document question = questionRepository.findById(itr);
+//
+//            if (question == null) {
+//                i++;
+//                continue;
+//            }
+//
+//            if(uploadableList != null && uploadableList.size() > i)
+//                questionsList.add(
+//                        Document.parse(question.toJson())
+//                                .append("no", i + 1)
+//                                .append("mark", questionsMark.get(i))
+//                                .append("can_upload", uploadableList.get(i))
+//                );
+//            else
+//                questionsList.add(
+//                        Document.parse(question.toJson())
+//                                .append("no", i + 1)
+//                                .append("mark", questionsMark.get(i))
+//                );
+//
+//            i++;
+//        }
+//
+//        JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true, true);
+//        return generateSuccessMsg("data", jsonArray);
+        return JSON_OK;
+    }
+
+    public static String removeCorrectors(Common db, ObjectId userId,
+                                          ObjectId quizId, JSONArray items) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if(!quiz.containsKey("correctors"))
+                return JSON_NOT_ACCESS;
+
+            List<Document> correctors = quiz.getList("correctors", Document.class);
+            JSONArray excepts = new JSONArray();
+            JSONArray doneIds = new JSONArray();
+
+            for(int i = 0; i < items.length(); i++) {
+
+                String id = items.getString(i);
+
+                if(!ObjectId.isValid(id)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                ObjectId oId = new ObjectId(id);
+
+                int idx = searchInDocumentsKeyValIdx(
+                        correctors, "_id", oId
+                );
+
+                if(idx < 0) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                correctors.remove(idx);
+                doneIds.put(id);
+            }
+
+            db.replaceOne(quizId, quiz);
+            return returnRemoveResponse(
+                    excepts, doneIds
+            );
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    public static String addCorrector(Common db, ObjectId userId, ObjectId quizId, String NID) {
+
+        if(!Utility.validationNationalCode(NID))
+            return generateErr("کد ملی وارد شده معتبر نمی باشد");
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if(!quiz.containsKey("correctors"))
+                return JSON_NOT_ACCESS;
+
+            Document user = userRepository.findBySecKey(NID);
+            if(user == null ||
+                    !user.getList("accesses", String.class).contains(Access.TEACHER.getName())
+            )
+                return generateErr("کدملی وارد شده مربوط به یک دبیر نیست");
+
+            List<Document> correctors = quiz.getList("correctors", Document.class);
+            ObjectId id = new ObjectId();
+
+            correctors.add(new Document("_id", id)
+                    .append("user_id", user.getObjectId("_id"))
+            );
+
+            db.replaceOne(quizId, quiz);
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("id", id.toString())
+                    .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                    .put("questions", 0)
+                    .put("students", 0)
+            );
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    public static String correctors(Common db, ObjectId userId, ObjectId quizId) {
+        try {
+            Document quiz = hasAccess(db, userId, quizId);
+            List<Document> correctors = quiz.getList("correctors", Document.class);
+            JSONArray jsonArray = new JSONArray();
+
+            for (Document corrector : correctors) {
+                Document user = userRepository.findById(corrector.getObjectId("user_id"));
+                if(user == null)
+                    continue;
+
+                jsonArray.put(new JSONObject()
+                        .put("id", corrector.getObjectId("_id").toString())
+                        .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                        .put("questions",
+                                corrector.containsKey("questions") ?
+                                        corrector.getList("questions", ObjectId.class).size() : 0
+                        )
+                        .put("students",
+                                corrector.containsKey("students") ?
+                                        corrector.getList("students", ObjectId.class).size() : 0
+                        )
+                );
+            }
+
+            return generateSuccessMsg("data", jsonArray);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
     }
 
     public static String create(ObjectId userId, JSONObject jsonObject, String mode) {
@@ -61,11 +233,15 @@ public class TashrihiQuizController extends QuizAbstract {
                 return generateErr("لطفا تمام فیلدهای لازم را پر نمایید");
 
             if(jsonObject.getBoolean("isUploadable") && (
-                    !jsonObject.has("duration") ||
-                            !jsonObject.has("start") ||
-                            !jsonObject.has("end")
+                    !jsonObject.has("start") ||
+                    !jsonObject.has("end")
             ))
                 return generateErr("لطفا تمام فیلدهای لازم را پر نمایید");
+
+            if(jsonObject.getBoolean("isQRNeeded") && (
+                    jsonObject.has("duration")
+            ))
+                return generateErr("فیلد مدت آزمون نامعتبر است");
 
             Document newDoc = QuizController.store(userId, jsonObject);
             iryscQuizRepository.insertOne(newDoc);
@@ -538,6 +714,7 @@ public class TashrihiQuizController extends QuizAbstract {
                 .put("mode", quiz.getString("mode"))
                 .put("tags", quiz.getList("tags", String.class))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
+                .put("isQRNeeded", quiz.getBoolean("is_q_r_needed"))
                 .put("id", quiz.getObjectId("_id").toString());
 
         if(quiz.containsKey("start"))
