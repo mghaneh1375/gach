@@ -671,28 +671,44 @@ public class TashrihiQuizController extends QuizAbstract {
     List<Document> registry(ObjectId studentId, String phone, String mail,
                   List<ObjectId> quizIds, int paid, ObjectId transactionId, String stdName) {
 
-//        List<Document> students = quiz.getList("students", Document.class);
-//
-//        if (searchInDocumentsKeyValIdx(
-//                students, "_id", studentId
-//        ) != -1)
-//            return null;
-//
-//        Document stdDoc = new Document("_id", studentId)
-//                .append("paid", paid)
-//                .append("register_at", System.currentTimeMillis())
-//                .append("finish_at", null)
-//                .append("start_at", null)
-//                .append("answers", new ArrayList<>())
-//                .append("all_marked", false);
-//
-//        if ((boolean) quiz.getOrDefault("permute", false))
-//            stdDoc.put("question_indices", new ArrayList<>());
-//
-//        students.add(stdDoc);
-//
-//        return stdDoc;
-        return null;
+        ArrayList<Document> added = new ArrayList<>();
+
+        for (ObjectId quizId : quizIds) {
+
+            try {
+                Document quiz = iryscQuizRepository.findById(quizId);
+                List<Document> students = quiz.getList("students", Document.class);
+
+                if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                        students, "_id", studentId
+                ) != -1)
+                    continue;
+
+                Document stdDoc = new Document("_id", studentId)
+                        .append("paid", paid / quizIds.size())
+                        .append("register_at", System.currentTimeMillis())
+                        .append("finish_at", null)
+                        .append("start_at", null)
+                        .append("all_marked", false)
+                        .append("answers", new ArrayList<>());
+
+                students.add(stdDoc);
+                added.add(stdDoc);
+                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
+                iryscQuizRepository.replaceOne(
+                        quizId, quiz
+                );
+
+                if(transactionId != null && mail != null) {
+                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
+                }
+
+                //todo : send notif
+            } catch (Exception ignore) {}
+        }
+
+        return added;
     }
 
     @Override

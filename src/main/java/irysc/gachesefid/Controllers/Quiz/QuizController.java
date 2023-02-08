@@ -968,9 +968,6 @@ public class QuizController {
             questions.put("uploadable_list", uploadable_list);
             questions.put("marks", marks);
             questions.put("_ids", ids);
-            questions.put("answers",
-                    Utility.getAnswersByteArr(ids)
-            );
             quiz.put("questions", questions);
 
             db.replaceOne(quiz.getObjectId("_id"), quiz);
