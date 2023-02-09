@@ -986,7 +986,8 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getQuizAnswerSheets(HttpServletRequest request,
                                       @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                      @PathVariable @ObjectIdConstraint ObjectId quizId
+                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                      @RequestParam(required = false, value = "studentId") ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -995,13 +996,13 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return AdminReportController.getQuizAnswerSheets(
-                    iryscQuizRepository, null, quizId
+                    iryscQuizRepository, null, quizId, studentId
             );
 
         return AdminReportController.getQuizAnswerSheets(
                 schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
-                quizId
+                quizId, studentId
         );
     }
 

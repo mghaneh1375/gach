@@ -1315,6 +1315,7 @@ public class QuizController {
                                             ObjectId quizId) {
         try {
             Document doc = hasAccess(db, userId, quizId);
+
             JSONArray jsonArray = new JSONArray();
 
             Document questions = doc.get("questions", Document.class);

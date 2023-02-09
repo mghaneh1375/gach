@@ -6,14 +6,17 @@ import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -435,19 +438,80 @@ public class AdminReportController {
 
     }
 
+    private static String getTashrihiQuizAnswerSheet(Document quiz, Document student) {
+
+        if(!quiz.containsKey("cropped"))
+            return generateErr("برش پاسخ برگها هنوز صورت نگرفته است.");
+
+        Document studentDoc = null;
+
+        if(student != null) {
+            studentDoc = userRepository.findById(student.getObjectId("_id"));
+            if(studentDoc == null)
+                return JSON_NOT_UNKNOWN;
+
+            String prefix =  DEV_MODE ?
+                    FileUtils.uploadDir_dev + "tashrihi_answer_sheets/" + quiz.getObjectId("_id") :
+                    FileUtils.uploadDir + "tashrihi_answer_sheets/" + quiz.getObjectId("_id");
+
+            prefix += "/";
+
+            File f = new File(prefix + studentDoc.getString("NID"));
+
+            if(!f.exists() || !f.isDirectory())
+                return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
+
+            File[] files = f.listFiles();
+            if(files == null)
+                return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
+
+            JSONArray answerSheets = new JSONArray();
+
+            prefix = "tashrihi_answer_sheets/" + quiz.getObjectId("_id") + "/" +
+                    studentDoc.getString("NID") + "/";
+
+            for(File itr : files) {
+
+                if(itr.getName().equals(".") || itr.getName().equals(".."))
+                    continue;
+
+                answerSheets.put(STATICS_SERVER + prefix + itr.getName());
+            }
+
+            if(answerSheets.length() == 0)
+                return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
+
+            return generateSuccessMsg("data", answerSheets);
+        }
+
+        return JSON_OK;
+    }
+
     public static String getQuizAnswerSheets(Common db, ObjectId userId,
-                                             ObjectId quizId) {
+                                             ObjectId quizId, ObjectId studentId) {
         try {
             Document doc = hasAccess(db, userId, quizId);
+            List<Document> students = doc.getList("students", Document.class);
+            int idx = -1;
 
+            if(studentId != null) {
+
+                idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    students, "_id", studentId
+                );
+
+                if(idx == -1)
+                    return JSON_NOT_VALID_PARAMS;
+            }
+
+            if(doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return getTashrihiQuizAnswerSheet(doc, idx == -1 ? null : students.get(idx));
 //            if(doc.getBoolean("is_online") ||
 //                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
 //            )
 //                return JSON_NOT_VALID_ID;
 
-            List<Document> students = doc.getList("students", Document.class);
             JSONObject jsonObject = new JSONObject();
-
             JSONArray answersJsonArray = new JSONArray();
 
             Document questions = doc.get("questions", Document.class);

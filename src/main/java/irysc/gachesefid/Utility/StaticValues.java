@@ -7,9 +7,9 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
 
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 //    public final static String GACH_SERVER = "http://192.168.43.157:8080/api/";
 
 
