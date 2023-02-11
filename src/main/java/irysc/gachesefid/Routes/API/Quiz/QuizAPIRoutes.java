@@ -31,8 +31,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -689,6 +687,35 @@ public class QuizAPIRoutes extends Router {
     }
 
 
+    @GetMapping(value = "/getCorrector/{mode}/{quizId}/{correctorId}")
+    @ResponseBody
+    public String getCorrector(HttpServletRequest request,
+                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId,
+                               @PathVariable @ObjectIdConstraint ObjectId correctorId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if (isAdmin && (
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
+        ))
+            return TashrihiQuizController.corrector(
+                    mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                            openQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                    contentQuizRepository : iryscQuizRepository, null,
+                    quizId, correctorId
+            );
+
+        return TashrihiQuizController.correctors(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
+    }
+
+
     @PostMapping(value = "/addCorrector/{mode}/{quizId}/{NID}")
     @ResponseBody
     public String addCorrector(HttpServletRequest request,
@@ -723,12 +750,12 @@ public class QuizAPIRoutes extends Router {
     @DeleteMapping(value = "/removeCorrectors/{mode}/{quizId}")
     @ResponseBody
     public String removeCorrectors(HttpServletRequest request,
-                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                  @RequestBody @StrongJSONConstraint(
-                                          params = {"items"},
-                                          paramsType = {JSONArray.class}
-                                  ) @NotBlank String jsonStr
+                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                   @RequestBody @StrongJSONConstraint(
+                                           params = {"items"},
+                                           paramsType = {JSONArray.class}
+                                   ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);

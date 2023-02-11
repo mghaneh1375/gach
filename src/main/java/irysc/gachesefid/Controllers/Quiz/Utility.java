@@ -11,6 +11,7 @@ import irysc.gachesefid.Models.DescMode;
 import irysc.gachesefid.Models.KindAnswer;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -18,12 +19,13 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.*;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
 
 
@@ -166,57 +168,95 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONArray getQuestions(boolean owner, boolean showResults,
-                                  Document questions,
-                                  List<Document> studentAnswers,
-                                  String folder) {
+    static JSONArray getTashrihiQuestions(boolean owner, boolean showResults,
+                                          boolean correctWithQR, String NID,
+                                          Document questions, List<Document> studentAnswers,
+                                          String folder, ObjectId quizId) {
+        String prefix;
+
+        if(correctWithQR) {
+
+            prefix = DEV_MODE ?
+                    FileUtils.uploadDir_dev + "tashrihi_answer_sheets/" + quizId :
+                    FileUtils.uploadDir + "tashrihi_answer_sheets/" + quizId;
+
+            prefix += "/";
+
+            File f = new File(prefix + NID);
+
+            if(!f.exists() || !f.isDirectory())
+                return new JSONArray();
+
+            File[] files = f.listFiles();
+            if(files == null)
+                return new JSONArray();
+
+            prefix = "tashrihi_answer_sheets/" + quizId + "/" +
+                    NID + "/";
+        }
+        else
+            prefix = StaticValues.STATICS_SERVER + folder + "/studentAnswers/";
 
         JSONArray questionsJSON = new JSONArray();
+        List<Boolean> uploadableList = questions.getList("uploadable_list", Boolean.class);
+        List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
-//        for (Document question : questions) {
-//
-//            JSONObject questionObj = convertQuestionToJSON(question, folder, owner);
-//
-//            if (studentAnswers != null) {
-//
-//                Document studentAnswer = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-//                        studentAnswers, "question_id", question.getObjectId("_id")
-//                );
-//
-//                JSONObject studentAnswerObj = new JSONObject()
-//                        .put("id", studentAnswer.getObjectId("_id").toString())
-//                        .put("answer", studentAnswer.get("answer"))
-//                        .put("answerAt", irysc.gachesefid.Utility.Utility.getSolarDate(studentAnswer.getLong("answer_at")));
-//
-//                if (studentAnswer.containsKey("mark") && (owner || showResults)) {
-//                    studentAnswerObj.put("mark", getMark(studentAnswer.get("mark")));
-//                    studentAnswerObj.put("markDesc", studentAnswer.getOrDefault("mark_desc", ""));
-//                }
-//
-//                if (
-//                        question.getString("answer_type").equals(KindAnswer.FILE.getName())
-//                )
-//                    if (!studentAnswer.containsKey("answer") ||
-//                            studentAnswer.getString("answer") == null ||
-//                            studentAnswer.getString("answer").isEmpty())
-//                        studentAnswerObj.put("answer", "");
-//                    else
-//                        studentAnswerObj.put("answer",
-//                                StaticValues.STATICS_SERVER + folder + "/studentAnswers/" +
-//                                        studentAnswer.getString("answer")
-//                        );
-//                else
-//                    studentAnswerObj.put("answer",
-//                            !studentAnswer.containsKey("answer") || studentAnswer.get("answer") == null ?
-//                                    "" : studentAnswer.get("answer")
-//                    );
-//
-//
-//                questionObj.put("studentAnswer", studentAnswerObj);
-//            }
-//
-//            questionsJSON.put(questionObj);
-//        }
+        List<Document> questionDocs = questionRepository.findByIds(ids, true);
+        int counter = 0;
+
+        for (Document question : questionDocs) {
+
+            JSONObject questionObj = convertQuestionToJSON(question, folder, owner);
+
+            if (studentAnswers != null) {
+
+                Document studentAnswer = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        studentAnswers, "question_id", question.getObjectId("_id")
+                );
+
+                if(studentAnswer != null) {
+
+                    JSONObject studentAnswerObj = new JSONObject()
+                            .put("id", studentAnswer.getObjectId("_id").toString())
+                            .put("answer", studentAnswer.get("answer"))
+                            .put("answerAt", irysc.gachesefid.Utility.Utility.getSolarDate(studentAnswer.getLong("answer_at")));
+
+                    if (studentAnswer.containsKey("mark") && (owner || showResults)) {
+                        studentAnswerObj.put("mark", studentAnswer.getDouble("mark"));
+                        studentAnswerObj.put("markDesc", studentAnswer.getOrDefault("mark_desc", ""));
+                    }
+
+                    if (uploadableList.get(counter)) {
+                        if (!studentAnswer.containsKey("answer") ||
+                                studentAnswer.getString("answer") == null ||
+                                studentAnswer.getString("answer").isEmpty()
+                        )
+                            studentAnswerObj.put("answer", "");
+                        else {
+                            if(correctWithQR)
+                                studentAnswerObj.put("answer",
+                                        prefix + question.getObjectId("_id")
+                                );
+                            else
+                                studentAnswerObj.put("answer",
+                                        prefix + studentAnswer.getString("answer")
+                                );
+                        }
+                    }
+                    else
+                        studentAnswerObj.put("answer",
+                                !studentAnswer.containsKey("answer") || studentAnswer.get("answer") == null ?
+                                        "" : studentAnswer.get("answer")
+                        );
+
+
+                    questionObj.put("studentAnswer", studentAnswerObj);
+                }
+            }
+
+            questionsJSON.put(questionObj);
+            counter++;
+        }
 
         return questionsJSON;
     }
@@ -240,16 +280,16 @@ public class Utility {
 //            }
 
             if (sentence == '1')
-                bitSum += (int)Math.pow(2, k) + (int)Math.pow(2, k + 1);
-            else if(sentence == '0')
-                bitSum += (int)Math.pow(2, k);
+                bitSum += (int) Math.pow(2, k) + (int) Math.pow(2, k + 1);
+            else if (sentence == '0')
+                bitSum += (int) Math.pow(2, k);
 
             k += 2;
         }
 
         byte[] b = ByteBuffer.allocate(4).putInt(bitSum).array();
         byte[] sentencesByteArr = new byte[(int) Math.ceil(sentences.length * 2 / 8.0)];
-        for(int i = 0; i < sentencesByteArr.length; i++) {
+        for (int i = 0; i < sentencesByteArr.length; i++) {
             sentencesByteArr[i] = b[3 - i];
         }
 
@@ -263,7 +303,7 @@ public class Utility {
 
     public static ArrayList<PairValue> getAnswers(byte[] bytes) {
 
-        if(bytes == null)
+        if (bytes == null)
             return new ArrayList<>();
 
         ArrayList<PairValue> numbers = new ArrayList<>();
@@ -301,7 +341,7 @@ public class Utility {
                 int sentencesCount = bytes[currIdx + 1] & 0xff;
                 int streamLen = (int) Math.ceil(sentencesCount / 4.0);
 
-                if(sentencesCount == 255) {
+                if (sentencesCount == 255) {
                     sentencesCount = 5;
                     streamLen = 2;
                 }
@@ -334,7 +374,7 @@ public class Utility {
                 }
 
                 StringBuilder builder = new StringBuilder(booleans.size());
-                for(Character ch: booleans)
+                for (Character ch : booleans)
                     builder.append(ch);
 
                 numbers.add(new PairValue(QuestionType.MULTI_SENTENCE, builder.toString()));
@@ -363,7 +403,7 @@ public class Utility {
 
         if (o == null || o instanceof Double) {
             output = new byte[8];
-            if(o == null)
+            if (o == null)
                 for (int i = 0; i < 8; i++) output[i] = (byte) 0xff;
             else {
                 long lng = Double.doubleToLongBits((Double) o);
@@ -758,12 +798,11 @@ public class Utility {
 
         ArrayList<PairValue> pairValues;
 
-        if(doc.containsKey("answers")) {
+        if (doc.containsKey("answers")) {
             pairValues = Utility.getAnswers(
                     ((Binary) doc.getOrDefault("answers", new byte[0])).getData()
             );
-        }
-        else {
+        } else {
             Document questions = doc.get("questions", Document.class);
             pairValues = Utility.getAnswers(
                     ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
@@ -793,11 +832,11 @@ public class Utility {
                                 new PairValue(((PairValue) p.getValue()).getKey(),
                                         0)
                         ));
-                    } else if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                    } else if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
                         stdAnswers.add(new PairValue(p.getKey(), null));
-                    else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                    else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
                         String s = "";
-                        for(int z = 0; z < p.getValue().toString().length(); z++)
+                        for (int z = 0; z < p.getValue().toString().length(); z++)
                             s += "_";
 
                         stdAnswers.add(new PairValue(p.getKey(), s.toCharArray()));
@@ -837,9 +876,9 @@ public class Utility {
             return JSON_NOT_VALID_PARAMS;
         }
 
-        if(student != null)
+        if (student != null)
             student.put("answers", Utility.getStdAnswersByteArr(stdAnswers));
-        else if(doc.containsKey("answers"))
+        else if (doc.containsKey("answers"))
             doc.put("student_answers", Utility.getStdAnswersByteArr(stdAnswers));
 
         db.replaceOne(doc.getObjectId("_id"), doc);

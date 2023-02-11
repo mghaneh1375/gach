@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -318,9 +319,7 @@ public class QuizController {
                 );
 
                 if (added.size() > 0)
-                    addedItems.put(convertStudentDocToJSON(added.get(0), student,
-                            null, null, null, null)
-                    );
+                    addedItems.put(convertStudentDocToJSON(added.get(0), student));
             }
 
             return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, addedItems);
@@ -537,6 +536,24 @@ public class QuizController {
             JSONArray jsonArray = new JSONArray();
 
             List<Document> students = quiz.getList("students", Document.class);
+            HashMap<ObjectId, String> correctors = null;
+            List<Document> correctorDocs = null;
+
+            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+
+                correctors = new HashMap<>();
+
+                if(quiz.containsKey("correctors")) {
+                    correctorDocs = quiz.getList("correctors", Document.class);
+                    for(Document doc : correctorDocs) {
+
+                        Document user = userRepository.findById(doc.getObjectId("_id"));
+                        if(user != null)
+                            correctors.put(doc.getObjectId("_id"), user.getString("first_name") + " " + user.getString("last_name"));
+                    }
+                }
+
+            }
 
             for (Document student : students) {
 
@@ -565,11 +582,35 @@ public class QuizController {
                 if (user == null)
                     continue;
 
-                jsonArray.put(convertStudentDocToJSON(student, user,
-                        isResultsNeeded, isStudentAnswersNeeded,
-                        quiz.get("questions", Document.class),
-                        db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
-                ));
+                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                    JSONObject jsonObject = convertStudentDocToJSONInTashrihiQuiz(student, user,
+                            isResultsNeeded
+                    );
+
+                    String corrector = null;
+
+                    if(correctorDocs != null) {
+
+                        for(Document correctorDoc : correctorDocs) {
+
+                            if(!correctorDoc.containsKey("students"))
+                                continue;
+
+                            if(correctorDoc.getList("students", ObjectId.class).contains(student.getObjectId("_id"))) {
+                                corrector = correctors.get(correctorDoc.getObjectId("_id"));
+                                break;
+                            }
+                        }
+
+                    }
+
+                    if(corrector != null)
+                        jsonObject.put("corrector", corrector);
+
+                    jsonArray.put(jsonObject);
+                }
+                else
+                    jsonArray.put(convertStudentDocToJSON(student, user));
             }
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
@@ -580,10 +621,8 @@ public class QuizController {
         }
     }
 
-    private static JSONObject convertStudentDocToJSON(
-            Document student, Document user,
-            Boolean isResultsNeeded, Boolean isStudentAnswersNeeded,
-            Document questions, String folder
+    private static JSONObject convertStudentDocToJSONInTashrihiQuiz(
+            Document student, Document user, Boolean isResultsNeeded
     ) {
 
         JSONObject jsonObject = new JSONObject()
@@ -609,18 +648,28 @@ public class QuizController {
         if (isResultsNeeded != null && isResultsNeeded)
             jsonObject.put("totalMark", student.getOrDefault("total_mark", ""));
 
-        if (isStudentAnswersNeeded != null && isStudentAnswersNeeded) {
+        return jsonObject;
+    }
 
-            if (!student.containsKey("answers"))
-                jsonObject.put("answers", new JSONArray());
+    private static JSONObject convertStudentDocToJSON(
+            Document student, Document user
+    ) {
 
-            else {
-                jsonObject.put("answers", Utility.getQuestions(
-                        true, false,
-                        questions, student.getList("answers", Document.class),
-                        folder
-                ));
-            }
+        JSONObject jsonObject = new JSONObject()
+                .put("paid", student.get("paid"))
+                .put("id", user.getObjectId("_id").toString())
+                .put("registerAt", getSolarDate(student.getLong("register_at")));
+
+        irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+
+        if (jsonObject.has("start_at")) {
+            jsonObject.put("startAt", student.containsKey("start_at") ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
+                    ""
+            ).put("finishAt", student.containsKey("finish_at") ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
+                    ""
+            );
         }
 
         return jsonObject;
@@ -933,6 +982,14 @@ public class QuizController {
                     Document question = questionRepository.findBySecKey(organizationId);
 
                     if (question == null) {
+                        excepts.put(i + 1);
+                        continue;
+                    }
+
+                    if(
+                            quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+                                    !question.getString("kind_question").equalsIgnoreCase(QuestionType.TASHRIHI.getName())
+                    ) {
                         excepts.put(i + 1);
                         continue;
                     }
