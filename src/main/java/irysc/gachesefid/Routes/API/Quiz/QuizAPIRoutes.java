@@ -377,6 +377,88 @@ public class QuizAPIRoutes extends Router {
     }
 
 
+    @PutMapping(path = "setCorrectorByStudentMode/{mode}/{quizId}/{correctorId}")
+    @ResponseBody
+    public String setCorrectorByStudentMode(HttpServletRequest request,
+                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                            @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                            @PathVariable @ObjectIdConstraint ObjectId correctorId,
+                                            @RequestBody @StrongJSONConstraint(
+                                                    params = {},
+                                                    paramsType = {},
+                                                    optionals = {"students"},
+                                                    optionalsType = {JSONArray.class}
+                                            ) String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        JSONArray jsonArray;
+
+        if(jsonStr == null || jsonStr.isEmpty())
+            jsonArray = new JSONArray();
+        else {
+            JSONObject jsonObject = new JSONObject(jsonStr);
+            if(jsonObject.has("students"))
+                jsonArray = jsonObject.getJSONArray("students");
+            else
+                jsonArray = new JSONArray();
+        }
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return TashrihiQuizController.setCorrectorByStudentMode(iryscQuizRepository, null, quizId,
+                    correctorId, jsonArray);
+
+        return TashrihiQuizController.setCorrectorByStudentMode(schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, correctorId,
+                jsonArray
+        );
+
+    }
+
+
+    @PutMapping(path = "setCorrectorByQuestionMode/{mode}/{quizId}/{correctorId}")
+    @ResponseBody
+    public String setCorrectorByQuestionMode(HttpServletRequest request,
+                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                            @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                            @PathVariable @ObjectIdConstraint ObjectId correctorId,
+                                            @RequestBody @StrongJSONConstraint(
+                                                    params = {},
+                                                    paramsType = {},
+                                                    optionals = {"questions"},
+                                                    optionalsType = {JSONArray.class}
+                                            ) String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        JSONArray jsonArray;
+
+        if(jsonStr == null || jsonStr.isEmpty())
+            jsonArray = new JSONArray();
+        else {
+            JSONObject jsonObject = new JSONObject(jsonStr);
+            if(jsonObject.has("questions"))
+                jsonArray = jsonObject.getJSONArray("questions");
+            else
+                jsonArray = new JSONArray();
+        }
+
+        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+            return TashrihiQuizController.setCorrectorByQuestionMode(iryscQuizRepository, null, quizId,
+                    correctorId, jsonArray);
+
+        return TashrihiQuizController.setCorrectorByQuestionMode(schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, correctorId,
+                jsonArray
+        );
+
+    }
+
+
     @GetMapping(value = "/getParticipants/{mode}/{quizId}")
     @ResponseBody
     public String getParticipants(HttpServletRequest request,

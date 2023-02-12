@@ -150,8 +150,20 @@ public class Utilities {
 
             }
 
+            if (doc.containsKey("allMarked"))
+                jsonObject.put("allMarked", doc.get("allMarked"));
+
+            if (doc.containsKey("total"))
+                jsonObject.put("total", doc.get("total"));
+
             if (doc.containsKey("mark"))
                 jsonObject.put("mark", doc.get("mark"));
+
+            if (doc.containsKey("corrector"))
+                jsonObject.put("corrector", doc.get("corrector"));
+
+            if (doc.containsKey("correctorId"))
+                jsonObject.put("correctorId", doc.get("correctorId"));
 
             if (doc.containsKey("year"))
                 jsonObject.put("year", doc.get("year"));

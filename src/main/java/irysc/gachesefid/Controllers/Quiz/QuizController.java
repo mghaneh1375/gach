@@ -52,7 +52,7 @@ public class QuizController {
         JSONArray all = new JSONArray();
         ArrayList<Document> quizzes = iryscQuizRepository.find(null, null);
 
-        for(Document quiz : quizzes) {
+        for (Document quiz : quizzes) {
 
             JSONObject jsonObject1 = new JSONObject()
                     .put("id", quiz.getObjectId("_id").toString())
@@ -62,11 +62,11 @@ public class QuizController {
             all.put(jsonObject1);
         }
 
-        if(isOpenQuizzesNeeded == null || isOpenQuizzesNeeded) {
+        if (isOpenQuizzesNeeded == null || isOpenQuizzesNeeded) {
 
             quizzes = openQuizRepository.find(null, null);
 
-            for(Document quiz : quizzes) {
+            for (Document quiz : quizzes) {
 
                 JSONObject jsonObject1 = new JSONObject()
                         .put("id", quiz.getObjectId("_id").toString())
@@ -86,7 +86,7 @@ public class QuizController {
         JSONArray all = new JSONArray();
         ArrayList<Document> quizzes = contentQuizRepository.find(null, null);
 
-        for(Document quiz : quizzes) {
+        for (Document quiz : quizzes) {
 
             JSONObject jsonObject1 = new JSONObject()
                     .put("id", quiz.getObjectId("_id").toString())
@@ -153,11 +153,10 @@ public class QuizController {
         if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
             newDoc.put("correctors", new ArrayList<>());
 
-        if(newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
+        if (newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
             try {
                 newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 newDoc.put("price", 0);
             }
         }
@@ -177,11 +176,10 @@ public class QuizController {
             if (!data.has("tags"))
                 quiz.put("tags", new ArrayList<>());
 
-            if(quiz.containsKey("price") && quiz.get("price") instanceof String) {
+            if (quiz.containsKey("price") && quiz.get("price") instanceof String) {
                 try {
                     quiz.put("price", Integer.parseInt(quiz.getString("price")));
-                }
-                catch (Exception x) {
+                } catch (Exception x) {
                     quiz.put("price", 0);
                 }
             }
@@ -223,25 +221,25 @@ public class QuizController {
 
         ArrayList<Document> docs;
         ArrayList<Bson> filters = new ArrayList<>();
-        if(userId != null)
+        if (userId != null)
             filters.add(eq("created_by", userId));
 
-        if(name != null)
+        if (name != null)
             filters.add(regex("title", Pattern.compile(Pattern.quote(name), Pattern.CASE_INSENSITIVE)));
 
-        if(kind != null && EnumValidatorImp.isValid(kind, KindQuiz.class))
+        if (kind != null && EnumValidatorImp.isValid(kind, KindQuiz.class))
             filters.add(eq("mode", kind));
 
-        if(startDateSolar != null)
+        if (startDateSolar != null)
             filters.add(gte("start", startDateSolar));
 
-        if(startDateSolarEndLimit != null)
+        if (startDateSolarEndLimit != null)
             filters.add(lte("start", startDateSolarEndLimit));
 
-        if(startRegistryDateSolar != null)
+        if (startRegistryDateSolar != null)
             filters.add(gte("start_registry", startRegistryDateSolar));
 
-        if(startRegistrySolarEndLimit != null)
+        if (startRegistrySolarEndLimit != null)
             filters.add(lte("start_registry", startRegistrySolarEndLimit));
 
         docs = db.find(filters.size() == 0 ? null : and(filters),
@@ -424,6 +422,7 @@ public class QuizController {
         try {
 
             Document quiz = hasAccess(db, userId, quizId);
+
             Document questionsDoc = quiz.get("questions", Document.class);
 
             ArrayList<Document> questionsList = new ArrayList<>();
@@ -435,13 +434,34 @@ public class QuizController {
             );
 
             List<Boolean> uploadableList = null;
-            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
                         "uploadable_list", new ArrayList<Double>()
                 );
 
             if (questionsMark.size() != questions.size())
                 return JSON_NOT_UNKNOWN;
+
+            HashMap<ObjectId, String> correctors = null;
+            List<Document> correctorDocs = null;
+
+            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+                    quiz.containsKey("correctors")
+            ) {
+
+                correctors = new HashMap<>();
+
+                correctorDocs = quiz.getList("correctors", Document.class);
+                for (Document doc : correctorDocs) {
+
+                    Document user = userRepository.findById(doc.getObjectId("user_id"));
+
+                    if (user != null)
+                        correctors.put(doc.getObjectId("_id"), user.getString("first_name") + " " + user.getString("last_name"));
+                }
+            }
+
+            List<Document> students = quiz.getList("students", Document.class);
 
             int i = 0;
             for (ObjectId itr : questions) {
@@ -453,20 +473,59 @@ public class QuizController {
                     continue;
                 }
 
-                if(uploadableList != null && uploadableList.size() > i)
-                    questionsList.add(
-                            Document.parse(question.toJson())
-                                    .append("no", i + 1)
-                                    .append("mark", questionsMark.get(i))
-                                    .append("can_upload", uploadableList.get(i))
-                    );
-                else
-                    questionsList.add(
-                            Document.parse(question.toJson())
-                                    .append("no", i + 1)
-                                    .append("mark", questionsMark.get(i))
-                    );
+                Document tmpDoc;
 
+                if (uploadableList != null && uploadableList.size() > i)
+                    tmpDoc = Document.parse(question.toJson())
+                            .append("no", i + 1)
+                            .append("mark", questionsMark.get(i))
+                            .append("can_upload", uploadableList.get(i));
+                else
+                    tmpDoc = Document.parse(question.toJson())
+                            .append("no", i + 1)
+                            .append("mark", questionsMark.get(i));
+
+                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+
+                    int marked = 0;
+                    for (Document student : students) {
+                        if(student.containsKey("answers")) {
+                            List<Document> answers = student.getList("answers", Document.class);
+                            Document q = searchInDocumentsKeyVal(answers, "question_id", question.getObjectId("_id"));
+                            if(q != null && q.containsKey("mark"))
+                                marked++;
+                        }
+                    }
+
+                    String corrector = null;
+                    String correctorId = null;
+
+                    if (correctorDocs != null) {
+
+                        for (Document correctorDoc : correctorDocs) {
+
+                            if (!correctorDoc.containsKey("questions"))
+                                continue;
+
+                            if (correctorDoc.getList("questions", ObjectId.class).contains(question.getObjectId("_id"))) {
+                                corrector = correctors.get(correctorDoc.getObjectId("_id"));
+                                correctorId = correctorDoc.getObjectId("_id").toString();
+                                break;
+                            }
+                        }
+
+                    }
+
+                    if (corrector != null) {
+                        tmpDoc.append("corrector", corrector)
+                                .append("correctorId", correctorId);
+                    }
+                    tmpDoc.append("total", students.size());
+                    tmpDoc.append("allMarked", marked);
+
+                }
+
+                questionsList.add(tmpDoc);
                 i++;
             }
 
@@ -539,20 +598,20 @@ public class QuizController {
             HashMap<ObjectId, String> correctors = null;
             List<Document> correctorDocs = null;
 
-            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+                    quiz.containsKey("correctors")
+            ) {
 
                 correctors = new HashMap<>();
 
-                if(quiz.containsKey("correctors")) {
-                    correctorDocs = quiz.getList("correctors", Document.class);
-                    for(Document doc : correctorDocs) {
+                correctorDocs = quiz.getList("correctors", Document.class);
+                for (Document doc : correctorDocs) {
 
-                        Document user = userRepository.findById(doc.getObjectId("_id"));
-                        if(user != null)
-                            correctors.put(doc.getObjectId("_id"), user.getString("first_name") + " " + user.getString("last_name"));
-                    }
+                    Document user = userRepository.findById(doc.getObjectId("user_id"));
+
+                    if (user != null)
+                        correctors.put(doc.getObjectId("_id"), user.getString("first_name") + " " + user.getString("last_name"));
                 }
-
             }
 
             for (Document student : students) {
@@ -582,34 +641,37 @@ public class QuizController {
                 if (user == null)
                     continue;
 
-                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
                     JSONObject jsonObject = convertStudentDocToJSONInTashrihiQuiz(student, user,
                             isResultsNeeded
                     );
 
                     String corrector = null;
+                    String correctorId = null;
 
-                    if(correctorDocs != null) {
+                    if (correctorDocs != null) {
 
-                        for(Document correctorDoc : correctorDocs) {
+                        for (Document correctorDoc : correctorDocs) {
 
-                            if(!correctorDoc.containsKey("students"))
+                            if (!correctorDoc.containsKey("students"))
                                 continue;
 
-                            if(correctorDoc.getList("students", ObjectId.class).contains(student.getObjectId("_id"))) {
+                            if (correctorDoc.getList("students", ObjectId.class).contains(student.getObjectId("_id"))) {
                                 corrector = correctors.get(correctorDoc.getObjectId("_id"));
+                                correctorId = correctorDoc.getObjectId("_id").toString();
                                 break;
                             }
                         }
 
                     }
 
-                    if(corrector != null)
-                        jsonObject.put("corrector", corrector);
+                    if (corrector != null) {
+                        jsonObject.put("corrector", corrector)
+                                .put("correctorId", correctorId);
+                    }
 
                     jsonArray.put(jsonObject);
-                }
-                else
+                } else
                     jsonArray.put(convertStudentDocToJSON(student, user));
             }
 
@@ -751,7 +813,7 @@ public class QuizController {
             String[] splited = attach.split("/");
 
             int idx = attaches.indexOf(splited[splited.length - 1]);
-            if(idx < 0)
+            if (idx < 0)
                 return JSON_NOT_VALID_PARAMS;
 
             FileUtils.removeFile(splited[splited.length - 1], IRYSCQuizRepository.FOLDER);
@@ -886,7 +948,7 @@ public class QuizController {
 
                 try {
 
-                    if(row.getCell(0) == null)
+                    if (row.getCell(0) == null)
                         break;
 
                     if (row.getLastCellNum() < 2) {
@@ -925,7 +987,7 @@ public class QuizController {
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return doAddQuestionsToQuiz(db, quiz, jsonArray,
                         new JSONArray(), mark, true
                 );
@@ -956,7 +1018,7 @@ public class QuizController {
         List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
         List<Boolean> uploadable_list = null;
 
-        if(can_upload != null)
+        if (can_upload != null)
             uploadable_list = questions.containsKey("uploadable_list") ?
                     questions.getList("uploadable_list", Boolean.class) : new ArrayList<>();
 
@@ -986,7 +1048,7 @@ public class QuizController {
                         continue;
                     }
 
-                    if(
+                    if (
                             quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
                                     !question.getString("kind_question").equalsIgnoreCase(QuestionType.TASHRIHI.getName())
                     ) {
@@ -1003,16 +1065,15 @@ public class QuizController {
 
                     ids.add(question.getObjectId("_id"));
                     marks.add(tmpMark);
-                    if(can_upload != null) {
+                    if (can_upload != null) {
                         uploadable_list.add(can_upload);
 
                         addedItems.add(
                                 Document.parse(question.toJson()).append("mark", mark)
-                                    .append("canUpload", true)
+                                        .append("canUpload", true)
                         );
 
-                    }
-                    else
+                    } else
                         addedItems.add(
                                 Document.parse(question.toJson()).append("mark", mark)
                         );
@@ -1132,13 +1193,13 @@ public class QuizController {
             List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
             int idx = ids.indexOf(questionId);
-            if(idx < 0)
+            if (idx < 0)
                 return JSON_NOT_VALID_ID;
 
             List<Double> marks = questions.getList("marks", Double.class);
             marks.set(idx, mark.doubleValue());
 
-            if(canUpload != null && questions.containsKey("uploadable_list") && (
+            if (canUpload != null && questions.containsKey("uploadable_list") && (
                     canUpload.equalsIgnoreCase("yes") ||
                             canUpload.equalsIgnoreCase("no")
             )) {
@@ -1159,7 +1220,7 @@ public class QuizController {
         try {
             Document quiz = hasAccess(iryscQuizRepository, null, quizId);
 
-            if(!quiz.containsKey("report_status") ||
+            if (!quiz.containsKey("report_status") ||
                     !quiz.getString("report_status").equalsIgnoreCase("ready")
             )
                 return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
@@ -1169,18 +1230,18 @@ public class QuizController {
                     quiz.get("questions", Document.class).getList("_ids", ObjectId.class), true
             );
 
-            if(questions == null || questions.size() != questionsStat.size())
+            if (questions == null || questions.size() != questionsStat.size())
                 return JSON_NOT_UNKNOWN;
 
             Utilities.updateQuestionsStat(questions, questionsStat);
 
             Document config = getConfig();
 
-            if(
+            if (
                     (config.containsKey("quiz_money") &&
                             config.getInteger("quiz_money") > 0) ||
-                    (config.containsKey("quiz_coin") &&
-                            config.getDouble("quiz_coin") > 0)
+                            (config.containsKey("quiz_coin") &&
+                                    config.getDouble("quiz_coin") > 0)
 
             ) {
                 List<Document> rankingList = quiz.getList("ranking_list", Document.class);
@@ -1190,27 +1251,27 @@ public class QuizController {
                 ).split(" ")[0];
                 String quizName = quiz.getString("title");
 
-                if(rankingList.size() > 0)
+                if (rankingList.size() > 0)
                     giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config, 1,
                             date, quizName
                     );
 
-                if(rankingList.size() > 1)
+                if (rankingList.size() > 1)
                     giveQuizGiftToUser(rankingList.get(1).getObjectId("_id"), config, 2,
                             date, quizName
                     );
 
-                if(rankingList.size() > 2)
+                if (rankingList.size() > 2)
                     giveQuizGiftToUser(rankingList.get(2).getObjectId("_id"), config, 3,
                             date, quizName
                     );
 
-                if(rankingList.size() > 3)
+                if (rankingList.size() > 3)
                     giveQuizGiftToUser(rankingList.get(3).getObjectId("_id"), config, 4,
                             date, quizName
                     );
 
-                if(rankingList.size() > 4)
+                if (rankingList.size() > 4)
                     giveQuizGiftToUser(rankingList.get(4).getObjectId("_id"), config, 5,
                             date, quizName
                     );
@@ -1218,8 +1279,7 @@ public class QuizController {
 
 
             return JSON_OK;
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return generateErr(x.getMessage());
         }
     }
@@ -1227,19 +1287,19 @@ public class QuizController {
     private static void giveQuizGiftToUser(ObjectId userId, Document config,
                                            int rank, String data, String quizName) {
 
-        if(rank > 3 && !config.containsKey("forth_rank_cert_id"))
+        if (rank > 3 && !config.containsKey("forth_rank_cert_id"))
             return;
 
         Document user = userRepository.findById(userId);
-        if(user == null)
+        if (user == null)
             return;
 
-        if(rank < 4) {
+        if (rank < 4) {
             if (
                     (config.containsKey("quiz_money") &&
                             config.getInteger("quiz_money") > 0)
             )
-                user.put("money", ((Number)user.get("money")).doubleValue() + config.getInteger("quiz_money"));
+                user.put("money", ((Number) user.get("money")).doubleValue() + config.getInteger("quiz_money"));
 
             if (
                     (config.containsKey("quiz_coin") &&
@@ -1258,23 +1318,23 @@ public class QuizController {
         params.put(data);
         params.put(rank + "");
 
-        if(rank == 1 && config.containsKey("first_rank_cert_id"))
+        if (rank == 1 && config.containsKey("first_rank_cert_id"))
             addUserToCert(null, config.getObjectId("first_rank_cert_id"),
                     user.getString("NID"), params);
 
-        if(rank == 2 && config.containsKey("second_rank_cert_id"))
+        if (rank == 2 && config.containsKey("second_rank_cert_id"))
             addUserToCert(null, config.getObjectId("second_rank_cert_id"),
                     user.getString("NID"), params);
 
-        if(rank == 3 && config.containsKey("third_rank_cert_id"))
+        if (rank == 3 && config.containsKey("third_rank_cert_id"))
             addUserToCert(null, config.getObjectId("third_rank_cert_id"),
                     user.getString("NID"), params);
 
-        if(rank == 4 && config.containsKey("forth_rank_cert_id"))
+        if (rank == 4 && config.containsKey("forth_rank_cert_id"))
             addUserToCert(null, config.getObjectId("forth_rank_cert_id"),
                     user.getString("NID"), params);
 
-        if(rank == 5 && config.containsKey("fifth_rank_cert_id"))
+        if (rank == 5 && config.containsKey("fifth_rank_cert_id"))
             addUserToCert(null, config.getObjectId("fifth_rank_cert_id"),
                     user.getString("NID"), params);
 
@@ -1445,7 +1505,7 @@ public class QuizController {
             if (quiz.containsKey("end") && quiz.getLong("end") > curr)
                 return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
 
-            if(db instanceof OpenQuizRepository)
+            if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
             else {
                 new RegularQuizController().createTaraz(quiz);
@@ -1454,16 +1514,16 @@ public class QuizController {
 
                     ArrayList<ObjectId> userIds = new ArrayList<>();
 
-                    for(Document doc : quiz.getList("students", Document.class))
+                    for (Document doc : quiz.getList("students", Document.class))
                         userIds.add(doc.getObjectId("_id"));
 
                     List<Document> students = userRepository.findByIds(userIds, false);
 
                     String prefix = quiz.getString("title") + "_" + SERVER + "result/irysc/" + quiz.getObjectId("_id").toString() + "/";
 
-                    for(Document student : students) {
+                    for (Document student : students) {
 
-                        if(!student.containsKey("mail"))
+                        if (!student.containsKey("mail"))
                             continue;
 
                         mailQueueRepository.insertOne(
@@ -1522,7 +1582,7 @@ public class QuizController {
                     "_id", studentId
             );
 
-            if(student == null)
+            if (student == null)
                 return JSON_NOT_VALID_ID;
 
             student.put("start_at", null);
@@ -1530,8 +1590,7 @@ public class QuizController {
 
             db.replaceOne(quizId, quiz);
             return JSON_OK;
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return generateErr(x.getMessage());
         }
     }
@@ -1539,20 +1598,19 @@ public class QuizController {
     public static String removeQuestions(Common db, ObjectId quizId, JSONArray jsonArray) {
 
         Document quiz = db.findById(quizId);
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(db instanceof IRYSCQuizRepository) {
+        if (db instanceof IRYSCQuizRepository) {
 
-            if(quiz.containsKey("start") &&
+            if (quiz.containsKey("start") &&
                     quiz.getLong("start") < System.currentTimeMillis()
             )
                 return generateErr("زمان آزمون موردنظر رسیده است و امکان حذف سوال از آزمون وجود ندارد.");
 
-        }
-        else if(db instanceof OpenQuizRepository) {
+        } else if (db instanceof OpenQuizRepository) {
 
-            if(quiz.getList("students", Document.class).size() > 0)
+            if (quiz.getList("students", Document.class).size() > 0)
                 return generateErr("دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف سوال وجود ندارد.");
 
         }
@@ -1565,16 +1623,16 @@ public class QuizController {
         List<Double> marks = questions.getList("marks", Double.class);
         List<ObjectId> removed = new ArrayList<>();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
 
             ObjectId qId = new ObjectId(id);
-            if(!questionIds.contains(qId)) {
+            if (!questionIds.contains(qId)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -1599,7 +1657,7 @@ public class QuizController {
 
         }
 
-        if(removeIds.length() == 0)
+        if (removeIds.length() == 0)
             return JSON_NOT_VALID_PARAMS;
 
         List<ObjectId> newQuestionsIds = new ArrayList<>();
@@ -1607,9 +1665,9 @@ public class QuizController {
 
         int idx = 0;
 
-        for(ObjectId qId : questionIds) {
+        for (ObjectId qId : questionIds) {
 
-            if(removed.contains(qId)) {
+            if (removed.contains(qId)) {
                 idx++;
                 continue;
             }

@@ -97,15 +97,10 @@ public class SchoolQuizAPIRoutes extends Router {
     @GetMapping(path = "getMyTasks")
     @ResponseBody
     public String getMyTasks(HttpServletRequest request,
-                             @RequestParam(required = false, value = "mode") @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                             @RequestParam(required = false, value = "pass") Boolean pass,
-                             @RequestParam(required = false, value = "curr") Boolean curr,
-                             @RequestParam(required = false, value = "future") Boolean future
+                             @RequestParam(required = false, value = "mode") @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return TashrihiQuizController.getMyTasks(
-                getPrivilegeUser(request).getObjectId("_id"), mode,
-                pass == null ? false : pass, curr == null ? true : curr,
-                future == null ? true : future
+                getPrivilegeUser(request).getObjectId("_id"), mode
         );
     }
 

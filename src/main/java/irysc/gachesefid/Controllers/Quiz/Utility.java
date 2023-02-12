@@ -25,8 +25,7 @@ import java.util.*;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
+import static irysc.gachesefid.Utility.Utility.*;
 
 
 public class Utility {
@@ -108,7 +107,7 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz) {
+    static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz, String mode) {
 
         JSONObject jsonObject = new JSONObject();
 
@@ -117,6 +116,7 @@ public class Utility {
 
         jsonObject.put("title", quiz.getString("title"));
         jsonObject.put("id", quiz.getObjectId("_id").toString());
+        jsonObject.put("mode", mode);
 
         return jsonObject;
     }
