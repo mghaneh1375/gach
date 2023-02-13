@@ -60,18 +60,14 @@ public class SchoolQuizAPIRoutes extends Router {
     public String getMyMarkList(HttpServletRequest request,
                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                @RequestParam(required = false, value = "justMarked") Boolean justMarked,
-                                @RequestParam(required = false, value = "justNotMarked") Boolean justNotMarked
+                                @RequestParam(value = "taskMode") String taskMode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-
         return TashrihiQuizController.getMyMarkList(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId, justMarked, justNotMarked
+                user.getObjectId("_id"), quizId, taskMode
         );
     }
 
@@ -97,7 +93,7 @@ public class SchoolQuizAPIRoutes extends Router {
     @GetMapping(path = "getMyTasks")
     @ResponseBody
     public String getMyTasks(HttpServletRequest request,
-                             @RequestParam(required = false, value = "mode") @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode
+                             @RequestParam(required = false, value = "mode") String mode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return TashrihiQuizController.getMyTasks(
                 getPrivilegeUser(request).getObjectId("_id"), mode

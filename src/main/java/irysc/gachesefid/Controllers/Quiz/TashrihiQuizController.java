@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
@@ -12,6 +13,7 @@ import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -369,83 +371,64 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     public static String getMyMarkList(Common db, ObjectId userId,
-                                       ObjectId quizId, Boolean justMarked,
-                                       Boolean justNotMark) {
+                                       ObjectId quizId, String taskMode) {
 
-        if (justMarked != null && justMarked &&
-                justNotMark != null && justNotMark)
+        if(
+                !taskMode.equalsIgnoreCase("student") &&
+                        !taskMode.equalsIgnoreCase("question")
+        )
             return JSON_NOT_VALID_PARAMS;
 
         try {
             PairValue p = hasCorrectorAccess(db, userId, quizId);
             Document quiz = (Document) p.getKey();
             int idx = (int) p.getValue();
+            if(idx == -1)
+                return JSON_NOT_ACCESS;
 
             List<ObjectId> studentIds = null;
             List<ObjectId> questionIds = null;
+            JSONArray jsonArray = new JSONArray();
 
-            if (idx != -1) {
+            Document doc = quiz.getList("correctors", Document.class).get(idx);
 
-                Document doc = quiz.getList("correctors", Document.class).get(idx);
+            if (taskMode.equals("student") && doc.get("students") != null)
+                studentIds = doc.getList("students", ObjectId.class);
 
-                if (doc.get("students") != null)
-                    studentIds = doc.getList("students", ObjectId.class);
+            if (taskMode.equals("question") && doc.get("questions") != null)
+                questionIds = doc.getList("questions", ObjectId.class);
 
-                if (doc.get("questions") != null)
-                    questionIds = doc.getList("questions", ObjectId.class);
+            if(studentIds != null) {
 
-            }
+                List<Document> students = quiz.getList("students", Document.class);
+                for (ObjectId stdId : studentIds) {
 
-            List<Document> students = quiz.getList("students", Document.class);
-            JSONArray data = new JSONArray();
+                    Document std = Utility.searchInDocumentsKeyVal(
+                            students, "_id", stdId
+                    );
 
-            for (Document student : students) {
+                    if(std == null)
+                        continue;
 
-                if (studentIds != null &&
-                        !studentIds.contains(student.getObjectId("user_id"))
-                )
-                    continue;
+                    Document user = userRepository.findById(stdId);
+                    if(user == null)
+                        continue;
 
-                boolean allMarked = questionIds == null && student.getBoolean("all_marked");
-
-                if (questionIds != null) {
-
-                    List<Document> answers = student.getList("answers", Document.class);
-                    boolean hasAnyNotMark = false;
-
-                    for (ObjectId questionId : questionIds) {
-
-                        if (!Utility.searchInDocumentsKeyVal(
-                                answers, "question_id", questionId
-                        ).containsKey("mark")) {
-                            hasAnyNotMark = true;
+                    boolean allMarked = true;
+                    for(Document ans : std.getList("answers", Document.class)) {
+                        if(!ans.containsKey("mark")) {
+                            allMarked = false;
                             break;
                         }
-
                     }
 
-                    allMarked = !hasAnyNotMark;
+                    JSONObject jsonObject = new JSONObject().put("allMarked", allMarked);
+                    Utility.fillJSONWithUser(jsonObject, user);
+                    jsonArray.put(jsonObject);
                 }
-
-
-                if (justMarked != null && justMarked && !allMarked)
-                    continue;
-
-                if (justNotMark != null && justNotMark && allMarked)
-                    continue;
-
-                Document user = userRepository.findById(
-                        student.getObjectId("user_id")
-                );
-
-                data.put(new JSONObject()
-                        .put("allMarked", allMarked)
-                        .put("studentName", user.getString("name_fa") + " " + user.getString("last_name_fa"))
-                        .put("studentId", student.getObjectId("user_id").toString())
-                );
             }
 
-            return Utility.generateSuccessMsg("data", data);
+            return Utility.generateSuccessMsg("data", jsonArray);
 
         } catch (InvalidFieldsException e) {
             return e.getMessage();
@@ -722,33 +705,53 @@ public class TashrihiQuizController extends QuizAbstract {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        filters.add(eq("mode", KindQuiz.TASHRIHI));
-        filters.add(eq("correctors._id", userId));
+        if(mode != null && !EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        filters.add(eq("mode", KindQuiz.TASHRIHI.getName()));
+        filters.add(eq("correctors.user_id", userId));
 
         JSONArray tasks = new JSONArray();
 
         if (mode == null || mode.equals(GeneralKindQuiz.IRYSC.getName())) {
 
             ArrayList<Document> docs = iryscQuizRepository.find(and(filters),
-                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS
+                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS, Sorts.descending("start")
             );
 
             for (Document doc : docs) {
-                tasks.put(
-                        convertTashrihiQuizToJSONDigestForTeachers(doc, "irysc")
+
+                Document corrector = Utility.searchInDocumentsKeyVal(
+                        doc.getList("correctors", Document.class),
+                        "user_id", userId
                 );
+
+                if(corrector == null)
+                    continue;
+
+                JSONObject jsonObject = convertTashrihiQuizToJSONDigestForTeachers(doc, corrector, "irysc");
+                tasks.put(jsonObject);
             }
         }
 
         if (mode == null || mode.equals(GeneralKindQuiz.SCHOOL.getName())) {
 
             ArrayList<Document> docs = schoolQuizRepository.find(and(filters),
-                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS
+                    TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS, Sorts.descending("start")
             );
 
             for (Document doc : docs) {
+
+                Document corrector = Utility.searchInDocumentsKeyVal(
+                        doc.getList("correctors", Document.class),
+                        "user_id", userId
+                );
+
+                if(corrector == null)
+                    continue;
+
                 tasks.put(
-                        convertTashrihiQuizToJSONDigestForTeachers(doc, "school")
+                        convertTashrihiQuizToJSONDigestForTeachers(doc, corrector, "school")
                 );
             }
 

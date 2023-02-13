@@ -107,16 +107,74 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz, String mode) {
+    static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz, Document corrector, String mode) {
 
         JSONObject jsonObject = new JSONObject();
 
-        jsonObject.put("start", irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("start")));
-        jsonObject.put("end", irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("end")));
+        jsonObject.put("start", quiz.containsKey("start") ? irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("start")) : "...");
+        jsonObject.put("end", quiz.containsKey("end") ? irysc.gachesefid.Utility.Utility.getSolarDate(quiz.getLong("end")) : "...");
 
         jsonObject.put("title", quiz.getString("title"));
         jsonObject.put("id", quiz.getObjectId("_id").toString());
         jsonObject.put("mode", mode);
+//        jsonObject.put()
+
+        List<ObjectId> myStudents = corrector.containsKey("students") ?
+                corrector.getList("students", ObjectId.class) :
+                new ArrayList<>();
+
+        List<ObjectId> myQuestions = corrector.containsKey("questions") ?
+                corrector.getList("questions", ObjectId.class) :
+                new ArrayList<>();
+
+        List<Document> students = quiz.getList("students", Document.class);
+
+        int allCorrectorQuestions = 0;
+        int allMarkedQuestions = 0;
+
+        for (Document student : students) {
+
+            if (
+                    (!myStudents.contains(student.getObjectId("_id")) && myQuestions.size() == 0) ||
+                            !student.containsKey("answers")
+            )
+                continue;
+
+            List<Document> answers = student.getList("answers", Document.class);
+            for (Document answer : answers) {
+                if (
+                        answer.containsKey("mark") &&
+                                (
+                                        myStudents.contains(student.getObjectId("_id")) ||
+                                                myQuestions.contains(answer.getObjectId("question_id"))
+                                )
+                )
+                    allMarkedQuestions++;
+            }
+
+        }
+
+        Document questionsDoc = quiz.get("questions", Document.class);
+        int qSize = questionsDoc.getList("_ids", ObjectId.class).size();
+        int sNo = 0;
+
+        if (corrector.containsKey("students")) {
+            sNo = corrector.getList("students", ObjectId.class).size();
+            allCorrectorQuestions += sNo * qSize;
+        }
+
+        if (corrector.containsKey("questions")) {
+
+            int qNo = corrector.getList("questions", ObjectId.class).size();
+
+            if (corrector.containsKey("students"))
+                allCorrectorQuestions -= qNo * sNo;
+
+            allCorrectorQuestions += qNo * students.size();
+        }
+
+        jsonObject.put("allCorrectorQuestions", allCorrectorQuestions);
+        jsonObject.put("allMarkedQuestions", allMarkedQuestions);
 
         return jsonObject;
     }
@@ -784,7 +842,7 @@ public class Utility {
 
             List<Document> correctors = quiz.getList("correctors", Document.class);
             idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                    correctors, "_id", userId);
+                    correctors, "user_id", userId);
 
             if (idx == -1)
                 throw new InvalidFieldsException(JSON_NOT_VALID_ID);

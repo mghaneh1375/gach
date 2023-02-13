@@ -7,9 +7,9 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
 
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 //    public final static String GACH_SERVER = "http://192.168.43.157:8080/api/";
 
 
@@ -49,7 +49,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -64,7 +64,9 @@ public class StaticValues {
 
     public final static BasicDBObject TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS =
             new BasicDBObject("title", 1).append("_id", 1)
-            .append("start", 1).append("end", 1);
+                    .append("correctors", 1).append("students", 1)
+                    .append("questions", 1)
+                    .append("start", 1).append("end", 1);
 
     public final static BasicDBObject QUIZ_DIGEST =
             new BasicDBObject("title", 1).append("_id", 1)

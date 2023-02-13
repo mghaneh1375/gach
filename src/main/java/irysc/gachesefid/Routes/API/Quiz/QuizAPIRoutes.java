@@ -794,7 +794,7 @@ public class QuizAPIRoutes extends Router {
                     quizId, correctorId
             );
 
-        return TashrihiQuizController.correctors(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
+        return TashrihiQuizController.corrector(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, correctorId);
     }
 
 
