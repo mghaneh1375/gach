@@ -30,6 +30,10 @@ public class OpenQuiz extends QuizAbstract {
 
             try {
                 Document quiz = openQuizRepository.findById(quizId);
+
+                if(quiz == null)
+                    continue;
+
                 List<Document> students = quiz.getList("students", Document.class);
 
                 if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(

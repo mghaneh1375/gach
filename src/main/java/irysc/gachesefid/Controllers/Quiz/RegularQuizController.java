@@ -197,6 +197,10 @@ public class RegularQuizController extends QuizAbstract {
 
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
+
+                if(quiz == null)
+                    continue;
+
                 List<Document> students = quiz.getList("students", Document.class);
 
                 if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(

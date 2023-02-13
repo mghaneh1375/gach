@@ -580,9 +580,7 @@ public class Utility {
             multipart.addBodyPart(mimeBodyPart);
 
             message.setContent(multipart, "text/html; charset=UTF-8");
-            System.out.println("sending mail");
             Transport.send(message);
-            System.out.println("send");
 
             String finalSubject = subject;
             String finalTo = to;

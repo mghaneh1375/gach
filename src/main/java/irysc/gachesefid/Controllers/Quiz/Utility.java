@@ -142,35 +142,17 @@ public class Utility {
 
             List<Document> answers = student.getList("answers", Document.class);
             for (Document answer : answers) {
-                if (
-                        answer.containsKey("mark") &&
-                                (
-                                        myStudents.contains(student.getObjectId("_id")) ||
-                                                myQuestions.contains(answer.getObjectId("question_id"))
-                                )
-                )
-                    allMarkedQuestions++;
+
+                if(
+                        myStudents.contains(student.getObjectId("_id")) ||
+                                myQuestions.contains(answer.getObjectId("question_id"))
+                ) {
+                    allCorrectorQuestions++;
+                    if(answer.containsKey("mark"))
+                        allMarkedQuestions++;
+                }
             }
 
-        }
-
-        Document questionsDoc = quiz.get("questions", Document.class);
-        int qSize = questionsDoc.getList("_ids", ObjectId.class).size();
-        int sNo = 0;
-
-        if (corrector.containsKey("students")) {
-            sNo = corrector.getList("students", ObjectId.class).size();
-            allCorrectorQuestions += sNo * qSize;
-        }
-
-        if (corrector.containsKey("questions")) {
-
-            int qNo = corrector.getList("questions", ObjectId.class).size();
-
-            if (corrector.containsKey("students"))
-                allCorrectorQuestions -= qNo * sNo;
-
-            allCorrectorQuestions += qNo * students.size();
         }
 
         jsonObject.put("allCorrectorQuestions", allCorrectorQuestions);

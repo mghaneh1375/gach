@@ -398,9 +398,57 @@ public class TashrihiQuizController extends QuizAbstract {
             if (taskMode.equals("question") && doc.get("questions") != null)
                 questionIds = doc.getList("questions", ObjectId.class);
 
+            List<Document> students = quiz.getList("students", Document.class);
+
+            if(questionIds != null) {
+
+                Document questions = quiz.get("questions", Document.class);
+                List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
+                List<Double> marks = questions.getList("marks", Double.class);
+
+                for(ObjectId id : questionIds) {
+
+                    int qIdx = ids.indexOf(id);
+
+                    if(qIdx == -1)
+                        continue;
+
+                    int marked = 0;
+                    int total = 0;
+
+                    for(Document student : students) {
+
+                        if(!student.containsKey("answers"))
+                            continue;
+
+                        Document ans = searchInDocumentsKeyVal(
+                                student.getList("answers", Document.class),
+                                "question_id", id
+                        );
+
+                        if(ans == null)
+                            continue;
+
+                        if(ans.containsKey("mark"))
+                            marked++;
+
+                        total++;
+                    }
+
+                    jsonArray.put(
+                        new JSONObject()
+                            .put("no", qIdx + 1)
+                            .put("allMarked", marked)
+                            .put("total", total)
+                            .put("mark", marks.get(idx))
+                    );
+
+                }
+
+            }
+
             if(studentIds != null) {
 
-                List<Document> students = quiz.getList("students", Document.class);
                 for (ObjectId stdId : studentIds) {
 
                     Document std = Utility.searchInDocumentsKeyVal(
@@ -871,6 +919,10 @@ public class TashrihiQuizController extends QuizAbstract {
 
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
+
+                if(quiz == null)
+                    continue;
+
                 List<Document> students = quiz.getList("students", Document.class);
 
                 if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(

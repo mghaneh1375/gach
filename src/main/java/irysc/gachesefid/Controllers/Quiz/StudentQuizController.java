@@ -320,14 +320,18 @@ public class StudentQuizController {
                 quizzes.addAll(openQuizRepository.find(and(filters), null));
 
             QuizAbstract regularQuizController = new RegularQuizController();
+            QuizAbstract tashrihiQuizController = new TashrihiQuizController();
             QuizAbstract openQuizAbstract = new OpenQuiz();
 
             for (Document quiz : quizzes) {
 
-                boolean isIRYSCQuiz = quiz.containsKey("launch_mode");
+                boolean isIRYSCQuiz = quiz.containsKey("launch_mode") ||
+                        quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
                 QuizAbstract quizAbstract = isIRYSCQuiz ?
-                        regularQuizController : openQuizAbstract;
+                        quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                                tashrihiQuizController :
+                                regularQuizController : openQuizAbstract;
 
                 if (isSchool) {
                     data.put(quizAbstract.convertDocToJSON(
@@ -549,6 +553,9 @@ public class StudentQuizController {
                     .put("duration", neededTime)
                     .put("reminder", reminder)
                     .put("isNewPerson", student.getLong("start_at") == curr);
+
+            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return returnTashrihiQuiz(doc, student.getList("answers", Document.class), quizJSON, false);
 
             return returnQuiz(doc, student, false, quizJSON);
 
@@ -884,10 +891,18 @@ public class StudentQuizController {
 
                 transactionRepository.insertOne(doc);
 
-                if (studentIds != null)
+                if (studentIds != null) {
+
                     new RegularQuizController()
                             .registry(studentIds, phone, mail, quizIds, 0);
-                else {
+
+//                    new TashrihiQuizController()
+//                            .registry(studentIds, phone, mail, quizIds, 0);
+
+                } else {
+
+                    new TashrihiQuizController()
+                            .registry(studentId, phone, mail, quizIds, 0, doc.getObjectId("_id"), stdName);
 
                     new RegularQuizController()
                             .registry(studentId, phone, mail, quizIds, 0, doc.getObjectId("_id"), stdName);
@@ -966,8 +981,72 @@ public class StudentQuizController {
         return goToPayment((int) (shouldPay - money), doc);
     }
 
+    public static String returnTashrihiQuiz(Document quiz, List<Document> stdAnswers,
+                                            JSONObject quizJSON, boolean isStatNeeded) {
+
+        Document questionsDoc = quiz.get("questions", Document.class);
+
+        ArrayList<Document> questionsList = new ArrayList<>();
+        List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                "_ids", new ArrayList<ObjectId>()
+        );
+        List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+                "marks", new ArrayList<Double>()
+        );
+        List<Boolean> uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
+                "uploadable_list", new ArrayList<Double>()
+        );
+
+        if (questionsMark.size() != questions.size())
+            return JSON_NOT_UNKNOWN;
+
+        if (questionsMark.size() != uploadableList.size())
+            return JSON_NOT_UNKNOWN;
+
+        int i = 0;
+        for (ObjectId itr : questions) {
+
+            Document question = questionRepository.findById(itr);
+
+            if (question == null) {
+                i++;
+                continue;
+            }
+
+            questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+            i++;
+        }
+
+        i = 0;
+
+        for (Document question : questionsList) {
+
+            if (i >= stdAnswers.size()) {
+                question.put("stdAns", "");
+                question.put("stdMark", 0);
+            }
+            else {
+                question.put("stdAns", stdAnswers.get(i).getString("answer"));
+                question.put("stdMark", isStatNeeded && stdAnswers.get(i).containsKey("mark") ? stdAnswers.get(i).get("mark") : -1);
+            }
+
+            i++;
+        }
+
+        JSONArray questionsJSONArr = Utilities.convertList(
+                questionsList, isStatNeeded, isStatNeeded, true, isStatNeeded, false
+        );
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("questions", questionsJSONArr);
+        jsonObject.put("quizInfo", quizJSON);
+
+        return generateSuccessMsg("data", jsonObject);
+
+    }
+
     public static String returnQuiz(Document quiz, Document stdDoc,
-                                     boolean isStatNeeded, JSONObject quizJSON) {
+                                    boolean isStatNeeded, JSONObject quizJSON) {
 
         Document questionsDoc = quiz.get("questions", Document.class);
 
@@ -1005,9 +1084,9 @@ public class StudentQuizController {
 
         Object tmp = null;
 
-        if(stdDoc != null) {
+        if (stdDoc != null) {
             tmp = stdDoc.getOrDefault("answers", null);
-            if(tmp != null)
+            if (tmp != null)
                 tmp = ((Binary) tmp).getData();
             else
                 tmp = new byte[0];

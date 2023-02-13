@@ -414,13 +414,9 @@ public class PackageController {
                 if (userId != null)
                     filtersForQuizzes.add(nin("students._id", userId));
 
-                System.out.println(and(filtersForQuizzes));
-
                 ArrayList<Document> docs = iryscQuizRepository.find(
                         and(filtersForQuizzes), null
                 );
-
-                System.out.println(docs.size());
 
                 if (!isSchool) {
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();
@@ -438,6 +434,7 @@ public class PackageController {
 
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
+                TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
 
                 for (Document doc : docs) {
 
@@ -468,6 +465,10 @@ public class PackageController {
 
                     if (doc.containsKey("launch_mode"))
                         object = quizController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else if(doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                        object = tashrihiQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
                     else
