@@ -102,7 +102,7 @@ public class Utilities {
 
     }
 
-    public static JSONArray convertList(ArrayList<Document> docs,
+    public static JSONArray convertList(List<Document> docs,
                                         boolean isSubjectsNeeded,
                                         boolean isAuthorsNeeded,
                                         boolean isQuestionFileNeeded,

@@ -1,10 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.mongodb.client.model.Sorts;
-import irysc.gachesefid.DB.Common;
-import irysc.gachesefid.DB.IRYSCQuizRepository;
-import irysc.gachesefid.DB.SchoolQuizRepository;
-import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
@@ -22,6 +19,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
@@ -462,15 +460,10 @@ public class TashrihiQuizController extends QuizAbstract {
                     if(user == null)
                         continue;
 
-                    boolean allMarked = true;
-                    for(Document ans : std.getList("answers", Document.class)) {
-                        if(!ans.containsKey("mark")) {
-                            allMarked = false;
-                            break;
-                        }
-                    }
+                    JSONObject jsonObject = new JSONObject()
+                            .put("allMarked", std.getOrDefault("all_marked", false))
+                            .put("totalMark", std.getOrDefault("total_mark", 0));
 
-                    JSONObject jsonObject = new JSONObject().put("allMarked", allMarked);
                     Utility.fillJSONWithUser(jsonObject, user);
                     jsonArray.put(jsonObject);
                 }
@@ -639,7 +632,7 @@ public class TashrihiQuizController extends QuizAbstract {
                 return JSON_NOT_ACCESS;
 
             List<Document> students = quiz.getList("students", Document.class);
-            Document student = Utility.searchInDocumentsKeyVal(students, "user_id", studentId);
+            Document student = Utility.searchInDocumentsKeyVal(students, "_id", studentId);
 
             if (student == null)
                 return JSON_NOT_VALID_PARAMS;
@@ -647,22 +640,39 @@ public class TashrihiQuizController extends QuizAbstract {
             boolean allMarked = (boolean)student.getOrDefault("all_marked", false);
 
             Document user = userRepository.findById(
-                    student.getObjectId("user_id")
+                    student.getObjectId("_id")
             );
+
+            List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", quiz.getString("title"))
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("generalMode",
+                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() : "school")
+                    .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                    .put("description", quiz.getOrDefault("desc", ""))
+                    .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                    .put("mode", quiz.getString("mode"))
+                    .put("attaches", jsonArray);
+
 
             return Utility.generateSuccessMsg("data", new JSONObject()
                     .put("allMarked", allMarked)
+                    .put("quizInfo", quizJSON)
                     .put("student", new JSONObject()
-                            .put("name", user.getString("name_fa") + " " + user.getString("last_name_fa"))
-                            .put("id", student.getObjectId("user_id").toString())
-                            .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                            .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                            .put("id", student.getObjectId("_id").toString())
                     )
                     .put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getTashrihiQuestions(
                             true, true, (boolean)quiz.getOrDefault("is_q_r_needed", false),
-                            user.getString("NID"), quiz.get("questions", Document.class),
+                            quiz.get("questions", Document.class),
                             student.getList("answers", Document.class),
-                            db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER,
-                            quizId
+                            db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
                     ))
             );
 
@@ -810,16 +820,37 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     public static String setMark(Common db, ObjectId userId,
-                                 ObjectId quizId, ObjectId answerId,
+                                 ObjectId quizId, ObjectId questionId,
                                  ObjectId studentId, JSONObject markData) {
         try {
 
             PairValue p = hasCorrectorAccess(db, userId, quizId);
-
             Document quiz = (Document) p.getKey();
             int correctorIdx = (int) p.getValue();
 
-            if (!DEV_MODE && quiz.getLong("end") > System.currentTimeMillis())
+            if (correctorIdx != -1) {
+
+                List<ObjectId> studentIds = null;
+                List<ObjectId> questionIds = null;
+
+                Document doc = quiz.getList("correctors", Document.class).get(correctorIdx);
+
+                if(doc.containsKey("students"))
+                    studentIds = doc.getList("students", ObjectId.class);
+
+                if(doc.containsKey("questions"))
+                    questionIds = doc.getList("questions", ObjectId.class);
+
+                boolean hasAccess = (studentIds != null && studentIds.contains(studentId)) ||
+                        (questionIds != null && questionIds.contains(questionId));
+
+                if(!hasAccess)
+                    return JSON_NOT_ACCESS;
+            }
+
+            if (!DEV_MODE && quiz.containsKey("end") &&
+                    quiz.getLong("end") > System.currentTimeMillis()
+            )
                 return Utility.generateErr("آزمون موردنظر هنوز به اتمام نرسیده است.");
 
             List<Document> students = quiz.getList("students", Document.class);
@@ -834,35 +865,21 @@ public class TashrihiQuizController extends QuizAbstract {
 
             List<Document> studentAnswers = students.get(stdIdx).getList("answers", Document.class);
 
-            int answerIdx = searchInDocumentsKeyValIdx(studentAnswers, "_id", answerId);
+            int answerIdx = searchInDocumentsKeyValIdx(studentAnswers, "question_id", questionId);
             if (answerIdx == -1)
                 return JSON_NOT_VALID_ID;
 
             double mark = markData.getNumber("mark").doubleValue();
 
-            ObjectId questionId = studentAnswers.get(answerIdx).getObjectId("question_id");
+            Document questions = quiz.get("questions", Document.class);
+            List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
-            if (correctorIdx != -1) {
+            int qIdx = ids.indexOf(questionId);
+            if(qIdx < 0)
+                return JSON_NOT_VALID_ID;
 
-                Document correctorAccess = quiz.getList("correctors", Document.class).get(correctorIdx);
-
-                if (correctorAccess.get("students") != null &&
-                        !correctorAccess.getList("students", ObjectId.class).contains(studentId)
-                )
-                    return JSON_NOT_ACCESS;
-
-                if (correctorAccess.get("questions") != null &&
-                        !correctorAccess.getList("questions", ObjectId.class).contains(questionId)
-                )
-                    return JSON_NOT_ACCESS;
-
-            }
-
-            List<Document> questions = quiz.getList("questions", Document.class);
-            int questionIdx = searchInDocumentsKeyValIdx(questions, "_id", questionId);
-
-            if (questions.get(questionIdx).getInteger("mark") < mark)
-                return Utility.generateErr("حداکثر نمره مجاز برای این سوال " + questions.get(questionIdx).getInteger("mark") + " می باشد.");
+            if (questions.getList("marks", Double.class).get(qIdx) < mark)
+                return Utility.generateErr("حداکثر نمره مجاز برای این سوال " + questions.getList("marks", Double.class).get(qIdx) + " می باشد.");
 
             double finalMark;
 
@@ -894,11 +911,10 @@ public class TashrihiQuizController extends QuizAbstract {
                 }
             }
 
-
             if (allMarked)
                 students.get(stdIdx).put("all_marked", true);
 
-            new Thread(() -> db.replaceOne(quizId, quiz)).start();
+            db.replaceOne(quizId, quiz);
             return JSON_OK;
         } catch (Exception x) {
             return Utility.generateErr(x.getMessage());

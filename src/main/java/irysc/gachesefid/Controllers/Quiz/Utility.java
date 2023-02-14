@@ -96,17 +96,6 @@ public class Utility {
 
     }
 
-    static JSONObject convertQuizToJSONInList(Document quiz) {
-
-        JSONObject jsonObject = new JSONObject();
-
-
-        jsonObject.put("studentsCount", quiz.getList("students", Document.class).size());
-        jsonObject.put("id", quiz.getObjectId("_id").toString());
-
-        return jsonObject;
-    }
-
     static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz, Document corrector, String mode) {
 
         JSONObject jsonObject = new JSONObject();
@@ -117,7 +106,6 @@ public class Utility {
         jsonObject.put("title", quiz.getString("title"));
         jsonObject.put("id", quiz.getObjectId("_id").toString());
         jsonObject.put("mode", mode);
-//        jsonObject.put()
 
         List<ObjectId> myStudents = corrector.containsKey("students") ?
                 corrector.getList("students", ObjectId.class) :
@@ -161,126 +149,64 @@ public class Utility {
         return jsonObject;
     }
 
-    private static JSONObject convertQuestionToJSON(Document question, String folder, boolean owner) {
-
-        JSONObject jsonObject = new JSONObject();
-
-        if (owner) {
-            for (String key : question.keySet()) {
-
-                if (question.get(key) instanceof ObjectId)
-                    jsonObject.put(irysc.gachesefid.Utility.Utility.camel(key, false), question.get(key).toString());
-                else
-                    jsonObject.put(irysc.gachesefid.Utility.Utility.camel(key, false), question.get(key));
-            }
-
-            if (jsonObject.has("correctAnswer") && jsonObject.getString("correctAnswerType").equals(KindAnswer.FILE.getName()))
-                jsonObject.put("correctAnswer", StaticValues.STATICS_SERVER + folder + "/answers/" + jsonObject.getString("correctAnswer"));
-
-        } else {
-
-            jsonObject.put("descMode", question.getString("desc_mode"));
-
-            if (question.containsKey("needed_time"))
-                jsonObject.put("neededTime", question.getInteger("needed_time"));
-
-            if (question.containsKey("question"))
-                jsonObject.put("question", question.get("question"));
-
-            if (question.containsKey("desc"))
-                jsonObject.put("desc", question.get("desc"));
-
-            jsonObject.put("id", question.getObjectId("_id").toString());
-            jsonObject.put("text", question.getString("text"));
-            jsonObject.put("choices", question.get("choices"));
-            jsonObject.put("mark", question.get("mark"));
-            jsonObject.put("answerType", question.getString("answer_type"));
-            jsonObject.put("questionType", question.getString("question_type"));
-            jsonObject.put("questionFile", question.getString("question_file"));
-        }
-
-        if (jsonObject.has("desc") && jsonObject.getString("descMode").equals(KindAnswer.FILE.getName()))
-            jsonObject.put("desc", StaticValues.STATICS_SERVER + folder + "/descs/" + jsonObject.getString("desc"));
-
-        if (jsonObject.has("questionFile"))
-            jsonObject.put("questionFile", StaticValues.STATICS_SERVER + folder + "/questions/" + jsonObject.getString("questionFile"));
-
-        return jsonObject;
-    }
 
     static JSONArray getTashrihiQuestions(boolean owner, boolean showResults,
-                                          boolean correctWithQR, String NID,
-                                          Document questions, List<Document> studentAnswers,
-                                          String folder, ObjectId quizId) {
+                                          boolean correctWithQR, Document questions,
+                                          List<Document> studentAnswers, String folder
+    ) {
         String prefix;
 
         if(correctWithQR) {
-
-            prefix = DEV_MODE ?
-                    FileUtils.uploadDir_dev + "tashrihi_answer_sheets/" + quizId :
-                    FileUtils.uploadDir + "tashrihi_answer_sheets/" + quizId;
-
+            prefix = StaticValues.STATICS_SERVER;
             prefix += "/";
-
-            File f = new File(prefix + NID);
-
-            if(!f.exists() || !f.isDirectory())
-                return new JSONArray();
-
-            File[] files = f.listFiles();
-            if(files == null)
-                return new JSONArray();
-
-            prefix = "tashrihi_answer_sheets/" + quizId + "/" +
-                    NID + "/";
         }
         else
             prefix = StaticValues.STATICS_SERVER + folder + "/studentAnswers/";
 
-        JSONArray questionsJSON = new JSONArray();
-        List<Boolean> uploadableList = questions.getList("uploadable_list", Boolean.class);
         List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
+        List<Double> marks = questions.getList("marks", Double.class);
 
         List<Document> questionDocs = questionRepository.findByIds(ids, true);
-        int counter = 0;
 
-        for (Document question : questionDocs) {
+        JSONArray questionsJSON = Utilities.convertList(questionDocs, true, true, true, true, true);
 
-            JSONObject questionObj = convertQuestionToJSON(question, folder, owner);
+        for (int z = 0; z < questionsJSON.length(); z++) {
+
+            JSONObject questionObj = questionsJSON.getJSONObject(z);
+
+            questionObj.put("mark", marks.get(z));
 
             if (studentAnswers != null) {
 
                 Document studentAnswer = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                        studentAnswers, "question_id", question.getObjectId("_id")
+                        studentAnswers, "question_id", questionDocs.get(z).getObjectId("_id")
                 );
 
                 if(studentAnswer != null) {
 
                     JSONObject studentAnswerObj = new JSONObject()
                             .put("id", studentAnswer.getObjectId("_id").toString())
-                            .put("answer", studentAnswer.get("answer"))
-                            .put("answerAt", irysc.gachesefid.Utility.Utility.getSolarDate(studentAnswer.getLong("answer_at")));
+                            .put("answerAt", studentAnswer.containsKey("answer_at") ?
+                                    irysc.gachesefid.Utility.Utility.getSolarDate(studentAnswer.getLong("answer_at")) : ""
+                            );
 
                     if (studentAnswer.containsKey("mark") && (owner || showResults)) {
                         studentAnswerObj.put("mark", studentAnswer.getDouble("mark"));
                         studentAnswerObj.put("markDesc", studentAnswer.getOrDefault("mark_desc", ""));
                     }
+                    else
+                        studentAnswerObj.put("mark", -1);
 
-                    if (uploadableList.get(counter)) {
+                    if (studentAnswer.getOrDefault("type", "").toString().equalsIgnoreCase("file")) {
                         if (!studentAnswer.containsKey("answer") ||
                                 studentAnswer.getString("answer") == null ||
                                 studentAnswer.getString("answer").isEmpty()
                         )
                             studentAnswerObj.put("answer", "");
                         else {
-                            if(correctWithQR)
-                                studentAnswerObj.put("answer",
-                                        prefix + question.getObjectId("_id")
-                                );
-                            else
-                                studentAnswerObj.put("answer",
-                                        prefix + studentAnswer.getString("answer")
-                                );
+                            studentAnswerObj.put("answer",
+                                    prefix + studentAnswer.getString("answer")
+                            ).put("type", "file");
                         }
                     }
                     else
@@ -290,12 +216,9 @@ public class Utility {
                         );
 
 
-                    questionObj.put("studentAnswer", studentAnswerObj);
+                    questionObj.put("stdAns", studentAnswerObj);
                 }
             }
-
-            questionsJSON.put(questionObj);
-            counter++;
         }
 
         return questionsJSON;

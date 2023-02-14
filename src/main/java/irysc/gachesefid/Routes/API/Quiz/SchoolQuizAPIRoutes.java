@@ -8,6 +8,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -100,16 +101,16 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "/setMark/{mode}/{taskId}/{studentId}/{answerId}")
+    @PutMapping(value = "/setMark/{mode}/{quizId}/{studentId}/{questionId}")
     @ResponseBody
     public String setMark(HttpServletRequest request,
                           @PathVariable @NotBlank @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                          @PathVariable @ObjectIdConstraint ObjectId taskId,
-                          @PathVariable @ObjectIdConstraint ObjectId answerId,
+                          @PathVariable @ObjectIdConstraint ObjectId quizId,
                           @PathVariable @ObjectIdConstraint ObjectId studentId,
+                          @PathVariable @ObjectIdConstraint ObjectId questionId,
                           @RequestBody @StrongJSONConstraint(
                                   params = {"mark"},
-                                  paramsType = {Number.class},
+                                  paramsType = {Object.class},
                                   optionals = {"description"},
                                   optionalsType = {String.class}
                           ) @NotBlank String jsonStr
@@ -121,7 +122,7 @@ public class SchoolQuizAPIRoutes extends Router {
         return TashrihiQuizController.setMark(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
-                taskId, answerId, studentId, new JSONObject(jsonStr)
+                quizId, questionId, studentId, Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
 

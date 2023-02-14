@@ -15,6 +15,7 @@ import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Models.ExchangeMode;
+import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Utility;
@@ -55,6 +56,23 @@ public class GeneralAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         contentRepository.clearFromCache(contentId);
+        return JSON_OK;
+    }
+
+    @PostMapping(value = "clearQuizCache/{mode}/{quizId}")
+    @ResponseBody
+    public String clearQuizCache(HttpServletRequest request,
+                                  @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                  @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+
+        if(mode.equals(GeneralKindQuiz.IRYSC.getName()))
+            iryscQuizRepository.clearFromCache(quizId);
+        else
+            schoolQuizRepository.clearFromCache(quizId);
+
         return JSON_OK;
     }
 
