@@ -1,6 +1,11 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -9,19 +14,21 @@ import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -371,7 +378,7 @@ public class TashrihiQuizController extends QuizAbstract {
     public static String getMyMarkList(Common db, ObjectId userId,
                                        ObjectId quizId, String taskMode) {
 
-        if(
+        if (
                 !taskMode.equalsIgnoreCase("student") &&
                         !taskMode.equalsIgnoreCase("question")
         )
@@ -381,7 +388,7 @@ public class TashrihiQuizController extends QuizAbstract {
             PairValue p = hasCorrectorAccess(db, userId, quizId);
             Document quiz = (Document) p.getKey();
             int idx = (int) p.getValue();
-            if(idx == -1)
+            if (idx == -1)
                 return JSON_NOT_ACCESS;
 
             List<ObjectId> studentIds = null;
@@ -398,25 +405,25 @@ public class TashrihiQuizController extends QuizAbstract {
 
             List<Document> students = quiz.getList("students", Document.class);
 
-            if(questionIds != null) {
+            if (questionIds != null) {
 
                 Document questions = quiz.get("questions", Document.class);
                 List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
                 List<Double> marks = questions.getList("marks", Double.class);
 
-                for(ObjectId id : questionIds) {
+                for (ObjectId id : questionIds) {
 
                     int qIdx = ids.indexOf(id);
 
-                    if(qIdx == -1)
+                    if (qIdx == -1)
                         continue;
 
                     int marked = 0;
                     int total = 0;
 
-                    for(Document student : students) {
+                    for (Document student : students) {
 
-                        if(!student.containsKey("answers"))
+                        if (!student.containsKey("answers"))
                             continue;
 
                         Document ans = searchInDocumentsKeyVal(
@@ -424,28 +431,29 @@ public class TashrihiQuizController extends QuizAbstract {
                                 "question_id", id
                         );
 
-                        if(ans == null)
+                        if (ans == null)
                             continue;
 
-                        if(ans.containsKey("mark"))
+                        if (ans.containsKey("mark"))
                             marked++;
 
                         total++;
                     }
 
                     jsonArray.put(
-                        new JSONObject()
-                            .put("no", qIdx + 1)
-                            .put("allMarked", marked)
-                            .put("total", total)
-                            .put("mark", marks.get(idx))
+                            new JSONObject()
+                                    .put("id", id.toString())
+                                    .put("no", qIdx + 1)
+                                    .put("allMarked", marked)
+                                    .put("total", total)
+                                    .put("mark", marks.get(idx))
                     );
 
                 }
 
             }
 
-            if(studentIds != null) {
+            if (studentIds != null) {
 
                 for (ObjectId stdId : studentIds) {
 
@@ -453,11 +461,11 @@ public class TashrihiQuizController extends QuizAbstract {
                             students, "_id", stdId
                     );
 
-                    if(std == null)
+                    if (std == null)
                         continue;
 
                     Document user = userRepository.findById(stdId);
-                    if(user == null)
+                    if (user == null)
                         continue;
 
                     JSONObject jsonObject = new JSONObject()
@@ -515,13 +523,13 @@ public class TashrihiQuizController extends QuizAbstract {
                         continue;
                     }
 
-                    for(Document c : correctors) {
+                    for (Document c : correctors) {
 
-                        if(!c.containsKey("questions") || c.getObjectId("_id").equals(correctorId))
+                        if (!c.containsKey("questions") || c.getObjectId("_id").equals(correctorId))
                             continue;
 
                         List<ObjectId> qs = c.getList("questions", ObjectId.class);
-                        if(qs.contains(oId)) {
+                        if (qs.contains(oId)) {
                             qs.remove(oId);
                             break;
                         }
@@ -580,13 +588,13 @@ public class TashrihiQuizController extends QuizAbstract {
                         continue;
                     }
 
-                    for(Document c : correctors) {
+                    for (Document c : correctors) {
 
-                        if(!c.containsKey("students") || c.getObjectId("_id").equals(correctorId))
+                        if (!c.containsKey("students") || c.getObjectId("_id").equals(correctorId))
                             continue;
 
                         List<ObjectId> stds = c.getList("students", ObjectId.class);
-                        if(stds.contains(oId)) {
+                        if (stds.contains(oId)) {
                             stds.remove(oId);
                             break;
                         }
@@ -622,7 +630,7 @@ public class TashrihiQuizController extends QuizAbstract {
             if (idx != -1) {
                 Document doc = quiz.getList("correctors", Document.class).get(idx);
 
-                if(!doc.containsKey("students"))
+                if (!doc.containsKey("students"))
                     return JSON_NOT_ACCESS;
 
                 studentIds = doc.getList("students", ObjectId.class);
@@ -637,7 +645,7 @@ public class TashrihiQuizController extends QuizAbstract {
             if (student == null)
                 return JSON_NOT_VALID_PARAMS;
 
-            boolean allMarked = (boolean)student.getOrDefault("all_marked", false);
+            boolean allMarked = (boolean) student.getOrDefault("all_marked", false);
 
             Document user = userRepository.findById(
                     student.getObjectId("_id")
@@ -669,7 +677,7 @@ public class TashrihiQuizController extends QuizAbstract {
                             .put("id", student.getObjectId("_id").toString())
                     )
                     .put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getTashrihiQuestions(
-                            true, true, (boolean)quiz.getOrDefault("is_q_r_needed", false),
+                            true, true, (boolean) quiz.getOrDefault("is_q_r_needed", false),
                             quiz.get("questions", Document.class),
                             student.getList("answers", Document.class),
                             db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
@@ -696,61 +704,148 @@ public class TashrihiQuizController extends QuizAbstract {
 
                 Document doc = quiz.getList("correctors", Document.class).get(idx);
 
-                if (doc.get("questions") != null)
-                    questionIds = doc.getList("questions", ObjectId.class);
+                if (!doc.containsKey("questions"))
+                    return JSON_NOT_ACCESS;
 
+                questionIds = doc.getList("questions", ObjectId.class);
             }
 
             if (questionIds != null && !questionIds.contains(questionId))
                 return JSON_NOT_ACCESS;
 
-//            List<Document> students = quiz.getList("students", Document.class);
-//            Document student = Utility.searchInDocumentsKeyVal(students, "user_id", studentId);
-//
-//            if (student == null)
-//                return JSON_NOT_VALID_PARAMS;
-//
-//            boolean allMarked = questionIds == null && student.getBoolean("all_marked");
-//
-//            if (questionIds != null) {
-//
-//                List<Document> answers = student.getList("answers", Document.class);
-//                boolean hasAnyNotMark = false;
-//
-//                for (ObjectId questionId : questionIds) {
-//
-//                    if (!Utility.searchInDocumentsKeyVal(
-//                            answers, "question_id", questionId
-//                    ).containsKey("mark")) {
-//                        hasAnyNotMark = true;
-//                        break;
-//                    }
-//
-//                }
-//
-//                allMarked = !hasAnyNotMark;
-//            }
-//
-//            Document user = userRepository.findById(
-//                    student.getObjectId("user_id")
-//            );
+            Document question = quiz.get("questions", Document.class);
+            List<ObjectId> ids = question.getList("_ids", ObjectId.class);
 
-//            return Utility.generateSuccessMsg("data", new JSONObject()
-//                    .put("allMarked", allMarked)
-//                    .put("student", new JSONObject()
-//                            .put("name", user.getString("name_fa") + " " + user.getString("last_name_fa"))
-//                            .put("id", student.getObjectId("user_id").toString())
-//                            .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-//                    )
-//                    .put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getQuestions(
-//                            true, true,
-//                            quiz.get("questions", Document.class),
-//                            student.getList("answers", Document.class),
-//                            db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
-//                    ))
-//            );
+            int qIdx = ids.indexOf(questionId);
 
-            return JSON_OK;
+            if (qIdx < 0)
+                return JSON_NOT_VALID_PARAMS;
+
+            Document q = questionRepository.findById(questionId);
+            if (q == null)
+                return JSON_NOT_UNKNOWN;
+
+            JSONArray qJSONArr = Utilities.convertList(new ArrayList<>() {{
+                                                           add(q);
+                                                       }},
+                    true, true, true, true, true
+            );
+
+            if (qJSONArr.length() != 1)
+                return JSON_NOT_UNKNOWN;
+
+            List<Double> marks = question.getList("marks", Double.class);
+            double qMark = marks.get(qIdx);
+
+            JSONObject qJSON = qJSONArr.getJSONObject(0);
+
+            List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", quiz.getString("title"))
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("generalMode",
+                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() : "school")
+                    .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                    .put("description", quiz.getOrDefault("desc", ""))
+                    .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                    .put("mode", quiz.getString("mode"))
+                    .put("attaches", jsonArray);
+
+
+            boolean allMarked = true;
+            HashMap<ObjectId, Document> stdAnswers = new HashMap<>();
+            List<Document> students = quiz.getList("students", Document.class);
+
+            for (Document std : students) {
+
+                if (!std.containsKey("answers"))
+                    continue;
+
+                List<Document> answers = std.getList("answers", Document.class);
+                Document ans = Utility.searchInDocumentsKeyVal(
+                        answers, "question_id", questionId
+                );
+
+                if (ans == null)
+                    continue;
+
+                if (allMarked && !ans.containsKey("mark"))
+                    allMarked = false;
+
+                stdAnswers.put(std.getObjectId("_id"), ans);
+            }
+
+            boolean correctWithQR = (boolean) quiz.getOrDefault("is_q_r_needed", false);
+            String prefix;
+            String folder = db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER;
+
+            if (correctWithQR) {
+                prefix = StaticValues.STATICS_SERVER;
+                prefix += "/";
+            } else
+                prefix = StaticValues.STATICS_SERVER + folder + "/studentAnswers/";
+
+            JSONArray data = new JSONArray();
+
+            for (ObjectId std : stdAnswers.keySet()) {
+
+                Document user = userRepository.findById(std);
+                if (user == null)
+                    continue;
+
+                JSONObject questionObj = new JSONObject(qJSON.toString());
+                questionObj.put("mark", qMark);
+                Document studentAnswer = stdAnswers.get(std);
+
+                JSONObject studentAnswerObj = new JSONObject()
+                        .put("id", studentAnswer.getObjectId("_id").toString())
+                        .put("answerAt", studentAnswer.containsKey("answer_at") ?
+                                irysc.gachesefid.Utility.Utility.getSolarDate(studentAnswer.getLong("answer_at")) : ""
+                        );
+
+                if (studentAnswer.containsKey("mark")) {
+                    studentAnswerObj.put("mark", studentAnswer.getDouble("mark"));
+                    studentAnswerObj.put("markDesc", studentAnswer.getOrDefault("mark_desc", ""));
+                } else
+                    studentAnswerObj.put("mark", -1);
+
+                if (studentAnswer.getOrDefault("type", "").toString().equalsIgnoreCase("file")) {
+                    if (!studentAnswer.containsKey("answer") ||
+                            studentAnswer.getString("answer") == null ||
+                            studentAnswer.getString("answer").isEmpty()
+                    )
+                        studentAnswerObj.put("answer", "");
+                    else {
+                        studentAnswerObj.put("answer",
+                                prefix + studentAnswer.getString("answer")
+                        ).put("type", "file");
+                    }
+                } else
+                    studentAnswerObj.put("answer",
+                            !studentAnswer.containsKey("answer") || studentAnswer.get("answer") == null ?
+                                    "" : studentAnswer.get("answer")
+                    );
+
+                questionObj.put("stdAns", studentAnswerObj);
+                questionObj.put("student", new JSONObject()
+                        .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                        .put("id", std.toString())
+                );
+
+                data.put(questionObj);
+            }
+
+            return Utility.generateSuccessMsg("data", new JSONObject()
+                    .put("allMarked", allMarked)
+                    .put("quizInfo", quizJSON)
+                    .put("qIdx", qIdx + 1)
+                    .put("answers", data)
+            );
 
         } catch (InvalidFieldsException e) {
             return e.getMessage();
@@ -763,7 +858,7 @@ public class TashrihiQuizController extends QuizAbstract {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if(mode != null && !EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
+        if (mode != null && !EnumValidatorImp.isValid(mode, GeneralKindQuiz.class))
             return JSON_NOT_VALID_PARAMS;
 
         filters.add(eq("mode", KindQuiz.TASHRIHI.getName()));
@@ -784,7 +879,7 @@ public class TashrihiQuizController extends QuizAbstract {
                         "user_id", userId
                 );
 
-                if(corrector == null)
+                if (corrector == null)
                     continue;
 
                 JSONObject jsonObject = convertTashrihiQuizToJSONDigestForTeachers(doc, corrector, "irysc");
@@ -805,7 +900,7 @@ public class TashrihiQuizController extends QuizAbstract {
                         "user_id", userId
                 );
 
-                if(corrector == null)
+                if (corrector == null)
                     continue;
 
                 tasks.put(
@@ -835,16 +930,16 @@ public class TashrihiQuizController extends QuizAbstract {
 
                 Document doc = quiz.getList("correctors", Document.class).get(correctorIdx);
 
-                if(doc.containsKey("students"))
+                if (doc.containsKey("students"))
                     studentIds = doc.getList("students", ObjectId.class);
 
-                if(doc.containsKey("questions"))
+                if (doc.containsKey("questions"))
                     questionIds = doc.getList("questions", ObjectId.class);
 
                 boolean hasAccess = (studentIds != null && studentIds.contains(studentId)) ||
                         (questionIds != null && questionIds.contains(questionId));
 
-                if(!hasAccess)
+                if (!hasAccess)
                     return JSON_NOT_ACCESS;
             }
 
@@ -875,7 +970,7 @@ public class TashrihiQuizController extends QuizAbstract {
             List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
             int qIdx = ids.indexOf(questionId);
-            if(qIdx < 0)
+            if (qIdx < 0)
                 return JSON_NOT_VALID_ID;
 
             if (questions.getList("marks", Double.class).get(qIdx) < mark)
@@ -904,6 +999,7 @@ public class TashrihiQuizController extends QuizAbstract {
             if (!students.get(stdIdx).containsKey("all_marked")) {
 
                 for (Document studentAnswer : studentAnswers) {
+
                     if (!studentAnswer.containsKey("mark")) {
                         allMarked = false;
                         break;
@@ -913,6 +1009,8 @@ public class TashrihiQuizController extends QuizAbstract {
 
             if (allMarked)
                 students.get(stdIdx).put("all_marked", true);
+            else
+                students.get(stdIdx).remove("all_marked");
 
             db.replaceOne(quizId, quiz);
             return JSON_OK;
@@ -936,7 +1034,7 @@ public class TashrihiQuizController extends QuizAbstract {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
-                if(quiz == null)
+                if (quiz == null)
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
@@ -1108,4 +1206,908 @@ public class TashrihiQuizController extends QuizAbstract {
         return jsonObject;
     }
 
+
+    static class Taraz {
+
+        private Document quiz;
+
+        private ArrayList<TashrihiQuestionStat> lessonsStat;
+        private ArrayList<TashrihiQuestionStat> subjectsStat;
+        private List<Document> questionsList;
+        private List<ObjectId> questionIds;
+
+        private List<Double> marks;
+        private List<Document> students;
+        private ArrayList<TashrihiQuestionStat> studentsStat;
+        public ArrayList<byte[]> questionStats;
+        private ArrayList<Document> studentsData;
+
+        private HashMap<ObjectId, ObjectId> states;
+        private HashMap<ObjectId, PairValue> usersCities;
+
+        private HashMap<ObjectId, Integer> cityRanking;
+        private HashMap<Object, Integer> stateRanking;
+
+        private HashMap<ObjectId, Integer> citySkip;
+        private HashMap<Object, Integer> stateSkip;
+
+        private HashMap<ObjectId, Double> cityOldT;
+        private HashMap<Object, Double> stateOldT;
+
+        private ArrayList<Document> rankingList;
+        private List<Document> subjectsGeneralStat;
+        private List<Document> lessonsGeneralStat;
+
+        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
+
+        Taraz(Document quiz, Common db) {
+
+            this.quiz = quiz;
+            Document questions = quiz.get("questions", Document.class);
+            marks = questions.getList("marks", Double.class);
+
+            students = quiz.getList("students", Document.class);
+            questionIds = questions.getList("_ids", ObjectId.class);
+
+            lessonsStat = new ArrayList<>();
+            subjectsStat = new ArrayList<>();
+            questionsList = new ArrayList<>();
+            studentsStat = new ArrayList<>();
+            questionStats = new ArrayList<>();
+            rankingList = new ArrayList<>();
+
+            states = new HashMap<>();
+            usersCities = new HashMap<>();
+
+            cityRanking = new HashMap<>();
+            stateRanking = new HashMap<>();
+
+            citySkip = new HashMap<>();
+            stateSkip = new HashMap<>();
+
+            cityOldT = new HashMap<>();
+            stateOldT = new HashMap<>();
+            subjectsGeneralStat = new ArrayList<>();
+            lessonsGeneralStat = new ArrayList<>();
+
+            fetchQuestions();
+            initStudentStats();
+
+            doCorrectStudents();
+            calcSubjectMarkSum();
+            calcLessonMarkSum();
+
+            calcSubjectsStandardDeviationAndTaraz();
+            calcLessonsStandardDeviationAndTaraz();
+
+            for (TashrihiQuestionStat aStudentsStat : studentsStat)
+                aStudentsStat.calculateTotalTaraz();
+
+            studentsStat.sort(TashrihiQuestionStat::compareTo);
+
+            fetchUsersData();
+            saveStudentsStats();
+
+            prepareForCityRanking();
+            calcCityRanking();
+
+            calcSubjectsStats();
+            calcLessonsStats();
+
+            save(db);
+            if (db instanceof IRYSCQuizRepository)
+                storeInRankingTable();
+        }
+
+        private void fetchQuestions() {
+
+            int k = -1;
+
+            for (ObjectId id : questionIds) {
+
+                Document question = questionRepository.findById(id);
+                k++;
+
+                if (question == null)
+                    continue;
+
+                Document tmp = Document.parse(question.toJson());
+                tmp.put("mark", marks.get(k));
+
+                ObjectId subjectId = question.getObjectId("subject_id");
+
+                boolean isSubjectAdded = false;
+
+                tmp.put("subject_id", subjectId);
+
+                for (TashrihiQuestionStat itr : subjectsStat) {
+                    if (itr.equals(subjectId)) {
+                        isSubjectAdded = true;
+                        tmp.put("lesson_id", itr.additionalId);
+                        break;
+                    }
+                }
+
+                if (!isSubjectAdded) {
+
+                    Document subject = subjectRepository.findById(subjectId);
+
+                    Document lesson = subject.get("lesson", Document.class);
+                    ObjectId lessonId = lesson.getObjectId("_id");
+
+                    subjectsStat.add(
+                            new TashrihiQuestionStat(
+                                    subjectId, subject.getString("name"), lessonId
+                            )
+                    );
+
+                    tmp.put("lesson_id", lessonId);
+
+                    boolean isLessonAdded = false;
+
+                    for (TashrihiQuestionStat itr : lessonsStat) {
+                        if (itr.equals(lessonId)) {
+                            isLessonAdded = true;
+                            break;
+                        }
+                    }
+
+                    if (!isLessonAdded)
+                        lessonsStat.add(
+                                new TashrihiQuestionStat(lessonId, lesson.getString("name"))
+                        );
+                }
+
+                questionsList.add(tmp);
+            }
+        }
+
+        private void initStudentStats() {
+            for (Document student : students) {
+                studentsStat.add(new TashrihiQuestionStat(
+                        student.getObjectId("_id"), "",
+                        student.getList("answers", Document.class)
+                ));
+            }
+        }
+
+        private void doCorrectStudents() {
+
+            int idx = 0;
+            for (Document question : questionsList) {
+                for (TashrihiQuestionStat aStudentsStat : studentsStat)
+                    aStudentsStat.doCorrect(question, idx);
+                idx++;
+            }
+        }
+
+        private void calcSubjectMarkSum() {
+            for (TashrihiQuestionStat itr : subjectsStat) {
+                for (TashrihiQuestionStat aStudentsStat : studentsStat) {
+                    itr.marks.add(
+                            (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
+                    );
+                }
+            }
+        }
+
+        private void calcLessonMarkSum() {
+            for (TashrihiQuestionStat itr : lessonsStat) {
+                for (TashrihiQuestionStat aStudentsStat : studentsStat) {
+                    itr.marks.add(
+                            (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
+                    );
+                }
+            }
+        }
+
+        private void calcSubjectsStandardDeviationAndTaraz() {
+            for (TashrihiQuestionStat itr : subjectsStat) {
+                itr.calculateSD();
+                for (TashrihiQuestionStat aStudentsStat : studentsStat)
+                    aStudentsStat.calculateTaraz(
+                            itr.mean, itr.sd,
+                            itr.id, true
+                    );
+            }
+        }
+
+        private void calcLessonsStandardDeviationAndTaraz() {
+            for (TashrihiQuestionStat itr : lessonsStat) {
+                itr.calculateSD();
+                for (TashrihiQuestionStat aStudentsStat : studentsStat)
+                    aStudentsStat.calculateTaraz(
+                            itr.mean, itr.sd,
+                            itr.id, false
+                    );
+            }
+        }
+
+        private void saveStudentsStats() {
+
+            for (TashrihiQuestionStat aStudentsStat : studentsStat) {
+
+                Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        students, "_id", aStudentsStat.id
+                );
+
+                ArrayList<Document> lessonsStats = new ArrayList<>();
+
+                for (TashrihiQuestionStat itr : lessonsStat) {
+
+                    lessonsStats.add(new Document
+                            ("stat", aStudentsStat.encode(itr.id, false))
+                            .append("name", itr.name)
+                            .append("_id", itr.id)
+                    );
+
+                }
+
+                student.put("lessons", lessonsStats);
+
+                ArrayList<Document> subjectStats = new ArrayList<>();
+
+                for (TashrihiQuestionStat itr : subjectsStat) {
+
+                    subjectStats.add(new Document
+                            ("stat", aStudentsStat.encode(itr.id, true))
+                            .append("name", itr.name)
+                            .append("_id", itr.id)
+                    );
+
+                }
+
+                student.put("subjects", subjectStats);
+            }
+
+        }
+
+        private void fetchUsersData() {
+
+            ArrayList<ObjectId> studentIds = new ArrayList<>();
+
+            for (TashrihiQuestionStat itr : studentsStat)
+                studentIds.add(itr.id);
+
+            studentsData = userRepository.findByIds(
+                    studentIds, true
+            );
+
+            initTarazRankingLists();
+
+            for (ObjectId subjectId : subjectsTarazRanking.keySet()) {
+                List<TarazRanking> allTarazRanking = subjectsTarazRanking.get(subjectId);
+                calcStateRanking(allTarazRanking, true, subjectId);
+                calcCountryRanking(allTarazRanking, true, subjectId);
+                calcCityRanking(allTarazRanking, true, subjectId);
+                calcSchoolRanking(allTarazRanking, true, subjectId);
+            }
+
+            for (ObjectId lessonId : lessonsTarazRanking.keySet()) {
+                List<TarazRanking> allTarazRanking = lessonsTarazRanking.get(lessonId);
+                calcStateRanking(allTarazRanking, false, lessonId);
+                calcCountryRanking(allTarazRanking, false, lessonId);
+                calcCityRanking(allTarazRanking, false, lessonId);
+                calcSchoolRanking(allTarazRanking, false, lessonId);
+            }
+
+        }
+
+        private void initTarazRankingLists() {
+
+            int k = 0;
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
+            ObjectId iryscSchool = schoolRepository.findOne(
+                    eq("name", "آیریسک تهران"), null
+            ).getObjectId("_id");
+
+            for (TashrihiQuestionStat itr : studentsStat) {
+
+                ObjectId cityId;
+                ObjectId schoolId;
+
+                if (!studentsData.get(k).containsKey("city") ||
+                        studentsData.get(k).get("city") == null
+                )
+                    cityId = unknownCity;
+                else
+                    cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
+
+                if (!studentsData.get(k).containsKey("school") ||
+                        studentsData.get(k).get("school") == null
+                )
+                    schoolId = iryscSchool;
+                else
+                    schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
+
+                ObjectId stateId;
+
+                if (statesDic.containsKey(cityId))
+                    stateId = statesDic.get(cityId);
+                else {
+                    stateId = cityRepository.findById(cityId).getObjectId("state_id");
+                    statesDic.put(cityId, stateId);
+                }
+
+                for (ObjectId oId : itr.subjectTaraz.keySet()) {
+
+                    TarazRanking t = new TarazRanking(
+                            schoolId, cityId, stateId,
+                            itr.subjectTaraz.get(oId)
+                    );
+
+                    if (subjectsTarazRanking.containsKey(oId))
+                        subjectsTarazRanking.get(oId).add(t);
+                    else
+                        subjectsTarazRanking.put(oId, new ArrayList<>() {{
+                            add(t);
+                        }});
+                }
+
+                for (ObjectId oId : itr.lessonTaraz.keySet()) {
+
+                    TarazRanking t = new TarazRanking(
+                            schoolId, cityId, stateId,
+                            itr.lessonTaraz.get(oId)
+                    );
+
+                    if (lessonsTarazRanking.containsKey(oId))
+                        lessonsTarazRanking.get(oId).add(t);
+                    else
+                        lessonsTarazRanking.put(oId, new ArrayList<>() {{
+                            add(t);
+                        }});
+                }
+
+                k++;
+            }
+        }
+
+        private void calcSchoolRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for (TarazRanking t : allTarazRanking) {
+
+                if (t.schoolRank != -1)
+                    continue;
+
+                ObjectId wantedSchoolId = t.schoolId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for (TarazRanking ii : allTarazRanking) {
+                    if (!ii.schoolId.equals(wantedSchoolId))
+                        continue;
+                    filterSorted.add(ii);
+                }
+
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).schoolRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for (TashrihiQuestionStat itr : studentsStat) {
+                if (isForSubject)
+                    itr.subjectSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
+                else
+                    itr.lessonSchoolRanking.put(oId, allTarazRanking.get(k++).schoolRank);
+            }
+
+        }
+
+        private void calcStateRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for (TarazRanking t : allTarazRanking) {
+
+                if (t.stateRank != -1)
+                    continue;
+
+                ObjectId wantedStateId = t.stateId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for (TarazRanking ii : allTarazRanking) {
+                    if (!ii.stateId.equals(wantedStateId))
+                        continue;
+                    filterSorted.add(ii);
+                }
+
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).stateRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for (TashrihiQuestionStat itr : studentsStat) {
+                if (isForSubject)
+                    itr.subjectStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
+                else
+                    itr.lessonStateRanking.put(oId, allTarazRanking.get(k++).stateRank);
+            }
+
+        }
+
+        private void calcCityRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for (TarazRanking t : allTarazRanking) {
+
+                if (t.cityRank != -1)
+                    continue;
+
+                ObjectId wantedStateId = t.cityId;
+
+                List<TarazRanking> filterSorted = new ArrayList<>();
+                for (TarazRanking ii : allTarazRanking) {
+
+                    if (!ii.cityId.equals(wantedStateId))
+                        continue;
+
+                    filterSorted.add(ii);
+                }
+
+                filterSorted.sort(Comparator.comparingInt(t2 -> t2.taraz));
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).cityRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for (TashrihiQuestionStat itr : studentsStat) {
+                if (isForSubject)
+                    itr.subjectCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
+                else
+                    itr.lessonCityRanking.put(oId, allTarazRanking.get(k++).cityRank);
+            }
+
+        }
+
+        private void calcCountryRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
+
+            for (TarazRanking t : allTarazRanking) {
+
+                if (t.countryRank != -1)
+                    continue;
+
+                List<TarazRanking> filterSorted =
+                        allTarazRanking.stream()
+                                .sorted(Comparator.comparingInt(t2 -> t2.taraz))
+                                .collect(Collectors.toList());
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for (int i = filterSorted.size() - 1; i >= 0; i--) {
+
+                    if (oldTaraz != filterSorted.get(i).taraz) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    filterSorted.get(i).countryRank = rank;
+                    oldTaraz = filterSorted.get(i).taraz;
+                }
+            }
+
+            int k = 0;
+            for (TashrihiQuestionStat itr : studentsStat) {
+                if (isForSubject)
+                    itr.subjectCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
+                else
+                    itr.lessonCountryRanking.put(oId, allTarazRanking.get(k++).countryRank);
+            }
+
+        }
+
+        private void prepareForCityRanking() {
+
+            ObjectId unknownCity = cityRepository.findOne(
+                    eq("name", "نامشخص"), null
+            ).getObjectId("_id");
+
+            for (Document itr : studentsData) {
+
+                ObjectId cityId = itr.get("city") == null ? unknownCity :
+                        itr.get("city", Document.class).getObjectId("_id");
+                ObjectId stateId;
+
+                if (states.containsKey(cityId))
+                    stateId = states.get(cityId);
+                else {
+                    Document city = cityRepository.findById(cityId);
+                    stateId = city.getObjectId("state_id");
+                    states.put(cityId, stateId);
+                }
+
+                if (
+                        !stateRanking.containsKey(stateId)
+                ) {
+                    stateRanking.put(stateId, 0);
+                    stateOldT.put(stateId, -1.0);
+                    stateSkip.put(stateId, 1);
+                }
+
+                if (
+                        !cityRanking.containsKey(cityId)
+                ) {
+                    cityRanking.put(cityId, 0);
+                    cityOldT.put(cityId, -1.0);
+                    citySkip.put(cityId, 1);
+                }
+
+                usersCities.put(
+                        itr.getObjectId("_id"),
+                        new PairValue(cityId, stateId)
+                );
+            }
+        }
+
+        private void calcCityRanking() {
+
+            int rank = 0;
+            int skip = 1;
+            double oldTaraz = -1;
+
+            for (TashrihiQuestionStat aStudentsStat : studentsStat) {
+
+                PairValue p = usersCities.get(aStudentsStat.id);
+
+                ObjectId stateId = (ObjectId) p.getValue();
+                ObjectId cityId = (ObjectId) p.getKey();
+                double currTaraz = aStudentsStat.taraz;
+
+                if (oldTaraz != currTaraz) {
+                    rank += skip;
+                    skip = 1;
+                } else
+                    skip++;
+
+                if (stateOldT.get(stateId) != currTaraz) {
+                    stateRanking.put(stateId, stateRanking.get(stateId) + stateSkip.get(stateId));
+                    stateSkip.put(stateId, 1);
+                } else
+                    stateSkip.put(stateId, stateSkip.get(stateId) + 1);
+
+                if (cityOldT.get(cityId) != currTaraz) {
+                    cityRanking.put(cityId, cityRanking.get(cityId) + citySkip.get(cityId));
+                    citySkip.put(cityId, 1);
+                } else
+                    citySkip.put(cityId, citySkip.get(cityId) + 1);
+
+                double stdMark = 0;
+                for(Double d : aStudentsStat.marks)
+                    stdMark += d;
+
+                rankingList.add(
+                        new Document("_id", aStudentsStat.id)
+                                .append("stat", encodeFormatGeneralTashrihi(stdMark,
+                                        (int) currTaraz, rank, cityRanking.get(cityId),
+                                        stateRanking.get(stateId)
+                                ))
+                );
+
+                oldTaraz = currTaraz;
+                stateOldT.put(stateId, currTaraz);
+                cityOldT.put(cityId, currTaraz);
+            }
+        }
+
+        private void calcSubjectsStats() {
+            for (TashrihiQuestionStat itr : subjectsStat) {
+                subjectsGeneralStat.add(
+                        new Document("avg", itr.mean)
+                                .append("max", itr.max)
+                                .append("min", itr.min)
+                                .append("_id", itr.id)
+                                .append("name", itr.name)
+                );
+            }
+        }
+
+        private void calcLessonsStats() {
+            for (TashrihiQuestionStat itr : lessonsStat) {
+                lessonsGeneralStat.add(
+                        new Document("avg", itr.mean)
+                                .append("max", itr.max)
+                                .append("min", itr.min)
+                                .append("_id", itr.id)
+                                .append("name", itr.name)
+                );
+            }
+        }
+
+        private void save(Common db) {
+
+            quiz.put("ranking_list", rankingList);
+            quiz.put("report_status", "ready");
+            quiz.put("general_stat",
+                    new Document("lessons", lessonsGeneralStat)
+                            .append("subjects", subjectsGeneralStat)
+            );
+
+            quiz.put("question_stat", questionStats);
+
+            if (db instanceof OpenQuizRepository)
+                quiz.put("last_build_at", System.currentTimeMillis());
+
+            db.replaceOne(
+                    quiz.getObjectId("_id"), quiz
+            );
+
+        }
+
+        private void storeInRankingTable() {
+
+            ArrayList<ObjectId> userIds = new ArrayList<>();
+
+            for (TashrihiQuestionStat aStudentsStat : studentsStat) {
+                userIds.add(aStudentsStat.id);
+            }
+
+            ArrayList<Document> tarazRankingList = tarazRepository.findPreserveOrderWitNull("user_id", userIds);
+            int idx = 0;
+            ObjectId quizId = this.quiz.getObjectId("_id");
+
+            List<BasicDBObject> updates = new ArrayList<>();
+            boolean needUpdateIRYSCRank = false;
+            List<WriteModel<Document>> writes = new ArrayList<>();
+            ArrayList<ObjectId> gradesNeedUpdate = new ArrayList<>();
+
+            for (Document doc : tarazRankingList) {
+
+                BasicDBObject update = new BasicDBObject();
+
+                if (!doc.containsKey("cum_sum_last_five"))
+                    doc.put("cum_sum_last_five", 0);
+
+                if (!doc.containsKey("cum_sum_last_three"))
+                    doc.put("cum_sum_last_three", 0);
+
+                ObjectId gradeId;
+
+                if (!studentsData.get(idx).containsKey("grade") ||
+                        studentsData.get(idx).get("grade") == null
+                )
+                    gradeId = null;
+                else
+                    gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
+
+                if (!doc.containsKey("grade_id") && gradeId != null) {
+                    doc.put("grade_id", gradeId);
+                    update.append("grade_id", gradeId);
+                }
+
+                List<Document> quizzes = doc.containsKey("quizzes") ?
+                        doc.getList("quizzes", Document.class) : new ArrayList<>();
+
+                Document q = searchInDocumentsKeyVal(
+                        quizzes, "_id", quizId
+                );
+
+                if (q == null) {
+                    quizzes.add(new Document("_id", quizId)
+                            .append("taraz", (int) studentsStat.get(idx).taraz)
+                            .append("start", this.quiz.getLong("start"))
+                    );
+                } else
+                    q.put("taraz", (int) studentsStat.get(idx).taraz);
+
+                quizzes.sort((o1, o2) ->
+                        Long.compare(o2.getLong("start"),
+                                o1.getLong("start")));
+
+                update.append("quizzes", quizzes);
+
+                int index = searchInDocumentsKeyValIdx(
+                        quizzes, "_id", quizId
+                );
+
+                if (index < 5) {
+                    int cumSum = 0;
+                    for (int i = 0; i < Math.min(5, quizzes.size()); i++)
+                        cumSum += quizzes.get(i).getInteger("taraz");
+
+                    doc.put("cum_sum_last_five", cumSum);
+                    update.append("cum_sum_last_five", cumSum);
+                    needUpdateIRYSCRank = true;
+                }
+
+                if (index < 3) {
+                    int cumSum = 0;
+                    for (int i = 0; i < Math.min(3, quizzes.size()); i++)
+                        cumSum += quizzes.get(i).getInteger("taraz");
+
+                    doc.put("cum_sum_last_three", cumSum);
+                    update.append("cum_sum_last_three", cumSum);
+                    if (gradeId != null &&
+                            !gradesNeedUpdate.contains(gradeId))
+                        gradesNeedUpdate.add(gradeId);
+                }
+
+                updates.add(update);
+                idx++;
+            }
+
+            List<Document> allTaraz;
+
+            if (needUpdateIRYSCRank) {
+
+                allTaraz = tarazRepository.find(null, null);
+                for (Document tarazRanking : tarazRankingList) {
+                    int index = searchInDocumentsKeyValIdx(
+                            allTaraz, "_id", tarazRanking.getObjectId("_id")
+                    );
+
+                    if (index != -1)
+                        allTaraz.set(index, tarazRanking);
+                    else
+                        allTaraz.add(tarazRanking);
+                }
+
+                allTaraz.sort((o1, o2) ->
+                        Integer.compare(o2.getInteger("cum_sum_last_five"),
+                                o1.getInteger("cum_sum_last_five")));
+
+
+                int rank = 0;
+                int oldTaraz = -1;
+                int skip = 1;
+
+                for (Document document : allTaraz) {
+
+                    if (oldTaraz != document.getInteger("cum_sum_last_five")) {
+                        rank += skip;
+                        skip = 1;
+                    } else
+                        skip++;
+
+                    int index = searchInDocumentsKeyValIdx(
+                            tarazRankingList, "_id", document.getObjectId("_id")
+                    );
+
+                    if (index == -1)
+                        writes.add(
+                                new UpdateOneModel<>(
+                                        eq("_id", document.getObjectId("_id")),
+                                        set("rank", rank)
+                                )
+                        );
+                    else {
+                        updates.get(index).append("rank", rank);
+                        writes.add(
+                                new UpdateOneModel<>(
+                                        eq("user_id", userIds.get(index)),
+                                        new BasicDBObject("$set", updates.get(index)),
+                                        new UpdateOptions().upsert(true)
+                                )
+                        );
+                    }
+
+                    oldTaraz = document.getInteger("cum_sum_last_five");
+                }
+            }
+
+            if (gradesNeedUpdate.size() > 0) {
+
+                for (ObjectId gradeId : gradesNeedUpdate) {
+
+                    allTaraz = tarazRepository.find(eq("grade_id", gradeId), null);
+
+                    for (Document tarazRanking : tarazRankingList) {
+
+                        if (
+                                gradeId == null || tarazRanking == null ||
+                                        !tarazRanking.containsKey("grade_id") ||
+                                        tarazRanking.get("grade_id") == null ||
+                                        !tarazRanking.get("grade_id").equals(gradeId))
+                            continue;
+
+                        int index = searchInDocumentsKeyValIdx(
+                                allTaraz, "_id", tarazRanking.getObjectId("_id")
+                        );
+
+                        if (index != -1)
+                            allTaraz.set(index, tarazRanking);
+                        else
+                            allTaraz.add(tarazRanking);
+                    }
+
+                    allTaraz.sort((o1, o2) ->
+                            Integer.compare(o2.getInteger("cum_sum_last_three"),
+                                    o1.getInteger("cum_sum_last_three")));
+
+
+                    int rank = 0;
+                    int oldTaraz = -1;
+                    int skip = 1;
+
+                    for (Document document : allTaraz) {
+
+                        if (oldTaraz != document.getInteger("cum_sum_last_three")) {
+                            rank += skip;
+                            skip = 1;
+                        } else
+                            skip++;
+
+                        int index = searchInDocumentsKeyValIdx(
+                                tarazRankingList, "_id", document.getObjectId("_id")
+                        );
+
+                        if (index == -1)
+                            writes.add(
+                                    new UpdateOneModel<>(
+                                            eq("_id", document.getObjectId("_id")),
+                                            set("grade_rank", rank)
+                                    )
+                            );
+                        else {
+                            updates.get(index).append("grade_rank", rank);
+                            writes.add(
+                                    new UpdateOneModel<>(
+                                            eq("user_id", userIds.get(index)),
+                                            new BasicDBObject("$set", updates.get(index)),
+                                            new UpdateOptions().upsert(true)
+                                    )
+                            );
+                        }
+
+                        oldTaraz = document.getInteger("cum_sum_last_three");
+                    }
+
+                }
+            }
+
+            tarazRepository.bulkWrite(writes);
+        }
+
+    }
+
+    void createTaraz(Document quiz) {
+        new TashrihiQuizController.Taraz(quiz, iryscQuizRepository);
+    }
 }

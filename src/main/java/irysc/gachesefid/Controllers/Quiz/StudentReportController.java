@@ -4,13 +4,8 @@ import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
-import irysc.gachesefid.Models.GeneralKindQuiz;
-import irysc.gachesefid.Utility.Excel;
-import irysc.gachesefid.Validator.EnumValidator;
-import irysc.gachesefid.Validator.EnumValidatorImp;
-import org.bson.BSON;
+import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -20,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -81,6 +75,14 @@ public class StudentReportController {
                     quiz = openQuizRepository.findById(quizId);
                 }
             }
+            double totalQuizMark = 0;
+
+            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                List<Double> marks = quiz.get("questions", Document.class).getList("marks", Double.class);
+
+                for (Double mark : marks)
+                    totalQuizMark += mark;
+            }
 
             JSONArray jsonArray = new JSONArray();
 
@@ -102,7 +104,9 @@ public class StudentReportController {
                 if(counter >= 5)
                     break;
 
-                Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
+                Object[] stat = quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                        QuizAbstract.decodeFormatGeneralTashrihi(doc.get("stat", Binary.class).getData())
+                        : QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
                 JSONObject jsonObject = new JSONObject()
                         .put("id", doc.getObjectId("_id").toString())
@@ -112,6 +116,10 @@ public class StudentReportController {
                         .put("stateRank", stat[2])
                         .put("rank", stat[1]);
 
+                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                    jsonObject.put("mark", stat[4]);
+                    jsonObject.put("totalMark", totalQuizMark);
+                }
 
                 if(!studentsInfo.get(k).containsKey("city") ||
                         studentsInfo.get(k).get("city") == null) {

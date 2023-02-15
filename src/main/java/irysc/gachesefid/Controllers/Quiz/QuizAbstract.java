@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -17,33 +18,33 @@ import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 public abstract class QuizAbstract {
 
     abstract List<Document> registry(ObjectId studentId, String phone,
-                                          String mail, List<ObjectId> quizIds,
-                                          int paid, ObjectId transactionId, String stdName);
+                                     String mail, List<ObjectId> quizIds,
+                                     int paid, ObjectId transactionId, String stdName);
 
     public static int calcLenStatic(Document quiz) {
 
-        if(quiz.containsKey("duration"))
+        if (quiz.containsKey("duration"))
             return quiz.getInteger("duration") * 60;
 
-        if(quiz.containsKey("duration_sum"))
+        if (quiz.containsKey("duration_sum"))
             return quiz.getInteger("duration_sum");
 
-        if(!quiz.containsKey("questions"))
+        if (!quiz.containsKey("questions"))
             return 0;
 
         Document questions = quiz.get("questions", Document.class);
 
-        if(!questions.containsKey("_ids"))
+        if (!questions.containsKey("_ids"))
             return 0;
 
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
         ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
 
-        if(questionsDoc == null || questionsDoc.size() == 0)
+        if (questionsDoc == null || questionsDoc.size() == 0)
             return 0;
 
         int total = 0;
-        for(Document question : questionsDoc)
+        for (Document question : questionsDoc)
             total += question.getInteger("needed_time");
 
         quiz.put("duration_sum", total);
@@ -52,28 +53,28 @@ public abstract class QuizAbstract {
 
     public int calcLen(Document quiz) {
 
-        if(quiz.containsKey("duration"))
+        if (quiz.containsKey("duration"))
             return quiz.getInteger("duration") * 60;
 
-        if(quiz.containsKey("duration_sum"))
+        if (quiz.containsKey("duration_sum"))
             return quiz.getInteger("duration_sum");
 
-        if(!quiz.containsKey("questions"))
+        if (!quiz.containsKey("questions"))
             return 0;
 
         Document questions = quiz.get("questions", Document.class);
 
-        if(!questions.containsKey("_ids"))
+        if (!questions.containsKey("_ids"))
             return 0;
 
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
         ArrayList<Document> questionsDoc = questionRepository.findByIds(questionIds, false);
 
-        if(questionsDoc == null || questionsDoc.size() == 0)
+        if (questionsDoc == null || questionsDoc.size() == 0)
             return 0;
 
         int total = 0;
-        for(Document question : questionsDoc)
+        for (Document question : questionsDoc)
             total += question.getInteger("needed_time");
 
         quiz.put("duration_sum", total);
@@ -85,6 +86,248 @@ public abstract class QuizAbstract {
     abstract JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin,
                                          boolean afterBuy, boolean isDescNeeded
     );
+
+    static class TashrihiQuestionStat {
+
+        String name;
+        ObjectId id;
+        ObjectId additionalId;
+
+        List<Document> studentAnswers;
+        List<Double> marks;
+
+        HashMap<ObjectId, Integer> subjectStateRanking;
+        HashMap<ObjectId, Integer> subjectCountryRanking;
+        HashMap<ObjectId, Integer> subjectCityRanking;
+        HashMap<ObjectId, Integer> subjectSchoolRanking;
+
+        HashMap<ObjectId, Integer> lessonStateRanking;
+        HashMap<ObjectId, Integer> lessonCountryRanking;
+        HashMap<ObjectId, Integer> lessonCityRanking;
+        HashMap<ObjectId, Integer> lessonSchoolRanking;
+
+        HashMap<ObjectId, Double> subjectMark;
+        HashMap<ObjectId, Double> lessonMark;
+
+        HashMap<ObjectId, Double> subjectTotalMark;
+        HashMap<ObjectId, Double> lessonTotalMark;
+
+        HashMap<ObjectId, Double> subjectPercent;
+        HashMap<ObjectId, Double> lessonPercent;
+
+        HashMap<ObjectId, Double> lessonTaraz;
+        HashMap<ObjectId, Double> subjectTaraz;
+
+        double sd;
+        double mean;
+        double taraz;
+        double totalMark;
+        double max;
+        double min;
+
+
+        TashrihiQuestionStat(ObjectId id, String name) {
+            this.id = id;
+            this.name = name;
+            marks = new ArrayList<>();
+        }
+
+        TashrihiQuestionStat(ObjectId id, String name, ObjectId additionalId) {
+            this.id = id;
+            this.name = name;
+            this.additionalId = additionalId;
+            marks = new ArrayList<>();
+        }
+
+        TashrihiQuestionStat(ObjectId id, String name,
+                             List<Document> studentAnswers) {
+            totalMark = 0;
+            this.id = id;
+            this.name = name;
+
+            this.studentAnswers = studentAnswers;
+
+            subjectMark = new HashMap<>();
+            lessonMark = new HashMap<>();
+
+            subjectTotalMark = new HashMap<>();
+            lessonTotalMark = new HashMap<>();
+
+            subjectTaraz = new HashMap<>();
+            lessonTaraz = new HashMap<>();
+
+            subjectPercent = new HashMap<>();
+            lessonPercent = new HashMap<>();
+
+            subjectStateRanking = new HashMap<>();
+            subjectCountryRanking = new HashMap<>();
+            subjectCityRanking = new HashMap<>();
+            subjectSchoolRanking = new HashMap<>();
+
+            lessonStateRanking = new HashMap<>();
+            lessonCountryRanking = new HashMap<>();
+            lessonCityRanking = new HashMap<>();
+            lessonSchoolRanking = new HashMap<>();
+
+            marks = new ArrayList<>();
+        }
+
+        void doCorrect(Document question, int idx) {
+
+            double mark = 0.0;
+            double qMark = question.getDouble("mark");
+            totalMark += qMark;
+
+            if (studentAnswers.size() <= idx)
+                return;
+
+            Document ans = Utility.searchInDocumentsKeyVal(
+                    studentAnswers, "question_id", question.getObjectId("_id")
+            );
+
+            if (ans != null && ans.containsKey("mark"))
+                mark += ans.getDouble("mark");
+            else
+                return;
+
+            marks.add(mark);
+
+            ObjectId subjectId = question.getObjectId("subject_id");
+            ObjectId lessonId = question.getObjectId("lesson_id");
+
+            if (subjectTotalMark.containsKey(subjectId))
+                subjectTotalMark.put(subjectId,
+                        subjectTotalMark.get(subjectId) + qMark
+                );
+            else
+                subjectTotalMark.put(subjectId, qMark);
+
+            if (lessonTotalMark.containsKey(lessonId))
+                lessonTotalMark.put(lessonId,
+                        lessonTotalMark.get(lessonId) + qMark
+                );
+            else
+                lessonTotalMark.put(lessonId, qMark);
+
+            if (subjectMark.containsKey(question.getObjectId("subject_id")))
+                subjectMark.put(subjectId, subjectMark.get(subjectId) + mark);
+            else
+                subjectMark.put(subjectId, mark);
+
+            if (lessonMark.containsKey(lessonId))
+                lessonMark.put(lessonId, lessonMark.get(lessonId) + mark);
+            else
+                lessonMark.put(lessonId, mark);
+        }
+
+        void calculateSD() {
+
+            double sum = 0.0, standardDeviation = 0.0;
+            int length = marks.size();
+
+            max = 0;
+            min = Integer.MAX_VALUE;
+
+            for (double num : marks) {
+
+                sum += num;
+                if (max < num)
+                    max = num;
+
+                if (min > num)
+                    min = num;
+            }
+
+            mean = sum / length;
+
+            for (double num : marks)
+                standardDeviation += Math.pow(num - mean, 2);
+
+            sd = Math.sqrt(standardDeviation / length);
+        }
+
+        void calculateTaraz(double mean, double sd,
+                            ObjectId oId, boolean isForSubject) {
+
+            double percent =
+                    isForSubject ?
+                            subjectMark.get(oId) / subjectTotalMark.get(oId) :
+                            lessonMark.get(oId) / lessonTotalMark.get(oId);
+
+            percent *= 100;
+
+            double t = 2000.0 * ((percent - mean) / sd) + 5000;
+
+            if (isForSubject) {
+                subjectTaraz.put(oId, t);
+                subjectPercent.put(oId, percent);
+            } else {
+                lessonTaraz.put(oId, t);
+                lessonPercent.put(oId, percent);
+            }
+        }
+
+        void calculateTotalTaraz() {
+
+            double sum = 0.0;
+            for (ObjectId oId : lessonTaraz.keySet()) {
+                sum += lessonTaraz.get(oId);
+            }
+
+            taraz = sum / lessonTaraz.size();
+
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return id.equals(o);
+        }
+
+        int compareTo(TashrihiQuestionStat q) {
+            return Double.compare(q.taraz, taraz);
+        }
+
+        byte[] encode(ObjectId oId, boolean isForSubject) {
+
+            byte[] out = new byte[8];
+
+            double t = 0;
+            if (isForSubject && subjectTaraz != null && subjectTaraz.containsKey(oId))
+                t = subjectTaraz.get(oId);
+            else if (!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
+                t = lessonTaraz.get(oId);
+
+            double p = isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId);
+
+            byte[] bb = ByteBuffer.allocate(4).putInt((int) t).array();
+            out[0] = bb[2];
+            out[1] = bb[3];
+
+            DecimalFormat df_obj = new DecimalFormat("#.##");
+            String[] splited = df_obj.format(p).split("\\.");
+            out[2] = (byte) Integer.parseInt(splited[0]);
+
+            if (splited.length == 1)
+                out[3] = (byte) (0x00);
+            else
+                out[3] = (byte) Integer.parseInt(splited[1]);
+
+            if (isForSubject) {
+                out[4] = (byte) ((int) subjectCountryRanking.get(oId));
+                out[5] = (byte) ((int) subjectStateRanking.get(oId));
+                out[6] = (byte) ((int) subjectCityRanking.get(oId));
+                out[7] = (byte) ((int) subjectSchoolRanking.get(oId));
+            } else {
+                out[4] = (byte) ((int) lessonCountryRanking.get(oId));
+                out[5] = (byte) ((int) lessonStateRanking.get(oId));
+                out[6] = (byte) ((int) lessonCityRanking.get(oId));
+                out[7] = (byte) ((int) lessonSchoolRanking.get(oId));
+            }
+
+            return out;
+        }
+
+    }
 
     static class QuestionStat {
 
@@ -139,8 +382,7 @@ public abstract class QuizAbstract {
         }
 
         QuestionStat(ObjectId id, String name,
-                     List<PairValue> studentAnswers)
-        {
+                     List<PairValue> studentAnswers) {
             totalMark = 0;
             this.id = id;
             this.name = name;
@@ -196,38 +438,35 @@ public abstract class QuizAbstract {
             totalMark += qMark;
             short status;
 
-            if(studentAnswers.size() <= idx)
+            if (studentAnswers.size() <= idx)
                 status = 0;
 
-            else if(question.getString("kind_question").equalsIgnoreCase(
+            else if (question.getString("kind_question").equalsIgnoreCase(
                     QuestionType.TEST.getName()
             )) {
 
                 PairValue pairValue = (PairValue) studentAnswers.get(idx).getValue();
 
-                if(
+                if (
                         pairValue.getValue().toString().isEmpty() ||
                                 pairValue.getValue().toString().equalsIgnoreCase("0")
                 )
                     status = 0;
 
-                else if(pairValue.getValue().toString()
+                else if (pairValue.getValue().toString()
                         .equalsIgnoreCase(question.get("answer").toString())
                 ) {
                     mark = question.getDouble("mark");
                     status = 1;
-                }
-
-                else {
+                } else {
                     mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
                     status = -1;
                 }
-            }
-            else if(question.getString("kind_question").equalsIgnoreCase(
+            } else if (question.getString("kind_question").equalsIgnoreCase(
                     QuestionType.SHORT_ANSWER.getName()
             )) {
 
-                if(
+                if (
                         studentAnswers.get(idx).getValue().toString().isEmpty()
                 )
                     status = 0;
@@ -240,14 +479,12 @@ public abstract class QuizAbstract {
                     ) {
                         mark = question.getDouble("mark");
                         status = 1;
-                    }
-                    else {
+                    } else {
                         mark = -question.getDouble("mark");
                         status = -1;
                     }
                 }
-            }
-            else if(question.getString("kind_question").equalsIgnoreCase(
+            } else if (question.getString("kind_question").equalsIgnoreCase(
                     QuestionType.MULTI_SENTENCE.getName()
             )) {
 
@@ -259,12 +496,12 @@ public abstract class QuizAbstract {
                 int c = 0;
                 int inc = 0;
 
-                for(int z = 0; z < t; z++) {
+                for (int z = 0; z < t; z++) {
 
-                    if(z >= stdAns.length() || stdAns.charAt(z) == '_')
+                    if (z >= stdAns.length() || stdAns.charAt(z) == '_')
                         continue;
 
-                    if(stdAns.charAt(z) == answer.charAt(z))
+                    if (stdAns.charAt(z) == answer.charAt(z))
                         c++;
                     else
                         inc++;
@@ -274,7 +511,7 @@ public abstract class QuizAbstract {
                 status = (short) (c == t ? 1 : inc + c == 0 ? 0 : -1);
                 double thisMark;
 
-                if(c == t)
+                if (c == t)
                     thisMark = question.getDouble("mark");
                 else {
 
@@ -285,8 +522,7 @@ public abstract class QuizAbstract {
                             p += 20;
                         else if (c == 3)
                             p += 50;
-                    }
-                    else if(c > 1) {
+                    } else if (c > 1) {
                         if (c == 2)
                             p += 10;
                         else if (c == 3)
@@ -299,8 +535,7 @@ public abstract class QuizAbstract {
 
                 mark += thisMark;
 
-            }
-            else
+            } else
                 status = 0;
 
             marks.add(mark);
@@ -308,52 +543,50 @@ public abstract class QuizAbstract {
             ObjectId subjectId = question.getObjectId("subject_id");
             ObjectId lessonId = question.getObjectId("lesson_id");
 
-            if(subjectTotalMark.containsKey(subjectId))
+            if (subjectTotalMark.containsKey(subjectId))
                 subjectTotalMark.put(subjectId,
                         subjectTotalMark.get(subjectId) + qMark
                 );
             else
                 subjectTotalMark.put(subjectId, qMark);
 
-            if(lessonTotalMark.containsKey(lessonId))
+            if (lessonTotalMark.containsKey(lessonId))
                 lessonTotalMark.put(lessonId,
                         lessonTotalMark.get(lessonId) + qMark
                 );
             else
                 lessonTotalMark.put(lessonId, qMark);
 
-            if(subjectMark.containsKey(question.getObjectId("subject_id"))) {
+            if (subjectMark.containsKey(question.getObjectId("subject_id"))) {
                 subjectMark.put(subjectId, subjectMark.get(subjectId) + mark);
 
-                if(status == 0)
+                if (status == 0)
                     subjectWhites.put(subjectId, subjectWhites.get(subjectId) + 1);
 
-                else if(status == 1)
+                else if (status == 1)
                     subjectCorrects.put(subjectId, subjectCorrects.get(subjectId) + 1);
 
                 else
                     subjectIncorrects.put(subjectId, subjectIncorrects.get(subjectId) + 1);
-            }
-            else {
+            } else {
                 subjectMark.put(subjectId, mark);
                 subjectWhites.put(subjectId, status == 0 ? 1 : 0);
                 subjectCorrects.put(subjectId, status == 1 ? 1 : 0);
                 subjectIncorrects.put(subjectId, status == -1 ? 1 : 0);
             }
 
-            if(lessonMark.containsKey(lessonId)) {
+            if (lessonMark.containsKey(lessonId)) {
                 lessonMark.put(lessonId, lessonMark.get(lessonId) + mark);
 
-                if(status == 0)
+                if (status == 0)
                     lessonWhites.put(lessonId, lessonWhites.get(lessonId) + 1);
 
-                else if(status == 1)
+                else if (status == 1)
                     lessonCorrects.put(lessonId, lessonCorrects.get(lessonId) + 1);
 
                 else
                     lessonIncorrects.put(lessonId, lessonIncorrects.get(lessonId) + 1);
-            }
-            else {
+            } else {
                 lessonMark.put(lessonId, mark);
                 lessonWhites.put(lessonId, status == 0 ? 1 : 0);
                 lessonCorrects.put(lessonId, status == 1 ? 1 : 0);
@@ -363,29 +596,28 @@ public abstract class QuizAbstract {
             return status;
         }
 
-        void calculateSD()
-        {
+        void calculateSD() {
             double sum = 0.0, standardDeviation = 0.0;
             int length = marks.size();
 
             max = -1;
             min = 110;
 
-            for(double num : marks) {
+            for (double num : marks) {
                 sum += num;
-                if(max < num)
+                if (max < num)
                     max = num;
 
-                if(min > num)
+                if (min > num)
                     min = num;
             }
 
             mean = sum / length;
 
-            for(double num : marks)
+            for (double num : marks)
                 standardDeviation += Math.pow(num - mean, 2);
 
-            sd = Math.sqrt(standardDeviation/length);
+            sd = Math.sqrt(standardDeviation / length);
         }
 
         void calculateTaraz(double mean, double sd,
@@ -400,11 +632,10 @@ public abstract class QuizAbstract {
 
             double t = 2000.0 * ((percent - mean) / sd) + 5000;
 
-            if(isForSubject) {
+            if (isForSubject) {
                 subjectTaraz.put(oId, t);
                 subjectPercent.put(oId, percent);
-            }
-            else {
+            } else {
                 lessonTaraz.put(oId, t);
                 lessonPercent.put(oId, percent);
             }
@@ -413,7 +644,7 @@ public abstract class QuizAbstract {
         void calculateTotalTaraz() {
 
             double sum = 0.0;
-            for(ObjectId oId : lessonTaraz.keySet())
+            for (ObjectId oId : lessonTaraz.keySet())
                 sum += lessonTaraz.get(oId);
 
             taraz = sum / lessonTaraz.size();
@@ -434,9 +665,9 @@ public abstract class QuizAbstract {
             byte[] out = new byte[11];
 
             double t = 0;
-            if(isForSubject && subjectTaraz != null && subjectTaraz.containsKey(oId))
+            if (isForSubject && subjectTaraz != null && subjectTaraz.containsKey(oId))
                 t = subjectTaraz.get(oId);
-            else if(!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
+            else if (!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
                 t = lessonTaraz.get(oId);
 
             int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
@@ -452,7 +683,7 @@ public abstract class QuizAbstract {
             out[4] = (byte) ic;
 
             boolean minus = false;
-            if(p < 0) {
+            if (p < 0) {
                 minus = true;
                 p = -p;
             }
@@ -461,20 +692,19 @@ public abstract class QuizAbstract {
             String[] splited = df_obj.format(p).split("\\.");
             out[5] = (byte) Integer.parseInt(splited[0]);
 
-            if(splited.length == 1)
+            if (splited.length == 1)
                 out[6] = (byte) (minus ? 0x80 : 0x00);
-            else if(minus)
+            else if (minus)
                 out[6] = (byte) (Integer.parseInt(splited[1]) + 128);
             else
                 out[6] = (byte) Integer.parseInt(splited[1]);
 
-            if(isForSubject) {
+            if (isForSubject) {
                 out[7] = (byte) ((int) subjectCountryRanking.get(oId));
                 out[8] = (byte) ((int) subjectStateRanking.get(oId));
                 out[9] = (byte) ((int) subjectCityRanking.get(oId));
                 out[10] = (byte) ((int) subjectSchoolRanking.get(oId));
-            }
-            else {
+            } else {
                 out[7] = (byte) ((int) lessonCountryRanking.get(oId));
                 out[8] = (byte) ((int) lessonStateRanking.get(oId));
                 out[9] = (byte) ((int) lessonCityRanking.get(oId));
@@ -498,7 +728,7 @@ public abstract class QuizAbstract {
             out[2] = (byte) ic;
 
             boolean minus = false;
-            if(p < 0) {
+            if (p < 0) {
                 minus = true;
                 p = -p;
             }
@@ -507,9 +737,9 @@ public abstract class QuizAbstract {
             String[] splited = df_obj.format(p).split("\\.");
             out[3] = (byte) Integer.parseInt(splited[0]);
 
-            if(splited.length == 1)
+            if (splited.length == 1)
                 out[4] = (byte) (minus ? 0x80 : 0x00);
-            else if(minus)
+            else if (minus)
                 out[4] = (byte) (Integer.parseInt(splited[1]) + 128);
             else
                 out[4] = (byte) Integer.parseInt(splited[1]);
@@ -542,6 +772,25 @@ public abstract class QuizAbstract {
         }
     }
 
+    public static Object[] decodeTashrihi(byte[] in) {
+
+        int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
+        int floatSection = (in[2] & 0xff);
+
+        double percent = (floatSection < 10) ?
+                (in[3] & 0xff) + (floatSection / 10.0) :
+                (in[3] & 0xff) + (floatSection / 100.0);
+
+        int countryRank = in[4] & 0xff;
+        int stateRank = in[5] & 0xff;
+        int cityRank = in[6] & 0xff;
+        int schoolRank = in[7] & 0xff;
+
+        return new Object[]{
+                taraz, Math.round(percent), countryRank, stateRank, cityRank, schoolRank
+        };
+    }
+
     public static Object[] decode(byte[] in) {
 
         int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
@@ -553,7 +802,7 @@ public abstract class QuizAbstract {
 
         boolean minus = false;
 
-        if(floatSection >= 128) {
+        if (floatSection >= 128) {
             minus = true;
             floatSection -= 128;
         }
@@ -562,7 +811,7 @@ public abstract class QuizAbstract {
                 (in[5] & 0xff) + (floatSection / 10.0) :
                 (in[5] & 0xff) + (floatSection / 100.0);
 
-        if(minus)
+        if (minus)
             percent = -percent;
 
         int countryRank = in[7] & 0xff;
@@ -570,7 +819,7 @@ public abstract class QuizAbstract {
         int cityRank = in[9] & 0xff;
         int schoolRank = in[10] & 0xff;
 
-        return new Object[] {
+        return new Object[]{
                 taraz, whites, corrects, incorrects, Math.round(percent), countryRank, stateRank, cityRank, schoolRank
         };
     }
@@ -585,7 +834,7 @@ public abstract class QuizAbstract {
 
         boolean minus = false;
 
-        if(floatSection >= 128) {
+        if (floatSection >= 128) {
             minus = true;
             floatSection -= 128;
         }
@@ -594,10 +843,10 @@ public abstract class QuizAbstract {
                 (in[3] & 0xff) + (floatSection / 10.0) :
                 (in[3] & 0xff) + (floatSection / 100.0);
 
-        if(minus)
+        if (minus)
             percent = -percent;
 
-        return new Object[] {
+        return new Object[]{
                 whites, corrects, incorrects, Math.round(percent)
         };
     }
@@ -618,6 +867,41 @@ public abstract class QuizAbstract {
         return out;
     }
 
+    public static byte[] encodeFormatGeneralTashrihi(double totalMark, int taraz, int rank,
+                                                     int cityRank, int stateRank
+    ) {
+
+        byte[] out = new byte[13];
+
+        byte[] bb = ByteBuffer.allocate(4).putInt(taraz).array();
+        out[0] = bb[2];
+        out[1] = bb[3];
+        out[2] = (byte) rank;
+        out[3] = (byte) stateRank;
+        out[4] = (byte) cityRank;
+
+        long lng = Double.doubleToLongBits(totalMark);
+        for(int i = 0; i < 8; i++) out[i + 5] = (byte)((lng >> ((7 - i) * 8)) & 0xff);
+
+        return out;
+    }
+
+    public static Object[] decodeFormatGeneralTashrihi(byte[] in) {
+
+        int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
+        int rank = in[2] & 0xff;
+        int stateRank = in[3] & 0xff;
+        int cityRank = in[4] & 0xff;
+
+        byte[] tmp = new byte[8];
+        System.arraycopy(in, 5, tmp, 0, 8);
+        double mark = ByteBuffer.wrap(tmp).getDouble();
+
+        return new Object[]{
+                taraz, rank, stateRank, cityRank, mark
+        };
+    }
+
     public static Object[] decodeFormatGeneral(byte[] in) {
 
         int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
@@ -625,7 +909,7 @@ public abstract class QuizAbstract {
         int stateRank = in[3] & 0xff;
         int cityRank = in[4] & 0xff;
 
-        return new Object[] {
+        return new Object[]{
                 taraz, rank, stateRank, cityRank
         };
     }

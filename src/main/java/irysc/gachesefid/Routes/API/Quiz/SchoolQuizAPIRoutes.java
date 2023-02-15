@@ -91,6 +91,26 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
+
+    @GetMapping(path = "getMyMarkListForSpecificQuestion/{mode}/{quizId}/{questionId}")
+    @ResponseBody
+    public String getMyMarkListForSpecificQuestion(HttpServletRequest request,
+                                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                                   @PathVariable @ObjectIdConstraint ObjectId questionId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return TashrihiQuizController.getMyMarkListForSpecificQuestion(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"),
+                quizId, questionId
+        );
+    }
+
     @GetMapping(path = "getMyTasks")
     @ResponseBody
     public String getMyTasks(HttpServletRequest request,
