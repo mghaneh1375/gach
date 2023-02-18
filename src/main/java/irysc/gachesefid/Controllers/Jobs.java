@@ -26,9 +26,9 @@ public class Jobs implements Runnable {
     @Override
     public void run() {
         Timer timer = new Timer();
-        timer.schedule(new TokenHandler(), 0, 86400000); // 1 day
+        timer.schedule(new TokenHandler(), 0, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
-        timer.schedule(new SiteStatsHandler(), 86400000, 86400000); // 1 day
+        timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
         timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
         timer.schedule(new SendMails(), 0, 300000);
@@ -491,5 +491,6 @@ public class Jobs implements Runnable {
             }
         }
     }
+
 
 }

@@ -331,30 +331,54 @@ public class AdminReportController {
             List<Document> lessonsGeneralStats = generalStats.getList("lessons", Document.class);
 
             int totalCorrect = 0;
+            boolean isTashrihi = quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
+
             for (Document doc : student.getList("lessons", Document.class)) {
 
                 Document generalStat = searchInDocumentsKeyVal(
                         lessonsGeneralStats, "_id", doc.getObjectId("_id")
                 );
 
-                Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
-                totalCorrect += (int) stats[2];
+                Object[] stats = isTashrihi ?
+                        QuizAbstract.decodeTashrihi(doc.get("stat", Binary.class).getData()) :
+                        QuizAbstract.decode(doc.get("stat", Binary.class).getData())
+                ;
 
-                JSONObject jsonObject = new JSONObject()
-                        .put("name", doc.getString("name"))
-                        .put("taraz", stats[0])
-                        .put("whites", stats[1])
-                        .put("corrects", stats[2])
-                        .put("incorrects", stats[3])
-                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
-                        .put("percent", stats[4])
-                        .put("countryRank", stats[5])
-                        .put("stateRank", stats[6])
-                        .put("cityRank", stats[7])
-                        .put("schoolRank", stats[8])
-                        .put("avg", df_obj.format(generalStat.getDouble("avg")))
-                        .put("max", df_obj.format(generalStat.getDouble("max")))
-                        .put("min", df_obj.format(generalStat.getDouble("min")));
+                JSONObject jsonObject;
+
+                if(isTashrihi) {
+
+                    jsonObject = new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("taraz", stats[0])
+                            .put("percent", stats[1])
+                            .put("countryRank", stats[2])
+                            .put("stateRank", stats[3])
+                            .put("cityRank", stats[4])
+                            .put("schoolRank", stats[5])
+                            .put("avg", df_obj.format(generalStat.getDouble("avg")))
+                            .put("max", df_obj.format(generalStat.getDouble("max")))
+                            .put("min", df_obj.format(generalStat.getDouble("min")));
+
+                }
+                else {
+                    totalCorrect += (int) stats[2];
+
+                    jsonObject = new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("taraz", stats[0])
+                            .put("whites", stats[1])
+                            .put("corrects", stats[2])
+                            .put("incorrects", stats[3])
+                            .put("percent", stats[4])
+                            .put("countryRank", stats[5])
+                            .put("stateRank", stats[6])
+                            .put("cityRank", stats[7])
+                            .put("schoolRank", stats[8])
+                            .put("avg", df_obj.format(generalStat.getDouble("avg")))
+                            .put("max", df_obj.format(generalStat.getDouble("max")))
+                            .put("min", df_obj.format(generalStat.getDouble("min")));
+                }
 
                 lessons.put(jsonObject);
             }
@@ -366,23 +390,42 @@ public class AdminReportController {
                         subjectsGeneralStats, "_id", doc.getObjectId("_id")
                 );
 
-                Object[] stats = QuizAbstract.decode(doc.get("stat", Binary.class).getData());
+                Object[] stats = isTashrihi ?
+                        QuizAbstract.decodeTashrihi(doc.get("stat", Binary.class).getData()) :
+                        QuizAbstract.decode(doc.get("stat", Binary.class).getData());
 
-                JSONObject jsonObject = new JSONObject()
-                        .put("name", doc.getString("name"))
-                        .put("taraz", stats[0])
-                        .put("whites", stats[1])
-                        .put("corrects", stats[2])
-                        .put("incorrects", stats[3])
-                        .put("percent", stats[4])
-                        .put("countryRank", stats[5])
-                        .put("stateRank", stats[6])
-                        .put("cityRank", stats[7])
-                        .put("schoolRank", stats[8])
-                        .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
-                        .put("avg", df_obj.format(generalStat.get("avg")))
-                        .put("max", df_obj.format(generalStat.get("max")))
-                        .put("min", df_obj.format(generalStat.get("min")));
+                JSONObject jsonObject;
+
+                if(isTashrihi) {
+                    jsonObject = new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("taraz", stats[0])
+                            .put("percent", stats[1])
+                            .put("countryRank", stats[2])
+                            .put("stateRank", stats[3])
+                            .put("cityRank", stats[4])
+                            .put("schoolRank", stats[5])
+                            .put("avg", df_obj.format(generalStat.get("avg")))
+                            .put("max", df_obj.format(generalStat.get("max")))
+                            .put("min", df_obj.format(generalStat.get("min")));
+                }
+                else {
+                    jsonObject = new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("taraz", stats[0])
+                            .put("whites", stats[1])
+                            .put("corrects", stats[2])
+                            .put("incorrects", stats[3])
+                            .put("percent", stats[4])
+                            .put("countryRank", stats[5])
+                            .put("stateRank", stats[6])
+                            .put("cityRank", stats[7])
+                            .put("schoolRank", stats[8])
+                            .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
+                            .put("avg", df_obj.format(generalStat.get("avg")))
+                            .put("max", df_obj.format(generalStat.get("max")))
+                            .put("min", df_obj.format(generalStat.get("min")));
+                }
 
                 subjects.put(jsonObject);
             }

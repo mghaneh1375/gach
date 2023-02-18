@@ -39,6 +39,15 @@ public class StudentContentController {
         return generateSuccessMsg("data", contentRepository.distinctTags("teacher"));
     }
 
+    public static String getTeacherBio(String teacher) {
+
+        Document doc = contentRepository.findOne(eq("teacher", teacher), new BasicDBObject("teacher_bio", 1));
+        if(doc == null)
+            return generateSuccessMsg("data", "");
+
+        return generateSuccessMsg("data", doc.getString("teacher_bio"));
+    }
+
     public static String getAll(ObjectId userId,
                                 boolean isAdmin,
                                 String tag,
@@ -515,7 +524,6 @@ public class StudentContentController {
             );
 
         } catch (Exception x) {
-            x.printStackTrace();
             return null;
         }
     }

@@ -23,8 +23,7 @@ import static irysc.gachesefid.Utility.Utility.printException;
 
 public class PDFUtils {
 
-
-    public static File createExam(ArrayList<String> files) {
+    public static File createExam(ArrayList<String> files, String filename) {
 
         PDDocument document = new PDDocument();
         try {
@@ -113,14 +112,10 @@ public class PDFUtils {
             }
 
             contentStream.close();
-
-            String filename = baseDir + "exam.pdf";
-
             document.save(filename);
             document.close();
 
             return new File(filename);
-
         }
         catch (Exception x) {
             printException(x);

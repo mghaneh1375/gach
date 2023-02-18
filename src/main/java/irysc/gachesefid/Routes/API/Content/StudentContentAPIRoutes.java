@@ -121,6 +121,15 @@ public class StudentContentAPIRoutes extends Router {
         return StudentContentController.distinctTeachers();
     }
 
+    @PostMapping(value = "getTeacherBio")
+    @ResponseBody
+    public String getTeacherBio(@RequestBody @StrongJSONConstraint(
+            params = {"teacher"},
+            paramsType = {String.class}
+    ) @NotBlank String jsonStr) {
+        return StudentContentController.getTeacherBio(new JSONObject(jsonStr).getString("teacher"));
+    }
+
     @GetMapping(value = "distinctTags")
     @ResponseBody
     public String distinctTags() {

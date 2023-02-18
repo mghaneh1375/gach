@@ -268,6 +268,29 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+
+    @GetMapping(value = "/getLog/{mode}/{quizId}")
+    @ResponseBody
+    public String getLog(HttpServletRequest request,
+                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                         @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+
+        if(!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        return QuizController.getLog(
+                mode.equals(AllKindQuiz.IRYSC.getName()) ?
+                    iryscQuizRepository : schoolQuizRepository,
+                quizId
+        );
+    }
+
+
     @PostMapping(value = "/toggleVisibility/{mode}/{quizId}")
     @ResponseBody
     public String toggleVisibility(HttpServletRequest request,
@@ -396,11 +419,11 @@ public class QuizAPIRoutes extends Router {
 
         JSONArray jsonArray;
 
-        if(jsonStr == null || jsonStr.isEmpty())
+        if (jsonStr == null || jsonStr.isEmpty())
             jsonArray = new JSONArray();
         else {
             JSONObject jsonObject = new JSONObject(jsonStr);
-            if(jsonObject.has("students"))
+            if (jsonObject.has("students"))
                 jsonArray = jsonObject.getJSONArray("students");
             else
                 jsonArray = new JSONArray();
@@ -421,15 +444,15 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(path = "setCorrectorByQuestionMode/{mode}/{quizId}/{correctorId}")
     @ResponseBody
     public String setCorrectorByQuestionMode(HttpServletRequest request,
-                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                            @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                            @PathVariable @ObjectIdConstraint ObjectId correctorId,
-                                            @RequestBody @StrongJSONConstraint(
-                                                    params = {},
-                                                    paramsType = {},
-                                                    optionals = {"questions"},
-                                                    optionalsType = {JSONArray.class}
-                                            ) String jsonStr
+                                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                             @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                             @PathVariable @ObjectIdConstraint ObjectId correctorId,
+                                             @RequestBody @StrongJSONConstraint(
+                                                     params = {},
+                                                     paramsType = {},
+                                                     optionals = {"questions"},
+                                                     optionalsType = {JSONArray.class}
+                                             ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
@@ -437,11 +460,11 @@ public class QuizAPIRoutes extends Router {
 
         JSONArray jsonArray;
 
-        if(jsonStr == null || jsonStr.isEmpty())
+        if (jsonStr == null || jsonStr.isEmpty())
             jsonArray = new JSONArray();
         else {
             JSONObject jsonObject = new JSONObject(jsonStr);
-            if(jsonObject.has("questions"))
+            if (jsonObject.has("questions"))
                 jsonArray = jsonObject.getJSONArray("questions");
             else
                 jsonArray = new JSONArray();
@@ -465,8 +488,6 @@ public class QuizAPIRoutes extends Router {
                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                   @RequestParam(value = "studentId", required = false) ObjectId studentId,
-                                  @RequestParam(value = "isResultsNeeded", required = false) Boolean isResultsNeeded,
-                                  @RequestParam(value = "isStudentAnswersNeeded", required = false) Boolean isStudentAnswersNeeded,
                                   @RequestParam(value = "justAbsents", required = false) Boolean justAbsents,
                                   @RequestParam(value = "justPresence", required = false) Boolean justPresence,
                                   @RequestParam(value = "justMarked", required = false) Boolean justMarked,
@@ -483,15 +504,13 @@ public class QuizAPIRoutes extends Router {
             return QuizController.getParticipants(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository : iryscQuizRepository, null,
-                    quizId, studentId, isStudentAnswersNeeded,
-                    isResultsNeeded, justMarked,
+                    quizId, studentId, justMarked,
                     justNotMarked, justAbsents, justPresence
             );
 
         return QuizController.getParticipants(schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
-                quizId, studentId, isStudentAnswersNeeded,
-                isResultsNeeded, justMarked,
+                quizId, studentId, justMarked,
                 justNotMarked, justAbsents, justPresence
         );
     }

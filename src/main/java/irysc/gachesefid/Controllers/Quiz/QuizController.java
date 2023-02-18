@@ -41,6 +41,18 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class QuizController {
 
+    public static String getLog(Common db, ObjectId quizId) {
+
+        Document quiz = db.findById(quizId);
+        if(quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("cropped", quiz.getOrDefault("cropped", false))
+                .put("logs", quiz.getOrDefault("logs", ""))
+        );
+    }
+
     public static String getDistinctTags() {
         return generateSuccessMsg("data",
                 iryscQuizRepository.distinctTags("tags")
@@ -250,15 +262,21 @@ public class QuizController {
 
         JSONArray jsonArray = new JSONArray();
 
-        if (db instanceof IRYSCQuizRepository)
-            quizAbstract = new RegularQuizController();
-        else if (db instanceof ContentQuizRepository)
-            quizAbstract = new ContentQuizController();
-        else
-            quizAbstract = new OpenQuiz();
+        for (Document quiz : docs) {
 
-        for (Document quiz : docs)
+            if (db instanceof IRYSCQuizRepository) {
+                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                    quizAbstract = new TashrihiQuizController();
+                else
+                    quizAbstract = new RegularQuizController();
+            }
+            else if (db instanceof ContentQuizRepository)
+                quizAbstract = new ContentQuizController();
+            else
+                quizAbstract = new OpenQuiz();
+
             jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
+        }
 
         return generateSuccessMsg("data", jsonArray);
 
@@ -582,8 +600,6 @@ public class QuizController {
                                          ObjectId userId,
                                          ObjectId quizId,
                                          ObjectId studentId,
-                                         Boolean isStudentAnswersNeeded,
-                                         Boolean isResultsNeeded,
                                          Boolean justMarked,
                                          Boolean justNotMarked,
                                          Boolean justAbsents,
@@ -642,7 +658,8 @@ public class QuizController {
                     continue;
 
                 if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
-                    JSONObject jsonObject = convertStudentDocToJSONInTashrihiQuiz(student, user,true);
+
+                    JSONObject jsonObject = convertStudentDocToJSONInTashrihiQuiz(student, user);
 
                     String corrector = null;
                     String correctorId = null;
@@ -682,12 +699,13 @@ public class QuizController {
     }
 
     private static JSONObject convertStudentDocToJSONInTashrihiQuiz(
-            Document student, Document user, Boolean isResultsNeeded
+            Document student, Document user
     ) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("paid", student.get("paid"))
                 .put("id", user.getObjectId("_id").toString())
+                .put("totalMark", student.getOrDefault("total_mark", ""))
                 .put("registerAt", getSolarDate(student.getLong("register_at")));
 
         irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
@@ -705,8 +723,27 @@ public class QuizController {
         if (student.containsKey("all_marked"))
             jsonObject.put("allMarked", student.getBoolean("all_marked"));
 
-        if (isResultsNeeded != null && isResultsNeeded)
-            jsonObject.put("totalMark", student.getOrDefault("total_mark", ""));
+        boolean hasAccepted = false;
+
+        if(student.containsKey("ans_files")) {
+
+            for (Document itr : student.getList("ans_files", Document.class)) {
+                if(itr.getString("status").equals("accepted")) {
+                    hasAccepted = true;
+                    break;
+                }
+            }
+        }
+
+        if(!hasAccepted && student.containsKey("answers")) {
+
+            List<Document> tmp = student.getList("answers", Document.class);
+
+            if(tmp.size() > 0 && tmp.get(0).containsKey("answer"))
+                hasAccepted = true;
+        }
+
+        jsonObject.put("hasAcceptedAnswerSheet", hasAccepted);
 
         return jsonObject;
     }
@@ -890,25 +927,40 @@ public class QuizController {
         }
     }
 
+    static File doGenerateQuestionPDF(Document doc, String folder) {
+
+        ArrayList<String> files = new ArrayList<>();
+        Document questions = doc.get("questions", Document.class);
+        List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
+
+        String prefix = DEV_MODE ? uploadDir_dev + QuestionRepository.FOLDER + "/" :
+                uploadDir + QuestionRepository.FOLDER + "/";
+
+        for (ObjectId qId: ids) {
+
+            Document questionDoc = questionRepository.findById(qId);
+            if (questionDoc == null)
+                continue;
+
+            files.add(prefix + questionDoc.getString("question_file"));
+        }
+
+        return PDFUtils.createExam(files, folder + doc.getObjectId("_id") + ".pdf");
+
+    }
+
     public static File generateQuestionPDF(Common db, ObjectId userId,
                                            ObjectId quizId) {
         try {
             Document doc = hasAccess(db, userId, quizId);
 
-            ArrayList<String> files = new ArrayList<>();
-            List<Document> questions = doc.getList("questions", Document.class);
-            for (Document question : questions) {
+            String prefix = DEV_MODE ? uploadDir_dev : uploadDir;
 
-                Document questionDoc = questionRepository.findById(question.getObjectId("_id"));
-                if (questionDoc == null)
-                    continue;
+            String folder = db instanceof IRYSCQuizRepository ?
+                    prefix + IRYSCQuizRepository.FOLDER + "/" :
+                    prefix + SchoolQuizRepository.FOLDER + "/";
 
-                files.add(DEV_MODE ? uploadDir_dev + QuestionRepository.FOLDER + "/" + questionDoc.getString("question_file") :
-                        uploadDir + QuestionRepository.FOLDER + "/" + questionDoc.getString("question_file"));
-            }
-
-            return PDFUtils.createExam(files);
-
+            return doGenerateQuestionPDF(doc, folder);
         } catch (Exception x) {
             System.out.println(x.getMessage());
             return null;
@@ -1506,6 +1558,7 @@ public class QuizController {
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
             else if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+
                 new TashrihiQuizController().createTaraz(quiz);
 
                 new Thread(() -> {
@@ -1573,8 +1626,6 @@ public class QuizController {
 
             return JSON_OK;
         } catch (Exception x) {
-            System.out.println(x.getMessage());
-            x.printStackTrace();
             return JSON_NOT_ACCESS;
         }
     }
@@ -1598,8 +1649,6 @@ public class QuizController {
             return saveStudentAnswers(doc, answers, student, db);
 
         } catch (Exception x) {
-            x.printStackTrace();
-            System.out.println(x.getMessage());
             return null;
         }
     }

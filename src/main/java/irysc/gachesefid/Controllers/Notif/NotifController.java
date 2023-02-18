@@ -110,6 +110,7 @@ public class NotifController {
 
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("status", "active"));
+        filters.add(exists("block_notif", false));
 
         if(filtersJSON.getString("via").equalsIgnoreCase(NotifVia.MAIL.toString()))
             filters.add(exists("mail", true));

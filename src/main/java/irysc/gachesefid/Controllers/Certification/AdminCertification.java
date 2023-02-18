@@ -96,8 +96,6 @@ public class AdminCertification {
         try {
             certificate.put("params", fetchParams(params));
         } catch (Exception x) {
-            System.out.println(x.getMessage());
-            x.printStackTrace();
             return Utility.generateErr(x.getMessage());
         }
 

@@ -6,10 +6,12 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -17,16 +19,19 @@ import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Question.Utilities.fetchFilter;
-import static irysc.gachesefid.Controllers.Quiz.Utility.hasProtectedAccess;
-import static irysc.gachesefid.Controllers.Quiz.Utility.saveStudentAnswers;
+import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.FileUtils.uploadDir;
+import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -484,20 +489,149 @@ public class StudentQuizController {
         return returnCustomQuiz(doc, quizJSON, false);
     }
 
+    public static File getMyQuestionPDF(Common db, ObjectId userId, ObjectId quizId) {
+
+        try {
+            Document quiz = hasProtectedAccess(db, userId, quizId);
+            File f;
+
+            String folder = db instanceof IRYSCQuizRepository ?
+                    IRYSCQuizRepository.FOLDER + "/" :
+                    SchoolQuizRepository.FOLDER + "/";
+
+            if (quiz.containsKey("generated_pdf"))
+                f = new File(quiz.getString("generated_pdf"));
+            else {
+
+                f = new File(DEV_MODE ?
+                        FileUtils.uploadDir_dev + folder + quiz.getObjectId("_id").toString() + ".pdf" :
+                        FileUtils.uploadDir + folder + quiz.getObjectId("_id").toString() + ".pdf"
+                );
+
+                quiz.put("generated_pdf", STATICS_SERVER + folder + quiz.getObjectId("_id").toString() + ".pdf");
+            }
+
+            if (!f.exists()) {
+
+                String prefix = DEV_MODE ? uploadDir_dev : uploadDir;
+
+                f = QuizController.doGenerateQuestionPDF(quiz, prefix + folder);
+                if (f == null)
+                    return null;
+            }
+
+            return f;
+        } catch (Exception x) {
+            return null;
+        }
+    }
+
     public static String launch(Common db, ObjectId quizId,
                                 ObjectId studentId) {
 
         try {
-            Document doc = hasProtectedAccess(db, studentId, quizId);
+            A a = checkStoreAnswer(db, studentId, quizId, false);
+
             long curr = System.currentTimeMillis();
 
-            if (doc.containsKey("start") &&
-                    (
-                            doc.getLong("start") > curr ||
-                                    doc.getLong("end") < curr
-                    )
-            )
-                return generateErr("در زمان ارزیابی قرار نداریم.");
+            a.student.put("finish_at", curr);
+            db.replaceOne(quizId, a.quiz);
+
+            List<String> attaches = (List<String>) a.quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", a.quiz.getString("title"))
+                    .put("id", a.quiz.getObjectId("_id").toString())
+                    .put("generalMode",
+                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() :
+                                    db instanceof OpenQuizRepository ? AllKindQuiz.OPEN.getName() : "school")
+                    .put("questionsNo", a.quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                    .put("description", a.quiz.getOrDefault("desc", ""))
+                    .put("mode", a.quiz.getString("mode"))
+                    .put("attaches", jsonArray)
+                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
+                    .put("duration", a.neededTime)
+                    .put("reminder", a.reminder)
+                    .put("isQRNeeded", a.quiz.getOrDefault("is_q_r_needed", false))
+                    .put("isNewPerson", !a.student.containsKey("start_at") ||
+                            a.student.get("start_at") == null ||
+                            a.student.getLong("start_at") == curr
+                    );
+
+            if (a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+
+                if ((boolean) a.quiz.getOrDefault("is_q_r_needed", false)) {
+
+                    return generateSuccessMsg("data", new JSONObject()
+                            .put("answerSheets", a.student.containsKey("ans_files") ?
+                                    returnMySubmits(db, a.student) :
+                                    new JSONArray()
+                            )
+                            .put("quizInfo", quizJSON)
+                    );
+                }
+
+                return returnTashrihiQuiz(a.quiz, a.student.getList("answers",
+                        Document.class), quizJSON, false, db);
+            }
+
+            return returnQuiz(a.quiz, a.student, false, quizJSON);
+
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+
+    }
+
+    private static JSONArray returnMySubmits(Common db, Document student) {
+
+        JSONArray tmp = new JSONArray();
+        String folder = db instanceof IRYSCQuizRepository ?
+                IRYSCQuizRepository.FOLDER + "/studentAnswers/" :
+                SchoolQuizRepository.FOLDER + "/studentAnswers/";
+
+        List<Document> ansFiles = student.getList("ans_files", Document.class);
+        boolean lastAccepted = false;
+
+        for (int z = ansFiles.size() - 1; z >= 0; z--) {
+
+            Document ansFile = ansFiles.get(z);
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("stdAns", STATICS_SERVER + folder + ansFile.getString("filename"))
+                    .put("status", ansFile.getString("status"))
+                    .put("createdAt", getSolarDate(ansFile.getLong("created_at")))
+                    .put("responseAt", ansFile.containsKey("response_at") ? getSolarDate(ansFile.getLong("response_at")) : "")
+                    .put("msg", ansFile.getOrDefault("msg", ""));
+
+            if(!lastAccepted && ansFile.getString("status").equals("accepted")) {
+                jsonObject.put("main", true);
+                lastAccepted = true;
+            }
+
+            tmp.put(jsonObject);
+        }
+
+        return tmp;
+    }
+
+    public static String getMySubmits(Common db, ObjectId quizId,
+                                      ObjectId studentId) {
+
+        if(db == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        try {
+
+            Document doc = hasProtectedAccess(db, studentId, quizId);
+
+            if (!doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return JSON_NOT_ACCESS;
 
             List<Document> students = doc.getList("students", Document.class);
 
@@ -505,65 +639,15 @@ public class StudentQuizController {
                     students, "_id", studentId
             );
 
-            int neededTime = new RegularQuizController().calcLen(doc);
-            long startAt;
+            if (!(boolean) doc.getOrDefault("is_q_r_needed", false))
+                return JSON_NOT_ACCESS;
 
-            if (student.containsKey("start_at") &&
-                    student.get("start_at") != null) {
-
-                int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
-                if (untilYetInSecondFormat > neededTime)
-                    return generateErr("شما در این آزمون شرکت کرده اید.");
-
-                startAt = student.getLong("start_at");
-            } else {
-                student.put("start_at", curr);
-                startAt = curr;
-            }
-
-            student.put("finish_at", curr);
-
-            int delay = doc.containsKey("end") ? Math.max(
-                    0,
-                    (int) (startAt + neededTime * 1000L - doc.getLong("end")) / 1000
-            ) : 0;
-
-            int reminder = neededTime -
-                    (int) ((curr - student.getLong("start_at")) / 1000) -
-                    delay;
-
-            db.replaceOne(quizId, doc);
-            List<String> attaches = (List<String>) doc.getOrDefault("attaches", new ArrayList<>());
-            JSONArray jsonArray = new JSONArray();
-
-            for (String attach : attaches)
-                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
-
-            JSONObject quizJSON = new JSONObject()
-                    .put("title", doc.getString("title"))
-                    .put("id", doc.getObjectId("_id").toString())
-                    .put("generalMode",
-                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() :
-                                    db instanceof OpenQuizRepository ? AllKindQuiz.OPEN.getName() : "school")
-                    .put("questionsNo", doc.get("questions", Document.class).getList("_ids", ObjectId.class).size())
-                    .put("description", doc.getOrDefault("desc", ""))
-                    .put("mode", doc.getString("mode"))
-                    .put("attaches", jsonArray)
-                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
-                    .put("duration", neededTime)
-                    .put("reminder", reminder)
-                    .put("isNewPerson", student.getLong("start_at") == curr);
-
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
-                return returnTashrihiQuiz(doc, student.getList("answers", Document.class), quizJSON, false);
-
-            return returnQuiz(doc, student, false, quizJSON);
-
+            return generateSuccessMsg("data", student.containsKey("ans_files") ?
+                    returnMySubmits(db, student) :
+                    new JSONArray());
         } catch (Exception x) {
-            x.printStackTrace();
-            return null;
+            return generateErr(x.getMessage());
         }
-
     }
 
     public static String storeCustomAnswers(ObjectId quizId, ObjectId studentId,
@@ -604,77 +688,118 @@ public class StudentQuizController {
         );
     }
 
+    private static A checkStoreAnswer(Common db, ObjectId studentId,
+                                      ObjectId quizId, boolean allowDelay
+    ) throws InvalidFieldsException {
+
+        long allowedDelay = allowDelay ? 3600000 : 0; // 1hour
+
+        Document doc = hasProtectedAccess(db, studentId, quizId);
+
+        long end = doc.containsKey("end") ?
+                doc.getLong("end") + allowedDelay : -1;
+
+        long curr = System.currentTimeMillis();
+
+        if (doc.containsKey("start") &&
+                (
+                        doc.getLong("start") > curr ||
+                                end < curr
+                )
+        )
+            throw new InvalidFieldsException("در زمان ارزیابی قرار نداریم.");
+
+        List<Document> students = doc.getList("students", Document.class);
+
+        Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                students, "_id", studentId
+        );
+
+        if ((boolean) doc.getOrDefault("is_q_r_needed", false))
+            return new A(doc, -1, student, -1, -1);
+
+        int neededTime = new RegularQuizController().calcLen(doc);
+
+        long startAt = student.containsKey("start_at") && student.get("start_at") != null ?
+                student.getLong("start_at") : curr;
+        int delay = doc.containsKey("end") ? Math.max(
+                0,
+                (int) (startAt + neededTime * 1000L - end) / 1000
+        ) : 0;
+
+        int reminder = neededTime -
+                (int) ((curr - startAt) / 1000) - delay;
+
+        if (reminder + allowedDelay / 1000 <= 0)
+            throw new InvalidFieldsException("شما در این آزمون شرکت کرده اید.");
+
+        return new A(doc, reminder, student, startAt, neededTime);
+    }
+
     public static String storeAnswers(Common db, ObjectId quizId,
                                       ObjectId studentId, JSONArray answers) {
 
-        long allowedDelay = 3600000; // 1hour
-
         try {
-            Document doc = hasProtectedAccess(db, studentId, quizId);
-
-            long end = doc.containsKey("end") ?
-                    doc.getLong("end") + allowedDelay : -1;
-
+            A a = checkStoreAnswer(db, studentId, quizId, true);
             long curr = System.currentTimeMillis();
-
-//            if (doc.containsKey("start") &&
-//                    (
-//                            doc.getLong("start") > curr ||
-//                            doc.getLong("end") < curr
-//                    )
-//            )
-//                return generateErr("در زمان ارزیابی قرار نداریم.");
-
-            if (doc.containsKey("start") &&
-                    (
-                            doc.getLong("start") > curr ||
-                                    end < curr
-                    )
-            )
-                return generateErr("در زمان ارزیابی قرار نداریم.");
-
-            List<Document> students = doc.getList("students", Document.class);
-
-            Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                    students, "_id", studentId
-            );
-
-            int neededTime = new RegularQuizController().calcLen(doc);
-
-//            if(student.containsKey("start_at") &&
-//                    student.get("start_at") != null) {
-
-            long startAt = student.getLong("start_at");
-            int delay = doc.containsKey("end") ? Math.max(
-                    0,
-                    (int) (startAt + neededTime * 1000L - end) / 1000
-            ) : 0;
-
-            int reminder = neededTime -
-                    (int) ((curr - startAt) / 1000) - delay;
-
-            if (reminder + allowedDelay / 1000 <= 0)
-                return generateErr("شما در این آزمون شرکت کرده اید.");
 
 //            int untilYetInSecondFormat = (int) ((curr - student.getLong("start_at")) / 1000);
 //            if(untilYetInSecondFormat > neededTime)
 //                return generateErr("شما در این آزمون شرکت کرده اید.");
 
-            student.put("finish_at", curr);
+            a.student.put("finish_at", curr);
             if (db instanceof OpenQuizRepository)
-                doc.put("last_finished_at", curr);
+                a.quiz.put("last_finished_at", curr);
 
-            String result = saveStudentAnswers(doc, answers, student, db);
+            String result;
+
+            if (a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                result = saveStudentTashrihiAnswers(a.quiz, answers,
+                        a.student.getList("answers", Document.class), db
+                );
+            else
+                result = saveStudentAnswers(a.quiz, answers, a.student, db);
+
             if (result.contains("nok"))
                 return result;
 
-            return generateSuccessMsg("reminder", reminder,
+            return generateSuccessMsg("reminder", a.reminder,
                     new PairValue("refresh", Math.abs(new Random().nextInt(3)) + 3)
             );
 
         } catch (Exception x) {
             x.printStackTrace();
-            return null;
+            return generateErr(x.getMessage());
+        }
+    }
+
+    public static String uploadAnswers(Common db, ObjectId quizId, ObjectId questionId,
+                                       ObjectId studentId, MultipartFile file) {
+
+        try {
+
+            A a = checkStoreAnswer(db, studentId, quizId, true);
+
+            if (!a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return JSON_NOT_ACCESS;
+
+            long curr = System.currentTimeMillis();
+
+            a.student.put("finish_at", curr);
+            if (db instanceof OpenQuizRepository)
+                a.quiz.put("last_finished_at", curr);
+
+            String url = saveStudentTashrihiAnswers(a.quiz, questionId,
+                    a.student.getList("answers", Document.class), db, file
+            );
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("reminder", a.reminder)
+                    .put("url", url)
+            );
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
         }
     }
 
@@ -781,7 +906,6 @@ public class StudentQuizController {
                 quizPackage, off, quizzes, openQuizzes, null
         );
     }
-
 
     private static String doBuy(ObjectId studentId,
                                 String phone,
@@ -982,7 +1106,8 @@ public class StudentQuizController {
     }
 
     public static String returnTashrihiQuiz(Document quiz, List<Document> stdAnswers,
-                                            JSONObject quizJSON, boolean isStatNeeded) {
+                                            JSONObject quizJSON, boolean isStatNeeded,
+                                            Common db) {
 
         Document questionsDoc = quiz.get("questions", Document.class);
 
@@ -1013,7 +1138,10 @@ public class StudentQuizController {
                 continue;
             }
 
-            questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+            questionsList.add(Document.parse(question.toJson())
+                    .append("no", i + 1).append("mark", questionsMark.get(i))
+                    .append("can_upload", uploadableList.get(i))
+            );
             i++;
         }
 
@@ -1021,13 +1149,23 @@ public class StudentQuizController {
 
         for (Document question : questionsList) {
 
-            if (i >= stdAnswers.size()) {
+            int idx = searchInDocumentsKeyValIdx(stdAnswers, "question_id", questions.get(i));
+            if (idx == -1) {
                 question.put("stdAns", "");
                 question.put("stdMark", 0);
-            }
-            else {
-                question.put("stdAns", stdAnswers.get(i).getString("answer"));
-                question.put("stdMark", isStatNeeded && stdAnswers.get(i).containsKey("mark") ? stdAnswers.get(i).get("mark") : -1);
+            } else {
+
+                if (uploadableList.get(i)) {
+
+                    String folder = db instanceof IRYSCQuizRepository ?
+                            IRYSCQuizRepository.FOLDER + "/studentAnswers/" :
+                            SchoolQuizRepository.FOLDER + "/studentAnswers/";
+
+                    question.put("stdAns", STATICS_SERVER + folder + stdAnswers.get(idx).getString("answer"));
+                } else
+                    question.put("stdAns", stdAnswers.get(idx).getString("answer"));
+
+                question.put("stdMark", isStatNeeded && stdAnswers.get(idx).containsKey("mark") ? stdAnswers.get(idx).get("mark") : -1);
             }
 
             i++;
@@ -1206,7 +1344,6 @@ public class StudentQuizController {
 
         return generateSuccessMsg("data", jsonObject);
     }
-
 
     public static String payCustomQuiz(Document user,
                                        ObjectId id,
@@ -1562,6 +1699,23 @@ public class StudentQuizController {
         }
 
         return selectedIndices;
+    }
+
+    static class A {
+
+        Document quiz;
+        int reminder;
+        Document student;
+        long startAt;
+        int neededTime;
+
+        public A(Document quiz, int reminder, Document student, long startAt, int neededTime) {
+            this.quiz = quiz;
+            this.reminder = reminder;
+            this.student = student;
+            this.startAt = startAt;
+            this.neededTime = neededTime;
+        }
     }
 
     public static class SubjectFilter {

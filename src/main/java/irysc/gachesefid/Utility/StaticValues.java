@@ -47,6 +47,7 @@ public class StaticValues {
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
+    public final static int MAX_QUIZ_FILE_SIZE = ONE_MB * 2;
 
     public final static boolean LOCAL = true;
     public final static boolean DEV_MODE = true;
@@ -90,6 +91,9 @@ public class StaticValues {
                     .append("price", 1).append("launch_mode", 1)
                     .append("capacity", 1).append("registered", 1)
                     .append("questions", 1)
+                    .append("is_uploadable", 1)
+                    .append("is_q_r_needed", 1)
+                    .append("is_registrable", 1)
             ;
 
     public final static BasicDBObject JUST_RANK = new BasicDBObject("rank", 1);

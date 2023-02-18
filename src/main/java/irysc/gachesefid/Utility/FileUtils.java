@@ -23,12 +23,12 @@ public class FileUtils {
     public final static String baseDir_dev = "./src/main/";
 
     public final static String uploadDir = "/var/www/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static PairValue uploadFileWithPath(MultipartFile file, String folder) {
 
@@ -89,7 +89,7 @@ public class FileUtils {
     }
 
     public static void removeFile(String filename, String folder) {
-
+        System.out.println(folder + filename);
         Path location = Paths.get(DEV_MODE ?
                 uploadDir_dev + folder + File.separator + filename :
                 uploadDir + folder + File.separator + filename

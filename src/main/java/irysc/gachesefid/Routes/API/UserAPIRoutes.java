@@ -1,58 +1,39 @@
 package irysc.gachesefid.Routes.API;
 
 import com.mongodb.BasicDBObject;
-import com.mongodb.client.model.Updates;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
-import irysc.gachesefid.Controllers.Question.Utilities;
-import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
-import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
-import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
-import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.Path;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
-import java.nio.ByteBuffer;
-import java.text.DecimalFormat;
-import java.util.*;
-import java.util.regex.Pattern;
 
-import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.inc;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -68,7 +49,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String test() {
 
-        if(1 == 1) {
+        if (1 == 1) {
 //            09026021609
 //            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
 
@@ -87,15 +68,15 @@ public class UserAPIRoutes extends Router {
         }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");
-        for(int i = 0; i < tags2.length(); i++) {
+        for (int i = 0; i < tags2.length(); i++) {
             String tag = tags2.getString(i);
             questionTagRepository.insertOne(
                     new Document("tag", tag)
-                        .append("code", Utility.getRandIntForTag())
+                            .append("code", Utility.getRandIntForTag())
             );
         }
 
-        if(1 == 1)
+        if (1 == 1)
             return "s";
 
         return "s";
@@ -224,6 +205,15 @@ public class UserAPIRoutes extends Router {
         Document user = (Document) getUserWithAdminAccess(request, false, false, userId).get("user");
         return UserController.updateInfo(convertPersian(new JSONObject(json)), user);
     }
+
+
+    @PutMapping(value = "/blockNotif")
+    @ResponseBody
+    public String blockNotif(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return UserController.blockNotif(getUser(request));
+    }
+
 
     @PostMapping(value = "/resendCode")
     @ResponseBody
@@ -459,13 +449,13 @@ public class UserAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         Document doc = getUserWithAdminAccess(request, false, false, userId);
 
-        if(doc.getBoolean("isAdmin"))
+        if (doc.getBoolean("isAdmin"))
             return UserController.forceUpdateUsername(
-                    (Document)doc.get("user"), convertPersian(new JSONObject(json))
+                    (Document) doc.get("user"), convertPersian(new JSONObject(json))
             );
 
         return UserController.updateUsername(
-                ((Document)doc.get("user")).getString("NID"),
+                ((Document) doc.get("user")).getString("NID"),
                 convertPersian(new JSONObject(json))
         );
     }
@@ -497,9 +487,9 @@ public class UserAPIRoutes extends Router {
             return new JSONObject().put("status", "nok").put("msg", "mail is incorrect").toString();
 
         Document doc = activationRepository.findOne(and(
-                        eq("token", jsonObject.getString("token")),
-                        eq("mail", jsonObject.getString("mail")),
-                        eq("code", jsonObject.getInt("code")))
+                eq("token", jsonObject.getString("token")),
+                eq("mail", jsonObject.getString("mail")),
+                eq("code", jsonObject.getInt("code")))
                 , null);
 
         if (doc == null)
@@ -542,7 +532,7 @@ public class UserAPIRoutes extends Router {
 //                return generateErr("رمزعبور جدید قوی نیست.");
 
             newPass = Utility.convertPersianDigits(newPass);
-            if(!isAdmin) {
+            if (!isAdmin) {
                 oldPassword = Utility.convertPersianDigits(oldPassword);
 
                 if (!userService.isOldPassCorrect(oldPassword, user.getString("password")))
@@ -551,10 +541,10 @@ public class UserAPIRoutes extends Router {
 
             userService.deleteFromCache(user.getString("NID"));
 
-            if(user.containsKey("phone") && !user.getString("phone").isEmpty())
+            if (user.containsKey("phone") && !user.getString("phone").isEmpty())
                 userService.deleteFromCache(user.getString("phone"));
 
-            if(user.containsKey("mail") && !user.getString("mail").isEmpty())
+            if (user.containsKey("mail") && !user.getString("mail").isEmpty())
                 userService.deleteFromCache(user.getString("mail"));
 
             newPass = userService.getEncPass(newPass);
@@ -598,7 +588,7 @@ public class UserAPIRoutes extends Router {
                             @PathVariable(required = false) String userId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         return UserController.setAvatar((
-                Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
+                        Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
                 avatarId
         );
     }

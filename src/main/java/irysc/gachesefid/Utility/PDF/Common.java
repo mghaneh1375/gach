@@ -1,9 +1,6 @@
 package irysc.gachesefid.Utility.PDF;
 
-import com.ibm.icu.text.ArabicShaping;
-import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
-import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Utility.FileUtils;
 import net.glxn.qrgen.javase.QRCode;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -15,7 +12,6 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.*;
-import java.net.URL;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.Utility.printException;
@@ -27,7 +23,6 @@ public class Common {
     public static PDFont font;
     public static PDFont farsiFont;
     public static PDFont farsiFontBold;
-    public static PDFont fontBold;
 
     static void drawCommon(PDDocument document,
                            PDPageContentStream contentStream,
@@ -37,41 +32,16 @@ public class Common {
             drawBorder(contentStream, mediaBox);
 
             PDImageXObject image
-                    = PDImageXObject.createFromFile(baseDir + "a.png", document);
+                    = PDImageXObject.createFromFile(baseDir + "irysc.png", document);
 
-            contentStream.drawImage(image, mediaBox.getUpperRightX() - 150, mediaBox.getUpperRightY() - 60, 130, 45);
+            contentStream.drawImage(image, mediaBox.getUpperRightX() - 150, mediaBox.getUpperRightY() - 75, 100, 58);
 
-            PDImageXObject image2
-                    = PDImageXObject.createFromFile(baseDir + "b.png", document);
+//            PDImageXObject image2
+//                    = PDImageXObject.createFromFile(baseDir + "b.png", document);
+//
+//            contentStream.drawImage(image2, 20, mediaBox.getUpperRightY() - 60, 98, 45);
 
-            contentStream.drawImage(image2, 20, mediaBox.getUpperRightY() - 60, 98, 45);
-        } catch (Exception ignore) {
-        }
-    }
-
-    static File saveImage(String imageUrl, String destinationFile) throws IOException, InvalidFieldsException {
-
-        URL url = new URL(imageUrl);
-        InputStream is = url.openStream();
-
-        File f = new File(destinationFile);
-
-        if (!f.createNewFile())
-            throw new InvalidFieldsException("can not create file");
-
-        OutputStream os = new FileOutputStream(f);
-
-        byte[] b = new byte[2048];
-        int length;
-
-        while ((length = is.read(b)) != -1) {
-            os.write(b, 0, length);
-        }
-
-        is.close();
-        os.close();
-
-        return f;
+        } catch (Exception ignore) {}
     }
 
     static void drawQR(PDDocument document,
@@ -196,7 +166,7 @@ public class Common {
 
     static void drawBorder(PDPageContentStream contentStream, PDRectangle mediaBox) {
         try {
-            contentStream.setStrokingColor(Color.RED);
+            contentStream.setStrokingColor(new Color(1, 50, 67));
             contentStream.setLineWidth((float) 0.4);
             contentStream.addRect(10, 10, mediaBox.getWidth() - 20, mediaBox.getHeight() - 20);
             contentStream.stroke();

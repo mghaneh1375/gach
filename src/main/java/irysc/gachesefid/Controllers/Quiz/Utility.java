@@ -4,11 +4,11 @@ package irysc.gachesefid.Controllers.Quiz;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.DB.SchoolRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.DescMode;
-import irysc.gachesefid.Models.KindAnswer;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.FileUtils;
@@ -18,14 +18,15 @@ import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.*;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.*;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
 
 
 public class Utility {
@@ -131,12 +132,12 @@ public class Utility {
             List<Document> answers = student.getList("answers", Document.class);
             for (Document answer : answers) {
 
-                if(
+                if (
                         myStudents.contains(student.getObjectId("_id")) ||
                                 myQuestions.contains(answer.getObjectId("question_id"))
                 ) {
                     allCorrectorQuestions++;
-                    if(answer.containsKey("mark"))
+                    if (answer.containsKey("mark"))
                         allMarkedQuestions++;
                 }
             }
@@ -156,10 +157,8 @@ public class Utility {
     ) {
         String prefix;
 
-        if(correctWithQR) {
+        if (correctWithQR)
             prefix = StaticValues.STATICS_SERVER;
-            prefix += "/";
-        }
         else
             prefix = StaticValues.STATICS_SERVER + folder + "/studentAnswers/";
 
@@ -182,7 +181,7 @@ public class Utility {
                         studentAnswers, "question_id", questionDocs.get(z).getObjectId("_id")
                 );
 
-                if(studentAnswer != null) {
+                if (studentAnswer != null) {
 
                     JSONObject studentAnswerObj = new JSONObject()
                             .put("id", studentAnswer.getObjectId("_id").toString())
@@ -193,8 +192,7 @@ public class Utility {
                     if (studentAnswer.containsKey("mark") && (owner || showResults)) {
                         studentAnswerObj.put("mark", studentAnswer.getDouble("mark"));
                         studentAnswerObj.put("markDesc", studentAnswer.getOrDefault("mark_desc", ""));
-                    }
-                    else
+                    } else
                         studentAnswerObj.put("mark", -1);
 
                     if (studentAnswer.getOrDefault("type", "").toString().equalsIgnoreCase("file")) {
@@ -208,8 +206,7 @@ public class Utility {
                                     prefix + studentAnswer.getString("answer")
                             ).put("type", "file");
                         }
-                    }
-                    else
+                    } else
                         studentAnswerObj.put("answer",
                                 !studentAnswer.containsKey("answer") || studentAnswer.get("answer") == null ?
                                         "" : studentAnswer.get("answer")
@@ -754,6 +751,126 @@ public class Utility {
         }
 
         return new PairValue(quiz, idx);
+    }
+
+    static String saveStudentTashrihiAnswers(Document doc, JSONArray answers,
+                                             List<Document> stdAnswers, Common db) {
+
+        Document questions = doc.get("questions", Document.class);
+        List<Boolean> uploadableList = questions.getList("uploadable_list", Boolean.class);
+        List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
+        long curr = System.currentTimeMillis();
+
+        if (uploadableList.size() < answers.length())
+            return JSON_NOT_VALID_PARAMS;
+
+        HashMap<ObjectId, String> answersHashMap = new HashMap<>();
+
+        for (int i = 0; i < answers.length(); i++) {
+
+            JSONObject jsonObject = answers.getJSONObject(i);
+            if (!jsonObject.has("questionId") || !jsonObject.has("answer"))
+                return JSON_NOT_VALID_PARAMS;
+
+            String qId = jsonObject.getString("questionId");
+            if (!ObjectId.isValid(qId))
+                return JSON_NOT_VALID_PARAMS;
+
+            ObjectId oId = new ObjectId(qId);
+            int idx = ids.indexOf(oId);
+
+            if (idx < 0 || answersHashMap.containsKey(oId) || uploadableList.get(idx))
+                return JSON_NOT_VALID_PARAMS;
+
+            answersHashMap.put(oId, jsonObject.getString("answer"));
+        }
+
+        try {
+
+            for (ObjectId qId : answersHashMap.keySet()) {
+
+                Document ans = searchInDocumentsKeyVal(
+                        stdAnswers, "question_id", qId
+                );
+
+                if (ans == null) {
+
+                    ans = new Document("_id", new ObjectId())
+                            .append("answer_at", curr)
+                            .append("question_id", qId)
+                            .append("answer", answersHashMap.get(qId));
+
+                    stdAnswers.add(ans);
+                } else {
+                    ans.put("answer_at", curr);
+                    ans.put("answer", answersHashMap.get(qId));
+                }
+
+            }
+        } catch (Exception x) {
+            return JSON_NOT_VALID_PARAMS;
+        }
+
+        db.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+    }
+
+    static String saveStudentTashrihiAnswers(Document doc, ObjectId questionId,
+                                             List<Document> stdAnswers, Common db,
+                                             MultipartFile file)
+            throws InvalidFieldsException {
+
+        Document questions = doc.get("questions", Document.class);
+        List<Boolean> uploadableList = questions.getList("uploadable_list", Boolean.class);
+        List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
+        long curr = System.currentTimeMillis();
+
+        int idx = ids.indexOf(questionId);
+        if (idx < 0)
+            throw new InvalidFieldsException("param is not valid");
+
+        if (!uploadableList.get(idx))
+            throw new InvalidFieldsException("not access");
+
+        if (file.getSize() > MAX_FILE_SIZE)
+            throw new InvalidFieldsException("حداکثر سایز قابل بارگذاری در این قسمت 2MB می باشد.");
+
+        String fileType = FileUtils.uploadImageFile(file);
+        if (fileType == null)
+            throw new InvalidFieldsException("تنها عکس می توان در این قسمت بارگذاری کرد.");
+
+        String folder = db instanceof IRYSCQuizRepository ?
+                IRYSCQuizRepository.FOLDER + "/studentAnswers/" :
+                SchoolQuizRepository.FOLDER + "/studentAnswers/";
+
+        String filename = FileUtils.uploadFile(file, folder);
+
+        if (filename == null)
+            throw new InvalidFieldsException("unknown file upload");
+
+        Document ans = searchInDocumentsKeyVal(
+                stdAnswers, "question_id", questionId
+        );
+
+        if (ans == null) {
+            ans = new Document("_id", new ObjectId())
+                    .append("answer_at", curr)
+                    .append("question_id", questionId)
+                    .append("type", "file")
+                    .append("answer", filename);
+
+            stdAnswers.add(ans);
+        } else {
+
+            if (ans.containsKey("answer") && !ans.getString("answer").isEmpty())
+                FileUtils.removeFile(ans.getString("answer"), folder);
+
+            ans.put("answer_at", curr);
+            ans.put("answer", filename);
+        }
+
+        db.replaceOne(doc.getObjectId("_id"), doc);
+        return STATICS_SERVER + folder + filename;
     }
 
     public static String saveStudentAnswers(Document doc, JSONArray answers,

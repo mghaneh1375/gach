@@ -498,6 +498,9 @@ public class UserController {
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
 
+        if(user.containsKey("block_notif"))
+            user.put("blockNotif", true);
+
         if (user.containsKey("form_list")) {
 
             JSONArray formsJSON = new JSONArray();
@@ -1101,6 +1104,17 @@ public class UserController {
                 .put("students", STUDENTS)
                 .put("questions", QUESTIONS)
         );
+    }
+
+    public static String blockNotif(Document user) {
+
+        if(user.containsKey("block_user"))
+            user.remove("block_user");
+        else
+            user.put("block_user", true);
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+        return JSON_OK;
     }
 
     public static String updateInfo(JSONObject jsonObject, Document user) {

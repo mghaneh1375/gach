@@ -1,7 +1,6 @@
 package irysc.gachesefid.DB;
 
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
@@ -15,7 +14,6 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,8 +22,6 @@ import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public abstract class Common extends Repository {
@@ -33,6 +29,10 @@ public abstract class Common extends Repository {
     MongoCollection<Document> documentMongoCollection = null;
     String table = "";
     String secKey = "";
+
+    public boolean isOIDInCache(ObjectId oId){
+        return isInCache(table, oId) != null;
+    }
 
     public boolean exist(Bson filter) {
         return documentMongoCollection.countDocuments(filter) > 0;
