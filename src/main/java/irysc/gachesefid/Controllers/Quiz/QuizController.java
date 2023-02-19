@@ -1552,8 +1552,8 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             long curr = System.currentTimeMillis();
 
-            if (quiz.containsKey("end") && quiz.getLong("end") > curr)
-                return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
+//            if (quiz.containsKey("end") && quiz.getLong("end") > curr)
+//                return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
 
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);

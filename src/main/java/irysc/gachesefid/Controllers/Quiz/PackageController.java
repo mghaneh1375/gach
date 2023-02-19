@@ -409,7 +409,15 @@ public class PackageController {
                         exists("end_registry", false),
                         gt("end_registry", curr)
                 ));
-                filtersForQuizzes.add(gt("end", curr));
+
+                filtersForQuizzes.add(or(
+                        and(
+                                exists("is_registrable"),
+                                eq("is_registrable", true),
+                                exists("end", false)
+                        ),
+                        gt("end", curr)
+                ));
 
                 if (userId != null)
                     filtersForQuizzes.add(nin("students._id", userId));

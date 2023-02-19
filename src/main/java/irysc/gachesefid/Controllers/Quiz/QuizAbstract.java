@@ -282,6 +282,7 @@ public abstract class QuizAbstract {
 
             DecimalFormat df_obj = new DecimalFormat("#.##");
             String[] splited = df_obj.format(p).split("\\.");
+
             out[2] = (byte) Integer.parseInt(splited[0]);
 
             if (splited.length == 1)
@@ -752,11 +753,13 @@ public abstract class QuizAbstract {
     public static Object[] decodeTashrihi(byte[] in) {
 
         int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
-        int floatSection = (in[2] & 0xff);
+        int floatSection = (in[3] & 0xff);
 
-        double percent = (floatSection < 10) ?
-                (in[3] & 0xff) + (floatSection / 10.0) :
-                (in[3] & 0xff) + (floatSection / 100.0);
+        double percent;
+
+        percent = (floatSection < 10) ?
+                (in[2] & 0xff) + (floatSection / 10.0) :
+                (in[2] & 0xff) + (floatSection / 100.0);
 
         int countryRank = in[4] & 0xff;
         int stateRank = in[5] & 0xff;
