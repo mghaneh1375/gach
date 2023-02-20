@@ -497,7 +497,8 @@ public class PackageController {
                         object = quizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
-                    else if(doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                    else if(doc.containsKey("mode") && doc.get("mode") != null &&
+                            doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                         object = tashrihiQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
