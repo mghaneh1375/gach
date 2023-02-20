@@ -7,9 +7,9 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "https://statics.irysc.com/";
 
-    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 //    public final static String GACH_SERVER = "http://192.168.43.157:8080/api/";
 
 
@@ -47,10 +47,9 @@ public class StaticValues {
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
-    public final static int MAX_QUIZ_FILE_SIZE = ONE_MB * 2;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";

@@ -14,6 +14,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.gt;
@@ -204,9 +207,18 @@ public class PackageController {
         return getPackageQuizzes(packageId, true);
     }
 
+    private final static Map<String, String> tagsColor = Stream.of(new String[][] {
+            { "شیمی", "#00FF00" },
+            { "ریاضی", "#FF0000" },
+            { "فیزیک", "#0000FF" },
+            { "زیست", "#00FFFF" },
+            { "ادبی", "#FFFF00" },
+            { "default", "#ffefce" },
+    }).collect(Collectors.toMap(data -> data[0], data -> data[1]));
+
     public static String getPackages(List<String> accesses, ObjectId userId,
-                                     ObjectId gradeId, ObjectId lessonId, ObjectId id,
-                                     ObjectId quizIdFilter
+                              ObjectId gradeId, ObjectId lessonId, ObjectId id,
+                              ObjectId quizIdFilter
     ) {
 
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
@@ -446,9 +458,19 @@ public class PackageController {
 
                 for (Document doc : docs) {
 
+                    String backColor = tagsColor.get("default");
+
                     if (doc.containsKey("tags")) {
                         List<String> t = doc.getList("tags", String.class);
                         if (t.size() > 0) {
+
+                            for(String key : tagsColor.keySet()) {
+                                if(t.get(0).contains(key)) {
+                                    backColor = tagsColor.get(key);
+                                    break;
+                                }
+                            }
+
                             for (String itr : t) {
                                 if (!tags.contains(itr))
                                     tags.add(itr);
@@ -484,6 +506,7 @@ public class PackageController {
                                 doc, true, false, false, true
                         ).put("type", "quiz");
 
+                    object.put("backColor", backColor);
                     jsonArray.put(object);
                 }
 

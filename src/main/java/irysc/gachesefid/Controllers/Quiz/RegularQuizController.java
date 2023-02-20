@@ -11,6 +11,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
+import irysc.gachesefid.Models.QuestionType;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -198,7 +199,7 @@ public class RegularQuizController extends QuizAbstract {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
-                if(quiz == null)
+                if (quiz == null || quiz.getString("mode").equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
@@ -568,7 +569,14 @@ public class RegularQuizController extends QuizAbstract {
                 short status;
 
                 for (QuestionStat aStudentsStat : studentsStat) {
-                    status = aStudentsStat.doCorrect(question, idx);
+
+                    if (question.getString("kind_question").equalsIgnoreCase(
+                            QuestionType.MULTI_SENTENCE.getName()
+                    ))
+                        status = aStudentsStat.doCorrectMultiSentence(question, idx);
+                    else
+                        status = aStudentsStat.doCorrect(question, idx);
+
                     if (status == 0)
                         whites++;
                     else if (status == 1)
@@ -582,6 +590,7 @@ public class RegularQuizController extends QuizAbstract {
                 tmp[1] = (byte) corrects;
                 tmp[2] = (byte) incorrects;
                 questionStats.add(tmp);
+
                 idx++;
             }
         }
@@ -1113,184 +1122,123 @@ public class RegularQuizController extends QuizAbstract {
 
         private void storeInRankingTable() {
 
-            ArrayList<ObjectId> userIds = new ArrayList<>();
+            try {
+                ArrayList<ObjectId> userIds = new ArrayList<>();
 
-            for (QuestionStat aStudentsStat : studentsStat) {
-                userIds.add(aStudentsStat.id);
-            }
-
-            ArrayList<Document> tarazRankingList = tarazRepository.findPreserveOrderWitNull("user_id", userIds);
-            int idx = 0;
-            ObjectId quizId = this.quiz.getObjectId("_id");
-
-            List<BasicDBObject> updates = new ArrayList<>();
-            boolean needUpdateIRYSCRank = false;
-            List<WriteModel<Document>> writes = new ArrayList<>();
-            ArrayList<ObjectId> gradesNeedUpdate = new ArrayList<>();
-
-            for(Document doc : tarazRankingList) {
-
-                BasicDBObject update = new BasicDBObject();
-
-                if(!doc.containsKey("cum_sum_last_five"))
-                    doc.put("cum_sum_last_five", 0);
-
-                if(!doc.containsKey("cum_sum_last_three"))
-                    doc.put("cum_sum_last_three", 0);
-
-                ObjectId gradeId;
-
-                if(!studentsData.get(idx).containsKey("grade") ||
-                        studentsData.get(idx).get("grade") == null
-                )
-                    gradeId = null;
-                else
-                    gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
-
-                if(!doc.containsKey("grade_id") && gradeId != null) {
-                    doc.put("grade_id", gradeId);
-                    update.append("grade_id", gradeId);
+                for (QuestionStat aStudentsStat : studentsStat) {
+                    userIds.add(aStudentsStat.id);
                 }
 
-                List<Document> quizzes = doc.containsKey("quizzes") ?
-                        doc.getList("quizzes", Document.class) : new ArrayList<>();
+                ArrayList<Document> tarazRankingList = tarazRepository.findPreserveOrderWitNull("user_id", userIds);
+                int idx = 0;
+                ObjectId quizId = this.quiz.getObjectId("_id");
 
-                Document q = searchInDocumentsKeyVal(
-                        quizzes, "_id", quizId
-                );
+                List<BasicDBObject> updates = new ArrayList<>();
+                boolean needUpdateIRYSCRank = false;
+                List<WriteModel<Document>> writes = new ArrayList<>();
+                ArrayList<ObjectId> gradesNeedUpdate = new ArrayList<>();
 
-                if(q == null) {
-                    quizzes.add(new Document("_id", quizId)
-                            .append("taraz", (int)studentsStat.get(idx).taraz)
-                            .append("start", this.quiz.getLong("start"))
-                    );
-                }
-                else
-                    q.put("taraz", (int) studentsStat.get(idx).taraz);
+                for (Document doc : tarazRankingList) {
 
-                quizzes.sort((o1, o2) ->
-                        Long.compare(o2.getLong("start"),
-                                o1.getLong("start")));
+                    BasicDBObject update = new BasicDBObject();
 
-                update.append("quizzes", quizzes);
+                    if (!doc.containsKey("cum_sum_last_five"))
+                        doc.put("cum_sum_last_five", 0);
 
-                int index = searchInDocumentsKeyValIdx(
-                        quizzes, "_id", quizId
-                );
+                    if (!doc.containsKey("cum_sum_last_three"))
+                        doc.put("cum_sum_last_three", 0);
 
-                if(index < 5) {
-                    int cumSum = 0;
-                    for(int i = 0; i < Math.min(5, quizzes.size()); i++)
-                        cumSum += quizzes.get(i).getInteger("taraz");
+                    ObjectId gradeId;
 
-                    doc.put("cum_sum_last_five", cumSum);
-                    update.append("cum_sum_last_five", cumSum);
-                    needUpdateIRYSCRank = true;
-                }
-
-                if(index < 3) {
-                    int cumSum = 0;
-                    for(int i = 0; i < Math.min(3, quizzes.size()); i++)
-                        cumSum += quizzes.get(i).getInteger("taraz");
-
-                    doc.put("cum_sum_last_three", cumSum);
-                    update.append("cum_sum_last_three", cumSum);
-                    if(gradeId != null &&
-                            !gradesNeedUpdate.contains(gradeId))
-                        gradesNeedUpdate.add(gradeId);
-                }
-
-                updates.add(update);
-                idx++;
-            }
-
-            List<Document> allTaraz;
-
-            if(needUpdateIRYSCRank) {
-
-                allTaraz = tarazRepository.find(null, null);
-                for (Document tarazRanking : tarazRankingList) {
-                    int index = searchInDocumentsKeyValIdx(
-                            allTaraz, "_id", tarazRanking.getObjectId("_id")
-                    );
-
-                    if(index != -1)
-                        allTaraz.set(index, tarazRanking);
+                    if (!studentsData.get(idx).containsKey("grade") ||
+                            studentsData.get(idx).get("grade") == null
+                    )
+                        gradeId = null;
                     else
-                        allTaraz.add(tarazRanking);
-                }
+                        gradeId = studentsData.get(idx).get("grade", Document.class).getObjectId("_id");
 
-                allTaraz.sort((o1, o2) ->
-                        Integer.compare(o2.getInteger("cum_sum_last_five"),
-                                o1.getInteger("cum_sum_last_five")));
-
-
-                int rank = 0;
-                int oldTaraz = -1;
-                int skip = 1;
-
-                for (Document document : allTaraz) {
-
-                    if (oldTaraz != document.getInteger("cum_sum_last_five")) {
-                        rank += skip;
-                        skip = 1;
-                    } else
-                        skip++;
-
-                    int index = searchInDocumentsKeyValIdx(
-                            tarazRankingList, "_id", document.getObjectId("_id")
-                    );
-
-                    if(index == -1)
-                        writes.add(
-                                new UpdateOneModel<>(
-                                        eq("_id", document.getObjectId("_id")),
-                                        set("rank", rank)
-                                )
-                        );
-                    else {
-                        updates.get(index).append("rank", rank);
-                        writes.add(
-                                new UpdateOneModel<>(
-                                        eq("user_id", userIds.get(index)),
-                                        new BasicDBObject("$set", updates.get(index)),
-                                        new UpdateOptions().upsert(true)
-                                )
-                        );
+                    if (!doc.containsKey("grade_id") && gradeId != null) {
+                        doc.put("grade_id", gradeId);
+                        update.append("grade_id", gradeId);
                     }
 
-                    oldTaraz = document.getInteger("cum_sum_last_five");
+                    List<Document> quizzes = doc.containsKey("quizzes") ?
+                            doc.getList("quizzes", Document.class) : new ArrayList<>();
+
+                    Document q = searchInDocumentsKeyVal(
+                            quizzes, "_id", quizId
+                    );
+
+                    if (q == null) {
+                        quizzes.add(new Document("_id", quizId)
+                                .append("taraz", (int) studentsStat.get(idx).taraz)
+                                .append("start", this.quiz.getLong("start"))
+                        );
+                    } else
+                        q.put("taraz", (int) studentsStat.get(idx).taraz);
+
+                    long curr = System.currentTimeMillis();
+
+                    for(Document s : quizzes) {
+                        if(s.getOrDefault("start", null) == null)
+                            s.put("start", curr);
+                    }
+
+                    quizzes.sort((o1, o2) ->
+                            Long.compare(o2.getLong("start"),
+                                    o1.getLong("start")));
+
+                    update.append("quizzes", quizzes);
+
+                    int index = searchInDocumentsKeyValIdx(
+                            quizzes, "_id", quizId
+                    );
+
+                    if (index < 5) {
+                        int cumSum = 0;
+                        for (int i = 0; i < Math.min(5, quizzes.size()); i++)
+                            cumSum += quizzes.get(i).getInteger("taraz");
+
+                        doc.put("cum_sum_last_five", cumSum);
+                        update.append("cum_sum_last_five", cumSum);
+                        needUpdateIRYSCRank = true;
+                    }
+
+                    if (index < 3) {
+                        int cumSum = 0;
+                        for (int i = 0; i < Math.min(3, quizzes.size()); i++)
+                            cumSum += quizzes.get(i).getInteger("taraz");
+
+                        doc.put("cum_sum_last_three", cumSum);
+                        update.append("cum_sum_last_three", cumSum);
+                        if (gradeId != null &&
+                                !gradesNeedUpdate.contains(gradeId))
+                            gradesNeedUpdate.add(gradeId);
+                    }
+
+                    updates.add(update);
+                    idx++;
                 }
-            }
 
-            if(gradesNeedUpdate.size() > 0) {
+                List<Document> allTaraz;
 
-                for(ObjectId gradeId : gradesNeedUpdate) {
+                if (needUpdateIRYSCRank) {
 
-                    allTaraz = tarazRepository.find(eq("grade_id", gradeId), null);
-
+                    allTaraz = tarazRepository.find(null, null);
                     for (Document tarazRanking : tarazRankingList) {
-
-                        if(
-                                gradeId == null || tarazRanking == null ||
-                                !tarazRanking.containsKey("grade_id") ||
-                                tarazRanking.get("grade_id") == null ||
-                                !tarazRanking.get("grade_id").equals(gradeId))
-                            continue;
-
                         int index = searchInDocumentsKeyValIdx(
                                 allTaraz, "_id", tarazRanking.getObjectId("_id")
                         );
 
-                        if(index != -1)
+                        if (index != -1)
                             allTaraz.set(index, tarazRanking);
                         else
                             allTaraz.add(tarazRanking);
                     }
 
                     allTaraz.sort((o1, o2) ->
-                            Integer.compare(o2.getInteger("cum_sum_last_three"),
-                                    o1.getInteger("cum_sum_last_three")));
+                            Integer.compare(o2.getInteger("cum_sum_last_five"),
+                                    o1.getInteger("cum_sum_last_five")));
 
 
                     int rank = 0;
@@ -1299,7 +1247,7 @@ public class RegularQuizController extends QuizAbstract {
 
                     for (Document document : allTaraz) {
 
-                        if (oldTaraz != document.getInteger("cum_sum_last_three")) {
+                        if (oldTaraz != document.getInteger("cum_sum_last_five")) {
                             rank += skip;
                             skip = 1;
                         } else
@@ -1309,15 +1257,15 @@ public class RegularQuizController extends QuizAbstract {
                                 tarazRankingList, "_id", document.getObjectId("_id")
                         );
 
-                        if(index == -1)
+                        if (index == -1)
                             writes.add(
                                     new UpdateOneModel<>(
                                             eq("_id", document.getObjectId("_id")),
-                                            set("grade_rank", rank)
+                                            set("rank", rank)
                                     )
                             );
                         else {
-                            updates.get(index).append("grade_rank", rank);
+                            updates.get(index).append("rank", rank);
                             writes.add(
                                     new UpdateOneModel<>(
                                             eq("user_id", userIds.get(index)),
@@ -1327,13 +1275,87 @@ public class RegularQuizController extends QuizAbstract {
                             );
                         }
 
-                        oldTaraz = document.getInteger("cum_sum_last_three");
+                        oldTaraz = document.getInteger("cum_sum_last_five");
                     }
-
                 }
-            }
 
-            tarazRepository.bulkWrite(writes);
+                if (gradesNeedUpdate.size() > 0) {
+
+                    for (ObjectId gradeId : gradesNeedUpdate) {
+
+                        allTaraz = tarazRepository.find(eq("grade_id", gradeId), null);
+
+                        for (Document tarazRanking : tarazRankingList) {
+
+                            if (
+                                    gradeId == null || tarazRanking == null ||
+                                            !tarazRanking.containsKey("grade_id") ||
+                                            tarazRanking.get("grade_id") == null ||
+                                            !tarazRanking.get("grade_id").equals(gradeId))
+                                continue;
+
+                            int index = searchInDocumentsKeyValIdx(
+                                    allTaraz, "_id", tarazRanking.getObjectId("_id")
+                            );
+
+                            if (index != -1)
+                                allTaraz.set(index, tarazRanking);
+                            else
+                                allTaraz.add(tarazRanking);
+                        }
+
+                        allTaraz.sort((o1, o2) ->
+                                Integer.compare(o2.getInteger("cum_sum_last_three"),
+                                        o1.getInteger("cum_sum_last_three")));
+
+
+                        int rank = 0;
+                        int oldTaraz = -1;
+                        int skip = 1;
+
+                        for (Document document : allTaraz) {
+
+                            if (oldTaraz != document.getInteger("cum_sum_last_three")) {
+                                rank += skip;
+                                skip = 1;
+                            } else
+                                skip++;
+
+                            int index = searchInDocumentsKeyValIdx(
+                                    tarazRankingList, "_id", document.getObjectId("_id")
+                            );
+
+                            if (index == -1)
+                                writes.add(
+                                        new UpdateOneModel<>(
+                                                eq("_id", document.getObjectId("_id")),
+                                                set("grade_rank", rank)
+                                        )
+                                );
+                            else {
+                                updates.get(index).append("grade_rank", rank);
+                                writes.add(
+                                        new UpdateOneModel<>(
+                                                eq("user_id", userIds.get(index)),
+                                                new BasicDBObject("$set", updates.get(index)),
+                                                new UpdateOptions().upsert(true)
+                                        )
+                                );
+                            }
+
+                            oldTaraz = document.getInteger("cum_sum_last_three");
+                        }
+
+                    }
+                }
+
+                if(writes.size() > 0)
+                    tarazRepository.bulkWrite(writes);
+            }
+            catch (Exception x) {
+                x.printStackTrace();
+                System.out.println(x.getMessage());
+            }
         }
 
     }

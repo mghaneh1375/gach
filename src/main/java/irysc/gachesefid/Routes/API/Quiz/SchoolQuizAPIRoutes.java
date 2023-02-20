@@ -4,6 +4,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
@@ -88,6 +89,20 @@ public class SchoolQuizAPIRoutes extends Router {
                         iryscQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, studentId
+        );
+    }
+
+
+    @GetMapping(path = "getMyMarks/{mode}/{quizId}")
+    @ResponseBody
+    public String getMyMarks(HttpServletRequest request,
+                             @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                             @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return TashrihiQuizController.getMyMarks(
+                mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : schoolQuizRepository,
+                quizId, getUser(request).getObjectId("_id")
         );
     }
 

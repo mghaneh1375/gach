@@ -689,6 +689,54 @@ public class TashrihiQuizController extends QuizAbstract {
 
     }
 
+    public static String getMyMarks(Common db, ObjectId quizId, ObjectId studentId) {
+
+        try {
+            Document quiz = hasProtectedAccess(db, studentId, quizId);
+
+            List<Document> students = quiz.getList("students", Document.class);
+            Document student = Utility.searchInDocumentsKeyVal(students, "_id", studentId);
+
+            boolean allMarked = (boolean) student.getOrDefault("all_marked", false);
+            if(!allMarked)
+                return generateErr("پاسخبرگ شما هنوز تصحیح نشده است");
+
+            List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", quiz.getString("title"))
+                    .put("id", quiz.getObjectId("_id").toString())
+                    .put("generalMode",
+                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() : "school")
+                    .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                    .put("description", quiz.getOrDefault("desc", ""))
+                    .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                    .put("mode", quiz.getString("mode"))
+                    .put("totalMark", student.get("total_mark"))
+                    .put("attaches", jsonArray);
+
+
+            return Utility.generateSuccessMsg("data", new JSONObject()
+                    .put("allMarked", allMarked)
+                    .put("quizInfo", quizJSON)
+                    .put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getTashrihiQuestions(
+                            true, true, (boolean) quiz.getOrDefault("is_q_r_needed", false),
+                            quiz.get("questions", Document.class),
+                            student.getList("answers", Document.class),
+                            db instanceof IRYSCQuizRepository ? IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER
+                    ))
+            );
+
+        } catch (InvalidFieldsException e) {
+            return e.getMessage();
+        }
+
+    }
+
     public static String getMyMarkListForSpecificQuestion(Common db, ObjectId userId,
                                                           ObjectId quizId, ObjectId questionId) {
 
@@ -1029,7 +1077,7 @@ public class TashrihiQuizController extends QuizAbstract {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
-                if (quiz == null)
+                if (quiz == null || !quiz.getString("mode").equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
@@ -1815,7 +1863,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     citySkip.put(cityId, citySkip.get(cityId) + 1);
 
                 double stdMark = 0;
-                for(Double d : aStudentsStat.marks)
+                for (Double d : aStudentsStat.marks)
                     stdMark += d;
 
                 rankingList.add(

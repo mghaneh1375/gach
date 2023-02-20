@@ -347,7 +347,6 @@ public class AdminReportController {
                 JSONObject jsonObject;
 
                 if(isTashrihi) {
-
                     jsonObject = new JSONObject()
                             .put("name", doc.getString("name"))
                             .put("taraz", stats[0])
@@ -356,6 +355,9 @@ public class AdminReportController {
                             .put("stateRank", stats[3])
                             .put("cityRank", stats[4])
                             .put("schoolRank", stats[5])
+                            .put("mark", stats[6])
+                            .put("totalMark", stats[7])
+                            .put("total", stats[8])
                             .put("avg", df_obj.format(generalStat.getDouble("avg")))
                             .put("max", df_obj.format(generalStat.getDouble("max")))
                             .put("min", df_obj.format(generalStat.getDouble("min")));
@@ -370,6 +372,7 @@ public class AdminReportController {
                             .put("whites", stats[1])
                             .put("corrects", stats[2])
                             .put("incorrects", stats[3])
+                            .put("total", (int)stats[1] + (int)stats[2] + (int)stats[3])
                             .put("percent", stats[4])
                             .put("countryRank", stats[5])
                             .put("stateRank", stats[6])
@@ -405,6 +408,9 @@ public class AdminReportController {
                             .put("stateRank", stats[3])
                             .put("cityRank", stats[4])
                             .put("schoolRank", stats[5])
+                            .put("mark", stats[6])
+                            .put("totalMark", stats[7])
+                            .put("total", stats[8])
                             .put("avg", df_obj.format(generalStat.get("avg")))
                             .put("max", df_obj.format(generalStat.get("max")))
                             .put("min", df_obj.format(generalStat.get("min")));

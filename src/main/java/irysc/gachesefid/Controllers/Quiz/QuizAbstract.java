@@ -92,6 +92,9 @@ public abstract class QuizAbstract {
         HashMap<ObjectId, Double> subjectPercent;
         HashMap<ObjectId, Double> lessonPercent;
 
+        HashMap<ObjectId, Integer> subjectTotalQuestions;
+        HashMap<ObjectId, Integer> lessonTotalQuestions;
+
         HashMap<ObjectId, Double> lessonTaraz;
         HashMap<ObjectId, Double> subjectTaraz;
 
@@ -146,6 +149,9 @@ public abstract class QuizAbstract {
             lessonCityRanking = new HashMap<>();
             lessonSchoolRanking = new HashMap<>();
 
+            subjectTotalQuestions = new HashMap<>();
+            lessonTotalQuestions = new HashMap<>();
+
             marks = new ArrayList<>();
         }
 
@@ -191,10 +197,20 @@ public abstract class QuizAbstract {
             else
                 subjectMark.put(subjectId, mark);
 
+            if (subjectTotalQuestions.containsKey(question.getObjectId("subject_id")))
+                subjectTotalQuestions.put(subjectId, subjectTotalQuestions.get(subjectId) + 1);
+            else
+                subjectTotalQuestions.put(subjectId, 1);
+
             if (lessonMark.containsKey(lessonId))
                 lessonMark.put(lessonId, lessonMark.get(lessonId) + mark);
             else
                 lessonMark.put(lessonId, mark);
+
+            if (lessonTotalQuestions.containsKey(lessonId))
+                lessonTotalQuestions.put(lessonId, lessonTotalQuestions.get(lessonId) + 1);
+            else
+                lessonTotalQuestions.put(lessonId, 1);
         }
 
         void calculateSD() {
@@ -266,7 +282,7 @@ public abstract class QuizAbstract {
 
         byte[] encode(ObjectId oId, boolean isForSubject) {
 
-            byte[] out = new byte[8];
+            byte[] out = new byte[13];
 
             double t = 0;
             if (isForSubject && subjectTaraz != null && subjectTaraz.containsKey(oId))
@@ -274,40 +290,49 @@ public abstract class QuizAbstract {
             else if (!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
                 t = lessonTaraz.get(oId);
 
-            double p = isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId);
+            fillByteArrWithDouble(isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId), out, 2);
 
             byte[] bb = ByteBuffer.allocate(4).putInt((int) t).array();
             out[0] = bb[2];
             out[1] = bb[3];
-
-            DecimalFormat df_obj = new DecimalFormat("#.##");
-            String[] splited = df_obj.format(p).split("\\.");
-
-            out[2] = (byte) Integer.parseInt(splited[0]);
-
-            if (splited.length == 1)
-                out[3] = (byte) (0x00);
-            else
-                out[3] = (byte) Integer.parseInt(splited[1]);
 
             if (isForSubject) {
                 out[4] = (byte) ((int) subjectCountryRanking.get(oId));
                 out[5] = (byte) ((int) subjectStateRanking.get(oId));
                 out[6] = (byte) ((int) subjectCityRanking.get(oId));
                 out[7] = (byte) ((int) subjectSchoolRanking.get(oId));
+                out[12] = (byte) ((int) subjectTotalQuestions.get(oId));
             } else {
                 out[4] = (byte) ((int) lessonCountryRanking.get(oId));
                 out[5] = (byte) ((int) lessonStateRanking.get(oId));
                 out[6] = (byte) ((int) lessonCityRanking.get(oId));
                 out[7] = (byte) ((int) lessonSchoolRanking.get(oId));
+                out[12] = (byte) ((int) lessonTotalQuestions.get(oId));
             }
+
+            fillByteArrWithDouble(isForSubject ? subjectMark.get(oId) : lessonMark.get(oId), out, 8);
+            fillByteArrWithDouble(isForSubject ? subjectTotalMark.get(oId) : lessonTotalMark.get(oId), out, 10);
 
             return out;
         }
 
     }
 
-    static class QuestionStat {
+    static void fillByteArrWithDouble(double p, byte[] out, int startIdx) {
+
+        DecimalFormat df_obj = new DecimalFormat("#.##");
+        String[] splited = df_obj.format(p).split("\\.");
+
+        out[startIdx] = (byte) Integer.parseInt(splited[0]);
+
+        if (splited.length == 1)
+            out[startIdx + 1] = (byte) (0x00);
+        else
+            out[startIdx + 1] = (byte) Integer.parseInt(splited[1]);
+
+    }
+
+    public static class QuestionStat {
 
         String name;
         ObjectId id;
@@ -409,6 +434,67 @@ public abstract class QuizAbstract {
             marks = new ArrayList<>();
         }
 
+        short doCorrectMultiSentence(Document question, int idx) {
+
+            String stdAns = studentAnswers.get(idx).getValue().toString();
+            String answer = question.getString("answer");
+            double qMark = question.getDouble("mark");
+            PairValue p = getStdMarkInMultiSentenceQuestion(answer, stdAns, question.getDouble("mark"));
+
+            updateStats((Double) p.getKey(), question, qMark, (short) p.getValue());
+            return (short) p.getValue();
+        }
+
+        public static PairValue getStdMarkInMultiSentenceQuestion(String answer, String stdAns, double mark) {
+
+            int t = answer.length();
+            int c = 0;
+            int inc = 0;
+
+            for (int z = 0; z < t; z++) {
+
+                if (z >= stdAns.length() || stdAns.charAt(z) == '_')
+                    continue;
+
+                if (stdAns.charAt(z) == answer.charAt(z))
+                    c++;
+                else
+                    inc++;
+
+            }
+
+            short status = (short) (c == t ? 1 : inc + c == 0 ? 0 : -1);
+            double thisMark;
+
+            if (c == t)
+                thisMark = mark;
+            else {
+
+                int p = -10 * inc;
+
+                if (c > 1 && t <= 4) {
+                    if (c == 2)
+                        p += 20;
+                    else if (c == 3)
+                        p += 50;
+                } else if (c > 1) {
+                    if (c == 2)
+                        p += 10;
+                    else if (c == 3)
+                        p += 30;
+                    else if (c == 4)
+                        p += 60;
+                }
+
+                thisMark = (p / 100.0) * mark;
+            }
+
+            DecimalFormat df = new DecimalFormat("#.##");
+            thisMark = Double.parseDouble(df.format(thisMark));
+
+            return new PairValue(thisMark, status);
+        }
+
         short doCorrect(Document question, int idx) {
 
             double mark = 0.0;
@@ -462,59 +548,16 @@ public abstract class QuizAbstract {
                         status = -1;
                     }
                 }
-            } else if (question.getString("kind_question").equalsIgnoreCase(
-                    QuestionType.MULTI_SENTENCE.getName()
-            )) {
+            }
 
-
-                String stdAns = studentAnswers.get(idx).getValue().toString();
-                String answer = question.getString("answer");
-
-                int t = answer.length();
-                int c = 0;
-                int inc = 0;
-
-                for (int z = 0; z < t; z++) {
-
-                    if (z >= stdAns.length() || stdAns.charAt(z) == '_')
-                        continue;
-
-                    if (stdAns.charAt(z) == answer.charAt(z))
-                        c++;
-                    else
-                        inc++;
-
-                }
-
-                status = (short) (c == t ? 1 : inc + c == 0 ? 0 : -1);
-                double thisMark;
-
-                if (c == t)
-                    thisMark = question.getDouble("mark");
-                else {
-
-                    int p = -10 * inc;
-
-                    if (c > 1 && t <= 4) {
-                        if (c == 2)
-                            p += 20;
-                        else if (c == 3)
-                            p += 50;
-                    } else if (c > 1) {
-                        if (c == 2)
-                            p += 10;
-                        else if (c == 3)
-                            p += 30;
-                        else if (c == 4)
-                            p += 60;
-                    }
-                    thisMark = (p / 100.0) * question.getDouble("mark");
-                }
-
-                mark += thisMark;
-
-            } else
+            else
                 status = 0;
+
+            updateStats(mark, question, qMark, status);
+            return status;
+        }
+
+        private void updateStats(double mark, Document question, double qMark, short status) {
 
             marks.add(mark);
 
@@ -571,7 +614,6 @@ public abstract class QuizAbstract {
                 lessonIncorrects.put(lessonId, status == -1 ? 1 : 0);
             }
 
-            return status;
         }
 
         void calculateSD() {
@@ -603,12 +645,11 @@ public abstract class QuizAbstract {
 
             double percent =
                     isForSubject ?
-                            subjectMark.get(oId) / subjectTotalMark.get(oId) :
-                            lessonMark.get(oId) / lessonTotalMark.get(oId);
-
+                            subjectTotalMark.get(oId) == 0 ? 0 : subjectMark.get(oId) / subjectTotalMark.get(oId) :
+                            lessonTotalMark.get(oId) == 0 ? 0 : lessonMark.get(oId) / lessonTotalMark.get(oId);
             percent *= 100;
 
-            double t = 2000.0 * ((percent - mean) / sd) + 5000;
+            double t = sd == 0 ? 5000 : 2000.0 * ((percent - mean) / sd) + 5000;
 
             if (isForSubject) {
                 subjectTaraz.put(oId, t);
@@ -755,9 +796,7 @@ public abstract class QuizAbstract {
         int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
         int floatSection = (in[3] & 0xff);
 
-        double percent;
-
-        percent = (floatSection < 10) ?
+        double percent = (floatSection < 10) ?
                 (in[2] & 0xff) + (floatSection / 10.0) :
                 (in[2] & 0xff) + (floatSection / 100.0);
 
@@ -766,14 +805,27 @@ public abstract class QuizAbstract {
         int cityRank = in[6] & 0xff;
         int schoolRank = in[7] & 0xff;
 
+        floatSection = (in[9] & 0xff);
+        double mark = (floatSection < 10) ?
+                (in[8] & 0xff) + (floatSection / 10.0) :
+                (in[8] & 0xff) + (floatSection / 100.0);
+
+        floatSection = (in[11] & 0xff);
+        double totalMark = (floatSection < 10) ?
+                (in[10] & 0xff) + (floatSection / 10.0) :
+                (in[10] & 0xff) + (floatSection / 100.0);
+
+        int totalQuestions = in[12] & 0xff;
+
         return new Object[]{
-                taraz, Math.round(percent), countryRank, stateRank, cityRank, schoolRank
+                taraz, Math.round(percent), countryRank, stateRank, cityRank, schoolRank, mark, totalMark, totalQuestions
         };
     }
 
     public static Object[] decode(byte[] in) {
 
         int taraz = (in[0] & 0xff) * 256 + (in[1] & 0xff);
+
         int whites = in[2] & 0xff;
         int corrects = in[3] & 0xff;
         int incorrects = in[4] & 0xff;
@@ -861,7 +913,7 @@ public abstract class QuizAbstract {
         out[4] = (byte) cityRank;
 
         long lng = Double.doubleToLongBits(totalMark);
-        for(int i = 0; i < 8; i++) out[i + 5] = (byte)((lng >> ((7 - i) * 8)) & 0xff);
+        for (int i = 0; i < 8; i++) out[i + 5] = (byte) ((lng >> ((7 - i) * 8)) & 0xff);
 
         return out;
     }

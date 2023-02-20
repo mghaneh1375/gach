@@ -614,11 +614,11 @@ public class Utility {
 
         for (int i = 0; i < answers.size(); i++) {
 
-            int percent = -1;
+            double percent = -1;
 
             if (questionStat != null) {
                 byte[] bytes = questionStat.get(i).getData();
-                percent = ((bytes[1] & 0xff) * 100) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
+                percent = ((bytes[1] & 0xff) * 100.0) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
             }
 
             int choicesCount = -1;
@@ -699,6 +699,7 @@ public class Utility {
     ) throws InvalidFieldsException {
 
         Document quiz = db.findById(quizId);
+
         if (quiz == null)
             throw new InvalidFieldsException(JSON_NOT_VALID_ID);
 
@@ -888,7 +889,6 @@ public class Utility {
                     ((Binary) questions.getOrDefault("answers", new byte[0])).getData()
             );
         }
-
 
         if (pairValues.size() != answers.length())
             return JSON_NOT_VALID_PARAMS;

@@ -534,6 +534,9 @@ public class StudentQuizController {
 
             long curr = System.currentTimeMillis();
 
+            if(a.needUpdate)
+                a.student.put("start_at", a.startAt);
+
             a.student.put("finish_at", curr);
             db.replaceOne(quizId, a.quiz);
 
@@ -722,6 +725,7 @@ public class StudentQuizController {
 
         long startAt = student.containsKey("start_at") && student.get("start_at") != null ?
                 student.getLong("start_at") : curr;
+
         int delay = doc.containsKey("end") ? Math.max(
                 0,
                 (int) (startAt + neededTime * 1000L - end) / 1000
@@ -733,7 +737,11 @@ public class StudentQuizController {
         if (reminder + allowedDelay / 1000 <= 0)
             throw new InvalidFieldsException("شما در این آزمون شرکت کرده اید.");
 
-        return new A(doc, reminder, student, startAt, neededTime);
+        A a = new A(doc, reminder, student, startAt, neededTime);
+        if(student.getOrDefault("start_at", null) == null)
+            a.setNeedUpdate();
+
+        return a;
     }
 
     public static String storeAnswers(Common db, ObjectId quizId,
@@ -1020,8 +1028,7 @@ public class StudentQuizController {
                     new RegularQuizController()
                             .registry(studentIds, phone, mail, quizIds, 0);
 
-//                    new TashrihiQuizController()
-//                            .registry(studentIds, phone, mail, quizIds, 0);
+                    //todo: group registration for tashrihi quiz
 
                 } else {
 
@@ -1708,6 +1715,7 @@ public class StudentQuizController {
         Document student;
         long startAt;
         int neededTime;
+        boolean needUpdate = false;
 
         public A(Document quiz, int reminder, Document student, long startAt, int neededTime) {
             this.quiz = quiz;
@@ -1715,6 +1723,10 @@ public class StudentQuizController {
             this.student = student;
             this.startAt = startAt;
             this.neededTime = neededTime;
+        }
+
+        public void setNeedUpdate() {
+            needUpdate = true;
         }
     }
 

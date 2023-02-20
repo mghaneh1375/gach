@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Question;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.QuestionLevel;
@@ -129,10 +130,29 @@ public class Utilities {
             }
 
             if (isDetailNeeded || isAnswerFileNeeded) {
+
                 jsonObject.put("answer", doc.get("answer"))
                         .put("oldCorrect", doc.getInteger("old_correct"))
                         .put("oldIncorrect", doc.getInteger("old_incorrect"))
                         .put("oldWhite", doc.getInteger("old_white"));
+
+                if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                    jsonObject.put("stdMark",
+                            QuizAbstract.QuestionStat.getStdMarkInMultiSentenceQuestion(doc.getString("answer"), jsonObject.getString("stdAns"), doc.getDouble("mark")).getKey()
+                    );
+                }
+                else if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
+
+                    double stdAns = jsonObject.getDouble("stdAns");
+
+                    if (doc.getDouble("answer") - doc.getDouble("telorance") < stdAns &&
+                            doc.getDouble("answer") + doc.getDouble("telorance") > stdAns
+                    )
+                        jsonObject.put("stdMark", doc.getDouble("mark"));
+                    else
+                        jsonObject.put("stdMark", 0);
+                }
+
             }
 
             if (isDetailNeeded) {

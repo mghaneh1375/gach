@@ -2,6 +2,8 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
@@ -1067,10 +1069,14 @@ public class QuizController {
         List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
         List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
         List<Boolean> uploadable_list = null;
+        boolean isTashrihi = quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
         if (can_upload != null)
             uploadable_list = questions.containsKey("uploadable_list") ?
                     questions.getList("uploadable_list", Boolean.class) : new ArrayList<>();
+
+        HashMap<ObjectId, Integer> allUsed = new HashMap<>();
+        List<Document> allQuestions = new ArrayList<>();
 
         if (questionsList instanceof JSONArray) {
 
@@ -1098,23 +1104,21 @@ public class QuizController {
                         continue;
                     }
 
-                    if (
-                            quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
-                                    !question.getString("kind_question").equalsIgnoreCase(QuestionType.TASHRIHI.getName())
+                    if (isTashrihi &&
+                            !question.getString("kind_question").equalsIgnoreCase(QuestionType.TASHRIHI.getName())
                     ) {
                         excepts.put(i + 1);
                         continue;
                     }
 
                     int used = (int) question.getOrDefault("used", 0);
+                    question.put("used", used + 1);
+                    allUsed.put(question.getObjectId("_id"), used + 1);
 
-                    questionRepository.updateOne(
-                            question.getObjectId("_id"),
-                            set("used", used + 1)
-                    );
-
-                    ids.add(question.getObjectId("_id"));
+                    allQuestions.add(question);
                     marks.add(tmpMark);
+                    ids.add(question.getObjectId("_id"));
+
                     if (can_upload != null) {
                         uploadable_list.add(can_upload);
 
@@ -1133,55 +1137,75 @@ public class QuizController {
                 }
             }
 
-            questions.put("uploadable_list", uploadable_list);
-            questions.put("marks", marks);
-            questions.put("_ids", ids);
-            quiz.put("questions", questions);
+            List<WriteModel<Document>> writes = new ArrayList<>();
 
-            db.replaceOne(quiz.getObjectId("_id"), quiz);
-
-            PairValue p = new PairValue("doneIds", Utilities.convertList(
-                    addedItems, true, true, true, true, true
-            ));
-
-            if (excepts.length() == 0)
-                return generateSuccessMsg(
-                        "excepts", "تمامی موارد به درستی اضافه گردیدند",
-                        p
-                );
-
-            return generateSuccessMsg(
-                    "excepts",
-                    "بجز موارد زیر سایرین به درستی اضافه گردیدند." + excepts,
-                    p
-            );
+            for(ObjectId oId : allUsed.keySet()) {
+                writes.add(new UpdateOneModel<>(
+                        eq("_id", oId),
+                        set("used", allUsed.get(oId))
+                ));
+            }
+            if(writes.size() > 0)
+                questionRepository.bulkWrite(writes);
         }
+        else if(questionsList instanceof Document) {
+            allQuestions.add((Document) questionsList);
+            marks.add(mark);
+            ids.add(((Document) questionsList).getObjectId("_id"));
 
-        Document question = (Document) questionsList;
-
-        ids.add(question.getObjectId("_id"));
-        marks.add(mark);
+            if (can_upload != null)
+                uploadable_list.add(can_upload);
+        }
 
         byte[] answersByte;
 
-        if (questions.containsKey("answers"))
-            answersByte = questions.get("answers", Binary.class).getData();
-        else
-            answersByte = new byte[0];
+        if(!isTashrihi) {
 
-        questions.put("answers",
-                Utility.addAnswerToByteArr(answersByte, question.getString("kind_question"),
-                        question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()) ?
-                                new PairValue(question.getInteger("choices_count"), question.get("answer")) :
-                                question.get("answer")
-                )
-        );
+            if (questions.containsKey("answers"))
+                answersByte = questions.get("answers", Binary.class).getData();
+            else
+                answersByte = new byte[0];
+
+            for(Document question : allQuestions) {
+                questions.put("answers",
+                        Utility.addAnswerToByteArr(answersByte, question.getString("kind_question"),
+                                question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()) ?
+                                        new PairValue(question.getInteger("choices_count"), question.get("answer")) :
+                                        question.get("answer")
+                        )
+                );
+            }
+        }
 
         questions.put("marks", marks);
         questions.put("_ids", ids);
+        quiz.put("questions", questions);
+
+        if(uploadable_list != null)
+            questions.put("uploadable_list", uploadable_list);
 
         db.replaceOne(quiz.getObjectId("_id"), quiz);
-        return "ok";
+
+        if(questionsList instanceof Document)
+            return "ok";
+
+        PairValue p = new PairValue("doneIds", Utilities.convertList(
+                addedItems, true, true, true, true, true
+        ));
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی موارد به درستی اضافه گردیدند",
+                    p
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی اضافه گردیدند." + excepts,
+                p
+        );
+
+
     }
 
     public static String addQuestionToQuizzes(String organizationCode, Common db,
@@ -1552,8 +1576,8 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             long curr = System.currentTimeMillis();
 
-//            if (quiz.containsKey("end") && quiz.getLong("end") > curr)
-//                return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
+            if (quiz.containsKey("end") && quiz.getLong("end") > curr)
+                return generateErr("زمان ساخت نتایج هنوز فرانرسیده است.");
 
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
