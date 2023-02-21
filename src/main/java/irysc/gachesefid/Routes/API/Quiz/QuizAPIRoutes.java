@@ -84,7 +84,7 @@ public class QuizAPIRoutes extends Router {
                                         "duration", // duration is in min format
                                         "showResultsAfterCorrectionNotLoginUsers",
                                         "isRegistrable", "isUploadable",
-                                        "kind", "isQRNeeded"
+                                        "kind", "isQRNeeded", "priority"
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -100,6 +100,7 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Boolean.class,
                                         Boolean.class, Boolean.class,
                                         KindQuiz.class, Boolean.class,
+                                        Positive.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -158,7 +159,9 @@ public class QuizAPIRoutes extends Router {
                                        "descAfter", "desc",
                                        "duration", // duration is in min format
                                        "visibility",
-                                       "showResultsAfterCorrectionNotLoginUsers"
+                                       "showResultsAfterCorrectionNotLoginUsers",
+                                       "isRegistrable", "isUploadable",
+                                       "kind", "isQRNeeded", "priority"
                                },
                                optionalsType = {
                                        String.class, Positive.class, Boolean.class,
@@ -172,7 +175,9 @@ public class QuizAPIRoutes extends Router {
                                        String.class, Boolean.class,
                                        String.class, String.class,
                                        Positive.class, Boolean.class,
-                                       Boolean.class
+                                       Boolean.class, Boolean.class,
+                                       Boolean.class, KindQuiz.class,
+                                       Boolean.class, Positive.class
                                }
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

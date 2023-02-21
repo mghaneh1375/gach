@@ -249,7 +249,7 @@ public abstract class QuizAbstract {
 
             percent *= 100;
 
-            double t = 2000.0 * ((percent - mean) / sd) + 5000;
+            double t = sd == 0 ? 5000 : 2000.0 * ((percent - mean) / sd) + 5000;
 
             if (isForSubject) {
                 subjectTaraz.put(oId, t);

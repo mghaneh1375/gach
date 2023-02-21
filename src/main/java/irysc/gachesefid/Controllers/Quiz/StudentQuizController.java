@@ -197,6 +197,9 @@ public class StudentQuizController {
                     .put("attaches", jsonArray)
                     .put("duration", neededTime);
 
+            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return returnTashrihiQuiz(quiz, stdDoc.getList("answers", Document.class), quizJSON, true, db);
+
             return returnQuiz(quiz, stdDoc, true, quizJSON);
         } catch (Exception x) {
             x.printStackTrace();
@@ -1172,7 +1175,11 @@ public class StudentQuizController {
                 } else
                     question.put("stdAns", stdAnswers.get(idx).getString("answer"));
 
-                question.put("stdMark", isStatNeeded && stdAnswers.get(idx).containsKey("mark") ? stdAnswers.get(idx).get("mark") : -1);
+                if(isStatNeeded && stdAnswers.get(idx).containsKey("mark"))
+                    question.put("stdMark", stdAnswers.get(idx).get("mark"));
+
+                if(isStatNeeded && stdAnswers.get(idx).containsKey("mark_desc") && !stdAnswers.get(idx).getString("mark_desc").isEmpty())
+                    question.put("markDesc", stdAnswers.get(idx).get("mark_desc"));
             }
 
             i++;

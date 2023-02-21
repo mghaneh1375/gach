@@ -38,7 +38,8 @@ public class RegularQuizController extends QuizAbstract {
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price",
             "end", "launchMode", "showResultsAfterCorrection",
-            "showResultsAfterCorrectionNotLoginUsers"
+            "showResultsAfterCorrectionNotLoginUsers",
+            "priority"
     };
 
     private final static String[] forbiddenFields = {
@@ -142,6 +143,7 @@ public class RegularQuizController extends QuizAbstract {
             jsonObject
                     .put("studentsCount", quiz.getInteger("registered"))
                     .put("visibility", quiz.getBoolean("visibility"))
+                    .put("priority", quiz.getInteger("priority"))
                     .put("questionsCount", questionsCount)
                     .put("capacity", quiz.getInteger("capacity"));
         }

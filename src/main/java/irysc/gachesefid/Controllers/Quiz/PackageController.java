@@ -435,7 +435,7 @@ public class PackageController {
                     filtersForQuizzes.add(nin("students._id", userId));
 
                 ArrayList<Document> docs = iryscQuizRepository.find(
-                        and(filtersForQuizzes), null
+                        and(filtersForQuizzes), null, Sorts.ascending("priority")
                 );
 
                 if (!isSchool) {

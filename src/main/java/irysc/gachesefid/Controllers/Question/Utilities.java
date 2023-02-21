@@ -129,6 +129,12 @@ public class Utilities {
                     jsonObject.put("stdAns", doc.get("stdAns"));
             }
 
+            if(doc.containsKey("stdMark"))
+                jsonObject.put("stdMark", doc.get("stdMark"));
+
+            if(doc.containsKey("markDesc"))
+                jsonObject.put("markDesc", doc.get("markDesc"));
+
             if (isDetailNeeded || isAnswerFileNeeded) {
 
                 jsonObject.put("answer", doc.get("answer"))

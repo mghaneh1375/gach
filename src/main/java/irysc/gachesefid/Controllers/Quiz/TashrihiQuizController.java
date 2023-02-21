@@ -1,10 +1,6 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -27,7 +23,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -41,7 +36,7 @@ public class TashrihiQuizController extends QuizAbstract {
             "showResultsAfterCorrection",
             "showResultsAfterCorrectionNotLoginUsers",
             "isUploadable", "isRegistrable",
-            "isQRNeeded"
+            "isQRNeeded", "priority"
     };
 
     private final static String[] forbiddenFields = {
@@ -1206,6 +1201,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     .put("studentsCount", quiz.getInteger("registered"))
                     .put("visibility", quiz.getBoolean("visibility"))
                     .put("questionsCount", questionsCount)
+                    .put("priority", quiz.getInteger("priority"))
                     .put("capacity", quiz.getOrDefault("capacity", 10000));
         }
 
