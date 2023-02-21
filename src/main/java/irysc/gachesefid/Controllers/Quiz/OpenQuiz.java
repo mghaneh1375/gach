@@ -102,7 +102,8 @@ public class OpenQuiz extends QuizAbstract {
 
         if (isAdmin) {
             jsonObject
-                    .put("studentsCount", quiz.getInteger("registered"));
+                    .put("studentsCount", quiz.getInteger("registered"))
+                    .put("priority", quiz.getInteger("priority"));
         }
 
         if(!isDigest || isDescNeeded)
