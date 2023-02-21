@@ -448,7 +448,7 @@ public class PackageController {
                         openQuizFilter.add(nin("students._id", userId));
 
                     docs.addAll(openQuizRepository.find(
-                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.descending("priority")
+                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
                     ));
                 }
 
