@@ -15,7 +15,7 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 public class OpenQuizController {
 
     private final static String[] mandatoryFields = {
-            "price"
+            "price", "priority"
     };
 
     private final static String[] forbiddenFields = {
