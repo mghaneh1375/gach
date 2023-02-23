@@ -24,8 +24,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class PackageController {
 
@@ -455,8 +454,14 @@ public class PackageController {
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
                 TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+                ArrayList<String> allMonth = new ArrayList<>();
 
                 for (Document doc : docs) {
+
+                    String month = getMonthSolarDate(doc.getLong("created_at"));
+
+                    if(!allMonth.contains(month))
+                        allMonth.add(month);
 
                     String backColor = tagsColor.get("default");
 
@@ -508,12 +513,14 @@ public class PackageController {
                         ).put("type", "quiz");
 
                     object.put("backColor", backColor);
+                    object.put("month", month);
                     jsonArray.put(object);
                 }
 
                 HashMap<String, ArrayList<String>> tmpHash = new HashMap<>();
                 tmpHash.put("تگ ها", tags);
                 data.put("tags", tmpHash);
+                data.put("month", allMonth);
             }
         }
 

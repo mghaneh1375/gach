@@ -1,13 +1,8 @@
 package irysc.gachesefid.Utility;
 
 import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import com.mongodb.BasicDBObject;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Kavenegar.KavenegarApi;
 import irysc.gachesefid.Kavenegar.excepctions.ApiException;
@@ -18,7 +13,6 @@ import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -883,6 +877,57 @@ public class Utility {
         String[] dateTime = simpleDateFormat.format(d).split(" ");
         String[] splited = dateTime[0].split("-");
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
+    }
+
+
+    public static String getMonthSolarDate(long time) {
+
+//        if(time < 1610494635)
+//            return "";
+
+        Date d = new Date(time);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        String[] dateTime = simpleDateFormat.format(d).split(" ");
+        String[] splited = dateTime[0].split("-");
+        String y = JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
+
+        String month = y.split("-")[0].replace(" ", "").split("/")[1];
+        switch (month) {
+            case "1":
+            case "01":
+            default:
+                return "فروردین";
+            case "2":
+            case "02":
+                return "اردیبهشت";
+            case "3":
+            case "03":
+                return "خرداد";
+            case "4":
+            case "04":
+                return "تیر";
+            case "5":
+            case "05":
+                return "مرداد";
+            case "6":
+            case "06":
+                return "شهریور";
+            case "7":
+            case "07":
+                return "مهر";
+            case "8":
+            case "08":
+                return "آبان";
+            case "9":
+            case "09":
+                return "آذر";
+            case "10":
+                return "دی";
+            case "11":
+                return "بهمن";
+            case "12":
+                return "اسفند";
+        }
     }
 
     public static String camel(String text, boolean firstLetterCapital) {
