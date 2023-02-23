@@ -891,43 +891,61 @@ public class Utility {
         String[] splited = dateTime[0].split("-");
         String y = JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
 
-        String month = y.split("-")[0].replace(" ", "").split("/")[1];
+        String tmp = y.split("-")[0].replace(" ", "");
+        String month = tmp.split("/")[1];
+        String year = tmp.split("/")[0];
+        String monthLabel;
+
         switch (month) {
             case "1":
             case "01":
             default:
-                return "فروردین";
+                monthLabel = "فروردین";
+                break;
             case "2":
             case "02":
-                return "اردیبهشت";
+                monthLabel = "اردیبهشت";
+                break;
             case "3":
             case "03":
-                return "خرداد";
+                monthLabel = "خرداد";
+                break;
             case "4":
             case "04":
-                return "تیر";
+                monthLabel = "تیر";
+                break;
             case "5":
             case "05":
-                return "مرداد";
+                monthLabel = "مرداد";
+                break;
             case "6":
             case "06":
-                return "شهریور";
+                monthLabel = "شهریور";
+                break;
             case "7":
             case "07":
-                return "مهر";
+                monthLabel = "مهر";
+                break;
             case "8":
             case "08":
-                return "آبان";
+                monthLabel = "آبان";
+                break;
             case "9":
             case "09":
-                return "آذر";
+                monthLabel = "آذر";
+                break;
             case "10":
-                return "دی";
+                monthLabel = "دی";
+                break;
             case "11":
-                return "بهمن";
+                monthLabel = "بهمن";
+                break;
             case "12":
-                return "اسفند";
+                monthLabel = "اسفند";
+                break;
         }
+
+        return monthLabel + " " + year;
     }
 
     public static String camel(String text, boolean firstLetterCapital) {
