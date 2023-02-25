@@ -1,25 +1,34 @@
 package irysc.gachesefid.Routes.API.Admin;
 
 import irysc.gachesefid.Controllers.Notif.NotifController;
+import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.AllKindQuiz;
+import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.NotifVia;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @Controller
 @RequestMapping(path = "/api/notifs/manage")
@@ -72,7 +81,8 @@ public class NotifAPIRoutes extends Router {
     @PostMapping(value = "store")
     @ResponseBody
     public String store(HttpServletRequest request,
-                        @RequestBody @StrongJSONConstraint(
+                        @RequestPart(value = "file", required = false) MultipartFile file,
+                        @RequestPart(value = "json") @StrongJSONConstraint(
                                 params = {"via", "title", "text", "sendSMS", "sendMail"},
                                 paramsType = {
                                         NotifVia.class, String.class, String.class,
@@ -97,7 +107,8 @@ public class NotifAPIRoutes extends Router {
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return NotifController.store(new JSONObject(jsonStr));
+        return NotifController.store(new JSONObject(jsonStr), file);
     }
+
 
 }

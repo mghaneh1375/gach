@@ -49,7 +49,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -111,7 +111,7 @@ public class StaticValues {
             .append("created_at", 1).append("tags", 1)
             .append("duration", 1).append("users", 1)
             .append("final_exam_id", 1).append("price", 1)
-            .append("slug", 1)
+            .append("slug", 1).append("priority", 1)
             .append("sessions_count", 1).append("visibility", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)

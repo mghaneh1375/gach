@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Content;
 
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
@@ -103,7 +104,8 @@ public class StudentContentController {
 
         ArrayList<Document> docs = contentRepository.find(
                 filters.size() == 0 ? null : and(filters),
-                isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST
+                isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST,
+                Sorts.ascending("priority")
         );
 
         if(!isAdmin && filters.size() == 2) {

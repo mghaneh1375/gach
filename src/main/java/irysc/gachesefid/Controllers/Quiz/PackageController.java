@@ -52,6 +52,7 @@ public class PackageController {
         Document newDoc = new Document("title", jsonObject.getString("title"))
                 .append("off_percent", jsonObject.getInt("offPercent"))
                 .append("min_select", jsonObject.getInt("minSelect"))
+                .append("priority", jsonObject.getInt("priority"))
                 .append("description", jsonObject.has("description") ? jsonObject.getString("description") : "")
                 .append("quizzes", new ArrayList<>())
                 .append("grade_id", gradeId)
@@ -100,6 +101,9 @@ public class PackageController {
 
         if (jsonObject.has("offPercent"))
             packageDoc.put("off_percent", jsonObject.getInt("offPercent"));
+
+        if (jsonObject.has("priority"))
+            packageDoc.put("priority", jsonObject.getInt("priority"));
 
         if (jsonObject.has("minSelect"))
             packageDoc.put("min_select", jsonObject.getInt("minSelect"));
@@ -220,6 +224,20 @@ public class PackageController {
                               ObjectId quizIdFilter
     ) {
 
+        if(quizIdFilter != null) {
+
+            Document quiz = iryscQuizRepository.findById(quizIdFilter);
+            if(quiz == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            if(searchInDocumentsKeyValIdx(
+                    quiz.getList("students", Document.class), "_id", userId
+            ) != -1)
+                return generateSuccessMsg("data", new JSONObject()
+                        .put("registered", true)
+                );
+        }
+
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
         boolean isSchool = !isAdmin && accesses != null && Authorization.isSchool(accesses);
 
@@ -240,7 +258,7 @@ public class PackageController {
             ));
 
         ArrayList<Document> packages = quizIdFilter != null ? new ArrayList<>() : packageRepository.find(
-                and(filters), null
+                and(filters), null, Sorts.ascending("priority")
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -251,6 +269,8 @@ public class PackageController {
         ArrayList<String> tags = new ArrayList<>();
         ArrayList<ObjectId> fetched = new ArrayList<>();
         JSONObject data = new JSONObject();
+
+        ArrayList<String> allMonth = new ArrayList<>();
 
         for (Document packageDoc : packages) {
 
@@ -309,6 +329,7 @@ public class PackageController {
             JSONArray quizzesDoc = new JSONArray();
             int totalPrice = 0;
             int registrable = 0;
+            ArrayList<String> packageMonth = new ArrayList<>();
 
             for (ObjectId quizId : quizzes) {
 
@@ -330,6 +351,14 @@ public class PackageController {
                         "_id", userId
                 ) != -1)
                     continue;
+
+                String month = getMonthSolarDate(quiz.getLong("start"));
+
+                if(!packageMonth.contains(month))
+                    packageMonth.add(month);
+
+                if(!allMonth.contains(month))
+                    allMonth.add(month);
 
                 QuizAbstract quizAbstract;
 
@@ -359,6 +388,7 @@ public class PackageController {
                     .put("quizzes", quizzesDoc.length())
                     .put("registrable", registrable)
                     .put("totalPrice", totalPrice)
+                    .put("month", packageMonth)
                     .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
                     .put("quizzesDoc", quizzesDoc);
 
@@ -454,7 +484,7 @@ public class PackageController {
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
                 TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
-                ArrayList<String> allMonth = new ArrayList<>();
+
 
                 for (Document doc : docs) {
 
@@ -573,6 +603,7 @@ public class PackageController {
                     )
                     .put("type", "package")
                     .put("offPercent", packageDoc.getInteger("off_percent"))
+                    .put("priority", packageDoc.getInteger("priority"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
 
             if(lesson != null) {

@@ -921,11 +921,11 @@ public class QuizAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {
                                                 "minSelect", "offPercent",
-                                                "title", "gradeId"
+                                                "title", "gradeId", "priority"
                                         },
                                         paramsType = {
                                                 Positive.class, Positive.class,
-                                                String.class, ObjectId.class,
+                                                String.class, ObjectId.class, Positive.class
                                         },
                                         optionals = {"description", "lessonId"},
                                         optionalsType = {String.class, ObjectId.class}
@@ -945,12 +945,14 @@ public class QuizAPIRoutes extends Router {
                                         optionals = {
                                                 "description", "minSelect",
                                                 "offPercent", "title",
-                                                "gradeId", "lessonId"
+                                                "gradeId", "lessonId",
+                                                "priority"
                                         },
                                         optionalsType = {
                                                 String.class, Positive.class,
                                                 Positive.class, String.class,
-                                                ObjectId.class, ObjectId.class
+                                                ObjectId.class, ObjectId.class,
+                                                Positive.class
                                         }
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

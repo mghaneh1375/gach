@@ -17,6 +17,9 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
 import javax.mail.*;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
@@ -579,6 +582,131 @@ public class Utility {
             String finalSubject = subject;
             String finalTo = to;
             new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", finalTo).append("subject", finalSubject))).start();
+
+        } catch (Exception x) {
+            printException(x);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static HashMap<String, DataSource> mailAttaches = new HashMap<>();
+
+    public static boolean sendMailWithAttach(String to, String msg, String username, String filename) {
+
+//        if (DEV_MODE)
+//            return true;
+
+        Properties prop = new Properties();
+        prop.put("mail.smtp.auth", true);
+        prop.put("mail.smtp.starttls.enable", "false");
+        prop.put("mail.smtp.host", "mail.irysc.com");
+        prop.put("mail.smtp.port", "587");
+
+        try {
+
+            Session session = Session.getInstance(prop, new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(mailUserName, mailPassword);
+                }
+            });
+
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress("noreply@irysc.com", "noreply@irysc.com"));
+            String title = null;
+
+            String subject = "پیام جدید";
+            String[] splited = to.split("___");
+            title = splited[0];
+            to = splited[1];
+
+            message.setRecipients(
+                    Message.RecipientType.TO, InternetAddress.parse(to));
+            message.setSubject(subject);
+
+            MimeBodyPart mimeBodyPart = new MimeBodyPart();
+
+            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
+            html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
+                    "border-color: rgb(255, 102, 0);\n" +
+                    "max-width: 700px;\n" +
+                    "width: 100%;\n" +
+                    "align-self: center;\n" +
+                    "padding: 40px;'>";
+            html += "<div style='\n" +
+                    "clear: both;\n" +
+                    "height: 80px;'>";
+
+            if(title == null)
+                html += "<h3 style='color: rgb(1, 50, 67);\n" +
+                        "font-family: IRANSans;\n" +
+                        "font-size: 20px;\n" +
+                        "margin-top: 20px; float: right;'>" + subject +  "</h3>";
+            else
+                html += "<h3 style='color: rgb(1, 50, 67);\n" +
+                        "font-family: IRANSans;\n" +
+                        "font-size: 20px;\n" +
+                        "margin-top: 20px; float: right;'>" + title +  "</h3>";
+
+
+            html += "<img style='height: 60px;\n" +
+                    "margin-bottom: 20px;\n" +
+                    "width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
+
+            html += "</div>";
+
+            html += "<div style='margin: 20px; font-family: IRANSans; direction: rtl; text-align: right'>";
+            if (username == null)
+                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>";
+            else
+                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
+
+            html += msg;
+            html += "</div>";
+
+            html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
+            html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
+            html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
+            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>تهران، میدان انقلاب، ابتدای خیابان آزادی، بن بست قائم مقام ، پلاک 5 - 02166917230</p>";
+            html += "</div>";
+            html += "</div>";
+
+            mimeBodyPart.setContent(html, "text/html; charset=UTF-8");
+
+            Multipart multipart = new MimeMultipart();
+            multipart.addBodyPart(mimeBodyPart);
+
+            if(filename != null && !filename.isEmpty()) {
+
+                MimeBodyPart messageBodyPart = new MimeBodyPart();
+
+                DataSource source;
+
+                if(mailAttaches.containsKey(filename))
+                    source = mailAttaches.get(filename);
+                else {
+                    String file = FileUtils.uploadDir + "notifs/" + filename;
+                    source = new FileDataSource(file);
+
+                    if(mailAttaches.keySet().size() >= 100)
+                        mailAttaches = new HashMap<>();
+
+                    mailAttaches.put(filename, source);
+                }
+
+                messageBodyPart.setDataHandler(new DataHandler(source));
+                messageBodyPart.setFileName(filename);
+
+                multipart.addBodyPart(messageBodyPart);
+            }
+
+            message.setContent(multipart, "text/html; charset=UTF-8");
+            Transport.send(message);
+
+            String finalTo = to;
+            new Thread(() -> mailRepository.insertOne(new Document("created_at", System.currentTimeMillis()).append("recp", finalTo).append("subject", subject))).start();
 
         } catch (Exception x) {
             printException(x);

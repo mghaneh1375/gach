@@ -382,13 +382,13 @@ public class Jobs implements Runnable {
                 try {
                     Document mail = mails.get(i);
 
-                    if(Utility.sendMail(
+                    if(Utility.sendMailWithAttach(
                             mail.containsKey("title") ?
                                     mail.getString("title") + "___" + mail.getString("mail") :
                                     mail.getString("mail"),
                             (String) mail.getOrDefault("msg", ""),
-                            mail.getString("mode"),
-                            (String) mail.getOrDefault("name", "")
+                            (String) mail.getOrDefault("name", ""),
+                            (String) mail.getOrDefault("attach", "")
                     )) {
                         if(
                                 !mail.getString("mode").equalsIgnoreCase("quizReminder") ||

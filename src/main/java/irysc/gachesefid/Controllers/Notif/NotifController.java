@@ -5,6 +5,7 @@ import com.mongodb.client.model.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.NotifVia;
+import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
@@ -14,7 +15,9 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,13 +63,17 @@ public class NotifController {
             if(n == null)
                 continue;
 
-            jsonArray.put(new JSONObject()
+            JSONObject jsonObject = new JSONObject()
                     .put("id", n.getObjectId("_id").toString())
                     .put("seen", notif.getBoolean("seen"))
                     .put("title", n.getString("title"))
                     .put("desc", n.getString("text"))
-                    .put("createdAt", getSolarDate(n.getLong("created_at")))
-            );
+                    .put("createdAt", getSolarDate(n.getLong("created_at")));
+
+            if(n.containsKey("attach") && !n.getString("attach").isEmpty())
+                jsonObject.put("attach", STATICS_SERVER + "notifs/" + n.getString("attach"));
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -337,7 +344,7 @@ public class NotifController {
         return users;
     }
 
-    public static String store(JSONObject filtersJSON) {
+    public static String store(JSONObject filtersJSON, MultipartFile f) {
 
         BasicDBObject neededFields = new BasicDBObject("_id", 1);
         String sendVia = filtersJSON.getString("via");
@@ -393,15 +400,28 @@ public class NotifController {
         List<WriteModel<Document>> mailWrites = new ArrayList<>();
         List<WriteModel<Document>> smsWrites = new ArrayList<>();
 
+        String attach = null;
+
+        if(users.size() > 0 && f != null)
+            attach = FileUtils.uploadFile(f, "notifs");
+
         for (Document user : users) {
             userIds.add(user.getObjectId("_id"));
             if(sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
                 List<Document> events = user.getList("events", Document.class);
-                events.add(
-                        new Document("created_at", curr)
-                                .append("notif_id", notifId)
-                                .append("seen", false)
-                );
+                if(attach != null)
+                    events.add(
+                            new Document("created_at", curr)
+                                    .append("notif_id", notifId)
+                                    .append("attach", attach)
+                                    .append("seen", false)
+                    );
+                else
+                    events.add(
+                            new Document("created_at", curr)
+                                    .append("notif_id", notifId)
+                                    .append("seen", false)
+                    );
                 writes.add(new UpdateOneModel<>(
                         eq("_id", user.getObjectId("_id")),
                         new BasicDBObject("$set",
@@ -414,17 +434,20 @@ public class NotifController {
                     filtersJSON.getBoolean("sendMail")) && user.containsKey("mail")
             ) {
 
-                mailWrites.add(new InsertOneModel<>(
-                        new Document("mode", "notif")
-                            .append("status", "pending")
-                            .append("notif_id", notifId.toString())
-                            .append("mail", user.getString("mail"))
-                            .append("title", filtersJSON.getString("title"))
-                            .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
-                                    filtersJSON.getString("text") : "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
-                            .append("created_at", curr)
-                            .append("name", user.getString("first_name") + " " + user.getString("last_name"))
-                ));
+                Document d = new Document("mode", "notif")
+                        .append("status", "pending")
+                        .append("notif_id", notifId.toString())
+                        .append("mail", user.getString("mail"))
+                        .append("title", filtersJSON.getString("title"))
+                        .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
+                                filtersJSON.getString("text") : "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
+                        .append("created_at", curr)
+                        .append("name", user.getString("first_name") + " " + user.getString("last_name"));
+
+                if(attach != null)
+                    d.append("attach", attach);
+
+                mailWrites.add(new InsertOneModel<>(d));
             }
 
             if((sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ||
@@ -443,6 +466,9 @@ public class NotifController {
         }
 
         notif.append("users", userIds);
+        if(attach != null)
+            notif.append("attach", attach);
+
         notifRepository.insertOne(notif);
 
         if(mailWrites.size() > 0)
@@ -551,12 +577,16 @@ public class NotifController {
             }
         }
 
-        return generateSuccessMsg("data", new JSONObject()
+        JSONObject jsonObject = new JSONObject()
                 .put("title", notif.getString("title"))
                 .put("desc", notif.getString("text"))
                 .put("oldSeen", oldSeen)
-                .put("createdAt", Utility.getSolarDate(notif.getLong("created_at")))
-        );
+                .put("createdAt", Utility.getSolarDate(notif.getLong("created_at")));
+
+        if(notif.containsKey("attach") && !notif.getString("attach").isEmpty())
+            jsonObject.put("attach", STATICS_SERVER + "notifs/" + notif.getString("attach"));
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
     public static String setSeen(ObjectId id, Document user) {

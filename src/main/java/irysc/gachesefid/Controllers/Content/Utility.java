@@ -55,6 +55,7 @@ public class Utility {
                 .put("price", doc.get("price"))
                 .put("title", doc.get("title"))
                 .put("slug", doc.get("slug"))
+                .put("priority", doc.get("priority"))
                 .put("tags", doc.get("tags"))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
