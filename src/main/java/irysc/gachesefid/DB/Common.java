@@ -418,4 +418,14 @@ public abstract class Common extends Repository {
 
         return jsonArray;
     }
+
+    public JSONArray distinctTagsWithFilter(Bson filter, String key) {
+        DistinctIterable<String> cursor = documentMongoCollection.distinct(key, filter, String.class);
+
+        JSONArray jsonArray = new JSONArray();
+        for (String itr : cursor)
+            jsonArray.put(itr);
+
+        return jsonArray;
+    }
 }

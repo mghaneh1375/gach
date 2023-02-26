@@ -78,7 +78,7 @@ public class Utility {
     }
 
     static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy,
-                              boolean includeFAQ, Document stdDoc, String NID) throws InvalidFieldsException {
+                              boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded) throws InvalidFieldsException {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
@@ -232,16 +232,27 @@ public class Utility {
                 jsonObject.put("finalExamMinMark", doc.get("final_exam_min_mark"));
 
         }
-        else {
+        else
+            jsonObject.put("afterBuy", afterBuy);
+
+        if(isSessionsNeeded) {
+
             List<Document> sessions = doc.getList("sessions", Document.class);
             JSONArray sessionsJSON = new JSONArray();
 
             for (Document session : sessions)
                 sessionsJSON.put(sessionDigest(session, false, afterBuy));
 
-            jsonObject.put("afterBuy", afterBuy);
             jsonObject.put("sessions", sessionsJSON);
         }
+
+        List<Document> chapters = doc.getList("chapters", Document.class);
+        JSONArray chaptersJSON = new JSONArray();
+
+        for (Document chapter : chapters)
+            chaptersJSON.put(chapterDigest(chapter));
+
+        jsonObject.put("chapters", chaptersJSON);
 
         Document config = contentConfigRepository.findBySecKey("first");
         if(config != null) {
@@ -271,6 +282,7 @@ public class Utility {
                 .put("id", doc.getObjectId("_id").toString())
                 .put("title", doc.get("title"))
                 .put("duration", doc.get("duration"))
+                .put("chapter", doc.get("chapter"))
                 .put("price", doc.getOrDefault("price", -1))
                 .put("description", doc.get("description"))
                 .put("attachesCount", attaches.size());
@@ -311,6 +323,15 @@ public class Utility {
 
         return jsonObject;
 
+    }
+
+    static JSONObject chapterDigest(Document doc) {
+        return new JSONObject()
+                .put("title", doc.get("title"))
+                .put("duration", doc.get("duration"))
+                .put("sessions", doc.get("sessions"))
+                .put("price", doc.getOrDefault("price", -1))
+                .put("description", doc.get("desc"));
     }
 
 }

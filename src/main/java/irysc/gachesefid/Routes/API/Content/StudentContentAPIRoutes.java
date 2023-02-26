@@ -136,4 +136,10 @@ public class StudentContentAPIRoutes extends Router {
         return StudentContentController.distinctTags();
     }
 
+
+    @GetMapping(value = "chapters/{id}")
+    @ResponseBody
+    public String chapters(@PathVariable @ObjectIdConstraint ObjectId id) {
+        return StudentContentController.chapters(id);
+    }
 }

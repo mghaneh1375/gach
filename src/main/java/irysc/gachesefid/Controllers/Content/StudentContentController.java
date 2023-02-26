@@ -36,6 +36,25 @@ public class StudentContentController {
         return generateSuccessMsg("data", contentRepository.distinctTags("tags"));
     }
 
+    public static String chapters(ObjectId contentId) {
+
+        Document doc = contentRepository.findById(contentId);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> chapters = (List<Document>) doc.getOrDefault("chapters", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document chapter : chapters) {
+            jsonArray.put(new JSONObject()
+                    .put("title", chapter.getString("title"))
+                    .put("desc", chapter.getString("desc"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String distinctTeachers() {
         return generateSuccessMsg("data", contentRepository.distinctTags("teacher"));
     }
@@ -183,7 +202,7 @@ public class StudentContentController {
 
         try {
             return generateSuccessMsg("data", Utility.convert(
-                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, NID
+                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, true
                     )
             );
         } catch (InvalidFieldsException e) {
@@ -201,9 +220,12 @@ public class StudentContentController {
             return JSON_NOT_VALID_ID;
 
         List<Document> sessions = content.getList("sessions", Document.class);
-        if(irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+
+        Document wantedSession = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                 sessions, "_id", sessionId
-        ) == -1)
+        );
+
+        if(wantedSession == null)
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
@@ -212,6 +234,9 @@ public class StudentContentController {
         ) != -1;
 
         for(Document session : sessions) {
+
+            if(!wantedSession.getString("chapter").equalsIgnoreCase(session.getString("chapter")))
+                continue;
 
             JSONObject jsonObject = Utility.sessionDigest(
                     session, isAdmin, afterBuy
