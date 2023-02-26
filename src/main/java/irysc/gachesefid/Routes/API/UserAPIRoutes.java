@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
+import java.util.List;
+
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -50,6 +52,22 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
+
+            List<Document> users = userRepository.find(null, null);
+            for(Document user : users) {
+
+                if(!user.containsKey("money"))
+                    continue;
+
+                Object money = user.get("money");
+                if(money instanceof Double)
+                    continue;
+
+                Number n = (Number) money;
+                user.put("money", n.doubleValue());
+                userRepository.replaceOne(user.getObjectId("_id"), user);
+            }
+            
 //            09026021609
 //            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
 
