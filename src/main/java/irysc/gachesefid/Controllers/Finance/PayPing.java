@@ -129,7 +129,7 @@ public class PayPing {
                 user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
             }
             else {
-                user.put("money", 0);
+                user.put("money", (double)0);
             }
 
             userRepository.replaceOne(
