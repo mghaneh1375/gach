@@ -197,10 +197,48 @@ public class StudentQuizController {
                     .put("attaches", jsonArray)
                     .put("duration", neededTime);
 
-            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return returnTashrihiQuiz(quiz, stdDoc.getList("answers", Document.class), quizJSON, true, db);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+    }
+
+
+    public static String rate(Common db, ObjectId quizId,
+                              ObjectId userId, int rate
+    ) {
+        try {
+            Document quiz = hasProtectedAccess(db, userId, quizId);
+
+            Document stdDoc = searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            );
+
+            int oldRate = (int)stdDoc.getOrDefault("rate", 0);
+            stdDoc.put("rate", rate);
+
+            double oldTotalRate = (double)quiz.getOrDefault("rate", (double)0);
+            int rateCount = (int)quiz.getOrDefault("rate_count", 0);
+
+            oldTotalRate *= rateCount;
+
+            if(oldRate == 0)
+                rateCount++;
+
+            oldTotalRate -= oldRate;
+            oldTotalRate += rate;
+
+            quiz.put("rate", Math.round(oldTotalRate / rateCount * 100.0) / 100.0);
+            quiz.put("rate_count", rateCount);
+
+            db.replaceOne(quizId, quiz);
+
+            return generateSuccessMsg("data", quiz.get("rate"));
         } catch (Exception x) {
             x.printStackTrace();
             return generateErr(x.getMessage());
@@ -379,6 +417,9 @@ public class StudentQuizController {
                         }
                     }
 
+                    if(studentDoc.containsKey("rate"))
+                        jsonObject.put("stdRate", studentDoc.getInteger("rate"));
+
                     data.put(jsonObject);
                 }
             }
@@ -537,7 +578,7 @@ public class StudentQuizController {
 
             long curr = System.currentTimeMillis();
 
-            if(a.needUpdate)
+            if (a.needUpdate)
                 a.student.put("start_at", a.startAt);
 
             a.student.put("finish_at", curr);
@@ -615,7 +656,7 @@ public class StudentQuizController {
                     .put("responseAt", ansFile.containsKey("response_at") ? getSolarDate(ansFile.getLong("response_at")) : "")
                     .put("msg", ansFile.getOrDefault("msg", ""));
 
-            if(!lastAccepted && ansFile.getString("status").equals("accepted")) {
+            if (!lastAccepted && ansFile.getString("status").equals("accepted")) {
                 jsonObject.put("main", true);
                 lastAccepted = true;
             }
@@ -629,7 +670,7 @@ public class StudentQuizController {
     public static String getMySubmits(Common db, ObjectId quizId,
                                       ObjectId studentId) {
 
-        if(db == null)
+        if (db == null)
             return JSON_NOT_VALID_PARAMS;
 
         try {
@@ -741,7 +782,7 @@ public class StudentQuizController {
             throw new InvalidFieldsException("شما در این آزمون شرکت کرده اید.");
 
         A a = new A(doc, reminder, student, startAt, neededTime);
-        if(student.getOrDefault("start_at", null) == null)
+        if (student.getOrDefault("start_at", null) == null)
             a.setNeedUpdate();
 
         return a;
@@ -1175,10 +1216,10 @@ public class StudentQuizController {
                 } else
                     question.put("stdAns", stdAnswers.get(idx).getString("answer"));
 
-                if(isStatNeeded && stdAnswers.get(idx).containsKey("mark"))
+                if (isStatNeeded && stdAnswers.get(idx).containsKey("mark"))
                     question.put("stdMark", stdAnswers.get(idx).get("mark"));
 
-                if(isStatNeeded && stdAnswers.get(idx).containsKey("mark_desc") && !stdAnswers.get(idx).getString("mark_desc").isEmpty())
+                if (isStatNeeded && stdAnswers.get(idx).containsKey("mark_desc") && !stdAnswers.get(idx).getString("mark_desc").isEmpty())
                     question.put("markDesc", stdAnswers.get(idx).get("mark_desc"));
             }
 

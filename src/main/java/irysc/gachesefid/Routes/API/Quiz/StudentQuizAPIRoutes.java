@@ -13,6 +13,7 @@ import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -125,6 +126,35 @@ public class StudentQuizAPIRoutes extends Router {
         );
 
     }
+
+
+    @PutMapping(value = "rate/{mode}/{quizId}")
+    @ResponseBody
+    public String rate(HttpServletRequest request,
+                       @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                       @PathVariable @ObjectIdConstraint ObjectId quizId,
+                       @RequestBody @StrongJSONConstraint(params = {"rate"}, paramsType = {Positive.class}) String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        if(!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        if(jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
+            return JSON_NOT_VALID_PARAMS;
+
+        return StudentQuizController.rate(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
+                        iryscQuizRepository : openQuizRepository,
+                quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
+        );
+
+    }
+
 
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody

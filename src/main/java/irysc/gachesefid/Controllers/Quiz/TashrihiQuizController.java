@@ -1132,6 +1132,7 @@ public class TashrihiQuizController extends QuizAbstract {
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("isQRNeeded", quiz.getBoolean("is_q_r_needed"))
                 .put("isRegistrable", quiz.getBoolean("is_registrable"))
+                .put("rate", quiz.getOrDefault("rate", 5))
                 .put("id", quiz.getObjectId("_id").toString());
 
         if (quiz.containsKey("start"))

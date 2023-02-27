@@ -81,6 +81,7 @@ public class OpenQuiz extends QuizAbstract {
                 .put("mode", quiz.getString("mode"))
                 .put("generalMode", AllKindQuiz.OPEN.getName())
                 .put("tags", quiz.getList("tags", String.class))
+                .put("rate", quiz.getOrDefault("rate", 5))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
 
