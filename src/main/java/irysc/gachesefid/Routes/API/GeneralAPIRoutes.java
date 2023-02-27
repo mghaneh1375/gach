@@ -96,7 +96,7 @@ public class GeneralAPIRoutes extends Router {
         if (userId != null) {
 
             Document doc = user.get("user", Document.class);
-            doc.put("money", jsonObject.getInt("amount"));
+            doc.put("money", (double)jsonObject.getInt("amount"));
 
             if (jsonObject.has("coin"))
                 doc.put("coin", jsonObject.getNumber("coin").doubleValue());

@@ -409,7 +409,7 @@ public class UserController {
                 .append("first_name", doc.getString("first_name"))
                 .append("last_name", doc.getString("last_name"))
                 .append("NID", doc.getString("NID"))
-                .append("money", config.getInteger("init_money"))
+                .append("money", (double)config.getInteger("init_money"))
                 .append("coin", config.getDouble("init_coin"))
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())

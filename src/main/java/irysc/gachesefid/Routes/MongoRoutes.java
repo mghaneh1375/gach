@@ -66,7 +66,7 @@ public class MongoRoutes extends Router {
                 document.put("last_name", user.cols.get("lastName"));
                 document.put("NID", user.cols.get("NID"));
                 document.put("phone", user.cols.get("phoneNum"));
-                document.put("money", Integer.parseInt(user.cols.get("money").toString()));
+                document.put("money", (double)Integer.parseInt(user.cols.get("money").toString()));
                 document.put("sex", user.cols.get("sex").toString().equals("1") ? Sex.MALE.getName() : Sex.FEMALE.getName());
                 document.put("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")));
                 document.put("events", new ArrayList<>());
