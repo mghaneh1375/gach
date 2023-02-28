@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.CommonController;
+import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -17,6 +18,7 @@ import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.FileUtils;
+import org.apache.xmlbeans.impl.xb.xsdschema.All;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -1263,5 +1265,18 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+
+    @GetMapping(value = "rates/{mode}/{id}")
+    @ResponseBody
+    public String rates(HttpServletRequest request,
+                        @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                        @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return QuizController.rates(mode.equalsIgnoreCase(
+                GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        openQuizRepository, id
+        );
+    }
 }
 

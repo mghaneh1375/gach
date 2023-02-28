@@ -771,6 +771,11 @@ public class QuizController {
             );
         }
 
+        if(student.containsKey("rate")) {
+            jsonObject.put("rate", user.get("rate"))
+                .put("rateAt", getSolarDate((Long) user.getOrDefault("rate_at", System.currentTimeMillis())));
+        }
+
         return jsonObject;
     }
 
@@ -1795,6 +1800,38 @@ public class QuizController {
         return irysc.gachesefid.Utility.Utility.returnRemoveResponse(
                 excepts, removeIds
         );
+    }
+
+
+    public static String rates(Common db, ObjectId quizId) {
+
+        Document quiz = db.findById(quizId);
+
+        if(quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> users = quiz.getList("students", Document.class);
+        JSONArray data = new JSONArray();
+        long curr = System.currentTimeMillis();
+
+        for (Document user : users) {
+
+            if(!user.containsKey("rate"))
+                continue;
+
+            Document std = userRepository.findById(user.getObjectId("_id"));
+            if(std == null)
+                continue;
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("rate", user.get("rate"))
+                    .put("rateAt", getSolarDate((Long) user.getOrDefault("rate_at", curr)));
+
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+            data.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", data);
     }
 
 }

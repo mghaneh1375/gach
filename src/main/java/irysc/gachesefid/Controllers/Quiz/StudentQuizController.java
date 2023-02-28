@@ -221,6 +221,7 @@ public class StudentQuizController {
 
             int oldRate = (int)stdDoc.getOrDefault("rate", 0);
             stdDoc.put("rate", rate);
+            stdDoc.put("rate_at", rate);
 
             double oldTotalRate = (double)quiz.getOrDefault("rate", (double)0);
             int rateCount = (int)quiz.getOrDefault("rate_count", 0);

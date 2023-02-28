@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Content;
 
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -118,8 +119,18 @@ public class StudentContentAPIRoutes extends Router {
 
     @GetMapping(value = "teacherPackages")
     @ResponseBody
-    public String rate(@RequestParam(value = "teacher") @NotBlank String teacher) {
+    public String teacherPackages(@RequestParam(value = "teacher") @NotBlank String teacher) {
         return StudentContentController.teacherPackages(teacher);
+    }
+
+
+    @GetMapping(value = "rates/{id}")
+    @ResponseBody
+    public String rates(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return StudentContentController.rates(id);
     }
 
 

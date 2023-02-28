@@ -221,6 +221,7 @@ public class StudentContentController {
 
         int oldRate = (int)stdDoc.getOrDefault("rate", 0);
         stdDoc.put("rate", rate);
+        stdDoc.put("rate_at", System.currentTimeMillis());
 
         double oldTotalRate = (double)content.getOrDefault("rate", (double)0);
         int rateCount = (int)content.getOrDefault("rate_count", 0);
@@ -665,4 +666,34 @@ public class StudentContentController {
         return StudentQuizController.returnQuiz(quiz, stdDoc, true, quizJSON);
     }
 
+    public static String rates(ObjectId contentId) {
+
+        Document content = contentRepository.findById(contentId);
+
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> users = content.getList("users", Document.class);
+        JSONArray data = new JSONArray();
+        long curr = System.currentTimeMillis();
+
+        for (Document user : users) {
+
+            if(!user.containsKey("rate"))
+                continue;
+
+            Document std = userRepository.findById(user.getObjectId("_id"));
+            if(std == null)
+                continue;
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("rate", user.get("rate"))
+                    .put("rateAt", getSolarDate((Long) user.getOrDefault("rate_at", curr)));
+
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+            data.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", data);
+    }
 }
