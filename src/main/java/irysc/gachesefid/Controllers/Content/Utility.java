@@ -56,6 +56,7 @@ public class Utility {
                 .put("title", doc.get("title"))
                 .put("slug", doc.get("slug"))
                 .put("priority", doc.get("priority"))
+                .put("rate", doc.getOrDefault("rate", 5))
                 .put("tags", doc.get("tags"))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
@@ -86,6 +87,7 @@ public class Utility {
                 .put("teacherBio", doc.getOrDefault("teacher_bio", ""))
                 .put("title", doc.get("title"))
                 .put("slug", doc.get("slug"))
+                .put("rate", doc.getOrDefault("rate", 5))
                 .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("teacher", doc.getString("teacher"))
@@ -117,6 +119,9 @@ public class Utility {
 
         if(doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
+
+        if(afterBuy && stdDoc != null && stdDoc.containsKey("rate"))
+            jsonObject.put("stdRate", stdDoc.get("rate"));
 
         if(afterBuy && doc.containsKey("final_exam_id") && stdDoc != null) {
 
@@ -246,7 +251,7 @@ public class Utility {
             jsonObject.put("sessions", sessionsJSON);
         }
 
-        List<Document> chapters = doc.getList("chapters", Document.class);
+        List<Document> chapters = (List<Document>) doc.getOrDefault("chapters", new ArrayList<>());
         JSONArray chaptersJSON = new JSONArray();
 
         for (Document chapter : chapters)

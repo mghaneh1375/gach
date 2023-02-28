@@ -7,9 +7,9 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
 
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 //    public final static String GACH_SERVER = "http://192.168.43.157:8080/api/";
 
 
@@ -49,7 +49,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -102,7 +102,7 @@ public class StaticValues {
             .append("cert_id", 1).append("img", 1)
             .append("price", 1).append("slug", 1)
             .append("created_at", 1).append("tags", 1)
-            .append("final_exam_id", 1)
+            .append("final_exam_id", 1).append("rate", 1)
             .append("duration", 1).append("sessions_count", 1);
 
     public final static BasicDBObject CONTENT_DIGEST_FOR_ADMIN = new BasicDBObject("_id", 1)

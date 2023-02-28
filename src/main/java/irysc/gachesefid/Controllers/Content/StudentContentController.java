@@ -59,9 +59,23 @@ public class StudentContentController {
         return generateSuccessMsg("data", contentRepository.distinctTags("teacher"));
     }
 
+    public static String teacherPackages(String teacher) {
+
+        List<Document> docs = contentRepository.find(eq("teacher", teacher), CONTENT_DIGEST, Sorts.ascending("priority"));
+        JSONArray data = new JSONArray();
+
+        for (Document doc : docs)
+            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false));
+
+        return generateSuccessMsg("data", data);
+    }
+
     public static String getTeacherBio(String teacher) {
 
-        Document doc = contentRepository.findOne(eq("teacher", teacher), new BasicDBObject("teacher_bio", 1));
+        Document doc = contentRepository.findOne(and(
+                eq("teacher", teacher),
+                eq("visibility", true)
+        ), new BasicDBObject("teacher_bio", 1));
         if(doc == null)
             return generateSuccessMsg("data", "");
 
@@ -187,7 +201,48 @@ public class StudentContentController {
     }
 
 
-    public static String get(boolean isAdmin, ObjectId userId, String slug, String NID) {
+    public static String rate(ObjectId contentId, ObjectId userId, int rate) {
+
+        if(rate <= 0 || rate > 5)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document content = contentRepository.findById(contentId);
+
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        Document stdDoc = searchInDocumentsKeyVal(
+                content.getList("users", Document.class),
+                "_id", userId
+        );
+
+        if(stdDoc == null)
+            return JSON_NOT_ACCESS;
+
+        int oldRate = (int)stdDoc.getOrDefault("rate", 0);
+        stdDoc.put("rate", rate);
+
+        double oldTotalRate = (double)content.getOrDefault("rate", (double)0);
+        int rateCount = (int)content.getOrDefault("rate_count", 0);
+
+        oldTotalRate *= rateCount;
+
+        if(oldRate == 0)
+            rateCount++;
+
+        oldTotalRate -= oldRate;
+        oldTotalRate += rate;
+
+        content.put("rate", Math.round(oldTotalRate / rateCount * 100.0) / 100.0);
+        content.put("rate_count", rateCount);
+
+        contentRepository.replaceOne(contentId, content);
+
+        return generateSuccessMsg("data", content.get("rate"));
+    }
+
+
+    public static String get(boolean isAdmin, ObjectId userId, String slug) {
 
         Document content = contentRepository.findBySecKey(slug);
         if(content == null)

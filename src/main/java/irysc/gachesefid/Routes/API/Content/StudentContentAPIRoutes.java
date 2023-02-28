@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
@@ -98,9 +99,29 @@ public class StudentContentAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.get(isAdmin, user == null ? null : user.getObjectId("_id"),
-                slug, user == null ? null : user.getString("NID")
+                slug
         );
     }
+
+
+    @PutMapping(value = "rate/{id}")
+    @ResponseBody
+    public String rate(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId id,
+                       @RequestBody @StrongJSONConstraint(params = {"rate"}, paramsType = {Positive.class}) String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentContentController.rate(id, getUser(request).getObjectId("_id"),
+                new JSONObject(jsonStr).getInt("rate")
+        );
+    }
+
+
+    @GetMapping(value = "teacherPackages")
+    @ResponseBody
+    public String rate(@RequestParam(value = "teacher") @NotBlank String teacher) {
+        return StudentContentController.teacherPackages(teacher);
+    }
+
 
     @GetMapping(value = "getSessions/{slug}/{sessionId}")
     @ResponseBody
