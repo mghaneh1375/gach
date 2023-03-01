@@ -32,7 +32,7 @@ public class NotifController {
 
         ArrayList<Bson> filter = new ArrayList<>();
         filter.add(eq("send_via", sendVia));
-        ArrayList<Document> docs = notifRepository.find(and(filter), null);
+        ArrayList<Document> docs = notifRepository.find(and(filter), null, Sorts.descending("created_at"));
 
         JSONArray jsonArray = new JSONArray();
         for (Document doc : docs) {

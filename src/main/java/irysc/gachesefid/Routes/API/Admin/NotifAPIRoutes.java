@@ -110,5 +110,35 @@ public class NotifAPIRoutes extends Router {
         return NotifController.store(new JSONObject(jsonStr), file);
     }
 
+    @PostMapping(value = "simpleStore")
+    @ResponseBody
+    public String simpleStore(HttpServletRequest request,
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {"via", "title", "text", "sendSMS", "sendMail"},
+                                      paramsType = {
+                                              NotifVia.class, String.class, String.class,
+                                              Boolean.class, Boolean.class
+                                      },
+                                      optionals = {
+                                              "cities", "states", "nids", "phones",
+                                              "branches", "sex", "schools", "grades",
+                                              "quizzes", "packages", "accesses",
+                                              "minCoin", "maxCoin", "minMoney",
+                                              "maxMoney", "minRank", "maxRank"
+                                      },
+                                      optionalsType = {
+                                              JSONArray.class, JSONArray.class,
+                                              JSONArray.class, JSONArray.class,
+                                              JSONArray.class, Sex.class, JSONArray.class,
+                                              JSONArray.class, JSONArray.class, JSONArray.class,
+                                              JSONArray.class, Number.class, Number.class,
+                                              Positive.class, Positive.class, Positive.class,
+                                              Positive.class
+                                      }
+                              ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return NotifController.store(new JSONObject(jsonStr), null);
+    }
 
 }
