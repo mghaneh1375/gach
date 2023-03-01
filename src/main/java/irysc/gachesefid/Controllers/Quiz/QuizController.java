@@ -722,6 +722,11 @@ public class QuizController {
             );
         }
 
+        if(student.containsKey("rate")) {
+            jsonObject.put("rate", student.get("rate"))
+                    .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
+        }
+
         if (student.containsKey("all_marked"))
             jsonObject.put("allMarked", student.getBoolean("all_marked"));
 

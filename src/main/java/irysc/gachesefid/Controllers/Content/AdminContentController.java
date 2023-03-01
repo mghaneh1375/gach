@@ -44,6 +44,11 @@ public class AdminContentController {
                 .put("id", user.getObjectId("_id").toString())
                 .put("registerAt", getSolarDate(student.getLong("register_at")));
 
+        if(student.containsKey("rate")) {
+            jsonObject.put("rate", student.get("rate"))
+                    .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
+        }
+
         irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
 
         return jsonObject;
