@@ -73,7 +73,7 @@ public class FileUtils {
     }
 
     public static void removeFile(String filename, String folder) {
-        System.out.println(folder + filename);
+
         Path location = Paths.get(DEV_MODE ?
                 uploadDir_dev + folder + File.separator + filename :
                 uploadDir + folder + File.separator + filename

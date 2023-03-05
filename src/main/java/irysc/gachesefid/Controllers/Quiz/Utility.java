@@ -274,7 +274,6 @@ public class Utility {
         while (currIdx < bytes.length) {
 
             // TEST
-
             if (bytes[currIdx] == 0x00) {
 
                 int i = currIdx + 1;
@@ -928,6 +927,7 @@ public class Utility {
                     int s = Integer.parseInt(stdAns);
 
                     PairValue pp = (PairValue) p.getValue();
+
                     if (s > (int) pp.getKey() || s < 0)
                         return JSON_NOT_VALID_PARAMS;
 

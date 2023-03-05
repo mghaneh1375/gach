@@ -46,7 +46,7 @@ public class QuizController {
     public static String getLog(Common db, ObjectId quizId) {
 
         Document quiz = db.findById(quizId);
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
         return generateSuccessMsg("data", new JSONObject()
@@ -267,12 +267,11 @@ public class QuizController {
         for (Document quiz : docs) {
 
             if (db instanceof IRYSCQuizRepository) {
-                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                     quizAbstract = new TashrihiQuizController();
                 else
                     quizAbstract = new RegularQuizController();
-            }
-            else if (db instanceof ContentQuizRepository)
+            } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
             else
                 quizAbstract = new OpenQuiz();
@@ -509,10 +508,10 @@ public class QuizController {
 
                     int marked = 0;
                     for (Document student : students) {
-                        if(student.containsKey("answers")) {
+                        if (student.containsKey("answers")) {
                             List<Document> answers = student.getList("answers", Document.class);
                             Document q = searchInDocumentsKeyVal(answers, "question_id", question.getObjectId("_id"));
-                            if(q != null && q.containsKey("mark"))
+                            if (q != null && q.containsKey("mark"))
                                 marked++;
                         }
                     }
@@ -722,7 +721,7 @@ public class QuizController {
             );
         }
 
-        if(student.containsKey("rate")) {
+        if (student.containsKey("rate")) {
             jsonObject.put("rate", student.get("rate"))
                     .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
         }
@@ -732,21 +731,21 @@ public class QuizController {
 
         boolean hasAccepted = false;
 
-        if(student.containsKey("ans_files")) {
+        if (student.containsKey("ans_files")) {
 
             for (Document itr : student.getList("ans_files", Document.class)) {
-                if(itr.getString("status").equals("accepted")) {
+                if (itr.getString("status").equals("accepted")) {
                     hasAccepted = true;
                     break;
                 }
             }
         }
 
-        if(!hasAccepted && student.containsKey("answers")) {
+        if (!hasAccepted && student.containsKey("answers")) {
 
             List<Document> tmp = student.getList("answers", Document.class);
 
-            if(tmp.size() > 0 && tmp.get(0).containsKey("answer"))
+            if (tmp.size() > 0 && tmp.get(0).containsKey("answer"))
                 hasAccepted = true;
         }
 
@@ -776,9 +775,9 @@ public class QuizController {
             );
         }
 
-        if(student.containsKey("rate")) {
+        if (student.containsKey("rate")) {
             jsonObject.put("rate", student.get("rate"))
-                .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
+                    .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
         }
 
         return jsonObject;
@@ -948,7 +947,7 @@ public class QuizController {
         String prefix = DEV_MODE ? uploadDir_dev + QuestionRepository.FOLDER + "/" :
                 uploadDir + QuestionRepository.FOLDER + "/";
 
-        for (ObjectId qId: ids) {
+        for (ObjectId qId : ids) {
 
             Document questionDoc = questionRepository.findById(qId);
             if (questionDoc == null)
@@ -1088,6 +1087,7 @@ public class QuizController {
         HashMap<ObjectId, Integer> allUsed = new HashMap<>();
         List<Document> allQuestions = new ArrayList<>();
 
+
         if (questionsList instanceof JSONArray) {
 
             JSONArray jsonArray = (JSONArray) questionsList;
@@ -1149,16 +1149,15 @@ public class QuizController {
 
             List<WriteModel<Document>> writes = new ArrayList<>();
 
-            for(ObjectId oId : allUsed.keySet()) {
+            for (ObjectId oId : allUsed.keySet()) {
                 writes.add(new UpdateOneModel<>(
                         eq("_id", oId),
                         set("used", allUsed.get(oId))
                 ));
             }
-            if(writes.size() > 0)
+            if (writes.size() > 0)
                 questionRepository.bulkWrite(writes);
-        }
-        else if(questionsList instanceof Document) {
+        } else if (questionsList instanceof Document) {
             allQuestions.add((Document) questionsList);
             marks.add(mark);
             ids.add(((Document) questionsList).getObjectId("_id"));
@@ -1169,34 +1168,34 @@ public class QuizController {
 
         byte[] answersByte;
 
-        if(!isTashrihi) {
+        if (!isTashrihi) {
 
             if (questions.containsKey("answers"))
                 answersByte = questions.get("answers", Binary.class).getData();
             else
                 answersByte = new byte[0];
 
-            for(Document question : allQuestions) {
-                questions.put("answers",
-                        Utility.addAnswerToByteArr(answersByte, question.getString("kind_question"),
-                                question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()) ?
-                                        new PairValue(question.getInteger("choices_count"), question.get("answer")) :
-                                        question.get("answer")
-                        )
+            for (Document question : allQuestions) {
+                answersByte = Utility.addAnswerToByteArr(answersByte, question.getString("kind_question"),
+                        question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()) ?
+                                new PairValue(question.getInteger("choices_count"), question.get("answer")) :
+                                question.get("answer")
                 );
             }
+
+            questions.put("answers", answersByte);
         }
 
         questions.put("marks", marks);
         questions.put("_ids", ids);
         quiz.put("questions", questions);
 
-        if(uploadable_list != null)
+        if (uploadable_list != null)
             questions.put("uploadable_list", uploadable_list);
 
         db.replaceOne(quiz.getObjectId("_id"), quiz);
 
-        if(questionsList instanceof Document)
+        if (questionsList instanceof Document)
             return "ok";
 
         PairValue p = new PairValue("doneIds", Utilities.convertList(
@@ -1597,7 +1596,7 @@ public class QuizController {
 
                 new Thread(() -> {
 
-                    if(DEV_MODE)
+                    if (DEV_MODE)
                         return;
 
                     ArrayList<ObjectId> userIds = new ArrayList<>();
@@ -1625,8 +1624,7 @@ public class QuizController {
                     }
 
                 }).start();
-            }
-            else {
+            } else {
                 new RegularQuizController().createTaraz(quiz);
 
                 new Thread(() -> {
@@ -1718,10 +1716,10 @@ public class QuizController {
 
         if (db instanceof IRYSCQuizRepository) {
 
-            if (quiz.containsKey("start") &&
-                    quiz.getLong("start") < System.currentTimeMillis()
-            )
-                return generateErr("زمان آزمون موردنظر رسیده است و امکان حذف سوال از آزمون وجود ندارد.");
+//            if (quiz.containsKey("start") &&
+//                    quiz.getLong("start") < System.currentTimeMillis()
+//            )
+//                return generateErr("زمان آزمون موردنظر رسیده است و امکان حذف سوال از آزمون وجود ندارد.");
 
         } else if (db instanceof OpenQuizRepository) {
 
@@ -1812,7 +1810,7 @@ public class QuizController {
 
         Document quiz = db.findById(quizId);
 
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> users = quiz.getList("students", Document.class);
@@ -1821,11 +1819,11 @@ public class QuizController {
 
         for (Document user : users) {
 
-            if(!user.containsKey("rate"))
+            if (!user.containsKey("rate"))
                 continue;
 
             Document std = userRepository.findById(user.getObjectId("_id"));
-            if(std == null)
+            if (std == null)
                 continue;
 
             JSONObject jsonObject = new JSONObject()

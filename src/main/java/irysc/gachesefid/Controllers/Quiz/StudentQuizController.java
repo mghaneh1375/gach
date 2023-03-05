@@ -219,16 +219,16 @@ public class StudentQuizController {
                     "_id", userId
             );
 
-            int oldRate = (int)stdDoc.getOrDefault("rate", 0);
+            int oldRate = (int) stdDoc.getOrDefault("rate", 0);
             stdDoc.put("rate", rate);
             stdDoc.put("rate_at", System.currentTimeMillis());
 
-            double oldTotalRate = (double)quiz.getOrDefault("rate", (double)0);
-            int rateCount = (int)quiz.getOrDefault("rate_count", 0);
+            double oldTotalRate = (double) quiz.getOrDefault("rate", (double) 0);
+            int rateCount = (int) quiz.getOrDefault("rate_count", 0);
 
             oldTotalRate *= rateCount;
 
-            if(oldRate == 0)
+            if (oldRate == 0)
                 rateCount++;
 
             oldTotalRate -= oldRate;
@@ -418,7 +418,7 @@ public class StudentQuizController {
                         }
                     }
 
-                    if(studentDoc.containsKey("rate"))
+                    if (studentDoc.containsKey("rate"))
                         jsonObject.put("stdRate", studentDoc.getInteger("rate"));
 
                     data.put(jsonObject);
@@ -601,7 +601,7 @@ public class StudentQuizController {
                     .put("description", a.quiz.getOrDefault("desc", ""))
                     .put("mode", a.quiz.getString("mode"))
                     .put("attaches", jsonArray)
-                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
+                    .put("refresh", 3) //Math.abs(new Random().nextInt(5)) + 5
                     .put("duration", a.neededTime)
                     .put("reminder", a.reminder)
                     .put("isQRNeeded", a.quiz.getOrDefault("is_q_r_needed", false))
@@ -771,10 +771,11 @@ public class StudentQuizController {
         long startAt = student.containsKey("start_at") && student.get("start_at") != null ?
                 student.getLong("start_at") : curr;
 
-        int delay = doc.containsKey("end") ? Math.max(
-                0,
-                (int) (startAt + neededTime * 1000L - end) / 1000
-        ) : 0;
+        int delay = doc.containsKey("end") ?
+                (startAt + neededTime * 1000L - end) > 0 ? Math.max(
+                        0,
+                        (int) (startAt + neededTime * 1000L - end) / 1000
+                ) : 0 : 0;
 
         int reminder = neededTime -
                 (int) ((curr - startAt) / 1000) - delay;

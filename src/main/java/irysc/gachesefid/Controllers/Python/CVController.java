@@ -63,7 +63,6 @@ public class CVController {
         for (int i = 0; i < total - 1; i++)
             answers.append("-1");
 
-        System.out.println(answers.toString());
         String output = DEV_MODE ? FileUtils.uploadDir_dev + "answer_sheets/" + filename :
                 FileUtils.uploadDir + "answer_sheets/" + filename;
 
