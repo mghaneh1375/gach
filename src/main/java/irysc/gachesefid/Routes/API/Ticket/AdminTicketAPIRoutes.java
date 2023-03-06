@@ -46,6 +46,7 @@ public class AdminTicketAPIRoutes extends Router {
                               @RequestParam(value = "status", required = false) String status,
                               @RequestParam(value = "finisher", required = false) ObjectId finisher,
                               @RequestParam(value = "studentId", required = false) ObjectId studentId,
+                              @RequestParam(value = "refId", required = false) ObjectId refId,
                               @RequestParam(value = "id", required = false) ObjectId id
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
@@ -61,7 +62,7 @@ public class AdminTicketAPIRoutes extends Router {
 
         return TicketController.getRequests(
                 searchInArchive, status,
-                finisher, id, studentId,
+                finisher, id, studentId, refId,
 //                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 isForTeacher, startByAdmin, section, priority

@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
@@ -171,7 +172,8 @@ public class Utilities {
     }
 
     static JSONObject fillJSON(Document request, boolean isStudentNeeded,
-                               boolean isFinisherNeeded, boolean isChatNeeded
+                               boolean isFinisherNeeded, boolean isChatNeeded,
+                               boolean isRefNeeded
     ) throws InvalidFieldsException {
 
         JSONObject result = new JSONObject();
@@ -190,6 +192,15 @@ public class Utilities {
         }
 
         List<Document> chats = request.getList("chats", Document.class);
+
+        if(isRefNeeded && request.containsKey("ref_id")) {
+
+            if(request.getOrDefault("section", "").toString().equalsIgnoreCase(TicketSection.CLASS.getName())) {
+                Document content = contentRepository.findById(request.getObjectId("ref_id"));
+                if(content != null)
+                    result.put("ref", content.getString("title"));
+            }
+        }
 
         result.put("status", request.getString("status"));
         result.put("statusFa", getStatusFa(request.getString("status")));

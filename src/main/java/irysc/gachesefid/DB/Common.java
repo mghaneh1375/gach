@@ -368,6 +368,61 @@ public abstract class Common extends Repository {
         return infos;
     }
 
+    // read only
+    public ArrayList<Document> findByIds(List<Object> objectIds, boolean preserveOrder, Bson project) {
+
+        ArrayList<Document> infos = new ArrayList<>();
+        ArrayList<Document> tmp = new ArrayList<>();
+
+//        if(preserveOrder) {
+//            for(int i = 0; i < objectIds.size(); i++)
+//                infos.add(null);
+//        }
+
+        FindIterable<Document> cursor =
+                documentMongoCollection.find(in("_id", objectIds)).projection(project);
+
+        for (Document doc : cursor)
+            tmp.add(doc);
+
+        for(Object oId : objectIds) {
+
+            boolean find = false;
+            for (Document doc : tmp) {
+                if(doc.getObjectId("_id").equals(oId)) {
+                    infos.add(doc);
+                    find = true;
+                    break;
+                }
+            }
+
+            if(!find)
+                return null;
+        }
+
+        if(1 == 1)
+            return infos;
+
+        if(preserveOrder) {
+            int idx, counter = 0;
+            for (Document doc : cursor) {
+                idx = objectIds.indexOf(doc.getObjectId("_id"));
+                infos.set(idx, doc);
+                counter++;
+            }
+            if(counter != objectIds.size())
+                return null;
+        }
+        else {
+
+        }
+
+        if (infos.size() != objectIds.size())
+            return null;
+
+        return infos;
+    }
+
     public ArrayList<Document> findPreserveOrderWitNull(String key, List<ObjectId> objectIds) {
 
         ArrayList<Document> infos = new ArrayList<>();

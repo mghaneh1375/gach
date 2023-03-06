@@ -4,10 +4,14 @@ import irysc.gachesefid.Controllers.Ticket.TicketController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.TicketPriority;
+import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
+import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -41,7 +45,7 @@ public class StudentTicketAPIRouter extends Router {
 
         return TicketController.getRequests(
                 null, status,
-                null, null, user.getObjectId("_id"),
+                null, null, user.getObjectId("_id"), null,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 null, null, section, priority
         );
@@ -51,14 +55,20 @@ public class StudentTicketAPIRouter extends Router {
     @PostMapping(value = "/submit")
     @ResponseBody
     public String submit(HttpServletRequest request,
-                         @RequestBody @JSONConstraint(
+                         @RequestBody @StrongJSONConstraint(
                                  params = {
                                          "title", "description"
                                  },
+                                 paramsType = {String.class, String.class},
                                  optionals = {
                                          "section", "priority",
-                                         "userId"
-                                 }) String jsonStr
+                                         "userId", "refId", "additional"
+                                 },
+                                 optionalsType = {
+                                         TicketSection.class, TicketPriority.class,
+                                         ObjectId.class, ObjectId.class, String.class
+                                 }
+                         ) String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         JSONObject jsonObject = new JSONObject(jsonStr);
