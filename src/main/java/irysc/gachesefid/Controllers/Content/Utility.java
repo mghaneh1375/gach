@@ -280,6 +280,9 @@ public class Utility {
 
     static JSONObject sessionDigest(Document doc, boolean isAdmin, boolean afterBuy) {
 
+        if(doc == null)
+            return new JSONObject();
+
         List<String> attaches = doc.containsKey("attaches") ? doc.getList("attaches", String.class)
                 : new ArrayList<>();
 
