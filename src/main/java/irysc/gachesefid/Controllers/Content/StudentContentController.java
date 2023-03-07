@@ -123,14 +123,12 @@ public class StudentContentController {
         if(maxDurationFilter != null)
             filters.add(lte("duration", maxDurationFilter));
 
-        if(isAdmin) {
+        if(teacher != null)
+            filters.add(eq("teacher", teacher));
 
+        if(isAdmin) {
             if(visibility != null)
                 filters.add(eq("visibility", visibility));
-
-            if(teacher != null)
-                filters.add(eq("teacher", teacher));
-
         }
 
         JSONArray data = new JSONArray();
@@ -141,7 +139,7 @@ public class StudentContentController {
                 Sorts.ascending("priority")
         );
 
-        if(!isAdmin && filters.size() == 2) {
+        if(!isAdmin && filters.size() <= 2) {
 
             int min = 1000000000;
             int max = -1;
@@ -166,7 +164,7 @@ public class StudentContentController {
                 if(duration > maxDuration)
                     maxDuration = duration;
 
-                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
+                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false));
             }
 
             return generateSuccessMsg("data", data,
@@ -174,14 +172,13 @@ public class StudentContentController {
                     new PairValue("max", max),
                     new PairValue("minDuration", minDuration),
                     new PairValue("maxDuration", maxDuration),
-                    new PairValue("tags", contentRepository.distinctTags("tags"))
+                    new PairValue("tags", contentRepository.distinctTags("tags")),
+                    new PairValue("teachers", contentRepository.distinctTags("teacher"))
             );
         }
 
-        else {
-            for (Document doc : docs)
-                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
-        }
+        for (Document doc : docs)
+            data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
 
         return generateSuccessMsg("data", data);
     }

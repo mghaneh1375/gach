@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Ticket;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.TicketRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -17,8 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 public class Utilities {
@@ -199,6 +199,28 @@ public class Utilities {
                 Document content = contentRepository.findById(request.getObjectId("ref_id"));
                 if(content != null)
                     result.put("ref", content.getString("title"));
+            }
+            else if(request.containsKey("ref_id") && request.getString("section").equalsIgnoreCase(TicketSection.QUIZ.getName()) &&
+                    request.containsKey("additional")
+            ) {
+
+                String additional = request.getString("additional");
+                Document quiz = null;
+                String prefix = "";
+
+                if (additional.equalsIgnoreCase("irysc")) {
+                    quiz = iryscQuizRepository.findById(request.getObjectId("ref_id"));
+                    prefix = "آزمون آیریسک: ";
+                }
+                else if (additional.equalsIgnoreCase("open")) {
+                    quiz = openQuizRepository.findById(request.getObjectId("ref_id"));
+                    prefix = "آزمون باز: ";
+                }
+                else if (additional.equalsIgnoreCase("custom"))
+                    quiz = customQuizRepository.findById(request.getObjectId("ref_id"));
+
+                if(quiz != null)
+                    result.put("ref", prefix + quiz.getString("title"));
             }
         }
 

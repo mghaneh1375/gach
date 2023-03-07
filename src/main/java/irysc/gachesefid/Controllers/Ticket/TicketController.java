@@ -121,7 +121,7 @@ public class TicketController {
                                 .append("status", 1).append("_id", 1)
                                 .append("priority", 1).append("section", 1)
                                 .append("title", 1).append("start_by_admin", 1)
-                                .append("chats", 1).append("ref_id", 1)
+                                .append("chats", 1).append("ref_id", 1).append("additional", 1)
                         ),
                         Sorts.descending("send_date"));
 
@@ -163,6 +163,51 @@ public class TicketController {
 
         JSONArray jsonArray1 = new JSONArray();
 
+        JSONArray allQuizzes = new JSONArray();
+
+        for(String key : refs.keySet()) {
+
+            if(key.equalsIgnoreCase(TicketSection.CLASS.getName()))
+                continue;
+
+            List<Object> list = refs.get(key);
+
+            if(list.size() == 0)
+                continue;
+
+            List<Document> items = null;
+            String prefix = "";
+
+            if (key.equalsIgnoreCase("irysc")) {
+                items = iryscQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
+                prefix = "آزمون آیریسک: ";
+            }
+            else if (key.equalsIgnoreCase("open")) {
+                items = openQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
+                prefix = "آزمون باز: ";
+            }
+            else if (key.equalsIgnoreCase("custom"))
+                items = customQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
+
+            if(items == null)
+                continue;
+
+            for(Document item : items) {
+                allQuizzes.put(new JSONObject()
+                        .put("id", item.getObjectId("_id").toString())
+                        .put("item", prefix + item.getString("title"))
+                );
+            }
+
+        }
+
+        if(allQuizzes.length() > 0)
+            jsonArray1.put(new JSONObject()
+                    .put("key", TicketSection.QUIZ.getName())
+                    .put("list", allQuizzes)
+            );
+
+
         for(String key : refs.keySet()) {
 
             List<Object> list = refs.get(key);
@@ -174,12 +219,6 @@ public class TicketController {
 
             if(key.equalsIgnoreCase(TicketSection.CLASS.getName()))
                 items = contentRepository.findByIds(list, false, new BasicDBObject("title", 1));
-            else if(key.equalsIgnoreCase("irysc"))
-                items = iryscQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
-            else if(key.equalsIgnoreCase("open"))
-                items = openQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
-            else if(key.equalsIgnoreCase("custom"))
-                items = customQuizRepository.findByIds(list, false, new BasicDBObject("title", 1));
 
             if(items == null)
                 continue;

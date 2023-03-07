@@ -159,8 +159,9 @@ public abstract class Common extends Repository {
     public synchronized Document findById(ObjectId id) {
 
         Document cached = isInCache(table, id);
-        if (cached != null)
+        if (cached != null) {
             return cached;
+        }
 
         FindIterable<Document> cursor = documentMongoCollection.find(eq("_id", id));
         if (cursor.iterator().hasNext()) {
