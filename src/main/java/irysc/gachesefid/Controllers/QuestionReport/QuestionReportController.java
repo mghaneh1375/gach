@@ -1,6 +1,5 @@
 package irysc.gachesefid.Controllers.QuestionReport;
 
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -11,6 +10,8 @@ import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.questionReportRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 public class QuestionReportController {
@@ -46,6 +47,7 @@ public class QuestionReportController {
                         .append("priority", jsonObject.getInt("priority"))
                         .append("can_has_desc", jsonObject.getBoolean("canHasDesc"))
                         .append("reports_count", 0)
+                        .append("visibility", true)
                         .append("reports", new ArrayList<>())
         );
     }
@@ -55,12 +57,12 @@ public class QuestionReportController {
         JSONArray doneIds = new JSONArray();
         JSONArray excepts = new JSONArray();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             try {
                 String id = jsonArray.getString(i);
 
-                if(!ObjectId.isValid(id)) {
+                if (!ObjectId.isValid(id)) {
                     excepts.put(i + 1);
                     continue;
                 }
@@ -69,14 +71,13 @@ public class QuestionReportController {
                         eq("_id", new ObjectId(id))
                 );
 
-                if(tmp == null) {
+                if (tmp == null) {
                     excepts.put(i + 1);
                     continue;
                 }
 
                 doneIds.put(id);
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 excepts.put(i + 1);
             }
 
@@ -85,5 +86,27 @@ public class QuestionReportController {
         return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
+    public static String edit(ObjectId id, JSONObject jsonObject) {
+
+        Document doc = questionReportRepository.findById(id);
+        if (doc == null)
+            return JSON_NOT_VALID_ID;
+
+        if (!doc.getString("label").equals(jsonObject.getString("label")) &&
+                questionReportRepository.exist(
+                        eq("label", jsonObject.getString("label"))
+                )
+        )
+            return generateErr("این تگ در سیستم موجود است");
+
+        doc.put("label", jsonObject.getString("label"));
+        doc.put("visibility", jsonObject.getString("visibility"));
+        doc.put("priority", jsonObject.getString("priority"));
+        doc.put("can_has_desc", jsonObject.getString("canHasDesc"));
+
+        questionReportRepository.replaceOne(id, doc);
+
+        return JSON_OK;
+    }
 
 }

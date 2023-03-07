@@ -65,14 +65,14 @@ public class QuestionReportAPIRoutes extends Router {
     public String editTag(HttpServletRequest request,
                           @PathVariable @ObjectIdConstraint ObjectId id,
                           @RequestBody @StrongJSONConstraint(
-                                  params = {"label"},
+                                  params = {"label", "priority", "canHasDesc", "visibility"},
                                   paramsType = {
-                                          String.class
+                                          String.class, Positive.class, Boolean.class, Boolean.class
                                   }
                           ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return AdvisorController.createTag(adviseTagRepository, new JSONObject(jsonStr));
+        return QuestionReportController.edit(id, new JSONObject(jsonStr));
     }
 
 }
