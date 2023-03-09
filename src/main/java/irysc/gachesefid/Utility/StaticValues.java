@@ -47,6 +47,7 @@ public class StaticValues {
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
+    public final static int MAX_ADV_FILE_SIZE = ONE_MB * 6;
 
     public final static boolean LOCAL = true;
     public final static boolean DEV_MODE = false;

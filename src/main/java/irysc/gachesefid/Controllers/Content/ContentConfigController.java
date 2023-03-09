@@ -73,8 +73,8 @@ public class ContentConfigController {
 
     public static String storeAdv(MultipartFile file, JSONObject jsonObject) {
 
-        if (file.getSize() > MAX_FILE_SIZE)
-            return generateErr("حداکثر حجم مجاز، " + MAX_FILE_SIZE + " مگ است.");
+        if (file.getSize() > MAX_ADV_FILE_SIZE)
+            return generateErr("حداکثر حجم مجاز، " + MAX_ADV_FILE_SIZE + " مگ است.");
 
         String fileType = uploadMultimediaFile(file);
 
