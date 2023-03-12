@@ -298,7 +298,7 @@ public class StudentContentController {
                 continue;
 
             JSONObject jsonObject = Utility.sessionDigest(
-                    session, isAdmin, afterBuy, isFree
+                    session, isAdmin, afterBuy, isFree, false
             );
 
             jsonObject.put("selected", session.getObjectId("_id").equals(sessionId));
