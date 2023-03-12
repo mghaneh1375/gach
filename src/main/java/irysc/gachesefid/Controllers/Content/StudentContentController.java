@@ -284,7 +284,7 @@ public class StudentContentController {
         JSONArray jsonArray = new JSONArray();
         List<Document> users = content.getList("users", Document.class);
 
-        boolean afterBuy = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+        boolean afterBuy = userId != null && irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                 users, "_id", userId
         ) != -1;
 
@@ -305,7 +305,7 @@ public class StudentContentController {
             jsonArray.put(jsonObject);
         }
 
-        if(!afterBuy) {
+        if(!afterBuy && userId != null) {
 
             users.add(new Document("_id", userId)
                     .append("paid", 0).append("register_at", System.currentTimeMillis()));
