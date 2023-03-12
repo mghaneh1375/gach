@@ -247,7 +247,7 @@ public class Utility {
 
             for (Document session : sessions) {
                 if(!isAdmin && !afterBuy && !session.getBoolean("visibility")) continue;
-                sessionsJSON.put(sessionDigest(session, false, afterBuy));
+                sessionsJSON.put(sessionDigest(session, false, afterBuy, doc.getInteger("price") == 0));
             }
 
             jsonObject.put("sessions", sessionsJSON);
@@ -280,7 +280,7 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject sessionDigest(Document doc, boolean isAdmin, boolean afterBuy) {
+    static JSONObject sessionDigest(Document doc, boolean isAdmin, boolean afterBuy, boolean isFree) {
 
         if(doc == null)
             return new JSONObject();
@@ -312,7 +312,7 @@ public class Utility {
                     .put("priority", doc.get("priority"))
                     .put("hasVideo", doc.containsKey("video") && doc.get("video") != null);
 
-        if(isAdmin || afterBuy || doc.getInteger("price") == 0) {
+        if(isAdmin || afterBuy || doc.getInteger("price") == 0 || isFree) {
 
             JSONArray attachesJSONArr = new JSONArray();
             for(String itr : attaches)

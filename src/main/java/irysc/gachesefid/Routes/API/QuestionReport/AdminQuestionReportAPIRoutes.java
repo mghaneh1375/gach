@@ -53,6 +53,19 @@ public class AdminQuestionReportAPIRoutes extends Router {
         return QuestionReportController.remove(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
+    @PutMapping(value = "setSeen/{tagId}")
+    @ResponseBody
+    public String setSeen(HttpServletRequest request,
+                          @PathVariable @ObjectIdConstraint ObjectId tagId,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"items"},
+                                  paramsType = {JSONArray.class}
+                          ) String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return QuestionReportController.setSeen(tagId, new JSONObject(jsonStr).getJSONArray("items"));
+    }
+
     @PostMapping(value = "addTag")
     @ResponseBody
     public String addTag(HttpServletRequest request,

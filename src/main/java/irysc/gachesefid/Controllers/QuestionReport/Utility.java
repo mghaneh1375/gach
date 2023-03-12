@@ -8,6 +8,8 @@ public class Utility {
     public static JSONObject convertToJSON(Document doc, Document user) {
 
         JSONObject jsonObject = new JSONObject()
+                .put("id", doc.getObjectId("_id").toString())
+                .put("seen", doc.getBoolean("seen"))
                 .put("createdAt", irysc.gachesefid.Utility.Utility.getSolarDate(doc.getLong("created_at")))
                 .put("questionCode", doc.getString("question_code"))
                 .put("NID", user.get("NID"))

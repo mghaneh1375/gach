@@ -282,9 +282,15 @@ public class StudentContentController {
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
+        List<Document> users = content.getList("users", Document.class);
+
         boolean afterBuy = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                content.getList("users", Document.class), "_id", userId
+                users, "_id", userId
         ) != -1;
+
+        boolean isFree = content.getInteger("price") == 0;
+        if(!afterBuy && !isFree && wantedSession.getInteger("price") > 0)
+            return JSON_NOT_ACCESS;
 
         for(Document session : sessions) {
 
@@ -292,11 +298,19 @@ public class StudentContentController {
                 continue;
 
             JSONObject jsonObject = Utility.sessionDigest(
-                    session, isAdmin, afterBuy
+                    session, isAdmin, afterBuy, isFree
             );
 
             jsonObject.put("selected", session.getObjectId("_id").equals(sessionId));
             jsonArray.put(jsonObject);
+        }
+
+        if(!afterBuy) {
+
+            users.add(new Document("_id", userId)
+                    .append("paid", 0).append("register_at", System.currentTimeMillis()));
+
+            contentRepository.replaceOne(content.getObjectId("_id"), content);
         }
 
         JSONObject data = new JSONObject().put("sessions", jsonArray);

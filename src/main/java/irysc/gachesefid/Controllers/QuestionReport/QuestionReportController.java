@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.QuestionReport;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -9,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
@@ -28,8 +30,10 @@ public class QuestionReportController {
         List<Object> userIds = new ArrayList<>();
         JSONArray data = new JSONArray();
 
-        for (Document report : reports) {
-            userIds.add(report.getObjectId("user_id"));
+        reports.sort(Comparator.comparingLong(o -> o.getLong("created_at")));
+
+        for (int i = reports.size() - 1; i >= 0; i--) {
+            userIds.add(reports.get(i).getObjectId("user_id"));
         }
 
         List<Document> users = userRepository.findByIds(userIds, true,
@@ -40,12 +44,10 @@ public class QuestionReportController {
         if(users == null)
             return JSON_NOT_UNKNOWN;
 
-        int idx = 0;
-        for(Document report : reports) {
+        for (int i = reports.size() - 1; i >= 0; i--) {
             data.put(
-                    irysc.gachesefid.Controllers.QuestionReport.Utility.convertToJSON(report, users.get(idx))
+                    irysc.gachesefid.Controllers.QuestionReport.Utility.convertToJSON(reports.get(i), users.get(i))
             );
-            idx++;
         }
 
         return generateSuccessMsg("data", data);
@@ -63,6 +65,8 @@ public class QuestionReportController {
                 jsonArray.put(new JSONObject()
                         .put("id", tag.getObjectId("_id").toString())
                         .put("label", tag.getString("label"))
+                        .put("reportsCount", tag.getInteger("reports_count"))
+                        .put("unseenReportsCount", tag.getInteger("unseen_reports_count"))
                         .put("canHasDesc", tag.getBoolean("can_has_desc"))
                         .put("visibility", tag.getBoolean("visibility"))
                         .put("priority", tag.getInteger("priority"))
@@ -95,6 +99,7 @@ public class QuestionReportController {
                         .append("priority", jsonObject.getInt("priority"))
                         .append("can_has_desc", jsonObject.getBoolean("canHasDesc"))
                         .append("reports_count", 0)
+                        .append("unseen_reports_count", 0)
                         .append("visibility", jsonObject.getBoolean("visibility"))
                         .append("reports", new ArrayList<>())
         );
@@ -134,6 +139,62 @@ public class QuestionReportController {
         return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
+    public static String setSeen(ObjectId tagId, JSONArray jsonArray) {
+
+        Document tag = questionReportRepository.findById(tagId);
+        if(tag == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray doneIds = new JSONArray();
+        JSONArray excepts = new JSONArray();
+
+        List<Document> reports = tag.getList("reports", Document.class);
+        int dec = 0;
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            try {
+                String id = jsonArray.getString(i);
+
+                if (!ObjectId.isValid(id)) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                Document tmp = searchInDocumentsKeyVal(reports, "_id", new ObjectId(id));
+
+                if (tmp == null) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                tmp.put("seen", false);
+                dec++;
+                doneIds.put(id);
+            } catch (Exception x) {
+                excepts.put(i + 1);
+            }
+
+        }
+
+        if(dec > 0) {
+            tag.put("unseen_reports_count", tag.getInteger("unseen_reports_count") - dec);
+            questionReportRepository.replaceOne(tagId, tag);
+        }
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی موارد به درستی تغییر وضعیت پیدا کردند",
+                    new PairValue("doneIds", doneIds)
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی تغییر وضعیت پیدا کردند" + excepts,
+                new PairValue("doneIds", doneIds)
+        );
+    }
+
     public static String storeReport(ObjectId userId, ObjectId questionId,
                                      ObjectId tagId, String desc) {
 
@@ -155,13 +216,17 @@ public class QuestionReportController {
             return generateErr("شما قبلا این سوال را با این تگ گزارش کرده اید");
 
         Document newDoc = new Document("user_id", userId)
+                .append("_id", new ObjectId())
                 .append("created_at", System.currentTimeMillis())
+                .append("seen", false)
                 .append("question_code", question.getString("organization_id"));
 
         if(desc != null)
             newDoc.put("description", desc);
 
         reports.add(newDoc);
+        tag.put("unseen_reports_count", tag.getInteger("unseen_reports_count") + 1);
+        tag.put("reports_count", tag.getInteger("reports_count") + 1);
         questionReportRepository.replaceOne(tagId, tag);
 
         return JSON_OK;
