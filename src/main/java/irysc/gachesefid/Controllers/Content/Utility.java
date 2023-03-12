@@ -224,6 +224,7 @@ public class Utility {
 
         if(isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
+                    .put("priority", doc.getBoolean("priority"))
                     .put("finalExamMinMark", doc.getOrDefault("final_exam_min_mark", -1))
                     .put("buyers", doc.getList("users", Document.class).size());
 
