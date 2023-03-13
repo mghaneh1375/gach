@@ -402,6 +402,22 @@ public class StudentContentController {
         }
 
         double shouldPayDouble = content.getInteger("price") * 1.0;
+
+        if(content.containsKey("off")) {
+
+            if(content.getLong("off_start") <= curr && content.getLong("off_expiration") >= curr) {
+
+                int val = content.getInteger("off");
+                String type = content.getString("off_type");
+
+                int offAmount = type.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()) ?
+                        (content.getInteger("price") * val) / 100 : val;
+
+                shouldPayDouble -= offAmount;
+            }
+
+        }
+
         double offAmount = 0;
 
         if(off != null) {

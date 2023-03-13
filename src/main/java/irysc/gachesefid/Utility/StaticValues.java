@@ -113,6 +113,8 @@ public class StaticValues {
             .append("price", 1).append("slug", 1)
             .append("created_at", 1).append("tags", 1)
             .append("final_exam_id", 1).append("rate", 1)
+            .append("off_type", 1).append("off", 1)
+            .append("off_start", 1).append("off_expiration", 1)
             .append("duration", 1).append("sessions_count", 1);
 
     public final static BasicDBObject CONTENT_DIGEST_FOR_ADMIN = new BasicDBObject("_id", 1)
