@@ -146,7 +146,7 @@ public class UserAPIRoutes extends Router {
         }
 
         while (true) {
-            String code = "ir-" + Utility.simpleRandomString(3).replace("_", "-") + Utility.getRandIntForGift(10000);
+            String code = "ir-" + Utility.simpleRandomString(3).replace("_", "") + Utility.getRandIntForGift(1000);
             JSONObject data = new JSONObject()
                     .put("name", System.currentTimeMillis() + "_" + user.getObjectId("_id").toString())
                     .put("code", code)
