@@ -146,7 +146,7 @@ public class UserAPIRoutes extends Router {
         }
 
         while (true) {
-            String code = "ir-" + Utility.simpleRandomString(2) + Utility.getRandIntForGift(10000);
+            String code = "ir-" + Utility.simpleRandomString(3).replace("_", "-") + Utility.getRandIntForGift(10000);
             JSONObject data = new JSONObject()
                     .put("name", System.currentTimeMillis() + "_" + user.getObjectId("_id").toString())
                     .put("code", code)
@@ -167,13 +167,14 @@ public class UserAPIRoutes extends Router {
 
                         if(mode.equalsIgnoreCase("charge")) {
                             double mainMoney = ((Number) (user.get("money"))).doubleValue();
-                            user.put("money", mainMoney - jsonObject.getInt("amount"));
+                            user.put("money", (mainMoney - jsonObject.getInt("amount") * 100.0) / 100.0);
                         }
                         else {
                             double coin = ((Number) (user.get("coin"))).doubleValue();
-                            user.put("coin", coin - jsonObject.getDouble("amount"));
+                            user.put("coin", (coin - jsonObject.getDouble("amount") * 100.0) / 100.0);
                         }
-                        
+
+                        userRepository.replaceOne(user.getObjectId("_id"), user);
                         return generateSuccessMsg("data", code);
                     }
 
