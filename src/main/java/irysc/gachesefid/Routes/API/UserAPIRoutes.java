@@ -59,30 +59,6 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-            JSONObject jsonObject = new JSONObject()
-                    .put("name", "asdqw")
-                    .put("code", "2132ds")
-                    .put("discount", 10000)
-                    .put("type", "F")
-                    .put("token", token);
-
-            try {
-
-                HttpResponse<String> jsonResponse = Unirest.post("https://shop.irysc.com/index.php?route=extension/total/coupon/add_coupon_api")
-                        .header("accept", "application/json")
-                        .header("content-type", "application/json")
-                        .body(jsonObject).asString();
-
-                if(jsonResponse.getStatus() == 200) {
-                    System.out.println(jsonResponse.getBody());
-//                    System.out.println(jsonResponse.getBody().getObject());
-                }
-
-            } catch (UnirestException e) {
-                e.printStackTrace();
-            }
-
-
 //
 //            List<Document> users = userRepository.find(null, null);
 //            for(Document user : users) {
@@ -131,6 +107,59 @@ public class UserAPIRoutes extends Router {
         return "s";
     }
 
+    @PostMapping(value = "/createOpenCardOff")
+    @ResponseBody
+    public String createOpenCardOff(HttpServletRequest request,
+                                    @StrongJSONConstraint(
+                                            params = {"amount"},
+                                            paramsType = {Positive.class}
+                                    ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+
+        Document user = getUser(request);
+        JSONObject jsonObject = new JSONObject(jsonStr);
+
+        double mainMoney = ((Number)(user.get("money"))).doubleValue();
+        int money = (int) mainMoney;
+
+        if(jsonObject.getInt("amount") > money)
+            return generateErr("حداکثر مقدار قابل تبدیل برای شما " + money + " می باشد.");
+
+        while (true) {
+            String code = "ir-" + Utility.simpleRandomString(2) + Utility.getRandIntForGift(10000);
+            JSONObject data = new JSONObject()
+                    .put("name", System.currentTimeMillis() + "_" + user.getObjectId("_id").toString())
+                    .put("code", code)
+                    .put("discount", jsonObject.getInt("amount"))
+                    .put("type", "F")
+                    .put("token", token);
+
+            try {
+
+                HttpResponse<String> jsonResponse = Unirest.post("https://shop.irysc.com/index.php?route=extension/total/coupon/add_coupon_api")
+                        .header("accept", "application/json")
+                        .header("content-type", "application/json")
+                        .body(data).asString();
+
+                if (jsonResponse.getStatus() == 200) {
+                    String res = jsonResponse.getBody();
+                    if (res.equals("ok")) {
+                        user.put("money", mainMoney - jsonObject.getInt("amount"));
+                        return generateSuccessMsg("data", code);
+                    }
+
+                    if (!res.equals("nok4"))
+                        return generateErr(JSON_NOT_UNKNOWN);
+                }
+
+            } catch (UnirestException e) {
+                return generateErr(e.getMessage());
+            }
+        }
+
+
+
+    }
 
     @PostMapping(value = "clearCache/{table}")
     @ResponseBody
