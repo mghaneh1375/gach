@@ -167,19 +167,21 @@ public class UserAPIRoutes extends Router {
 
                         if(mode.equalsIgnoreCase("charge")) {
                             double mainMoney = ((Number) (user.get("money"))).doubleValue();
-                            user.put("money", (mainMoney - jsonObject.getInt("amount") * 100.0) / 100.0);
+                            user.put("money", ((mainMoney - jsonObject.getInt("amount")) * 100.0) / 100.0);
                         }
                         else {
                             double coin = ((Number) (user.get("coin"))).doubleValue();
-                            user.put("coin", (coin - jsonObject.getDouble("amount") * 100.0) / 100.0);
+                            user.put("coin", ((coin - jsonObject.getDouble("amount")) * 100.0) / 100.0);
                         }
 
                         userRepository.replaceOne(user.getObjectId("_id"), user);
                         return generateSuccessMsg("data", code);
                     }
 
-                    if (!res.equals("nok4"))
-                        return generateErr(JSON_NOT_UNKNOWN);
+                    if (!res.equals("nok4")) {
+                        System.out.println(res);
+                        return JSON_NOT_UNKNOWN;
+                    }
                 }
 
             } catch (UnirestException e) {
