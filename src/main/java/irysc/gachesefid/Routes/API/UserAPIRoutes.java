@@ -15,6 +15,7 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Digit;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
@@ -110,27 +111,46 @@ public class UserAPIRoutes extends Router {
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody
     public String createOpenCardOff(HttpServletRequest request,
-                                    @StrongJSONConstraint(
-                                            params = {"amount"},
-                                            paramsType = {Positive.class}
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {"amount", "mode"},
+                                            paramsType = {Number.class, String.class}
                                     ) @NotBlank String jsonStr
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
         JSONObject jsonObject = new JSONObject(jsonStr);
+        String mode = jsonObject.getString("mode");
 
-        double mainMoney = ((Number)(user.get("money"))).doubleValue();
-        int money = (int) mainMoney;
+        if(!mode.equalsIgnoreCase("charge") && !mode.equalsIgnoreCase("coin"))
+            return JSON_NOT_VALID_PARAMS;
 
-        if(jsonObject.getInt("amount") > money)
-            return generateErr("حداکثر مقدار قابل تبدیل برای شما " + money + " می باشد.");
+        int amount;
+
+        if(mode.equalsIgnoreCase("charge")) {
+            double mainMoney = ((Number) (user.get("money"))).doubleValue();
+            int money = (int) mainMoney;
+            amount = jsonObject.getInt("amount");
+
+            if (amount > money)
+                return generateErr("حداکثر مقدار قابل تبدیل برای شما " + money + " می باشد.");
+        }
+        else {
+
+            double coin = ((Number) (user.get("coin"))).doubleValue();
+
+            if (jsonObject.getDouble("amount") > coin)
+                return generateErr("حداکثر مقدار قابل تبدیل برای شما " + coin + " می باشد.");
+
+            Document doc = Utility.getConfig();
+            amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getDouble("amount"));
+        }
 
         while (true) {
             String code = "ir-" + Utility.simpleRandomString(2) + Utility.getRandIntForGift(10000);
             JSONObject data = new JSONObject()
                     .put("name", System.currentTimeMillis() + "_" + user.getObjectId("_id").toString())
                     .put("code", code)
-                    .put("discount", jsonObject.getInt("amount"))
+                    .put("discount", amount)
                     .put("type", "F")
                     .put("token", token);
 
@@ -144,7 +164,16 @@ public class UserAPIRoutes extends Router {
                 if (jsonResponse.getStatus() == 200) {
                     String res = jsonResponse.getBody();
                     if (res.equals("ok")) {
-                        user.put("money", mainMoney - jsonObject.getInt("amount"));
+
+                        if(mode.equalsIgnoreCase("charge")) {
+                            double mainMoney = ((Number) (user.get("money"))).doubleValue();
+                            user.put("money", mainMoney - jsonObject.getInt("amount"));
+                        }
+                        else {
+                            double coin = ((Number) (user.get("coin"))).doubleValue();
+                            user.put("coin", coin - jsonObject.getDouble("amount"));
+                        }
+                        
                         return generateSuccessMsg("data", code);
                     }
 
