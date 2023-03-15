@@ -145,6 +145,9 @@ public class UserAPIRoutes extends Router {
             amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getDouble("amount"));
         }
 
+        if(amount > 500000 || amount < 40000)
+           return generateErr("حداکثر تخفیف ۵۰۰۰۰۰ و حداقل ۴۰۰۰۰ تومان می باشد.");
+
         while (true) {
             String code = "ir-" + Utility.simpleRandomString(3).replace("_", "") + Utility.getRandIntForGift(1000);
             JSONObject data = new JSONObject()
