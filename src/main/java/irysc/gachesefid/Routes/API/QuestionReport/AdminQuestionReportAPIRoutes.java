@@ -1,6 +1,5 @@
-package irysc.gachesefid.Routes.API.Admin;
+package irysc.gachesefid.Routes.API.QuestionReport;
 
-import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.QuestionReport.QuestionReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -19,19 +18,27 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
-import static irysc.gachesefid.Main.GachesefidApplication.adviseTagRepository;
 
 @Controller
 @RequestMapping(path = "/api/questionReport/manage")
 @Validated
-public class QuestionReportAPIRoutes extends Router {
+public class AdminQuestionReportAPIRoutes extends Router {
+
+    @GetMapping(value = "getReports/{tagId}")
+    @ResponseBody
+    public String getReports(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId tagId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return QuestionReportController.getReports(tagId);
+    }
 
     @GetMapping(value = "getAllTags")
     @ResponseBody
     public String getAllTags(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return QuestionReportController.getAllTags();
+        return QuestionReportController.getAllTags(true);
     }
 
     @DeleteMapping(value = "remove")
@@ -46,13 +53,26 @@ public class QuestionReportAPIRoutes extends Router {
         return QuestionReportController.remove(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
+    @PutMapping(value = "setSeen/{tagId}")
+    @ResponseBody
+    public String setSeen(HttpServletRequest request,
+                          @PathVariable @ObjectIdConstraint ObjectId tagId,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"items"},
+                                  paramsType = {JSONArray.class}
+                          ) String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return QuestionReportController.setSeen(tagId, new JSONObject(jsonStr).getJSONArray("items"));
+    }
+
     @PostMapping(value = "addTag")
     @ResponseBody
     public String addTag(HttpServletRequest request,
                          @RequestBody @StrongJSONConstraint(
-                                 params = {"label", "priority", "canHasDesc"},
+                                 params = {"label", "priority", "visibility", "canHasDesc"},
                                  paramsType = {
-                                         String.class, Positive.class, Boolean.class
+                                         String.class, Positive.class, Boolean.class, Boolean.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

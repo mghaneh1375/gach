@@ -1,5 +1,9 @@
 package irysc.gachesefid.Routes.API;
 
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
@@ -11,6 +15,7 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Digit;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
@@ -47,26 +52,29 @@ public class UserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
+    private static String token = "LYqPozxUPrpDVAxqBs7vXp1knTnEgEYUrnbpqKtggn1DHDQofCn=?aAdh6Mo/5I8qTcJSkAQppUCB/pzfD2G-0PNkl-R3Ub42BAv4QHFUlWgAfu6SwyRH!O3jUF426jw33EMCGJmYWSApEbCg?t4dRGowUX-ixRMUjqoCF/6s8IcyTQHtOYK9OD/xBGKjq/yzA/AEfz6xP3A7k-CBElUbTRU=3WyZaOjZnANV6EUE3PiK9g-5XKvos-qPP?Pcau=o8li6fDopR/L1ccV9SHlGEGxIMM7V5ZyKCKgxbc4J7lx0nyd0DCI?ddiWHXqAYbe2!oIZT-o4pEdJF2IVYj-jpyJI?VOwMrVR4P-4hrj2fyvW5fFhlgrpBVe6CpwGYdmcx7QxMyjwb5vAh!1tDM=jcVP/AL2a-JzbdtGhYCgkbxexHoZYFjV5goTGjTMXB?yQJrn!ABGC?BYV0B59NNi!0n/u/tbIqTant-FixPJ5otO4h6278ZHpiL9llIg9t0Rk3Sym=fnhEkE4GkfaM6jVTMaSC2iVc9jMg2ug2pXoK1NMaNA/LW77kiJTfrmnobzbPSK7fX84Klk7QtE53i-CdD=a=gB2NnWXKwqX7dic=S289OeaNlP705GZ9-6wvF!HvFTBtlyckzaAVXR2zjip7JLTvnwqrIWKd=P3Hs/!r3Rdmp7OTJgYw85Wq4dIX=Aa/lAc77n0wRyQ5AtaocYAYhstBoF2U96QTcUofNWOn1j6hJAUhboqd99L2dWykVtreRi7E7PYWNef1qrV/yUQbPKaNH4EKvppN03D3Rd1iCq1Kq8N=5ayyx=hOvrvqZ3EoT-x3RA-CY7m0i452xbKSP4nJLzT-/t!uB1/VlxDUoK8XdoGMZo0DMjUWbV8t5j9Kk/w7ta5vcPELszuqA-JkAnDlly?Tg=XBnbhJEyUTndjXrW3Y09BLn/hS7dcF2pU7Az6OleSnuMWGcBO2qPtwrUf2EgcwgPrqG4EwWzdx5IfeoKSbhC?BKi-mFcBV/bv!mnSZi7?BiLG?e1srXRJx?uY??lFXf3B2Lh-?R?d2BB7PV0x!UPgqwnRLCc8noaw0dqbrl6ab7U?Sl7CGlS2R4oeDIM=?jWBUL659cYQ/SdKJ-0xw9jWGWo?fx?qUzwbnrDgPvls2PdWot9ybfuuBJU7Kh2EgW?DbYBaU8MSfqnMLxTD1GKWVIGBFhCL-6n=oczCtLObrwz3j1g15ua2Igiuhf4s?LaRGtB1nFgD3q!5DRsye6IFK15PCS-TaQGFcNSXvh8woN4cOfSWhslDTKrlY5oiZN05qWu25?FI-2gWekEFKuZw3dMPIohxA2wlnx4ILk9Q6Y0iacefvPUm=zMHFot8jP5mFgZoLQRha-Q=6Xvl2ooUlqSdwMi83uoSfJgKAdMK2fa=NP?BT1vOdraDGZoXlQFmL4=2?FnN3Pa8iXVp/ZpNJ?DXnhGzsa624PkH5!HhsBS=YD?9qsX6y=XILOhuGrwub?sokmEVK0IKzd0AvHVpD1m96nlwXqO1KXmPjUodjBiZb/RQHH0?JzjydqV-AQmAdBWM-nel/In8wpRqkqsOHq!l5B6eNlCbqVjVB-?y8PHPorDL0?C1a9z0p7befPM?RaRD9Y127EWyqFgsrSzMJ-!chcC0CtKebR5uiopTQM=eI1jsiiXI5KNB7gIj95tGP=TcWy=HSr6mmfEhw1mUky-7!5m9ZUxYl9ghU6AvCQ!Yl?piMJZyYVVsrz07dELveO6pppGu0hEZ8qL-yfL2fGeR6MmCWdEsAkGg4cfTzQRp3?wfSAtziJ-49=U3XA7E?QS4hA?ZInmx!vTAFN?VvMDgg1LC9xzj8l2Dkzz?!=3TYHRLfAJVvgBBhS!WJkJSscQia-QEBAeKwe0347X6uwefT?0bo!9=iP0/vWgSF-DQ0=WgT/yARdniodePw!T-CAZlF1bfU/Z1O!RFJ2hunLYkdFWNyoepO?bFMCAV6h3hEhjSZkxtQy?fiV-BtX!Sh?-?jZBOa4Cecjj0eqaXehVB!G8WZEu";
+
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
 
         if (1 == 1) {
 
-            List<Document> users = userRepository.find(null, null);
-            for(Document user : users) {
-
-                if(!user.containsKey("money"))
-                    continue;
-
-                Object money = user.get("money");
-                if(money instanceof Double)
-                    continue;
-
-                Number n = (Number) money;
-                user.put("money", n.doubleValue());
-                userRepository.replaceOne(user.getObjectId("_id"), user);
-            }
+//
+//            List<Document> users = userRepository.find(null, null);
+//            for(Document user : users) {
+//
+//                if(!user.containsKey("money"))
+//                    continue;
+//
+//                Object money = user.get("money");
+//                if(money instanceof Double)
+//                    continue;
+//
+//                Number n = (Number) money;
+//                user.put("money", n.doubleValue());
+//                userRepository.replaceOne(user.getObjectId("_id"), user);
+//            }
 
 //            09026021609
 //            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
@@ -100,6 +108,93 @@ public class UserAPIRoutes extends Router {
         return "s";
     }
 
+    @PostMapping(value = "/createOpenCardOff")
+    @ResponseBody
+    public String createOpenCardOff(HttpServletRequest request,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {"amount", "mode"},
+                                            paramsType = {Number.class, String.class}
+                                    ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+
+        Document user = getUser(request);
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        String mode = jsonObject.getString("mode");
+
+        if(!mode.equalsIgnoreCase("charge") && !mode.equalsIgnoreCase("coin"))
+            return JSON_NOT_VALID_PARAMS;
+
+        int amount;
+
+        if(mode.equalsIgnoreCase("charge")) {
+            double mainMoney = ((Number) (user.get("money"))).doubleValue();
+            int money = (int) mainMoney;
+            amount = jsonObject.getInt("amount");
+
+            if (amount > money)
+                return generateErr("حداکثر مقدار قابل تبدیل برای شما " + money + " می باشد.");
+        }
+        else {
+
+            double coin = ((Number) (user.get("coin"))).doubleValue();
+
+            if (jsonObject.getDouble("amount") > coin)
+                return generateErr("حداکثر مقدار قابل تبدیل برای شما " + coin + " می باشد.");
+
+            Document doc = Utility.getConfig();
+            amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getDouble("amount"));
+        }
+
+        if(amount > 500000 || amount < 40000)
+           return generateErr("حداکثر تخفیف ۵۰۰۰۰۰ و حداقل ۴۰۰۰۰ تومان می باشد.");
+
+        while (true) {
+            String code = "ir-" + Utility.simpleRandomString(3).replace("_", "") + Utility.getRandIntForGift(1000);
+            JSONObject data = new JSONObject()
+                    .put("name", System.currentTimeMillis() + "_" + user.getObjectId("_id").toString())
+                    .put("code", code)
+                    .put("discount", amount)
+                    .put("type", "F")
+                    .put("token", token);
+
+            try {
+
+                HttpResponse<String> jsonResponse = Unirest.post("https://shop.irysc.com/index.php?route=extension/total/coupon/add_coupon_api")
+                        .header("accept", "application/json")
+                        .header("content-type", "application/json")
+                        .body(data).asString();
+
+                if (jsonResponse.getStatus() == 200) {
+                    String res = jsonResponse.getBody();
+                    if (res.equals("ok")) {
+
+                        if(mode.equalsIgnoreCase("charge")) {
+                            double mainMoney = ((Number) (user.get("money"))).doubleValue();
+                            user.put("money", ((mainMoney - jsonObject.getInt("amount")) * 100.0) / 100.0);
+                        }
+                        else {
+                            double coin = ((Number) (user.get("coin"))).doubleValue();
+                            user.put("coin", ((coin - jsonObject.getDouble("amount")) * 100.0) / 100.0);
+                        }
+
+                        userRepository.replaceOne(user.getObjectId("_id"), user);
+                        return generateSuccessMsg("data", code);
+                    }
+
+                    if (!res.equals("nok4")) {
+                        System.out.println(res);
+                        return JSON_NOT_UNKNOWN;
+                    }
+                }
+
+            } catch (UnirestException e) {
+                return generateErr(e.getMessage());
+            }
+        }
+
+
+
+    }
 
     @PostMapping(value = "clearCache/{table}")
     @ResponseBody

@@ -282,9 +282,15 @@ public class StudentContentController {
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
-        boolean afterBuy = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                content.getList("users", Document.class), "_id", userId
+        List<Document> users = content.getList("users", Document.class);
+
+        boolean afterBuy = userId != null && irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                users, "_id", userId
         ) != -1;
+
+        boolean isFree = content.getInteger("price") == 0;
+        if(!afterBuy && !isFree && wantedSession.getInteger("price") > 0)
+            return JSON_NOT_ACCESS;
 
         for(Document session : sessions) {
 
@@ -292,11 +298,19 @@ public class StudentContentController {
                 continue;
 
             JSONObject jsonObject = Utility.sessionDigest(
-                    session, isAdmin, afterBuy
+                    session, isAdmin, afterBuy, isFree, false
             );
 
             jsonObject.put("selected", session.getObjectId("_id").equals(sessionId));
             jsonArray.put(jsonObject);
+        }
+
+        if(!afterBuy && userId != null) {
+
+            users.add(new Document("_id", userId)
+                    .append("paid", 0).append("register_at", System.currentTimeMillis()));
+
+            contentRepository.replaceOne(content.getObjectId("_id"), content);
         }
 
         JSONObject data = new JSONObject().put("sessions", jsonArray);
@@ -388,6 +402,22 @@ public class StudentContentController {
         }
 
         double shouldPayDouble = content.getInteger("price") * 1.0;
+
+        if(content.containsKey("off")) {
+
+            if(content.getLong("off_start") <= curr && content.getLong("off_expiration") >= curr) {
+
+                int val = content.getInteger("off");
+                String type = content.getString("off_type");
+
+                int offAmount = type.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()) ?
+                        (content.getInteger("price") * val) / 100 : val;
+
+                shouldPayDouble -= offAmount;
+            }
+
+        }
+
         double offAmount = 0;
 
         if(off != null) {

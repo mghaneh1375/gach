@@ -595,8 +595,8 @@ public class Utility {
 
     public static boolean sendMailWithAttach(String to, String msg, String username, String filename) {
 
-//        if (DEV_MODE)
-//            return true;
+        if (DEV_MODE)
+            return true;
 
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);

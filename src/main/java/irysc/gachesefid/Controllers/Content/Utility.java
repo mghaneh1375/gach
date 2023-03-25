@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Content;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Models.OffCodeTypes;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -70,6 +71,26 @@ public class Utility {
         if(!isAdmin && doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
+        if(doc.containsKey("off")) {
+
+            long curr = System.currentTimeMillis();
+
+            if(doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
+
+                int val = doc.getInteger("off");
+                String type = doc.getString("off_type");
+
+                int offAmount = type.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()) ?
+                        (doc.getInteger("price") * val) / 100 : val;
+
+                jsonObject.put("off", val)
+                        .put("offType", type)
+                        .put("afterOff", doc.getInteger("price") - offAmount);
+
+            }
+
+        }
+
         if(isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
                     .put("createdAt", irysc.gachesefid.Utility.Utility.getSolarDate(doc.getLong("created_at")))
@@ -120,6 +141,26 @@ public class Utility {
 
         if(doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
+
+        if(!afterBuy && doc.containsKey("off")) {
+
+            long curr = System.currentTimeMillis();
+
+            if(doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
+
+                int val = doc.getInteger("off");
+                String type = doc.getString("off_type");
+
+                int offAmount = type.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()) ?
+                        (doc.getInteger("price") * val) / 100 : val;
+
+                jsonObject.put("off", val)
+                        .put("offType", type)
+                        .put("afterOff", doc.getInteger("price") - offAmount);
+
+            }
+
+        }
 
         if(afterBuy && stdDoc != null && stdDoc.containsKey("rate"))
             jsonObject.put("stdRate", stdDoc.get("rate"));
@@ -225,8 +266,16 @@ public class Utility {
 
         if(isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
+                    .put("priority", doc.getOrDefault("priority", 1))
                     .put("finalExamMinMark", doc.getOrDefault("final_exam_min_mark", -1))
                     .put("buyers", doc.getList("users", Document.class).size());
+
+            if(doc.containsKey("off")) {
+                jsonObject.put("off", doc.get("off"));
+                jsonObject.put("offType", doc.get("off_type"));
+                jsonObject.put("offExpiration", doc.get("off_expiration"));
+                jsonObject.put("offStart", doc.get("off_start"));
+            }
 
             if(doc.containsKey("cert_id"))
                 jsonObject.put("certId", doc.getObjectId("cert_id").toString());
@@ -246,8 +295,10 @@ public class Utility {
             List<Document> sessions = doc.getList("sessions", Document.class);
             JSONArray sessionsJSON = new JSONArray();
 
-            for (Document session : sessions)
-                sessionsJSON.put(sessionDigest(session, false, afterBuy));
+            for (Document session : sessions) {
+                if(!isAdmin && !afterBuy && !session.getBoolean("visibility")) continue;
+                sessionsJSON.put(sessionDigest(session, false, afterBuy, doc.getInteger("price") == 0, true));
+            }
 
             jsonObject.put("sessions", sessionsJSON);
         }
@@ -279,7 +330,8 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject sessionDigest(Document doc, boolean isAdmin, boolean afterBuy) {
+    static JSONObject sessionDigest(Document doc, boolean isAdmin,
+                                    boolean afterBuy, boolean isFree, boolean returnFree) {
 
         if(doc == null)
             return new JSONObject();
@@ -311,7 +363,11 @@ public class Utility {
                     .put("priority", doc.get("priority"))
                     .put("hasVideo", doc.containsKey("video") && doc.get("video") != null);
 
-        if(isAdmin || afterBuy || doc.getInteger("price") == 0) {
+        if(isAdmin || afterBuy || doc.getInteger("price") == 0 || isFree) {
+
+            if(!returnFree && !afterBuy && isFree && doc.getInteger("price") > 0) {
+                return jsonObject;
+            }
 
             JSONArray attachesJSONArr = new JSONArray();
             for(String itr : attaches)
