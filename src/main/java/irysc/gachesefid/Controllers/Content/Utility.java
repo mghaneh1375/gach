@@ -17,6 +17,7 @@ import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildConte
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
+import static irysc.gachesefid.Utility.StaticValues.VIDEO_STATICS_SERVER;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 public class Utility {
@@ -323,7 +324,7 @@ public class Utility {
                 video = doc.containsKey("video") ? doc.getString("video") : null;
             else if(doc.containsKey("chunk_at") && doc.containsKey("video")) {
                 String folderName = doc.getString("video").split("\\.mp4")[0];
-                video = STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
+                video = VIDEO_STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
             }
 
             jsonObject.put("video", video);
