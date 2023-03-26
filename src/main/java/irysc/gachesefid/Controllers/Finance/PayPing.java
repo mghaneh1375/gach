@@ -46,10 +46,15 @@ public class PayPing {
             return generateErr("تنها تا یک رقم اعشار می توانید عدد خود را وارد نمایید.");
 
         Document config = getConfig();
+//        double exchangeCoef =
+//                mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) ?
+//                        ((Number)config.get("coin_rate_coef")).doubleValue() :
+//                        ((Number)config.get("money_rate_coef")).doubleValue();
+
         double exchangeCoef =
                 mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) ?
                         ((Number)config.get("coin_rate_coef")).doubleValue() :
-                        ((Number)config.get("money_rate_coef")).doubleValue();
+                        10000.0 / ((Number)config.get("coin_rate_coef")).doubleValue();
 
         if(
                 mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) &&

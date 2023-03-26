@@ -30,7 +30,7 @@ public class Jobs implements Runnable {
         timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
         timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
-        timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
+//        timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);

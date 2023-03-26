@@ -13,13 +13,11 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import static irysc.gachesefid.Controllers.Certification.AdminCertification.addUserToCert;
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildContentQuizTaraz;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 import static irysc.gachesefid.Utility.StaticValues.VIDEO_STATICS_SERVER;
-import static irysc.gachesefid.Utility.Utility.generateErr;
 
 public class Utility {
 
