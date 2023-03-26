@@ -440,7 +440,9 @@ public class NotifController {
                         .append("mail", user.getString("mail"))
                         .append("title", filtersJSON.getString("title"))
                         .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
-                                filtersJSON.getString("text") : "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
+                                filtersJSON.getString("text")
+                                        .replace("<figure class=\"image\"><img src", "<figure class=\"image\"><img style='max-width: 100%' src") :
+                                "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
                         .append("created_at", curr)
                         .append("name", user.getString("first_name") + " " + user.getString("last_name"));
 
