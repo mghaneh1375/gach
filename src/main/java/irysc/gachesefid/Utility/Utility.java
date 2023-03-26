@@ -628,7 +628,7 @@ public class Utility {
 
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
 
-            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
+            String html = "<style>figure > img {max-width: 100%;} </style><div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
             html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
                     "border-color: rgb(255, 102, 0);\n" +
                     "max-width: 700px;\n" +
