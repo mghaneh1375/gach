@@ -390,7 +390,7 @@ public class NotifController {
         Document notif = new Document("_id", notifId)
                 .append("users_count", users.size())
                 .append("title", filtersJSON.getString("title"))
-                .append("text", filtersJSON.getString("text"))
+                .append("text", filtersJSON.getString("text").replace("<figure class=\"image\"><img src", "<figure class=\"image\"><img style='max-width: 100%' src"))
                 .append("send_via", sendVia)
                 .append("created_at", curr);
 
