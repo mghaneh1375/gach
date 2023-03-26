@@ -1052,12 +1052,15 @@ public class UserController {
         Document config = getConfig();
 
         double exchangeRate = ((Number)config.get("coin_rate_coef")).doubleValue();
+        System.out.println((10000 / exchangeRate));
+        double roundVal = Math.round((10000 / exchangeRate) * 100.0)/100.0;
+        System.out.println(roundVal);
 
         JSONObject jsonObject = new JSONObject()
                 .put("money", user.get("money"))
                 .put("coinToMoneyExchange", exchangeRate)
 //                .put("moneyToCoinExchange", config.get("money_rate_coef"))
-                .put("moneyToCoinExchange", String.format("%.2f", 10000.0 / exchangeRate))
+                .put("moneyToCoinExchange", roundVal)
                 .put("rank", rank == null ? "" : rank.getInteger("rank"))
                 .put("branchRank", 1)
                 .put("gradeRank", rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
