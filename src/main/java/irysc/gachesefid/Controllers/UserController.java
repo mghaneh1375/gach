@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -1052,9 +1053,10 @@ public class UserController {
         Document config = getConfig();
 
         double exchangeRate = ((Number)config.get("coin_rate_coef")).doubleValue();
-        System.out.println((10000 / exchangeRate));
-        double roundVal = Math.round((10000 / exchangeRate) * 100.0)/100.0;
-        System.out.println(roundVal);
+        DecimalFormat decfor = new DecimalFormat("0.000");
+
+        double a = (10000.0 / exchangeRate);
+        String roundVal = decfor.format(a);
 
         JSONObject jsonObject = new JSONObject()
                 .put("money", user.get("money"))
