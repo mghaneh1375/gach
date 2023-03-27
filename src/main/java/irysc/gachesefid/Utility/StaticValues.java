@@ -7,10 +7,10 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
     public final static String VIDEO_STATICS_SERVER = "https://v.irysc.com/";
 
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 //    public final static String GACH_SERVER = "http://192.168.43.157:8080/api/";
 
 
@@ -51,7 +51,7 @@ public class StaticValues {
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -96,6 +96,7 @@ public class StaticValues {
                     .append("start_registry", 1)
                     .append("end_registry", 1)
                     .append("visibility", 1)
+                    .append("database", 1).append("status", 1)
                     .append("report_status", 1)
                     .append("tags", 1).append("mode", 1)
                     .append("price", 1).append("launch_mode", 1)

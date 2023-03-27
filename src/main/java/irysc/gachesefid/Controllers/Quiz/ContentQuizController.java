@@ -54,7 +54,7 @@ public class ContentQuizController extends QuizAbstract {
 
             Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
             jsonObject.put("mode", "regular");
-            Document newDoc = QuizController.store(userId, jsonObject);
+            Document newDoc = QuizController.store(userId, jsonObject, "irysc");
             contentQuizRepository.insertOne(newDoc);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(

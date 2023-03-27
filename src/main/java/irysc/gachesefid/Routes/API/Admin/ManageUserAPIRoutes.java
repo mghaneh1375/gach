@@ -192,7 +192,7 @@ public class ManageUserAPIRoutes extends Router {
         JSONObject jsonObject = new JSONObject(jsonStr);
         return ManageUserController.checkDuplicate(
                 jsonObject.getString("phone"),
-                jsonObject.getString("NID")
+                jsonObject.get("NID").toString()
         );
     }
 
@@ -216,7 +216,7 @@ public class ManageUserAPIRoutes extends Router {
                                             "schoolSex", "kindSchool"
                                     },
                                     paramsType = {
-                                            Digit.class, Digit.class,
+                                            String.class, Digit.class,
                                             String.class, Digit.class,
                                             String.class, String.class,
                                             Sex.class, GradeSchool.class

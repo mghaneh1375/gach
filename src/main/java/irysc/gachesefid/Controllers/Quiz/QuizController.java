@@ -112,14 +112,16 @@ public class QuizController {
         return generateSuccessMsg("data", all);
     }
 
-    public static Document store(ObjectId userId, JSONObject data
+    public static Document store(ObjectId userId, JSONObject data, String mode
     ) throws InvalidFieldsException {
 
         Document newDoc = new Document();
 
         for (String key : data.keySet()) {
+
             if (key.equalsIgnoreCase("tags") || key.equalsIgnoreCase("kind"))
                 continue;
+
             newDoc.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
                     data.get(key)
@@ -148,11 +150,9 @@ public class QuizController {
 //        )
 //            newDoc.put("desc_mode", DescMode.NONE.getName());
 
-        newDoc.put("visibility", true);
         newDoc.put("students", new ArrayList<>());
         newDoc.put("registered", 0);
         newDoc.put("removed_questions", new ArrayList<>());
-        newDoc.put("tags", tagsArr);
         newDoc.put("attaches", new ArrayList<>());
         newDoc.put("created_by", userId);
         newDoc.put("created_at", System.currentTimeMillis());
@@ -164,15 +164,25 @@ public class QuizController {
 //                newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
 //        )
 
-        if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
-            newDoc.put("correctors", new ArrayList<>());
+        if(!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
 
-        if (newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
-            try {
-                newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
-            } catch (Exception x) {
-                newDoc.put("price", 0);
+            if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+                newDoc.put("correctors", new ArrayList<>());
+
+            newDoc.put("visibility", true);
+            newDoc.put("tags", tagsArr);
+
+            if (newDoc.containsKey("price") && newDoc.get("price") instanceof String) {
+                try {
+                    newDoc.put("price", Integer.parseInt(newDoc.getString("price")));
+                } catch (Exception x) {
+                    newDoc.put("price", 0);
+                }
             }
+        }
+        else {
+            newDoc.put("mode", "regular");
+            newDoc.put("status", "init");
         }
 
         return newDoc;
@@ -224,6 +234,70 @@ public class QuizController {
 
     }
 
+    public static String finalizeQuiz(ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
+
+            int studentsCount = quiz.getList("students", Document.class).size();
+            if(studentsCount == 0)
+                return generateErr("لطفا ابتدا دانش آموز/دانش آموزان خود را به آزمون اضافه کنید");
+
+            Document question = quiz.get("questions", Document.class);
+            if(!question.containsKey("_ids"))
+                return generateErr("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
+
+            List<ObjectId> questionIds = question.getList("_ids", ObjectId.class);
+
+            if(questionIds.size() == 0)
+                return generateErr("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
+
+            List<Document> questions = questionRepository.findByIds(
+                    questionIds, true
+            );
+
+            if(questions == null)
+                return JSON_NOT_UNKNOWN;
+
+            HashMap<ObjectId, Document> subjects = new HashMap<>();
+            double total = 0;
+
+            for(Document q : questions) {
+
+                ObjectId subjectId = q.getObjectId("subject_id");
+                Document subject;
+
+                if(!subjects.containsKey(subjectId)) {
+
+                    subject = subjectRepository.findById(subjectId);
+
+                    if (subject == null)
+                        return JSON_NOT_UNKNOWN;
+
+                    subjects.put(subjectId, subject);
+                }
+                else
+                    subject = subjects.get(subjectId);
+
+                int basePrice = q.getString("level").equals("easy") ?
+                        subject.getInteger("school_easy_price") :
+                            q.getString("level").equals("mid") ?
+                            subject.getInteger("school_mid_price") :
+                            subject.getInteger("school_hard_price");
+
+                double price = basePrice * Math.floor(studentsCount / 10.0) * 0.15;
+                total += price * studentsCount;
+
+            }
+
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
     public static String getAll(Common db, ObjectId userId,
                                 String name,
                                 Long startDateSolar,
@@ -256,10 +330,10 @@ public class QuizController {
         if (startRegistrySolarEndLimit != null)
             filters.add(lte("start_registry", startRegistrySolarEndLimit));
 
-        docs = db.find(filters.size() == 0 ? null : and(filters),
-                userId == null ? QUIZ_DIGEST_MANAGEMENT : QUIZ_DIGEST,
+        docs = db.find(filters.size() == 0 ? null : and(filters), QUIZ_DIGEST_MANAGEMENT,
                 Sorts.descending("created_at")
         );
+
         QuizAbstract quizAbstract;
 
         JSONArray jsonArray = new JSONArray();
@@ -273,6 +347,8 @@ public class QuizController {
                     quizAbstract = new RegularQuizController();
             } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
+            else if(db instanceof SchoolQuizRepository)
+                quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new OpenQuiz();
 
@@ -300,6 +376,9 @@ public class QuizController {
             JSONArray excepts = new JSONArray();
             JSONArray addedItems = new JSONArray();
 
+            ArrayList<ObjectId> quizIds = new ArrayList<>();
+            quizIds.add(quizId);
+
             for (int i = 0; i < jsonArray.length(); i++) {
 
                 String NID = jsonArray.getString(i);
@@ -326,17 +405,26 @@ public class QuizController {
                     continue;
                 }
 
-                ArrayList<ObjectId> quizIds = new ArrayList<>();
-                quizIds.add(quizId);
+                if(db instanceof SchoolQuizRepository) {
+                    if(((RegularQuizController)quizAbstract).schoolQuizRegistry(
+                            student.getObjectId("_id"), quiz
+                    ))
+                        addedItems.put(student.getObjectId("_id"));
+                }
+                else {
+                    List<Document> added = quizAbstract.registry(
+                            student.getObjectId("_id"), student.getString("phone"),
+                            student.getString("mail"), quizIds, paid,
+                            null, null
+                    );
 
-                List<Document> added = quizAbstract.registry(
-                        student.getObjectId("_id"), student.getString("phone"),
-                        student.getString("mail"), quizIds, paid,
-                        null, null
-                );
+                    if (added.size() > 0)
+                        addedItems.put(convertStudentDocToJSON(added.get(0), student));
+                }
+            }
 
-                if (added.size() > 0)
-                    addedItems.put(convertStudentDocToJSON(added.get(0), student));
+            if(db instanceof SchoolQuizRepository && addedItems.length() > 0) {
+                db.replaceOne(quizId, quiz);
             }
 
             return irysc.gachesefid.Utility.Utility.returnAddResponse(excepts, addedItems);
@@ -759,11 +847,19 @@ public class QuizController {
     ) {
 
         JSONObject jsonObject = new JSONObject()
-                .put("paid", student.get("paid"))
-                .put("id", user.getObjectId("_id").toString())
-                .put("registerAt", getSolarDate(student.getLong("register_at")));
+                .put("id", user.getObjectId("_id").toString());
 
-        irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+        if(student.containsKey("paid")) {
+            jsonObject.put("paid", student.get("paid"));
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+        }
+        else {
+            jsonObject.put("name", user.getString("first_name") + " " + user.getString("last_name"));
+            jsonObject.put("NID", user.getString("NID"));
+        }
+
+        if(student.containsKey("register_at"))
+            jsonObject.put("registerAt", getSolarDate(student.getLong("register_at")));
 
         if (jsonObject.has("start_at")) {
             jsonObject.put("startAt", student.containsKey("start_at") ?

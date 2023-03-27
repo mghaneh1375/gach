@@ -147,6 +147,10 @@ public class Excel {
 
         try {
             String str = cell.getStringCellValue();
+
+            if(str.charAt(0) == '0')
+                return str;
+
             try {
                 return Integer.parseInt(str);
             }

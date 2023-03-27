@@ -7,6 +7,7 @@ import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
@@ -18,10 +19,14 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -42,19 +47,38 @@ public class RegularQuizController extends QuizAbstract {
             "priority"
     };
 
+    private final static String[] schoolMandatoryFields = {
+            "start", "end", "launchMode", "showResultsAfterCorrection", "database"
+    };
+
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
             "kind"
+    };
+
+    private final static String[] schoolForbiddenFields = {
+            "paperTheme", "isRegistrable", "isUploadable",
+            "kind", "startRegistry", "endRegistry", "price",
+            "priority", "showResultsAfterCorrectionNotLoginUsers"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject, String mode) {
 
         try {
 
-            Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
-            jsonObject.put("mode", "regular");
-            Document newDoc = QuizController.store(userId, jsonObject);
-            iryscQuizRepository.insertOne(newDoc);
+            if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
+                Utility.checkFields(schoolMandatoryFields, schoolForbiddenFields, jsonObject);
+            } else {
+                Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
+                jsonObject.put("mode", "regular");
+            }
+
+            Document newDoc = QuizController.store(userId, jsonObject, mode);
+
+            if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+                schoolQuizRepository.insertOne(newDoc);
+            else
+                iryscQuizRepository.insertOne(newDoc);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "quiz", new RegularQuizController()
@@ -86,9 +110,94 @@ public class RegularQuizController extends QuizAbstract {
         return JSON_OK;
     }
 
+
+    JSONObject convertSchoolDocToJSON(Document quiz, boolean isDigest,
+                                      boolean isAdmin, boolean afterBuy) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("start", quiz.getLong("start"))
+                .put("end", quiz.getLong("end"))
+                .put("generalMode", AllKindQuiz.SCHOOL.getName())
+                .put("mode", quiz.getString("mode"))
+                .put("launchMode", quiz.getString("launch_mode"))
+                .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
+                .put("id", quiz.getObjectId("_id").toString());
+
+
+        int questionsCount = 0;
+        try {
+            questionsCount = quiz.get("questions", Document.class)
+                    .getList("_ids", ObjectId.class).size();
+        } catch (Exception ignore) {
+        }
+
+        if (afterBuy) {
+            long curr = System.currentTimeMillis();
+
+            if (quiz.getLong("end") < curr) {
+                boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
+                        quiz.containsKey("report_status") &&
+                        quiz.getString("report_status").equalsIgnoreCase("ready");
+
+                if (canSeeResult)
+                    jsonObject.put("status", "finished")
+                            .put("questionsCount", questionsCount);
+                else
+                    jsonObject.put("status", "waitForResult")
+                            .put("questionsCount", questionsCount);
+            } else if (quiz.getLong("start") <= curr &&
+                    quiz.getLong("end") > curr
+            ) {
+                jsonObject
+                        .put("status", "inProgress")
+                        .put("duration", calcLen(quiz))
+                        .put("questionsCount", questionsCount);
+            } else
+                jsonObject.put("status", "notStart");
+
+        }
+
+        if (isAdmin) {
+            jsonObject
+                    .put("status", quiz.getString("status"))
+                    .put("studentsCount", quiz.getInteger("registered"))
+                    .put("questionsCount", questionsCount);
+        }
+
+        if (!isDigest) {
+
+            jsonObject
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
+
+            if (isAdmin) {
+                JSONArray attaches = new JSONArray();
+                if (quiz.containsKey("attaches")) {
+                    for (String attach : quiz.getList("attaches", String.class))
+                        attaches.put(STATICS_SERVER + SchoolQuizRepository.FOLDER + "/" + attach);
+                }
+
+                jsonObject.put("lenMode", quiz.containsKey("duration") ? "custom" : "question");
+                if (quiz.containsKey("duration"))
+                    jsonObject.put("len", quiz.getInteger("duration"));
+
+                jsonObject.put("minusMark", quiz.getOrDefault("minus_mark", false));
+
+                jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
+                jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+                jsonObject.put("attaches", attaches);
+            }
+        }
+
+        return jsonObject;
+    }
+
     @Override
     JSONObject convertDocToJSON(Document quiz, boolean isDigest,
                                 boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
+
+        if (!quiz.containsKey("start_registry") && quiz.containsKey("database"))
+            return convertSchoolDocToJSON(quiz, isDigest, isAdmin, afterBuy);
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
@@ -118,22 +227,20 @@ public class RegularQuizController extends QuizAbstract {
                         quiz.containsKey("report_status") &&
                         quiz.getString("report_status").equalsIgnoreCase("ready");
 
-                if(canSeeResult)
+                if (canSeeResult)
                     jsonObject.put("status", "finished")
                             .put("questionsCount", questionsCount);
                 else
                     jsonObject.put("status", "waitForResult")
                             .put("questionsCount", questionsCount);
-            }
-            else if (quiz.getLong("start") <= curr &&
+            } else if (quiz.getLong("start") <= curr &&
                     quiz.getLong("end") > curr
             ) {
                 jsonObject
                         .put("status", "inProgress")
                         .put("duration", calcLen(quiz))
                         .put("questionsCount", questionsCount);
-            }
-            else
+            } else
                 jsonObject.put("status", "notStart");
 
         } else
@@ -153,7 +260,7 @@ public class RegularQuizController extends QuizAbstract {
         if (quiz.containsKey("capacity"))
             jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
 
-        if(!isDigest || isDescNeeded)
+        if (!isDigest || isDescNeeded)
             jsonObject
                     .put("description", quiz.getOrDefault("description", ""));
 
@@ -162,15 +269,15 @@ public class RegularQuizController extends QuizAbstract {
                     .put("topStudentsCount", quiz.getInteger("top_students_count"))
                     .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
 
-            if(isAdmin) {
+            if (isAdmin) {
                 JSONArray attaches = new JSONArray();
-                if(quiz.containsKey("attaches")) {
+                if (quiz.containsKey("attaches")) {
                     for (String attach : quiz.getList("attaches", String.class))
                         attaches.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
                 }
 
                 jsonObject.put("lenMode", quiz.containsKey("duration") ? "custom" : "question");
-                if(quiz.containsKey("duration"))
+                if (quiz.containsKey("duration"))
                     jsonObject.put("len", quiz.getInteger("duration"));
 
                 jsonObject.put("minusMark", quiz.getOrDefault("minus_mark", false));
@@ -231,15 +338,39 @@ public class RegularQuizController extends QuizAbstract {
                         quizId, quiz
                 );
 
-                if(transactionId != null && mail != null) {
+                if (transactionId != null && mail != null) {
                     new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
                 }
 
                 //todo : send notif
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
 
         return added;
+    }
+
+    boolean schoolQuizRegistry(ObjectId studentId, Document quiz) {
+        try {
+
+            List<Document> students = quiz.getList("students", Document.class);
+
+            if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    students, "_id", studentId
+            ) != -1)
+                return false;
+
+            Document stdDoc = new Document("_id", studentId)
+                    .append("finish_at", null)
+                    .append("start_at", null)
+                    .append("answers", new byte[0]);
+
+            students.add(stdDoc);
+            quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
+        } catch (Exception ignore) {}
+
+        return true;
     }
 
     public List<Document> registry(List<ObjectId> studentIds, String phone,
@@ -255,7 +386,7 @@ public class RegularQuizController extends QuizAbstract {
                 Document quiz = iryscQuizRepository.findById(quizId);
                 List<Document> students = quiz.getList("students", Document.class);
 
-                for(ObjectId studentId : studentIds) {
+                for (ObjectId studentId : studentIds) {
                     if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                             students, "_id", studentId
                     ) != -1)
@@ -281,7 +412,8 @@ public class RegularQuizController extends QuizAbstract {
                 );
 
                 //todo : send notif
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
 
         return added;
@@ -303,41 +435,38 @@ public class RegularQuizController extends QuizAbstract {
         // todo: send notif
     }
 
+    void createTaraz(Document quiz) {
+        new Taraz(quiz, iryscQuizRepository);
+    }
+
     static class Taraz {
 
+        public ArrayList<byte[]> questionStats;
+        public ArrayList<Document> lessonsStatOutput;
+        public ArrayList<Document> subjectsStatOutput;
+        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
         private Document quiz;
-
         private ArrayList<QuestionStat> lessonsStat;
         private ArrayList<QuestionStat> subjectsStat;
         private List<Document> questionsList;
         private List<ObjectId> questionIds;
-
         private List<Double> marks;
         private List<Document> students;
         private ArrayList<QuestionStat> studentsStat;
-        public ArrayList<byte[]> questionStats;
         private ArrayList<Document> studentsData;
-
         private HashMap<ObjectId, ObjectId> states;
         private HashMap<ObjectId, PairValue> usersCities;
-
         private HashMap<ObjectId, Integer> cityRanking;
         private HashMap<Object, Integer> stateRanking;
-
         private HashMap<ObjectId, Integer> citySkip;
         private HashMap<Object, Integer> stateSkip;
-
         private HashMap<ObjectId, Double> cityOldT;
         private HashMap<Object, Double> stateOldT;
-
         private ArrayList<Document> rankingList;
         private List<Document> subjectsGeneralStat;
         private List<Document> lessonsGeneralStat;
-
-        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
-
         Taraz(Document quiz, Common db) {
 
             this.quiz = quiz;
@@ -349,7 +478,7 @@ public class RegularQuizController extends QuizAbstract {
             questionIds = questions.getList("_ids", ObjectId.class);
 
             marks = new ArrayList<>();
-            for(int i = 0; i < questionIds.size(); i++)
+            for (int i = 0; i < questionIds.size(); i++)
                 marks.add(3.0);
 
             lessonsStat = new ArrayList<>();
@@ -398,15 +527,12 @@ public class RegularQuizController extends QuizAbstract {
             calcLessonsStats();
 
             save(db);
-            if(db instanceof IRYSCQuizRepository)
+            if (db instanceof IRYSCQuizRepository)
                 storeInRankingTable();
         }
 
-        public ArrayList<Document> lessonsStatOutput;
-        public ArrayList<Document> subjectsStatOutput;
-
         Taraz(
-                ArrayList<Document> questions, 
+                ArrayList<Document> questions,
                 ObjectId userId,
                 ArrayList<PairValue> studentAnswers
         ) {
@@ -758,14 +884,14 @@ public class RegularQuizController extends QuizAbstract {
                 ObjectId cityId;
                 ObjectId schoolId;
 
-                if(!studentsData.get(k).containsKey("city") ||
+                if (!studentsData.get(k).containsKey("city") ||
                         studentsData.get(k).get("city") == null
                 )
                     cityId = unknownCity;
                 else
                     cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
 
-                if(!studentsData.get(k).containsKey("school") ||
+                if (!studentsData.get(k).containsKey("school") ||
                         studentsData.get(k).get("school") == null
                 )
                     schoolId = iryscSchool;
@@ -1115,7 +1241,7 @@ public class RegularQuizController extends QuizAbstract {
 
             quiz.put("question_stat", questionStats);
 
-            if(db instanceof OpenQuizRepository)
+            if (db instanceof OpenQuizRepository)
                 quiz.put("last_build_at", System.currentTimeMillis());
 
             db.replaceOne(
@@ -1183,8 +1309,8 @@ public class RegularQuizController extends QuizAbstract {
 
                     long curr = System.currentTimeMillis();
 
-                    for(Document s : quizzes) {
-                        if(s.getOrDefault("start", null) == null)
+                    for (Document s : quizzes) {
+                        if (s.getOrDefault("start", null) == null)
                             s.put("start", curr);
                     }
 
@@ -1353,18 +1479,13 @@ public class RegularQuizController extends QuizAbstract {
                     }
                 }
 
-                if(writes.size() > 0)
+                if (writes.size() > 0)
                     tarazRepository.bulkWrite(writes);
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 x.printStackTrace();
                 System.out.println(x.getMessage());
             }
         }
 
-    }
-
-    void createTaraz(Document quiz) {
-        new Taraz(quiz, iryscQuizRepository);
     }
 }

@@ -199,6 +199,14 @@ public class Router {
                         !Authorization.isTeacher(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
+                if(wantedAccess.equals(Access.SCHOOL.getName()) &&
+                        !Authorization.isSchool(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                if(wantedAccess.equals(Access.AGENT.getName()) &&
+                        !Authorization.isAgent(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
                 if(wantedAccess.equals(Access.ADMIN.getName()) &&
                         !Authorization.isAdmin(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");

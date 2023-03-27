@@ -40,7 +40,7 @@ public class OpenQuizController {
         try {
 
             checkFields(mandatoryFields, forbiddenFields, jsonObject);
-            Document newDoc = QuizController.store(userId, jsonObject);
+            Document newDoc = QuizController.store(userId, jsonObject, "irysc");
             openQuizRepository.insertOne(newDoc);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(

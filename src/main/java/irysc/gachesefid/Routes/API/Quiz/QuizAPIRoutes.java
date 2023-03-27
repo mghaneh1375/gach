@@ -51,6 +51,16 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 public class QuizAPIRoutes extends Router {
 
 
+    @PostMapping(value = "/finalize/{quizId}")
+    @ResponseBody
+    public String finalize(HttpServletRequest request,
+                        @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return QuizController.finalizeQuiz(quizId,
+                getSchoolUser(request).getObjectId("_id")
+        );
+    }
+
     @PostMapping(value = "/createFromIRYSCQuiz/{quizId}")
     @ResponseBody
     public String createFromIRYSCQuiz(HttpServletRequest request,
@@ -107,7 +117,7 @@ public class QuizAPIRoutes extends Router {
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getSchoolUser(request);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
         if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
@@ -120,6 +130,13 @@ public class QuizAPIRoutes extends Router {
                         jsonObject, mode
                 );
 
+            return RegularQuizController.create(
+                    user.getObjectId("_id"),
+                    jsonObject, mode
+            );
+        }
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
             return RegularQuizController.create(
                     user.getObjectId("_id"),
                     jsonObject, mode
@@ -336,7 +353,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.forceRegistry(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
                 jsonArray, paid
         );
@@ -610,17 +627,9 @@ public class QuizAPIRoutes extends Router {
                                     iryscQuizRepository, quizId, jsonArray
             );
 
-        else
-            output = CommonController.removeAllFormDocList(
-                    schoolQuizRepository,
-                    jsonArray, quizId, "questions",
-                    and(
-                            gt("start", System.currentTimeMillis()),
-                            eq("created_by", user.getObjectId("_id"))
-                    )
-            );
-
-        return output;
+        return QuizController.removeQuestions(
+                schoolQuizRepository, quizId, jsonArray
+        );
     }
 
     @PostMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
@@ -733,7 +742,7 @@ public class QuizAPIRoutes extends Router {
                                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONObject jsonObject = new JSONObject(jsonStr);

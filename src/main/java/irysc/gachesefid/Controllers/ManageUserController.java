@@ -430,10 +430,15 @@ public class ManageUserController {
 
     public static String getMyStudents(List<ObjectId> students) {
 
-        List<Document> studentsInfo = userRepository.findByIds(students, false);
+        List<Document> studentsInfo = userRepository.findPreserveOrderWitNull("_id", students);
+
         JSONArray data = new JSONArray();
 
         for (Document itr : studentsInfo) {
+
+            if(itr == null)
+                continue;
+
             JSONObject jsonObject = new JSONObject();
             Utility.fillJSONWithUser(jsonObject, itr);
             data.put(jsonObject.getJSONObject("student"));
@@ -522,7 +527,11 @@ public class ManageUserController {
 
             Document config = Utility.getConfig();
             Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
-            avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+
+            if(avatar == null)
+                avatar = avatarRepository.findOne(null, null);
+
+            avatar.put("used", (int) avatar.getOrDefault("used", 0) + 1);
             avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
             user = new Document("NID", NID)
@@ -549,7 +558,7 @@ public class ManageUserController {
             ArrayList<Document> forms = new ArrayList<>();
 
             Document form = new Document("role", "school")
-                    .append("tel", jsonObject.getString("tel"))
+                    .append("tel", jsonObject.get("tel").toString())
                     .append("address", jsonObject.getString("address"))
                     .append("name", jsonObject.getString("name"))
                     .append("manager_name", jsonObject.getString("managerName"))
@@ -811,6 +820,9 @@ public class ManageUserController {
         if (validSchool == null)
             throw new InvalidFieldsException("unknown2 err");
 
+        if(!school.containsKey("city"))
+            throw new InvalidFieldsException("ابتدا شهر خود را در پروفایل انتخاب کنید");
+
         return validSchool;
     }
 
@@ -829,7 +841,7 @@ public class ManageUserController {
             ObjectId oId = doAddStudent(jsonObject, avatar, System.currentTimeMillis(),
                     config.getInteger("init_money"),
                     config.getDouble("init_coin"),
-                    validSchool
+                    validSchool, school.get("city", Document.class)
             );
 
             List<ObjectId> students = school.containsKey("students") ?
@@ -847,7 +859,7 @@ public class ManageUserController {
 
     private static ObjectId doAddStudent(
             JSONObject jsonObject, Document avatar, long curr,
-            int initMoney, double initCoin, Document school
+            int initMoney, double initCoin, Document school, Document city
     ) throws InvalidFieldsException {
 
         String NID = jsonObject.getString("NID");
@@ -872,7 +884,6 @@ public class ManageUserController {
         if (isExist)
             throw new InvalidFieldsException("دانش آموزی با کدملی/شماره همراه وارد شده در سامانه موجود است.");
 
-
         Document student = new Document("NID", NID)
                 .append("status", "active")
                 .append("level", false)
@@ -896,6 +907,11 @@ public class ManageUserController {
                         new Document("_id", school.getObjectId("_id"))
                                 .append("name", school.getString("name"))
                 );
+
+        if(city != null)
+            student.put("city", new Document("_id", city.getObjectId("_id"))
+                    .append("name", city.getString("name"))
+            );
 
         if (phone != null)
             student.append("phone", phone);
@@ -930,9 +946,12 @@ public class ManageUserController {
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
 
         long curr = System.currentTimeMillis();
-        int neededCols = passwordPolicy.equalsIgnoreCase(
+        int minNeededCols = passwordPolicy.equalsIgnoreCase(
                 PasswordMode.CUSTOM.getName()
         ) ? 4 : 3;
+
+        List<ObjectId> myStudents = school.getList("students", ObjectId.class);
+        int dones = 0;
 
         int rowIdx = 0;
         JSONArray passwords = new JSONArray();
@@ -946,12 +965,12 @@ public class ManageUserController {
                 if(row.getCell(1) == null)
                     break;
 
-                if (row.getLastCellNum() < neededCols) {
+                if (row.getLastCellNum() < minNeededCols) {
                     excepts.put(rowIdx);
                     continue;
                 }
 
-                String NID = String.valueOf(row.getCell(3).getNumericCellValue());
+                String NID = Excel.getCellValue(row.getCell(3)).toString();
                 String firstName = row.getCell(1).getStringCellValue();
                 String lastName = row.getCell(2).getStringCellValue();
 
@@ -961,8 +980,8 @@ public class ManageUserController {
                                 .put("firstName", firstName)
                                 .put("lastName", lastName);
 
-                if (row.getLastCellNum() >= 4)
-                    jsonObject1.put("phone", row.getCell(4).getNumericCellValue());
+                if (row.getLastCellNum() >= 4 && row.getCell(4) != null)
+                    jsonObject1.put("phone", Excel.getCellValue(row.getCell(4)).toString());
 
                 String password =
                         passwordPolicy.equalsIgnoreCase(PasswordMode.SIMPLE.getName()) ?
@@ -977,13 +996,15 @@ public class ManageUserController {
 
                 jsonObject1.put("password", getEncPassStatic(password));
 
-                avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
-                doAddStudent(jsonObject1,
+                ObjectId stdId = doAddStudent(jsonObject1,
                         avatar, curr,
                         config.getInteger("init_money"),
                         config.getDouble("init_coin"),
-                        validSchool
+                        validSchool, school.get("city", Document.class)
                 );
+
+                dones++;
+                myStudents.add(stdId);
 
                 if(passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()))
                     passwords.put(new JSONObject()
@@ -992,13 +1013,20 @@ public class ManageUserController {
                     );
 
             } catch (Exception x) {
+                System.out.println(x.getMessage());
+                x.printStackTrace();
                 excepts.put(rowIdx);
             }
 
-            avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
         }
 
-        return generateSuccessMsg("password", passwords);
+        if(dones > 0) {
+            avatar.put("used", (int) avatar.getOrDefault("used", 0) + dones);
+            avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
+            userRepository.replaceOne(school.getObjectId("_id"), school);
+        }
+//        return generateSuccessMsg("password", passwords);
+        return returnBatchResponse(excepts, null, "اضافه");
     }
 
     public static String acceptInvite(Document user,

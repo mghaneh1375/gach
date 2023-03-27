@@ -265,7 +265,7 @@ public class TashrihiQuizController extends QuizAbstract {
             ))
                 return generateErr("فیلد مدت آزمون نامعتبر است");
 
-            Document newDoc = QuizController.store(userId, jsonObject);
+            Document newDoc = QuizController.store(userId, jsonObject, mode);
             iryscQuizRepository.insertOne(newDoc);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(

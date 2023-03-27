@@ -51,7 +51,7 @@ public class QuestionAPIRoutes extends Router {
                                    @RequestParam(required = false) ObjectId gradeId,
                                    @RequestParam(required = false) String organizationCode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getPrivilegeUser(request);
         return QuestionController.subjectQuestions(
                 isQuestionNeeded, criticalThresh, organizationCode, subjectId, lessonId, gradeId
         );
