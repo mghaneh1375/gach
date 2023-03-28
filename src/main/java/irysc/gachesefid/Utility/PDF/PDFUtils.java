@@ -65,6 +65,11 @@ public class PDFUtils {
 
             myShowText(bidiReorder("بسم الله الرحمن الرحیم"), contentStream, mediaBox, 12, 50, -1, true);
 
+            
+
+//            File avatarF = new File(file);
+//            PDImageXObject avatar = PDImageXObject.createFromFileByExtension(avatarF, document);
+
             int marginRightHeader = 100;
             myShowText(bidiReorder(" نام آزمون: " + quiz.getString("title")), contentStream, mediaBox, 8, 75, marginRightHeader, false);
 
