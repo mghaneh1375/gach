@@ -201,7 +201,7 @@ public class QuizAPIRoutes extends Router {
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getPrivilegeUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 

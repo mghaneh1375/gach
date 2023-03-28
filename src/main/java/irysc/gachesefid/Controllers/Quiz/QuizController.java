@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
@@ -491,16 +492,14 @@ public class QuizController {
 
     }
 
-    public static String get(Common db, Object user,
-                             ObjectId quizId
-    ) {
+    public static String get(Common db, Object user, ObjectId quizId) {
 
         try {
 
             Document quiz = hasPublicAccess(db, user, quizId);
             QuizAbstract quizAbstract = null;
 
-            if (db instanceof IRYSCQuizRepository)
+            if (db instanceof IRYSCQuizRepository || db instanceof SchoolQuizRepository)
                 quizAbstract = new RegularQuizController();
 
             else if (db instanceof OpenQuizRepository)
@@ -1034,7 +1033,7 @@ public class QuizController {
         }
     }
 
-    static File doGenerateQuestionPDF(Document doc, String folder) {
+    static File doGenerateQuestionPDF(Document doc, String folder, String schoolName) {
 
         ArrayList<String> files = new ArrayList<>();
         Document questions = doc.get("questions", Document.class);
@@ -1052,7 +1051,7 @@ public class QuizController {
             files.add(prefix + questionDoc.getString("question_file"));
         }
 
-        return PDFUtils.createExam(files, folder + doc.getObjectId("_id") + ".pdf");
+        return PDFUtils.createExam(files, folder + doc.getObjectId("_id") + ".pdf", doc, schoolName);
 
     }
 
@@ -1067,7 +1066,19 @@ public class QuizController {
                     prefix + IRYSCQuizRepository.FOLDER + "/" :
                     prefix + SchoolQuizRepository.FOLDER + "/";
 
-            return doGenerateQuestionPDF(doc, folder);
+            String schoolName = null;
+            if(db instanceof  SchoolQuizRepository) {
+                Document school = schoolRepository.findOne(
+                        and(
+                                exists("user_id", true),
+                                eq("user_id", userId)
+                        ), new BasicDBObject("name", 1)
+                );
+                if(school != null)
+                    schoolName = school.getString("name");
+            }
+
+            return doGenerateQuestionPDF(doc, folder, schoolName);
         } catch (Exception x) {
             System.out.println(x.getMessage());
             return null;
@@ -1165,7 +1176,8 @@ public class QuizController {
     private static String doAddQuestionsToQuiz(Common db, Document quiz,
                                                Object questionsList,
                                                JSONArray excepts,
-                                               double mark, Boolean can_upload) {
+                                               double mark, Boolean can_upload
+    ) throws InvalidFieldsException {
 
         ArrayList<Document> addedItems = new ArrayList<>();
 
@@ -1254,9 +1266,16 @@ public class QuizController {
             if (writes.size() > 0)
                 questionRepository.bulkWrite(writes);
         } else if (questionsList instanceof Document) {
+
+            ObjectId qIdTmp = ((Document) questionsList).getObjectId("_id");
+
+            if(ids.contains(qIdTmp)) {
+                throw new InvalidFieldsException("duplicate");
+            }
+
             allQuestions.add((Document) questionsList);
             marks.add(mark);
-            ids.add(((Document) questionsList).getObjectId("_id"));
+            ids.add(qIdTmp);
 
             if (can_upload != null)
                 uploadable_list.add(can_upload);

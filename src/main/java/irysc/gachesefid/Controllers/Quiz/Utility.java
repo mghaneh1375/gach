@@ -5,7 +5,6 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.SchoolQuizRepository;
-import irysc.gachesefid.DB.SchoolRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.DescMode;
@@ -716,10 +715,10 @@ public class Utility {
             return quiz;
         }
 
-        if (db instanceof SchoolRepository && quiz.getObjectId("created_by").equals(userId))
+        if (db instanceof SchoolQuizRepository && quiz.getObjectId("created_by").equals(userId))
             return quiz;
 
-        if (db instanceof SchoolRepository && !quiz.getBoolean("visibility"))
+        if (db instanceof SchoolQuizRepository && !quiz.getBoolean("visibility"))
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
 
         if (searchInDocumentsKeyValIdx(

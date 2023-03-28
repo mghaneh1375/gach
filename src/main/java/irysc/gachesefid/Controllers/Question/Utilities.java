@@ -142,12 +142,12 @@ public class Utilities {
                         .put("oldIncorrect", doc.getInteger("old_incorrect"))
                         .put("oldWhite", doc.getInteger("old_white"));
 
-                if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()) && jsonObject.has("stdAns")) {
                     jsonObject.put("stdMark",
                             QuizAbstract.QuestionStat.getStdMarkInMultiSentenceQuestion(doc.getString("answer"), jsonObject.getString("stdAns"), doc.getDouble("mark")).getKey()
                     );
                 }
-                else if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
+                else if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
 
                     double stdAns = jsonObject.getDouble("stdAns");
 

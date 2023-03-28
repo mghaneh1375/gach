@@ -1,5 +1,8 @@
 package irysc.gachesefid.Utility.PDF;
 
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
+import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
+import irysc.gachesefid.Utility.Utility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -23,7 +26,7 @@ import static irysc.gachesefid.Utility.Utility.printException;
 
 public class PDFUtils {
 
-    public static File createExam(ArrayList<String> files, String filename) {
+    public static File createExam(ArrayList<String> files, String filename, Document quiz, String schoolName) {
 
         PDDocument document = new PDDocument();
         try {
@@ -45,7 +48,7 @@ public class PDFUtils {
 
             int tempSpaceWidth = 120;
 
-            myShowText(bidiReorder("چرک نویس"), contentStream, mediaBox, 14, 80, mediaBox.getWidth() - 40, false);
+            myShowText(bidiReorder("چرک نویس"), contentStream, mediaBox, 14, 100, mediaBox.getWidth() - 40, false);
 
             contentStream.setStrokingColor(Color.BLACK);
             contentStream.setLineWidth((float) 0.4);
@@ -59,6 +62,26 @@ public class PDFUtils {
 
             int w = (int) (mediaBox.getWidth() - 40 - tempSpaceWidth);
             boolean first = true;
+
+            myShowText(bidiReorder("بسم الله الرحمن الرحیم"), contentStream, mediaBox, 12, 50, -1, true);
+
+            int marginRightHeader = 100;
+            myShowText(bidiReorder(" نام آزمون: " + quiz.getString("title")), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+
+            if(schoolName != null) {
+                marginRightHeader += 150;
+                myShowText(bidiReorder(" نام مدرسه: " + schoolName), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+            }
+
+            if(quiz.containsKey("start")) {
+                marginRightHeader += 150;
+                myShowText(bidiReorder(" تاریخ برگزاری: " + Utility.getSolarDate(quiz.getLong("start"))), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+            }
+
+            int len = (int) Math.ceil(QuizAbstract.calcLenStatic(quiz) / 60);
+            marginRightHeader += 150;
+            myShowText(bidiReorder(" مدت آزمون: " + len + " دقیقه"), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+
 
             int i = 1;
             for(String file : files) {
