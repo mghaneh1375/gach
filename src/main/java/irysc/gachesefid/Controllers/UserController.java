@@ -760,18 +760,21 @@ public class UserController {
 
     public static boolean setPic(MultipartFile file, Document user) {
 
-        if (user.getString("pic") != null)
+        if (user.containsKey("pic") && user.getString("pic") != null)
             new Thread(() -> FileUtils.removeFile(user.getString("pic"), UserRepository.FOLDER)).start();
 
         String filename = FileUtils.uploadFile(file, UserRepository.FOLDER);
+
         if (filename != null) {
 
             user.put("pic", filename);
 
             if (user.containsKey("avatar_id")) {
                 Document oldAvatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-                oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
-                avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
+                if(oldAvatar != null) {
+                    oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
+                    avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
+                }
                 user.remove("avatar_id");
             }
 

@@ -1033,7 +1033,8 @@ public class QuizController {
         }
     }
 
-    static File doGenerateQuestionPDF(Document doc, String folder, String schoolName) {
+    static File doGenerateQuestionPDF(Document doc, String folder,
+                                      String schoolName, String pic) {
 
         ArrayList<String> files = new ArrayList<>();
         Document questions = doc.get("questions", Document.class);
@@ -1051,7 +1052,7 @@ public class QuizController {
             files.add(prefix + questionDoc.getString("question_file"));
         }
 
-        return PDFUtils.createExam(files, folder + doc.getObjectId("_id") + ".pdf", doc, schoolName);
+        return PDFUtils.createExam(files, folder + doc.getObjectId("_id") + ".pdf", doc, schoolName, pic);
 
     }
 
@@ -1067,18 +1068,38 @@ public class QuizController {
                     prefix + SchoolQuizRepository.FOLDER + "/";
 
             String schoolName = null;
+            String pic = null;
+
             if(db instanceof  SchoolQuizRepository) {
+
                 Document school = schoolRepository.findOne(
                         and(
                                 exists("user_id", true),
                                 eq("user_id", userId)
                         ), new BasicDBObject("name", 1)
                 );
+
                 if(school != null)
                     schoolName = school.getString("name");
+
+                Document user = userRepository.findById(userId);
+                if(user != null) {
+
+                    if(user.containsKey("pic"))
+                        pic = DEV_MODE ? uploadDir_dev + UserRepository.FOLDER + "/" + user.getString("pic") :
+                                uploadDir + UserRepository.FOLDER + "/" + user.getString("pic");
+
+                    else if(user.containsKey("avatar_id")) {
+                        Document avatar = avatarRepository.findById(user.getObjectId("avatar_id"));
+                        if(avatar != null)
+                            pic = DEV_MODE ? uploadDir_dev + UserRepository.FOLDER + "/" + avatar.getString("file") :
+                                    uploadDir + UserRepository.FOLDER + "/" + avatar.getString("file");
+                    }
+                }
+
             }
 
-            return doGenerateQuestionPDF(doc, folder, schoolName);
+            return doGenerateQuestionPDF(doc, folder, schoolName, pic);
         } catch (Exception x) {
             System.out.println(x.getMessage());
             return null;

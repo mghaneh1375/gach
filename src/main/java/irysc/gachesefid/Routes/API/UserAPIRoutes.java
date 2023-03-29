@@ -688,10 +688,10 @@ public class UserAPIRoutes extends Router {
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getUserWithAdminAccess(request, false, true, userId);
+        Document user = (Document) getUserWithAdminAccess(request, false, true, userId).get("user");
 
         if (UserController.setPic(file, user))
-            return JSON_OK;
+            return generateSuccessMsg("file", "");
 
         return JSON_NOT_UNKNOWN;
     }

@@ -560,7 +560,7 @@ public class StudentQuizController {
 
                 String prefix = DEV_MODE ? uploadDir_dev : uploadDir;
 
-                f = QuizController.doGenerateQuestionPDF(quiz, prefix + folder, null);
+                f = QuizController.doGenerateQuestionPDF(quiz, prefix + folder, null, null);
                 if (f == null)
                     return null;
             }

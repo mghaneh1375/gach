@@ -369,7 +369,7 @@ public class Utility {
 
             JSONArray attachesJSONArr = new JSONArray();
             for(String itr : attaches)
-                attachesJSONArr.put(itr);
+                attachesJSONArr.put(STATICS_SERVER + itr);
 
             jsonObject.put("attaches", attachesJSONArr);
             String video = null;

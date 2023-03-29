@@ -1,7 +1,6 @@
 package irysc.gachesefid.Utility.PDF;
 
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
-import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Utility.Utility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -10,7 +9,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -26,7 +24,8 @@ import static irysc.gachesefid.Utility.Utility.printException;
 
 public class PDFUtils {
 
-    public static File createExam(ArrayList<String> files, String filename, Document quiz, String schoolName) {
+    public static File createExam(ArrayList<String> files, String filename,
+                                  Document quiz, String schoolName, String pic) {
 
         PDDocument document = new PDDocument();
         try {
@@ -47,8 +46,34 @@ public class PDFUtils {
             PDRectangle mediaBox = page.getMediaBox();
 
             int tempSpaceWidth = 120;
+            int tempSpaceTop = 100;
 
-            myShowText(bidiReorder("چرک نویس"), contentStream, mediaBox, 14, 100, mediaBox.getWidth() - 40, false);
+            int marginRightHeader = 70;
+            int marginTopHeader = 75;
+
+            float marginTop = marginFromTop;
+            float totalH = mediaBox.getHeight() - 20;
+
+            int w = (int) (mediaBox.getWidth() - 40 - tempSpaceWidth);
+
+            if(pic != null) {
+
+                File avatarF = new File(pic);
+                if(avatarF.exists()) {
+                    PDImageXObject avatar = PDImageXObject.createFromFileByExtension(avatarF, document);
+                    BufferedImage bimg = ImageIO.read(avatarF);
+                    int wA = 60;
+                    int h = wA * bimg.getHeight() / bimg.getWidth();
+                    contentStream.drawImage(avatar, 30, totalH - 80, wA, h);
+                    marginTopHeader = 80;
+                    tempSpaceTop = 140;
+                    marginTop += 50;
+                }
+
+            }
+
+
+            myShowText(bidiReorder("چرک نویس"), contentStream, mediaBox, 14, tempSpaceTop, mediaBox.getWidth() - 40, false);
 
             contentStream.setStrokingColor(Color.BLACK);
             contentStream.setLineWidth((float) 0.4);
@@ -57,35 +82,24 @@ public class PDFUtils {
 
             drawCommon(document, contentStream, mediaBox);
 
-            float marginTop = marginFromTop;
-            float totalH = mediaBox.getHeight() - 20;
-
-            int w = (int) (mediaBox.getWidth() - 40 - tempSpaceWidth);
             boolean first = true;
 
             myShowText(bidiReorder("بسم الله الرحمن الرحیم"), contentStream, mediaBox, 12, 50, -1, true);
-
-            
-
-//            File avatarF = new File(file);
-//            PDImageXObject avatar = PDImageXObject.createFromFileByExtension(avatarF, document);
-
-            int marginRightHeader = 100;
-            myShowText(bidiReorder(" نام آزمون: " + quiz.getString("title")), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+            myShowText(bidiReorder(" نام آزمون: " + quiz.getString("title")), contentStream, mediaBox, 8, marginTopHeader, marginRightHeader, false);
 
             if(schoolName != null) {
-                marginRightHeader += 150;
-                myShowText(bidiReorder(" نام مدرسه: " + schoolName), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+                marginRightHeader += 130;
+                myShowText(bidiReorder(" نام مدرسه: " + schoolName), contentStream, mediaBox, 8, marginTopHeader, marginRightHeader, false);
             }
 
             if(quiz.containsKey("start")) {
-                marginRightHeader += 150;
-                myShowText(bidiReorder(" تاریخ برگزاری: " + Utility.getSolarDate(quiz.getLong("start"))), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+                marginRightHeader += 190;
+                myShowText(bidiReorder(" تاریخ برگزاری: " + Utility.getSolarDate(quiz.getLong("start"))), contentStream, mediaBox, 8, marginTopHeader, marginRightHeader, false);
             }
 
             int len = (int) Math.ceil(QuizAbstract.calcLenStatic(quiz) / 60);
-            marginRightHeader += 150;
-            myShowText(bidiReorder(" مدت آزمون: " + len + " دقیقه"), contentStream, mediaBox, 8, 75, marginRightHeader, false);
+            marginRightHeader += 90;
+            myShowText(bidiReorder(" مدت آزمون: " + len + " دقیقه"), contentStream, mediaBox, 8, marginTopHeader, marginRightHeader, false);
 
 
             int i = 1;
