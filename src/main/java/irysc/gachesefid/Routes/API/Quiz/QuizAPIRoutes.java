@@ -50,17 +50,6 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class QuizAPIRoutes extends Router {
 
-
-    @PostMapping(value = "/finalize/{quizId}")
-    @ResponseBody
-    public String finalize(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.finalizeQuiz(quizId,
-                getSchoolUser(request).getObjectId("_id")
-        );
-    }
-
     @PostMapping(value = "/createFromIRYSCQuiz/{quizId}")
     @ResponseBody
     public String createFromIRYSCQuiz(HttpServletRequest request,

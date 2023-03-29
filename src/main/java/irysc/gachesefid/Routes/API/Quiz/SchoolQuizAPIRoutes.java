@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
+import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -161,4 +162,24 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
+
+    @PostMapping(value = "/finalize/{quizId}")
+    @ResponseBody
+    public String finalize(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return QuizController.finalizeQuiz(quizId,
+                getSchoolUser(request).getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "/recp/{quizId}")
+    @ResponseBody
+    public String recp(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return QuizController.recp(quizId,
+                getSchoolUser(request).getObjectId("_id")
+        );
+    }
 }

@@ -165,7 +165,7 @@ public class QuizController {
 //                newDoc.getString("mode").equals(KindQuiz.OPEN.getName())
 //        )
 
-        if(!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
+        if (!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
 
             if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
                 newDoc.put("correctors", new ArrayList<>());
@@ -180,8 +180,7 @@ public class QuizController {
                     newDoc.put("price", 0);
                 }
             }
-        }
-        else {
+        } else {
             newDoc.put("mode", "regular");
             newDoc.put("status", "init");
         }
@@ -235,41 +234,88 @@ public class QuizController {
 
     }
 
-    public static String finalizeQuiz(ObjectId quizId, ObjectId userId) {
+    private static PairValue isSchoolQuizReadyForPay(Document quiz) throws InvalidFieldsException {
+
+        int studentsCount = quiz.getList("students", Document.class).size();
+        if (studentsCount == 0)
+            throw new InvalidFieldsException("لطفا ابتدا دانش آموز/دانش آموزان خود را به آزمون اضافه کنید");
+
+        Document question = quiz.get("questions", Document.class);
+        if (!question.containsKey("_ids"))
+            throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
+
+        List<ObjectId> questionIds = question.getList("_ids", ObjectId.class);
+
+        if (questionIds.size() == 0)
+            throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
+
+        List<Document> questions = questionRepository.findByIds(
+                questionIds, true
+        );
+
+        if (questions == null)
+            throw new InvalidFieldsException("خطای نامشخص");
+
+        return new PairValue(studentsCount, questions);
+    }
+
+    private static class SchoolRecpRow {
+
+        String level;
+        String subject;
+        int price;
+        int count;
+
+        public JSONObject toJSON() {
+            return new JSONObject()
+                    .put("level", level.equals("hard") ? "دشوار" :
+                            level.equals("mid") ? "متوسط" : "آسان")
+                    .put("subject", subject)
+                    .put("price", price)
+                    .put("totalPrice", price * count)
+                    .put("count", count);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+
+            if (o instanceof SchoolRecpRow) {
+                SchoolRecpRow schoolRecpRow = (SchoolRecpRow) o;
+                return schoolRecpRow.level.equals(level) && schoolRecpRow.subject.equals(subject);
+            }
+
+            return false;
+        }
+
+        public SchoolRecpRow(String level, String subject, int price) {
+            this.level = level;
+            this.subject = subject;
+            this.price = price;
+            this.count = 1;
+        }
+
+        public void inc() {
+            this.count++;
+        }
+    }
+
+    public static String recp(ObjectId quizId, ObjectId userId) {
 
         try {
-
             Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
 
-            int studentsCount = quiz.getList("students", Document.class).size();
-            if(studentsCount == 0)
-                return generateErr("لطفا ابتدا دانش آموز/دانش آموزان خود را به آزمون اضافه کنید");
-
-            Document question = quiz.get("questions", Document.class);
-            if(!question.containsKey("_ids"))
-                return generateErr("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
-
-            List<ObjectId> questionIds = question.getList("_ids", ObjectId.class);
-
-            if(questionIds.size() == 0)
-                return generateErr("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
-
-            List<Document> questions = questionRepository.findByIds(
-                    questionIds, true
-            );
-
-            if(questions == null)
-                return JSON_NOT_UNKNOWN;
-
+            PairValue p = isSchoolQuizReadyForPay(quiz);
+            int studentsCount = (int) p.getKey();
+            List<Document> questions = (List<Document>) p.getValue();
+            List<SchoolRecpRow> rows = new ArrayList<>();
             HashMap<ObjectId, Document> subjects = new HashMap<>();
-            double total = 0;
 
-            for(Document q : questions) {
+            for (Document question : questions) {
 
-                ObjectId subjectId = q.getObjectId("subject_id");
+                ObjectId subjectId = question.getObjectId("subject_id");
                 Document subject;
 
-                if(!subjects.containsKey(subjectId)) {
+                if (!subjects.containsKey(subjectId)) {
 
                     subject = subjectRepository.findById(subjectId);
 
@@ -277,17 +323,75 @@ public class QuizController {
                         return JSON_NOT_UNKNOWN;
 
                     subjects.put(subjectId, subject);
-                }
+                } else
+                    subject = subjects.get(subjectId);
+
+                int basePrice = question.getString("level").equals("easy") ?
+                        subject.getInteger("school_easy_price") :
+                        question.getString("level").equals("mid") ?
+                                subject.getInteger("school_mid_price") :
+                                subject.getInteger("school_hard_price");
+
+                double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
+
+                SchoolRecpRow row = new SchoolRecpRow(question.getString("level"),
+                        subject.getString("name"), (int) price);
+
+                int idx = rows.indexOf(row);
+                if(idx < 0)
+                    rows.add(row);
                 else
+                    rows.get(idx).inc();
+            }
+
+            JSONArray jsonArray = new JSONArray();
+            for(SchoolRecpRow row : rows)
+                jsonArray.put(row.toJSON());
+
+            return generateSuccessMsg("data", jsonArray);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
+
+    public static String finalizeQuiz(ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
+
+            PairValue p = isSchoolQuizReadyForPay(quiz);
+            int studentsCount = (int) p.getKey();
+            List<Document> questions = (List<Document>) p.getValue();
+
+            HashMap<ObjectId, Document> subjects = new HashMap<>();
+            double total = 0;
+
+            for (Document q : questions) {
+
+                ObjectId subjectId = q.getObjectId("subject_id");
+                Document subject;
+
+                if (!subjects.containsKey(subjectId)) {
+
+                    subject = subjectRepository.findById(subjectId);
+
+                    if (subject == null)
+                        return JSON_NOT_UNKNOWN;
+
+                    subjects.put(subjectId, subject);
+                } else
                     subject = subjects.get(subjectId);
 
                 int basePrice = q.getString("level").equals("easy") ?
                         subject.getInteger("school_easy_price") :
-                            q.getString("level").equals("mid") ?
-                            subject.getInteger("school_mid_price") :
-                            subject.getInteger("school_hard_price");
+                        q.getString("level").equals("mid") ?
+                                subject.getInteger("school_mid_price") :
+                                subject.getInteger("school_hard_price");
 
-                double price = basePrice * Math.floor(studentsCount / 10.0) * 0.15;
+                double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
                 total += price * studentsCount;
 
             }
@@ -348,7 +452,7 @@ public class QuizController {
                     quizAbstract = new RegularQuizController();
             } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
-            else if(db instanceof SchoolQuizRepository)
+            else if (db instanceof SchoolQuizRepository)
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new OpenQuiz();
@@ -406,13 +510,12 @@ public class QuizController {
                     continue;
                 }
 
-                if(db instanceof SchoolQuizRepository) {
-                    if(((RegularQuizController)quizAbstract).schoolQuizRegistry(
+                if (db instanceof SchoolQuizRepository) {
+                    if (((RegularQuizController) quizAbstract).schoolQuizRegistry(
                             student.getObjectId("_id"), quiz
                     ))
                         addedItems.put(student.getObjectId("_id"));
-                }
-                else {
+                } else {
                     List<Document> added = quizAbstract.registry(
                             student.getObjectId("_id"), student.getString("phone"),
                             student.getString("mail"), quizIds, paid,
@@ -424,7 +527,7 @@ public class QuizController {
                 }
             }
 
-            if(db instanceof SchoolQuizRepository && addedItems.length() > 0) {
+            if (db instanceof SchoolQuizRepository && addedItems.length() > 0) {
                 db.replaceOne(quizId, quiz);
             }
 
@@ -848,16 +951,15 @@ public class QuizController {
         JSONObject jsonObject = new JSONObject()
                 .put("id", user.getObjectId("_id").toString());
 
-        if(student.containsKey("paid")) {
+        if (student.containsKey("paid")) {
             jsonObject.put("paid", student.get("paid"));
             irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
-        }
-        else {
+        } else {
             jsonObject.put("name", user.getString("first_name") + " " + user.getString("last_name"));
             jsonObject.put("NID", user.getString("NID"));
         }
 
-        if(student.containsKey("register_at"))
+        if (student.containsKey("register_at"))
             jsonObject.put("registerAt", getSolarDate(student.getLong("register_at")));
 
         if (jsonObject.has("start_at")) {
@@ -1070,7 +1172,7 @@ public class QuizController {
             String schoolName = null;
             String pic = null;
 
-            if(db instanceof  SchoolQuizRepository) {
+            if (db instanceof SchoolQuizRepository) {
 
                 Document school = schoolRepository.findOne(
                         and(
@@ -1079,19 +1181,19 @@ public class QuizController {
                         ), new BasicDBObject("name", 1)
                 );
 
-                if(school != null)
+                if (school != null)
                     schoolName = school.getString("name");
 
                 Document user = userRepository.findById(userId);
-                if(user != null) {
+                if (user != null) {
 
-                    if(user.containsKey("pic"))
+                    if (user.containsKey("pic"))
                         pic = DEV_MODE ? uploadDir_dev + UserRepository.FOLDER + "/" + user.getString("pic") :
                                 uploadDir + UserRepository.FOLDER + "/" + user.getString("pic");
 
-                    else if(user.containsKey("avatar_id")) {
+                    else if (user.containsKey("avatar_id")) {
                         Document avatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-                        if(avatar != null)
+                        if (avatar != null)
                             pic = DEV_MODE ? uploadDir_dev + UserRepository.FOLDER + "/" + avatar.getString("file") :
                                     uploadDir + UserRepository.FOLDER + "/" + avatar.getString("file");
                     }
@@ -1290,7 +1392,7 @@ public class QuizController {
 
             ObjectId qIdTmp = ((Document) questionsList).getObjectId("_id");
 
-            if(ids.contains(qIdTmp)) {
+            if (ids.contains(qIdTmp)) {
                 throw new InvalidFieldsException("duplicate");
             }
 
