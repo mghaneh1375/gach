@@ -138,7 +138,7 @@ public class PDFUtils {
 
                 contentStream.drawImage(image, mediaBox.getWidth() - w - 20, totalH - marginTop, w, h);
 
-                myShowText(bidiReorder(convertEnToPrNum(i + "") + " - "), contentStream, mediaBox, 14, marginTop - h + 74, 45, false);
+                myShowText(bidiReorder(convertEnToPrNum(i + "") + " - "), contentStream, mediaBox, 14, marginTop - h + 20, 45, false);
 
                 i++;
 
