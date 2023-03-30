@@ -7,10 +7,10 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+    public final static String STATICS_SERVER = "https://statics.irysc.com/";
     public final static String VIDEO_STATICS_SERVER = "https://v.irysc.com/";
 
-    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 
 
     public final static String mailUserName = "noreply@irysc.com";
@@ -50,7 +50,7 @@ public class StaticValues {
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
