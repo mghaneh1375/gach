@@ -309,6 +309,7 @@ public class QuizController {
             List<Document> questions = (List<Document>) p.getValue();
             List<SchoolRecpRow> rows = new ArrayList<>();
             HashMap<ObjectId, Document> subjects = new HashMap<>();
+            double total = 0;
 
             for (Document question : questions) {
 
@@ -333,6 +334,7 @@ public class QuizController {
                                 subject.getInteger("school_hard_price");
 
                 double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
+                total += price;
 
                 SchoolRecpRow row = new SchoolRecpRow(question.getString("level"),
                         subject.getString("name"), (int) price);
@@ -347,6 +349,14 @@ public class QuizController {
             JSONArray jsonArray = new JSONArray();
             for(SchoolRecpRow row : rows)
                 jsonArray.put(row.toJSON());
+
+            jsonArray.put(new JSONObject()
+                    .put("level", "-")
+                    .put("subject", "جمع کل")
+                    .put("price", "-")
+                    .put("totalPrice", (int)total)
+                    .put("count", questions.size())
+            );
 
             return generateSuccessMsg("data", jsonArray);
 
