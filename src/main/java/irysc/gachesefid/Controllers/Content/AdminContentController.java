@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Content;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -12,8 +13,7 @@ import java.util.List;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.getSolarDate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminContentController {
 
@@ -108,4 +108,44 @@ public class AdminContentController {
 
     }
 
+    public static String forceFire(ObjectId id, JSONArray jsonArray) {
+
+        Document content = contentRepository.findById(id);
+        if(content == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        List<Document> students = content.getList("users", Document.class);
+
+        int idx;
+        ObjectId oId;
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            String idStr = jsonArray.getString(i);
+
+            if (!ObjectId.isValid(idStr)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            oId = new ObjectId(idStr);
+            idx = Utility.searchInDocumentsKeyValIdx(students, "_id", oId);
+
+            if(idx == -1) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            students.remove(idx);
+            doneIds.put(oId);
+        }
+
+        if(doneIds.length() > 0)
+            contentRepository.replaceOne(content.getObjectId("_id"), content);
+
+        return returnRemoveResponse(excepts, doneIds);
+    }
 }

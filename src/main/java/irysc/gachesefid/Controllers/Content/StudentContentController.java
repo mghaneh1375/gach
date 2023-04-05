@@ -305,7 +305,7 @@ public class StudentContentController {
             jsonArray.put(jsonObject);
         }
 
-        if(!afterBuy && userId != null) {
+        if(!afterBuy && userId != null && isFree) {
 
             users.add(new Document("_id", userId)
                     .append("paid", 0).append("register_at", System.currentTimeMillis()));
