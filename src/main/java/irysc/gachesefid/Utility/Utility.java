@@ -323,6 +323,53 @@ public class Utility {
         return false;
     }
 
+
+    public static boolean sendSMSWithTemplate(String receptor, int templateId, PairValue ... paramsPair) {
+
+        if(DEV_MODE)
+            return true;
+
+        receptor = convertPersianDigits(receptor);
+
+        try {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("destination", receptor)
+                    .put("send_to_blacklist", 1)
+                    .put("template_id", templateId);
+
+            JSONArray params = new JSONArray();
+
+            for(PairValue p : paramsPair)
+                params.put(new JSONObject()
+                        .put(p.getKey().toString(), p.getValue())
+                );
+
+            jsonObject.put("parameters", params);
+
+            HttpResponse<String> response = Unirest.post("https://api.asanak.com/v1/sms/template")
+                    .header("api_key", "bogenGach")
+                    .header("api_secret", "bd23cb13fa2c49c20673504ed2a19729e61feb22f951819fbe5042a18efab840")
+                    .header("accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .body(jsonObject)
+                    .asString();
+
+            if(response != null)
+                System.out.println(response.getBody());
+
+            return true;
+        } catch (HttpException ex) {
+            System.out.print("HttpException  : " + ex.getMessage());
+        } catch (ApiException ex) {
+            System.out.print("ApiException : " + ex.getMessage());
+        } catch (UnirestException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
     public static String convertPersianDigits(String number) {
 
         char[] chars = new char[number.length()];

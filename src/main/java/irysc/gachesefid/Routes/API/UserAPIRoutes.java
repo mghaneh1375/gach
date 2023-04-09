@@ -10,6 +10,7 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
@@ -61,7 +62,8 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-//
+            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "محمدقانع"));
+
 //            List<Document> users = userRepository.find(null, null);
 //            for(Document user : users) {
 //
