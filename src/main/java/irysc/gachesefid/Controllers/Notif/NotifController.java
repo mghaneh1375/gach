@@ -351,15 +351,16 @@ public class NotifController {
 
         if(sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
             neededFields.append("events", 1);
+            neededFields.append("first_name", 1);
+            neededFields.append("last_name", 1);
 
             if(filtersJSON.getBoolean("sendMail")) {
                 neededFields.append("mail", 1);
-                neededFields.append("first_name", 1);
-                neededFields.append("last_name", 1);
             }
 
-            if(filtersJSON.getBoolean("sendSMS"))
+            if(filtersJSON.getBoolean("sendSMS")) {
                 neededFields.append("phone", 1);
+            }
         }
 
         else if(sendVia.equalsIgnoreCase(NotifVia.MAIL.toString())) {
