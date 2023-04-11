@@ -51,7 +51,7 @@ public class StudentCertification {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String verifyCert(ObjectId certId, String NID) {
+    public static String verifyCert(ObjectId certId, ObjectId id) {
 
         Document certificate = certificateRepository.findById(certId);
 
@@ -60,7 +60,7 @@ public class StudentCertification {
 
         List<Document> users = certificate.getList("users", Document.class);
         Document userCert = Utility.searchInDocumentsKeyVal(
-                users, "NID", NID
+                users, "_id", id
         );
 
         if (userCert == null)
@@ -96,8 +96,8 @@ public class StudentCertification {
                 certificate.getInteger("qr_x"),
                 certificate.getInteger("qr_y"),
                 certificate.getInteger("qr_size"),
-                userCert.getObjectId("_id").toString(),
-                NID
+                certificate.getObjectId("_id").toString(),
+                userCert.getObjectId("_id").toString()
         );
     }
 

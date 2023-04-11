@@ -11,10 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
@@ -32,7 +29,7 @@ public class StudentCertificateAPIRoutes extends Router {
                                                            @PathVariable @NotBlank String NID) {
 
         File f = StudentCertification.issueMyCert(certificateId, NID);
-        if(f == null)
+        if (f == null)
             return null;
 
         try {
@@ -50,6 +47,14 @@ public class StudentCertificateAPIRoutes extends Router {
 
         return null;
     }
+
+    @PostMapping(path = "/verifyCert/{certificateId}/{id}")
+    @ResponseBody
+    public String verifyCert(@PathVariable @ObjectIdConstraint ObjectId certificateId,
+                             @PathVariable @ObjectIdConstraint ObjectId id) {
+        return StudentCertification.verifyCert(certificateId, id);
+    }
+
 
     @GetMapping(path = "/getMyCerts/{NID}")
     @ResponseBody
