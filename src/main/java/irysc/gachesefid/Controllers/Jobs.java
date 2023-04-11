@@ -440,6 +440,8 @@ public class Jobs implements Runnable {
                 if(!PhoneValidator.isValid(sms.getString("phone")))
                     continue;
 
+                ObjectId notifId = sms.getObjectId("notif_id");
+
                 if(sms.getString("msg").contains("newNotif")) {
                     String name = sms.getString("msg").split("__")[1];
                     sendSMSWithTemplate(sms.getString("phone"), 815, new PairValue("name", name));
@@ -453,23 +455,38 @@ public class Jobs implements Runnable {
                             e.printStackTrace();
                         }
                     }
+
+                    if(!ids.containsKey(notifId)) {
+                        ids.put(notifId, new ArrayList<>() {{
+                            add(sms.getObjectId("_id"));
+                        }});
+                    }
+                    else {
+                        ids.get(notifId).add(sms.getObjectId("_id"));
+                    }
+
                 }
 
                 else {
-                    ObjectId notifId = sms.getObjectId("notif_id");
 
                     if (!messages.containsKey(notifId)) {
                         messages.put(notifId, sms.getString("msg"));
                         receivers.put(notifId, new ArrayList<>() {{
                             add(sms.getString("phone"));
                         }});
+                    } else {
+                        receivers.get(notifId).add(sms.getString("phone"));
+                    }
+
+                    if(!ids.containsKey(notifId)) {
                         ids.put(notifId, new ArrayList<>() {{
                             add(sms.getObjectId("_id"));
                         }});
-                    } else {
-                        receivers.get(notifId).add(sms.getString("phone"));
+                    }
+                    else {
                         ids.get(notifId).add(sms.getObjectId("_id"));
                     }
+
                 }
 
             }
