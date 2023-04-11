@@ -56,7 +56,7 @@ public class UserAPIRoutes extends Router {
 
         Document newDoc = new Document("_id", doc1.getObjectId("_id"))
                 .append("register_at", Math.min(doc1.getLong("register_at"), doc2.getLong("register_at")))
-                .append("paid", Math.max(doc1.getLong("paid"), doc2.getLong("paid")));
+                .append("paid", Math.max(doc1.getInteger("paid"), doc2.getInteger("paid")));
 
         int rate = Math.max((Integer) doc1.getOrDefault("rate", 0), (Integer) doc2.getOrDefault("rate", 0));
         if(rate > 0)
