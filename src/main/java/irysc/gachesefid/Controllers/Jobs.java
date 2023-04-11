@@ -433,12 +433,16 @@ public class Jobs implements Runnable {
             HashMap<ObjectId, ArrayList<ObjectId>> ids = new HashMap<>();
             HashMap<ObjectId, String> messages = new HashMap<>();
 
+            List<ObjectId> shouldRemove = new ArrayList<>();
+
             int sent = 0;
 
             for(Document sms : allSms) {
 
-                if(!PhoneValidator.isValid(sms.getString("phone")))
+                if(!PhoneValidator.isValid(sms.getString("phone"))) {
+                    shouldRemove.add(sms.getObjectId("_id"));
                     continue;
+                }
 
                 ObjectId notifId = sms.getObjectId("notif_id");
 
@@ -537,6 +541,12 @@ public class Jobs implements Runnable {
                     }
                 }
 
+            }
+
+            if(shouldRemove.size() > 0) {
+                smsQueueRepository.deleteMany(
+                        in("_id", shouldRemove)
+                );
             }
         }
     }
