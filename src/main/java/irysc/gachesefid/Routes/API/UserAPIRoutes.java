@@ -9,6 +9,7 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
@@ -71,41 +72,39 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-            List<Document> docs = contentRepository.find(null, null);
-            for(Document doc : docs) {
+//            List<Document> docs = contentRepository.find(null, null);
+//            for(Document doc : docs) {
+//
+//                List<Document> users = doc.getList("users", Document.class);
+//                List<Document> newList = new ArrayList<>();
+//
+//                for(int i = 0; i < users.size(); i++) {
+//
+//                    ObjectId search = users.get(i).getObjectId("_id");
+//                    if(Utility.searchInDocumentsKeyValIdx(newList, "_id", search) != -1)
+//                        continue;
+//
+//                    boolean findDup = false;
+//
+//                    for(int j = i + 1; j < users.size(); j++) {
+//
+//                        if(search.equals(users.get(j).getObjectId("_id"))) {
+//                            newList.add(mergeDuplicateRegistry(users.get(i), users.get(j)));
+//                            findDup = true;
+//                            break;
+//                        }
+//
+//                    }
+//
+//                    if(!findDup)
+//                        newList.add(users.get(i));
+//                }
+//
+//                doc.put("users", newList);
+//                contentRepository.replaceOne(doc.getObjectId("_id"), doc);
+//            }
 
-                List<Document> users = doc.getList("users", Document.class);
-                List<Document> newList = new ArrayList<>();
-
-                for(int i = 0; i < users.size(); i++) {
-
-                    ObjectId search = users.get(i).getObjectId("_id");
-                    if(Utility.searchInDocumentsKeyValIdx(newList, "_id", search) != -1)
-                        continue;
-
-                    boolean findDup = false;
-
-                    for(int j = i + 1; j < users.size(); j++) {
-
-                        if(search.equals(users.get(j).getObjectId("_id"))) {
-                            newList.add(mergeDuplicateRegistry(users.get(i), users.get(j)));
-                            findDup = true;
-                            break;
-                        }
-
-                    }
-
-                    if(!findDup)
-                        newList.add(users.get(i));
-                }
-
-                doc.put("users", newList);
-                contentRepository.replaceOne(doc.getObjectId("_id"), doc);
-            }
-
-//            StudentCertification.issueMyCert(new ObjectId("6326c05a16c8da2a7301cf39"), "0250329001");
-
-//            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "سلام"));
+//            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "امیر حسین نظری اصل"));
 
 //            List<Document> users = userRepository.find(null, null);
 //            for(Document user : users) {

@@ -5,6 +5,7 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
@@ -20,6 +21,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
 
 public class Jobs implements Runnable {
 
@@ -431,23 +433,53 @@ public class Jobs implements Runnable {
             HashMap<ObjectId, ArrayList<ObjectId>> ids = new HashMap<>();
             HashMap<ObjectId, String> messages = new HashMap<>();
 
+            int sent = 0;
+
             for(Document sms : allSms) {
 
                 if(!PhoneValidator.isValid(sms.getString("phone")))
                     continue;
 
-                ObjectId notifId = sms.getObjectId("notif_id");
+                if(sms.getString("msg").contains("newNotif")) {
+                    String name = sms.getString("msg").split("__")[1];
+                    sendSMSWithTemplate(sms.getString("phone"), 815, new PairValue("name", name));
+                    sent++;
 
-                if(!messages.containsKey(notifId)) {
-                    messages.put(notifId, sms.getString("msg"));
-                    receivers.put(notifId, new ArrayList<>(){{add(sms.getString("phone"));}});
-                    ids.put(notifId, new ArrayList<>(){{add(sms.getObjectId("_id"));}});
+                    if(sent >= 30) {
+                        sent = 0;
+                        try {
+                            Thread.sleep(20000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
+
                 else {
-                    receivers.get(notifId).add(sms.getString("phone"));
-                    ids.get(notifId).add(sms.getObjectId("_id"));
+                    ObjectId notifId = sms.getObjectId("notif_id");
+
+                    if (!messages.containsKey(notifId)) {
+                        messages.put(notifId, sms.getString("msg"));
+                        receivers.put(notifId, new ArrayList<>() {{
+                            add(sms.getString("phone"));
+                        }});
+                        ids.put(notifId, new ArrayList<>() {{
+                            add(sms.getObjectId("_id"));
+                        }});
+                    } else {
+                        receivers.get(notifId).add(sms.getString("phone"));
+                        ids.get(notifId).add(sms.getObjectId("_id"));
+                    }
                 }
 
+            }
+
+            if(sent > 0) {
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
 
             for(ObjectId key : messages.keySet()) {

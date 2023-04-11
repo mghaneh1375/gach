@@ -461,7 +461,8 @@ public class NotifController {
                                 .append("notif_id", notifId)
                                 .append("phone", user.getString("phone"))
                                 .append("msg", sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ?
-                                        Jsoup.parse(filtersJSON.getString("text")).text() : "پیام جدیدی در آیریسک داری" + "\n" + "https://e.irysc.com")
+                                        Jsoup.parse(filtersJSON.getString("text")).text() : "newNotif__" +
+                                        user.getString("first_name") + " " + user.getString("last_name"))
                                 .append("created_at", curr)
                 ));
             }
