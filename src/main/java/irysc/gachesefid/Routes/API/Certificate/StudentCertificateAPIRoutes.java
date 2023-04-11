@@ -55,6 +55,29 @@ public class StudentCertificateAPIRoutes extends Router {
         return StudentCertification.verifyCert(certificateId, id);
     }
 
+    @GetMapping(path = "/issueCert/{certificateId}/{id}")
+    @ResponseBody
+    public ResponseEntity<InputStreamResource> issueCert(@PathVariable @ObjectIdConstraint ObjectId certificateId,
+                                                         @PathVariable @ObjectIdConstraint ObjectId id) {
+        File f = StudentCertification.issueCert(certificateId, id);
+        if (f == null)
+            return null;
+
+        try {
+            InputStreamResource file = new InputStreamResource(
+                    new ByteArrayInputStream(FileUtils.readFileToByteArray(f))
+            );
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificate_2.pdf")
+                    .contentType(MediaType.parseMediaType("application/pdf"))
+                    .body(file);
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+
+        return null;
+    }
 
     @GetMapping(path = "/getMyCerts/{NID}")
     @ResponseBody

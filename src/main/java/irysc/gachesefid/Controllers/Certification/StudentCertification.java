@@ -70,6 +70,34 @@ public class StudentCertification {
     }
 
 
+    public static File issueCert(ObjectId certId, ObjectId id) {
+
+        Document certificate = certificateRepository.findById(certId);
+
+        if (certificate == null || !certificate.getBoolean("visibility"))
+            return null;
+
+        List<Document> users = certificate.getList("users", Document.class);
+        Document userCert = Utility.searchInDocumentsKeyVal(
+                users, "_id", id
+        );
+
+        if (userCert == null)
+            return null;
+
+        return PDFUtils.getCertificate(
+                certificate.getList("params", Document.class),
+                userCert.getList("params", String.class),
+                certificate.getString("img"),
+                certificate.getBoolean("is_landscape"),
+                certificate.getInteger("qr_x"),
+                certificate.getInteger("qr_y"),
+                certificate.getInteger("qr_size"),
+                certificate.getObjectId("_id").toString(),
+                userCert.getObjectId("_id").toString()
+        );
+    }
+
     public static File issueMyCert(ObjectId certId, String NID) {
 
         Document certificate = certificateRepository.findById(certId);
