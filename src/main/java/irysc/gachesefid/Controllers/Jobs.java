@@ -460,15 +460,7 @@ public class Jobs implements Runnable {
                         }
                     }
 
-                    if(!ids.containsKey(notifId)) {
-                        ids.put(notifId, new ArrayList<>() {{
-                            add(sms.getObjectId("_id"));
-                        }});
-                    }
-                    else {
-                        ids.get(notifId).add(sms.getObjectId("_id"));
-                    }
-
+                    shouldRemove.add(sms.getObjectId("_id"));
                 }
 
                 else {
