@@ -14,6 +14,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class StudentCertification {
@@ -50,6 +51,25 @@ public class StudentCertification {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String verifyCert(ObjectId certId, String NID) {
+
+        Document certificate = certificateRepository.findById(certId);
+
+        if (certificate == null || !certificate.getBoolean("visibility"))
+            return JSON_NOT_VALID_ID;
+
+        List<Document> users = certificate.getList("users", Document.class);
+        Document userCert = Utility.searchInDocumentsKeyVal(
+                users, "NID", NID
+        );
+
+        if (userCert == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        return JSON_OK;
+    }
+
+
     public static File issueMyCert(ObjectId certId, String NID) {
 
         Document certificate = certificateRepository.findById(certId);
@@ -76,7 +96,8 @@ public class StudentCertification {
                 certificate.getInteger("qr_x"),
                 certificate.getInteger("qr_y"),
                 certificate.getInteger("qr_size"),
-                userCert.getObjectId("_id").toString()
+                userCert.getObjectId("_id").toString(),
+                NID
         );
     }
 

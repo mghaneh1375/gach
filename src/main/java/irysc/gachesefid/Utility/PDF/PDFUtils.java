@@ -168,7 +168,7 @@ public class PDFUtils {
 
     public static File getCertificate(List<Document> params, List<String> values,
                                       String img, boolean isLandscape,
-                                      int qrX, int qrY, int qrSize, String certId) {
+                                      int qrX, int qrY, int qrSize, String certId, String NID) {
 
         PDDocument document = new PDDocument();
         try {
@@ -215,8 +215,7 @@ public class PDFUtils {
                     );
             }
 
-//            "http://192.168.43.157:3000/checkCert/" + certId
-            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://e.irysc.com/checkCert/" + certId);
+            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://e.irysc.com/checkCert/" + certId + "/" + NID);
             contentStream.close();
 
             String filename = baseDir + "exam.pdf";

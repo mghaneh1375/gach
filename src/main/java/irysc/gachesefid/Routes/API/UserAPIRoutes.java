@@ -5,6 +5,7 @@ import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Certification.StudentCertification;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
@@ -64,49 +65,7 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-            List<Document> docs = transactionRepository.find(and(
-                    eq("status", "success"),
-                    exists("products"),
-                    exists("student_ids", false),
-                    eq("section", OffCodeSections.GACH_EXAM.getName())
-            ), null);
-
-            TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
-
-            for (Document transaction : docs) {
-
-
-                ObjectId studentId = transaction.getObjectId("user_id");
-                Document user = userRepository.findById(studentId);
-                if(user != null) {
-
-                    List<ObjectId> products = transaction.getList("products", ObjectId.class);
-                    List<ObjectId> iryscQuizIds = new ArrayList<>();
-
-                    for(ObjectId id : products) {
-
-                        Document quiz = iryscQuizRepository.findById(id);
-
-                        if (quiz == null || !quiz.getString("mode").equals("tashrihi")) {
-                            continue;
-                        }
-
-                        iryscQuizIds.add(id);
-                    }
-
-                    if(iryscQuizIds.size() > 0) {
-                        tashrihiQuizController.registry(
-                                studentId,
-                                user.getString("phone"),
-                                user.getString("mail"),
-                                iryscQuizIds,
-                                transaction.getInteger("amount"),
-                                transaction.getObjectId("_id"),
-                                user.getString("first_name") + " " + user.getString("last_name")
-                        );
-                    }
-                }
-            }
+//            StudentCertification.issueMyCert(new ObjectId("6326c05a16c8da2a7301cf39"), "0250329001");
 
 //            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "سلام"));
 
