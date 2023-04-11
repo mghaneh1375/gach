@@ -5,6 +5,7 @@ import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
+import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -142,6 +143,15 @@ public class PayPing {
             );
 
             if(transaction.containsKey("products")) {
+
+                if(transaction.containsKey("package_id")) {
+                    Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
+                    if(thePackage != null) {
+                        thePackage.put("buyers", (int)thePackage.getOrDefault("buyers", 0) + 1);
+                        packageRepository.replaceOne(thePackage.getObjectId("_id"), thePackage);
+                    }
+                }
+
                 if(transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
                 ) {
@@ -199,7 +209,8 @@ public class PayPing {
                                 openQuizIds.add(id);
                         }
 
-                        if(iryscQuizIds.size() > 0)
+                        if(iryscQuizIds.size() > 0) {
+
                             new RegularQuizController()
                                     .registry(studentId,
                                             user.getString("phone"),
@@ -209,6 +220,17 @@ public class PayPing {
                                             transaction.getObjectId("_id"),
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
+
+                            new TashrihiQuizController()
+                                    .registry(studentId,
+                                            user.getString("phone"),
+                                            user.getString("mail"),
+                                            iryscQuizIds,
+                                            transaction.getInteger("amount"),
+                                            transaction.getObjectId("_id"),
+                                            user.getString("first_name") + " " + user.getString("last_name")
+                                    );
+                        }
 
                         if(openQuizIds.size() > 0)
                             new OpenQuiz()
@@ -221,13 +243,16 @@ public class PayPing {
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
                     }
-                    else
+                    else {
                         new RegularQuizController()
                                 .registry(transaction.getList("student_ids", ObjectId.class),
                                         user.getString("phone"),
                                         user.getString("mail"),
                                         products,
                                         transaction.getInteger("amount"));
+
+                        // todo: group registration for tashrihi
+                    }
                 }
 
                 else if(transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {

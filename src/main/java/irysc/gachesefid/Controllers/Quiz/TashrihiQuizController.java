@@ -1062,8 +1062,8 @@ public class TashrihiQuizController extends QuizAbstract {
     }
 
     @Override
-    List<Document> registry(ObjectId studentId, String phone, String mail,
-                            List<ObjectId> quizIds, int paid, ObjectId transactionId, String stdName) {
+    public List<Document> registry(ObjectId studentId, String phone, String mail,
+                                   List<ObjectId> quizIds, int paid, ObjectId transactionId, String stdName) {
 
         ArrayList<Document> added = new ArrayList<>();
 

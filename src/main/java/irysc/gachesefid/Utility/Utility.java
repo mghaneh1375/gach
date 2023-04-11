@@ -338,12 +338,10 @@ public class Utility {
                     .put("send_to_blacklist", 1)
                     .put("template_id", templateId);
 
-            JSONArray params = new JSONArray();
+            JSONObject params = new JSONObject();
 
             for(PairValue p : paramsPair)
-                params.put(new JSONObject()
-                        .put(p.getKey().toString(), p.getValue())
-                );
+                params.put(p.getKey().toString(), p.getValue());
 
             jsonObject.put("parameters", params);
 

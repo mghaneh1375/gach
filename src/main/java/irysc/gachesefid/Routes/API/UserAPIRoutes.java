@@ -39,8 +39,7 @@ import javax.validation.constraints.NotBlank;
 import java.text.DecimalFormat;
 import java.util.List;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -62,7 +61,20 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "محمدقانع"));
+            List<Document> docs = packageRepository.find(null, null);
+            for (Document doc : docs) {
+
+                int count = transactionRepository.count(and(
+                        exists("package_id", true),
+                        eq("status", "success"),
+                        eq("package_id", doc.getObjectId("_id"))
+                ));
+
+                doc.put("buyers", count);
+                packageRepository.replaceOne(doc.getObjectId("_id"), doc);
+            }
+
+//            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "سلام"));
 
 //            List<Document> users = userRepository.find(null, null);
 //            for(Document user : users) {
