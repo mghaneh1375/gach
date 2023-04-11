@@ -7,11 +7,13 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
+import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
@@ -37,6 +39,7 @@ import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
@@ -61,17 +64,48 @@ public class UserAPIRoutes extends Router {
 
         if (1 == 1) {
 
-            List<Document> docs = packageRepository.find(null, null);
-            for (Document doc : docs) {
+            List<Document> docs = transactionRepository.find(and(
+                    eq("status", "success"),
+                    exists("products"),
+                    exists("student_ids", false),
+                    eq("section", OffCodeSections.GACH_EXAM.getName())
+            ), null);
 
-                int count = transactionRepository.count(and(
-                        exists("package_id", true),
-                        eq("status", "success"),
-                        eq("package_id", doc.getObjectId("_id"))
-                ));
+            TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
 
-                doc.put("buyers", count);
-                packageRepository.replaceOne(doc.getObjectId("_id"), doc);
+            for (Document transaction : docs) {
+
+
+                ObjectId studentId = transaction.getObjectId("user_id");
+                Document user = userRepository.findById(studentId);
+                if(user != null) {
+
+                    List<ObjectId> products = transaction.getList("products", ObjectId.class);
+                    List<ObjectId> iryscQuizIds = new ArrayList<>();
+
+                    for(ObjectId id : products) {
+
+                        Document quiz = iryscQuizRepository.findById(id);
+
+                        if (quiz == null || !quiz.getString("mode").equals("tashrihi")) {
+                            continue;
+                        }
+
+                        iryscQuizIds.add(id);
+                    }
+
+                    if(iryscQuizIds.size() > 0) {
+                        tashrihiQuizController.registry(
+                                studentId,
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                iryscQuizIds,
+                                transaction.getInteger("amount"),
+                                transaction.getObjectId("_id"),
+                                user.getString("first_name") + " " + user.getString("last_name")
+                        );
+                    }
+                }
             }
 
 //            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "سلام"));
