@@ -166,10 +166,22 @@ public class SchoolQuizAPIRoutes extends Router {
     @PostMapping(value = "/finalize/{quizId}")
     @ResponseBody
     public String finalize(HttpServletRequest request,
-                           @PathVariable @ObjectIdConstraint ObjectId quizId
+                           @PathVariable @ObjectIdConstraint ObjectId quizId,
+                           @RequestBody(required = false) @StrongJSONConstraint(
+                                   params = {},
+                                   paramsType = {},
+                                   optionals = {"off"},
+                                   optionalsType = {String.class}
+                           ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getSchoolUser(request);
+
         return QuizController.finalizeQuiz(quizId,
-                getSchoolUser(request).getObjectId("_id")
+                user.getObjectId("_id"),
+                jsonStr != null && !jsonStr.isEmpty() ?
+                        new JSONObject(jsonStr).getString("off") :
+                        null, ((Number) user.get("money")).doubleValue()
         );
     }
 
@@ -180,6 +192,20 @@ public class SchoolQuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return QuizController.recp(quizId,
                 getSchoolUser(request).getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "/getTotalPrice/{quizId}")
+    @ResponseBody
+    public String getTotalPrice(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getSchoolUser(request);
+
+        return QuizController.getTotalPrice(quizId,
+                user.getObjectId("_id"),
+                user.getDouble("money")
         );
     }
 }

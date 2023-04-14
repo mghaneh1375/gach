@@ -28,6 +28,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Question.Utilities.fetchFilter;
+import static irysc.gachesefid.Controllers.Quiz.QuizController.payFromWallet;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir;
@@ -1036,12 +1037,8 @@ public class StudentQuizController {
 
             double newUserMoney = money;
 
-            if (shouldPay > 100) {
-                newUserMoney -= Math.min(shouldPay, money);
-                Document user = userRepository.findById(studentId);
-                user.put("money", newUserMoney);
-                userRepository.replaceOne(studentId, user);
-            }
+            if (shouldPay > 100)
+                newUserMoney = payFromWallet(shouldPay, money, studentId);
 
             Document finalOff = off;
             boolean finalUsePackageOff = usePackageOff;

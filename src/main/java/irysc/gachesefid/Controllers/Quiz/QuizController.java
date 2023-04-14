@@ -30,11 +30,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Certification.AdminCertification.addUserToCert;
+import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.*;
@@ -240,6 +242,12 @@ public class QuizController {
         if (studentsCount == 0)
             throw new InvalidFieldsException("لطفا ابتدا دانش آموز/دانش آموزان خود را به آزمون اضافه کنید");
 
+        Document config = getConfig();
+        int maxStd = (int)config.getOrDefault("max_student_quiz_per_day", 10);
+
+        if(maxStd < studentsCount)
+            throw new InvalidFieldsException("حداکثر تعداد دانش آموز در یک آزمون می تواند " + maxStd + " باشد");
+
         Document question = quiz.get("questions", Document.class);
         if (!question.containsKey("_ids"))
             throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
@@ -249,14 +257,25 @@ public class QuizController {
         if (questionIds.size() == 0)
             throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
 
-        List<Document> questions = questionRepository.findByIds(
-                questionIds, true
+        int maxQ = (int)config.getOrDefault("max_question_per_quiz", 20);
+        if (maxQ < questionIds.size())
+            throw new InvalidFieldsException("حداکثر تعداد سوال در هر آزمون می تواند " + maxQ + " باشد");
+
+        if(quiz.getBoolean("database")) {
+
+            List<Document> questions = questionRepository.findByIds(
+                    questionIds, true
+            );
+
+            if (questions == null)
+                throw new InvalidFieldsException("خطای نامشخص");
+
+            return new PairValue(studentsCount, questions);
+        }
+
+        return new PairValue(studentsCount,
+                config.getOrDefault("quiz_per_student_price", 1000)
         );
-
-        if (questions == null)
-            throw new InvalidFieldsException("خطای نامشخص");
-
-        return new PairValue(studentsCount, questions);
     }
 
     private static class SchoolRecpRow {
@@ -299,6 +318,62 @@ public class QuizController {
         }
     }
 
+    private static PairValue calcPrice(List<Document> questions,
+                                       int studentsCount, boolean isRecpRowNeeded
+    ) throws InvalidFieldsException {
+
+        List<SchoolRecpRow> rows = new ArrayList<>();
+        HashMap<ObjectId, Document> subjects = new HashMap<>();
+        double total = 0;
+
+        for (Document question : questions) {
+
+            ObjectId subjectId = question.getObjectId("subject_id");
+            Document subject;
+
+            if (!subjects.containsKey(subjectId)) {
+
+                subject = subjectRepository.findById(subjectId);
+
+                if (subject == null)
+                    throw new InvalidFieldsException("unknown exception");
+
+                subjects.put(subjectId, subject);
+            } else
+                subject = subjects.get(subjectId);
+
+            int basePrice = question.getString("level").equals("easy") ?
+                    subject.getInteger("school_easy_price") :
+                    question.getString("level").equals("mid") ?
+                            subject.getInteger("school_mid_price") :
+                            subject.getInteger("school_hard_price");
+
+            double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
+            total += price;
+
+            if(isRecpRowNeeded) {
+                SchoolRecpRow row = new SchoolRecpRow(question.getString("level"),
+                        subject.getString("name"), (int) price);
+
+                int idx = rows.indexOf(row);
+                if (idx < 0)
+                    rows.add(row);
+                else
+                    rows.get(idx).inc();
+            }
+        }
+
+        if(isRecpRowNeeded) {
+            JSONArray jsonArray = new JSONArray();
+            for (SchoolRecpRow row : rows)
+                jsonArray.put(row.toJSON());
+
+            return new PairValue(total, jsonArray);
+        }
+
+        return new PairValue(total, null);
+    }
+
     public static String recp(ObjectId quizId, ObjectId userId) {
 
         try {
@@ -306,57 +381,34 @@ public class QuizController {
 
             PairValue p = isSchoolQuizReadyForPay(quiz);
             int studentsCount = (int) p.getKey();
-            List<Document> questions = (List<Document>) p.getValue();
-            List<SchoolRecpRow> rows = new ArrayList<>();
-            HashMap<ObjectId, Document> subjects = new HashMap<>();
-            double total = 0;
+            JSONArray jsonArray;
 
-            for (Document question : questions) {
+            if(quiz.getBoolean("database")) {
 
-                ObjectId subjectId = question.getObjectId("subject_id");
-                Document subject;
+                List<Document> questions = (List<Document>) p.getValue();
 
-                if (!subjects.containsKey(subjectId)) {
+                PairValue res = calcPrice(questions, studentsCount, true);
+                jsonArray = (JSONArray) res.getValue();
+                int total = (int)((double) res.getKey());
 
-                    subject = subjectRepository.findById(subjectId);
+                jsonArray.put(new JSONObject()
+                        .put("level", "-")
+                        .put("subject", "جمع کل")
+                        .put("price", "-")
+                        .put("totalPrice", total)
+                        .put("count", questions.size())
+                );
 
-                    if (subject == null)
-                        return JSON_NOT_UNKNOWN;
-
-                    subjects.put(subjectId, subject);
-                } else
-                    subject = subjects.get(subjectId);
-
-                int basePrice = question.getString("level").equals("easy") ?
-                        subject.getInteger("school_easy_price") :
-                        question.getString("level").equals("mid") ?
-                                subject.getInteger("school_mid_price") :
-                                subject.getInteger("school_hard_price");
-
-                double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
-                total += price;
-
-                SchoolRecpRow row = new SchoolRecpRow(question.getString("level"),
-                        subject.getString("name"), (int) price);
-
-                int idx = rows.indexOf(row);
-                if(idx < 0)
-                    rows.add(row);
-                else
-                    rows.get(idx).inc();
             }
-
-            JSONArray jsonArray = new JSONArray();
-            for(SchoolRecpRow row : rows)
-                jsonArray.put(row.toJSON());
-
-            jsonArray.put(new JSONObject()
-                    .put("level", "-")
-                    .put("subject", "جمع کل")
-                    .put("price", "-")
-                    .put("totalPrice", (int)total)
-                    .put("count", questions.size())
-            );
+            else {
+                jsonArray = new JSONArray();
+                int price = (int)p.getValue();
+                jsonArray.put(new JSONObject()
+                    .put("price", price)
+                    .put("totalPrice", studentsCount * price)
+                    .put("count", studentsCount)
+                );
+            }
 
             return generateSuccessMsg("data", jsonArray);
 
@@ -366,7 +418,84 @@ public class QuizController {
 
     }
 
-    public static String finalizeQuiz(ObjectId quizId, ObjectId userId) {
+    public static String getTotalPrice(ObjectId quizId, ObjectId userId,
+                                       double money) {
+
+        try {
+            Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
+            PairValue p = isSchoolQuizReadyForPay(quiz);
+            int studentsCount = (int) p.getKey();
+            int total;
+
+            if(quiz.getBoolean("database")) {
+                List<Document> questions = (List<Document>) p.getValue();
+                PairValue res = calcPrice(questions, studentsCount, false);
+                total = (int) ((double) res.getKey());
+            }
+            else {
+                int price = (int) p.getValue();
+                total = studentsCount * price;
+            }
+
+            long curr = System.currentTimeMillis();
+
+            Document offDoc = findAccountOff(
+                    userId, curr, OffCodeSections.SCHOOL_QUIZ.getName()
+            );
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("total", total);
+
+            double shouldPayDouble = total;
+
+            if(offDoc != null) {
+
+                double offAmount =
+                        offDoc.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
+                                shouldPayDouble * offDoc.getInteger("amount") / 100.0 :
+                                offDoc.getInteger("amount");
+
+                jsonObject.put("off", offAmount);
+                shouldPayDouble -= offAmount;
+            }
+            else
+                jsonObject.put("off", 0);
+
+            if(shouldPayDouble > 0) {
+                if(money >= shouldPayDouble) {
+                    jsonObject.put("usedFromWallet", shouldPayDouble);
+                    shouldPayDouble = 0;
+                }
+                else {
+                    jsonObject.put("usedFromWallet", money);
+                    shouldPayDouble -= money;
+                }
+            }
+            else
+                jsonObject.put("usedFromWallet", 0);
+
+            shouldPayDouble = Math.max(0, shouldPayDouble);
+            jsonObject.put("shouldPay", (int)shouldPayDouble);
+
+            return generateSuccessMsg("data", jsonObject);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
+
+    static double payFromWallet(int shouldPay, double money, ObjectId userId) {
+        double newUserMoney = money;
+        newUserMoney -= Math.min(shouldPay, money);
+        Document user = userRepository.findById(userId);
+        user.put("money", newUserMoney);
+        userRepository.replaceOne(userId, user);
+        return newUserMoney;
+    }
+
+    public static String finalizeQuiz(ObjectId quizId, ObjectId userId,
+                                      String off, double money) {
 
         try {
 
@@ -374,39 +503,127 @@ public class QuizController {
 
             PairValue p = isSchoolQuizReadyForPay(quiz);
             int studentsCount = (int) p.getKey();
-            List<Document> questions = (List<Document>) p.getValue();
+            int total;
 
-            HashMap<ObjectId, Document> subjects = new HashMap<>();
-            double total = 0;
+            if(quiz.getBoolean("database")) {
+                List<Document> questions = (List<Document>) p.getValue();
+                PairValue res = calcPrice(questions, studentsCount, false);
+                total = (int) ((double) res.getKey());
+            }
+            else {
+                int price = (int) p.getValue();
+                total = studentsCount * price;
+            }
 
-            for (Document q : questions) {
+            long curr = System.currentTimeMillis();
+            Document offDoc;
 
-                ObjectId subjectId = q.getObjectId("subject_id");
-                Document subject;
+            if (off == null)
+                offDoc = findAccountOff(
+                        userId, curr, OffCodeSections.SCHOOL_QUIZ.getName()
+                );
+            else {
 
-                if (!subjects.containsKey(subjectId)) {
+                offDoc = validateOffCode(
+                        off, userId, curr,
+                        OffCodeSections.SCHOOL_QUIZ.getName()
+                );
 
-                    subject = subjectRepository.findById(subjectId);
-
-                    if (subject == null)
-                        return JSON_NOT_UNKNOWN;
-
-                    subjects.put(subjectId, subject);
-                } else
-                    subject = subjects.get(subjectId);
-
-                int basePrice = q.getString("level").equals("easy") ?
-                        subject.getInteger("school_easy_price") :
-                        q.getString("level").equals("mid") ?
-                                subject.getInteger("school_mid_price") :
-                                subject.getInteger("school_hard_price");
-
-                double price = basePrice + basePrice * Math.floor(studentsCount / 10.0) * 0.15;
-                total += price * studentsCount;
+                if (offDoc == null)
+                    return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
 
             }
 
-            return JSON_OK;
+            double offAmount = 0;
+            double shouldPayDouble = total * 1.0;
+
+            if (offDoc != null) {
+                offAmount +=
+                        offDoc.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
+                                shouldPayDouble * offDoc.getInteger("amount") / 100.0 :
+                                offDoc.getInteger("amount")
+                ;
+                shouldPayDouble = total - offAmount;
+            }
+
+            int shouldPay = (int) shouldPayDouble;
+
+            if (shouldPay - money <= 100) {
+
+                if (shouldPay > 100)
+                    money = payFromWallet(shouldPay, money, userId);
+
+                Document doc = new Document("user_id", userId)
+                        .append("amount", 0)
+                        .append("account_money", shouldPay)
+                        .append("created_at", curr)
+                        .append("status", "success")
+                        .append("section", OffCodeSections.SCHOOL_QUIZ.getName())
+                        .append("products", quizId);
+
+                if (offDoc != null) {
+                    doc.append("off_code", offDoc.getObjectId("_id"));
+                    doc.append("off_amount", (int) offAmount);
+                }
+
+                ObjectId tId = transactionRepository.insertOneWithReturnId(doc);
+                quiz.put("status", "finish");
+                schoolQuizRepository.replaceOne(quizId, quiz);
+
+                if (offDoc != null) {
+
+                    BasicDBObject update;
+
+                    if (offDoc.containsKey("is_public") &&
+                            offDoc.getBoolean("is_public")
+                    ) {
+                        List<ObjectId> students = offDoc.getList("students", ObjectId.class);
+                        students.add(userId);
+                        update = new BasicDBObject("students", students);
+                    } else {
+
+                        update = new BasicDBObject("used", true)
+                                .append("used_at", curr)
+                                .append("used_section", OffCodeSections.SCHOOL_QUIZ.getName())
+                                .append("used_for", quizId);
+                    }
+
+                    offcodeRepository.updateOne(
+                            offDoc.getObjectId("_id"),
+                            new BasicDBObject("$set", update)
+                    );
+                }
+
+                return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                        "action", "success",
+                        new PairValue("refId", money),
+                        new PairValue("transactionId", tId.toString())
+                );
+            }
+
+            long orderId = Math.abs(new Random().nextLong());
+            while (transactionRepository.exist(
+                    eq("order_id", orderId)
+            )) {
+                orderId = Math.abs(new Random().nextLong());
+            }
+
+            Document doc =
+                    new Document("user_id", userId)
+                            .append("account_money", money)
+                            .append("amount", (int) (shouldPay - money))
+                            .append("created_at", curr)
+                            .append("status", "init")
+                            .append("order_id", orderId)
+                            .append("products", quizId)
+                            .append("section", OffCodeSections.SCHOOL_QUIZ.getName());
+
+            if (off != null) {
+                doc.append("off_code", offDoc.getObjectId("_id"));
+                doc.append("off_amount", (int) offAmount);
+            }
+
+            return goToPayment((int) (shouldPay - money), doc);
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());

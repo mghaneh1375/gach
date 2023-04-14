@@ -116,7 +116,7 @@ public class PayPing {
         return output.toString();
     }
 
-    private static void completePay(Document transaction)  {
+    private static void completePay(Document transaction) {
 
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
@@ -143,6 +143,19 @@ public class PayPing {
             );
 
             if(transaction.containsKey("products")) {
+
+
+                if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.SCHOOL_QUIZ.getName())
+                ) {
+
+                    Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
+
+                    if(quiz != null) {
+                        quiz.put("status", "finish");
+                        schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+                    }
+                }
 
                 if(transaction.containsKey("package_id")) {
                     Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
