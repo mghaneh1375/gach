@@ -53,7 +53,7 @@ public class QuestionAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getPrivilegeUser(request);
         return QuestionController.subjectQuestions(
-                isQuestionNeeded, criticalThresh, organizationCode, subjectId, lessonId, gradeId
+                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode, subjectId, lessonId, gradeId
         );
     }
 
