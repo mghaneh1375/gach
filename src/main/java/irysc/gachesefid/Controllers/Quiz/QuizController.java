@@ -2055,6 +2055,8 @@ public class QuizController {
 
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
+            else if (db instanceof SchoolQuizRepository)
+                new RegularQuizController.Taraz(quiz, schoolQuizRepository);
             else if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                 new TashrihiQuizController().createTaraz(quiz);

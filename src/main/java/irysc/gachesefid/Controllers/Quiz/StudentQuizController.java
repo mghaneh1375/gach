@@ -417,6 +417,8 @@ public class StudentQuizController {
                             if (!isIRYSCQuiz)
                                 jsonObject.put("status", "continue");
                         }
+
+                        jsonObject.put("startAt", studentDoc.getLong("start_at"));
                     }
 
                     if (studentDoc.containsKey("rate"))
@@ -425,6 +427,79 @@ public class StudentQuizController {
                     data.put(jsonObject);
                 }
             }
+
+        }
+
+        return generateSuccessMsg("data", data);
+    }
+
+    public static String mySchoolQuizzes(Document user,
+                                         String status) {
+
+        ObjectId userId = user.getObjectId("_id");
+
+        JSONArray data = new JSONArray();
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        filters.add(in("students._id", userId));
+        filters.add(eq("status", "finish"));
+
+        long curr = System.currentTimeMillis();
+
+        if (status != null) {
+
+            if (status.equalsIgnoreCase("finished"))
+                filters.add(lt("end", curr));
+            else if (status.equalsIgnoreCase("inProgress"))
+                filters.add(
+                        and(
+                                lte("start", curr),
+                                gt("end", curr)
+                        )
+                );
+            else
+                filters.add(gt("start", curr));
+        }
+
+        ArrayList<Document> quizzes = schoolQuizRepository.find(and(filters), null);
+
+        QuizAbstract quizAbstract = new RegularQuizController();
+
+        for (Document quiz : quizzes) {
+
+            Document studentDoc = searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            );
+
+            if (studentDoc == null)
+                continue;
+
+            JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                    quiz, true, false, true, true
+            );
+
+            if (jsonObject.getString("status")
+                    .equalsIgnoreCase("inProgress") &&
+                    studentDoc.containsKey("start_at") &&
+                    studentDoc.get("start_at") != null
+            ) {
+                int neededTime = quizAbstract.calcLen(quiz);
+                int untilYetInSecondFormat =
+                        (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+
+                int reminder = neededTime - untilYetInSecondFormat;
+
+                if (reminder < 0)
+                    jsonObject.put("status", "waitForResult");
+                else {
+                    jsonObject.put("timeReminder", reminder);
+                }
+
+                jsonObject.put("startAt", studentDoc.getLong("start_at"));
+            }
+
+            data.put(jsonObject);
 
         }
 

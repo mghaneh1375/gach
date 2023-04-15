@@ -715,11 +715,19 @@ public class Utility {
             return quiz;
         }
 
-        if (db instanceof SchoolQuizRepository && quiz.getObjectId("created_by").equals(userId))
-            return quiz;
+        if (db instanceof SchoolQuizRepository) {
+            if(quiz.getObjectId("created_by").equals(userId))
+                return quiz;
+            else if(quiz.getString("status").equals("finish") && quiz.getBoolean("visibility") &&
+                    searchInDocumentsKeyValIdx(
+                            quiz.getList("students", Document.class),
+                            "_id", userId
+                    ) != -1
+            )
+                return quiz;
 
-        if (db instanceof SchoolQuizRepository && !quiz.getBoolean("visibility"))
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
+        }
 
         if (searchInDocumentsKeyValIdx(
                 quiz.getList("students", Document.class),

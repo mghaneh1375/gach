@@ -733,8 +733,13 @@ public class QuestionController extends Utilities {
                     );
 
             if (isQuestionNeeded != null && isQuestionNeeded) {
+
                 ArrayList<Document> questions = questionRepository.find(
-                        eq("subject_id", doc.getObjectId("_id")), null
+                        organizationCode == null ? eq("subject_id", doc.getObjectId("_id")) :
+                        and(
+                                eq("subject_id", doc.getObjectId("_id")),
+                                eq("organization_id", organizationCode)
+                        ), null
                 );
 
                 jsonObject.put("questions", convertList(

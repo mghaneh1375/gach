@@ -138,13 +138,13 @@ public class StudentQuizAPIRoutes extends Router {
 
         Document user = getUser(request);
 
-        if(!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+        if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         )
             return JSON_NOT_VALID_PARAMS;
 
         JSONObject jsonObject = new JSONObject(jsonStr);
-        if(jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
+        if (jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
             return JSON_NOT_VALID_PARAMS;
 
         return StudentQuizController.rate(
@@ -243,6 +243,17 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.myQuizzes(
                 user, mode, status
+        );
+    }
+
+    @GetMapping(value = "mySchoolQuizzes")
+    @ResponseBody
+    public String mySchoolQuizzes(HttpServletRequest request,
+                                  @RequestParam(required = false) String status
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.mySchoolQuizzes(
+                user, status
         );
     }
 
