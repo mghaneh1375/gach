@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
@@ -147,5 +148,35 @@ public class AdminContentController {
             contentRepository.replaceOne(content.getObjectId("_id"), content);
 
         return returnRemoveResponse(excepts, doneIds);
+    }
+
+    public static String getAllContents() {
+
+        List<Document> docs = contentRepository.find(exists("sessions.0"),
+                new BasicDBObject("title", 1).append("sessions.title", 1)
+                        .append("_id", 1).append("sessions._id", 1)
+        );
+
+        JSONArray data = new JSONArray();
+
+        for(Document doc : docs) {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", doc.getString("title"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            JSONArray jsonArray = new JSONArray();
+            for(Document session : doc.getList("sessions", Document.class)) {
+                jsonArray.put(new JSONObject()
+                        .put("name", session.getString("title"))
+                        .put("id", session.getObjectId("_id").toString())
+                );
+            }
+
+            jsonObject.put("sessions", jsonArray);
+            data.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", data);
     }
 }

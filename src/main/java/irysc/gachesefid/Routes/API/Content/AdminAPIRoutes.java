@@ -32,6 +32,14 @@ public class AdminAPIRoutes extends Router {
         return AdminContentController.buyers(id);
     }
 
+    @GetMapping(value = "allContents")
+    @ResponseBody
+    public String getAllContents(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return AdminContentController.getAllContents();
+    }
+
 
     @PutMapping(value = "force_registry/{id}")
     @ResponseBody
