@@ -172,6 +172,9 @@ public class QuizController {
             if (newDoc.containsKey("mode") && newDoc.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
                 newDoc.put("correctors", new ArrayList<>());
 
+            if(!newDoc.containsKey("mode"))
+                newDoc.put("mode", "regular");
+
             newDoc.put("visibility", true);
             newDoc.put("tags", tagsArr);
 
