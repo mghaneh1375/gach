@@ -870,7 +870,7 @@ public class QuizController {
             );
 
             List<Boolean> uploadableList = null;
-            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.containsKey("mode") && quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
                         "uploadable_list", new ArrayList<Double>()
                 );
@@ -881,7 +881,8 @@ public class QuizController {
             HashMap<ObjectId, String> correctors = null;
             List<Document> correctorDocs = null;
 
-            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+            if (quiz.containsKey("mode") &&
+                    quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
                     quiz.containsKey("correctors")
             ) {
 
