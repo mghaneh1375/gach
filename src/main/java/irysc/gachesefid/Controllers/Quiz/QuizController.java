@@ -2017,11 +2017,11 @@ public class QuizController {
                                             MultipartFile file) {
         try {
             Document doc = hasAccess(db, userId, quizId);
-            //todo
-//            if (doc.getBoolean("is_online") ||
-//                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
-//            )
-//                return JSON_NOT_VALID_ID;
+
+            if (!doc.getOrDefault("launch_mode", "online").toString().equalsIgnoreCase(LaunchMode.PHYSICAL.getName()) ||
+                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
+            )
+                return JSON_NOT_VALID_ID;
 
             List<Document> students = doc.getList("students", Document.class);
             Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
@@ -2031,15 +2031,16 @@ public class QuizController {
             if (student == null)
                 return JSON_NOT_VALID_ID;
 
-            //todo
-            String filename = FileUtils.uploadFile(file, "answer_sheets");
+            String folder = db instanceof SchoolQuizRepository ? "school_quizzes/answer_sheets" : "answer_sheets";
+
+            String filename = FileUtils.uploadFile(file, folder);
             if (filename == null)
                 return JSON_UNKNOWN_UPLOAD_FILE;
 
             student.put("answer_sheet", filename);
             db.replaceOne(quizId, doc);
 
-            return generateSuccessMsg("file", STATICS_SERVER + "answer_sheets/" + filename);
+            return generateSuccessMsg("file", STATICS_SERVER + folder + "/" + filename);
 
         } catch (Exception x) {
             System.out.println(x.getMessage());

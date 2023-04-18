@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -77,7 +78,7 @@ public class AdminQuestionReportAPIRoutes extends Router {
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return QuestionReportController.create(new JSONObject(jsonStr));
+        return QuestionReportController.create(Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
     @PostMapping(value = "editTag/{id}")
@@ -92,7 +93,7 @@ public class AdminQuestionReportAPIRoutes extends Router {
                           ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return QuestionReportController.edit(id, new JSONObject(jsonStr));
+        return QuestionReportController.edit(id, Utility.convertPersian(new JSONObject(jsonStr)));
     }
 
 }

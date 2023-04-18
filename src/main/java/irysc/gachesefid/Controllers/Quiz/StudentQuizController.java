@@ -706,7 +706,6 @@ public class StudentQuizController {
             return returnQuiz(a.quiz, a.student, false, quizJSON);
 
         } catch (Exception x) {
-            x.printStackTrace();
             return generateErr(x.getMessage());
         }
 
@@ -819,6 +818,9 @@ public class StudentQuizController {
         long allowedDelay = allowDelay ? 3600000 : 0; // 1hour
 
         Document doc = hasProtectedAccess(db, studentId, quizId);
+
+        if(doc.getOrDefault("launch_mode", "online").toString().equalsIgnoreCase("physical"))
+            throw new InvalidFieldsException("این آزمون به صورت حضوری برگزار می شود");
 
         long end = doc.containsKey("end") ?
                 doc.getLong("end") + allowedDelay : -1;
