@@ -188,6 +188,7 @@ public class QuizController {
         } else {
             newDoc.put("mode", "regular");
             newDoc.put("status", "init");
+            newDoc.put("visibility", false);
         }
 
         return newDoc;

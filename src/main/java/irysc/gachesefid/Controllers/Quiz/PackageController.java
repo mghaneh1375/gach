@@ -227,8 +227,12 @@ public class PackageController {
         if(quizIdFilter != null) {
 
             Document quiz = iryscQuizRepository.findById(quizIdFilter);
-            if(quiz == null)
-                return JSON_NOT_VALID_PARAMS;
+            if(quiz == null) {
+
+                quiz = openQuizRepository.findById(quizIdFilter);
+                if(quiz == null)
+                    return JSON_NOT_VALID_PARAMS;
+            }
 
             if(searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class), "_id", userId
