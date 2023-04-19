@@ -30,7 +30,7 @@ import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 
 public class Utilities {
 
-    static void checkAnswer(JSONObject jsonObject) throws InvalidFieldsException {
+    public static void checkAnswer(JSONObject jsonObject) throws InvalidFieldsException {
 
         if (jsonObject.has("subjectId")) {
 
@@ -65,7 +65,9 @@ public class Utilities {
                 throw new InvalidFieldsException("کد سازمانی سوال در سامانه موجود است.");
         }
 
-        if (jsonObject.getString("kindQuestion").equals(QuestionType.TEST.getName())) {
+        if (!jsonObject.has("kindQuestion") ||
+                jsonObject.getString("kindQuestion").equals(QuestionType.TEST.getName())
+        ) {
 
             if (!(jsonObject.get("answer") instanceof Integer))
                 throw new InvalidFieldsException("پاسخ سوال باید گزینه صحیح باشد.");
@@ -75,14 +77,14 @@ public class Utilities {
 
         }
 
-        if (jsonObject.getString("kindQuestion").equals(QuestionType.SHORT_ANSWER.getName())) {
+        if (jsonObject.has("kindQuestion") && jsonObject.getString("kindQuestion").equals(QuestionType.SHORT_ANSWER.getName())) {
 
             if (!(jsonObject.get("answer") instanceof Number))
                 throw new InvalidFieldsException("پاسخ سوال باید یک عدد باشد.");
 
         }
 
-        if (jsonObject.getString("kindQuestion").equals(QuestionType.MULTI_SENTENCE.getName())) {
+        if (jsonObject.has("kindQuestion") && jsonObject.getString("kindQuestion").equals(QuestionType.MULTI_SENTENCE.getName())) {
 
             if (!jsonObject.has("sentencesCount"))
                 throw new InvalidFieldsException("تعداد گزاره ها را تعیین کنید.");

@@ -1,12 +1,10 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
-import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionLevel;
-import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -20,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 
-import static com.mongodb.client.model.Filters.eq;
+import static irysc.gachesefid.Controllers.Question.Utilities.checkAnswer;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.Excel.getCellValue;
@@ -29,21 +27,11 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class SchoolQuizController {
 
-    final static String[] mandatoryFields = {
-            "start", "end", "isOnline", "showResultsAfterCorrection",
-    };
-
-    final static String[] forbiddenFields = {
-            "topStudentsGiftCoin", "topStudentsGiftMoney",
-            "topStudentsCount", "startRegistry", "price",
-            "capacity", "endRegistry",
-    };
-
 
     public static String addBatchQuestions(MultipartFile file, ObjectId quizId, ObjectId userId) {
 
+        Document quiz;
 
-        Document quiz = null;
         try {
             quiz = hasAccess(schoolQuizRepository, userId, quizId);
 
@@ -74,22 +62,17 @@ public class SchoolQuizController {
             if (maxQ < currQSize + rows.size())
                 return generateErr("حداکثر تعداد سوال در هر آزمون می تواند " + maxQ + " باشد");
 
-
-
             // excel format:
             // 1- row no 2- question file name 3- subject id
-            // 4- kindQuestion[test, short_answer, multi_sentence]
-            // 5- needed time 6- answer
-            // 7- level[easy, mid, hard] 8- answer file name : optional
-            // 9- sentencesCount : optional 10- telorance : optional
-            // 11- choicesCount : optional
+            // 4- needed time 5- answer
+            // 6- level[easy, mid, hard]
+            // 7- choicesCount : optional
+            // 8- answer file name : optional
 
             JSONArray excepts = new JSONArray();
             int rowIdx = 0;
 
             JSONArray errs = new JSONArray();
-
-            boolean addAtLeastOne = false;
 
             for (Row row : rows) {
 
@@ -100,25 +83,25 @@ public class SchoolQuizController {
                     if(row.getCell(1) == null)
                         break;
 
-                    if (row.getLastCellNum() < 8) {
+                    if (row.getLastCellNum() < 7) {
                         excepts.put(rowIdx);
                         errs.put(batchRowErr(rowIdx, "تعداد ستون ها نامعتیر است."));
                         continue;
                     }
 
                     String questionFilename = row.getCell(1).getStringCellValue();
-                    if (!FileUtils.checkExist(questionFilename, QuestionRepository.FOLDER)) {
+                    if (!FileUtils.checkExist(questionFilename, "school_quizzes/questions")) {
                         excepts.put(rowIdx);
                         errs.put(batchRowErr(rowIdx, "فایل سوال موجود نیست."));
                         continue;
                     }
 
                     String answerFilename = null;
-                    Cell cell = row.getCell(8);
+                    Cell cell = row.getCell(7);
 
                     if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
                         answerFilename = cell.getStringCellValue();
-                        if (!FileUtils.checkExist(answerFilename, QuestionRepository.FOLDER)) {
+                        if (!FileUtils.checkExist(answerFilename, "school_quizzes/questions")) {
                             excepts.put(rowIdx);
                             errs.put(batchRowErr(rowIdx, "فایل پاسخ سوال موجود نیست."));
                             continue;
@@ -138,107 +121,37 @@ public class SchoolQuizController {
 
                     ObjectId subjectId = subject.getObjectId("_id");
 
-                    int authorCode = (int) getCellValue(row.getCell(3));
-                    Document author = authorRepository.findBySecKey(String.format("%03d", authorCode));
-                    if (author == null) {
-                        excepts.put(rowIdx);
-                        errs.put(batchRowErr(rowIdx, "کد مولف نامعتبر است."));
-                        continue;
-                    }
-
-                    String kindQuestion = row.getCell(4).getStringCellValue();
-                    if (!EnumValidatorImp.isValid(kindQuestion, QuestionType.class)) {
-                        errs.put(batchRowErr(rowIdx, "نوع سوال نامعتیر است."));
-                        excepts.put(rowIdx);
-                        continue;
-                    }
-                    jsonObject.put("kindQuestion", kindQuestion);
-
-
-                    String level = row.getCell(8).getStringCellValue();
+                    String level = row.getCell(5).getStringCellValue();
                     if (!EnumValidatorImp.isValid(level, QuestionLevel.class)) {
                         excepts.put(rowIdx);
                         errs.put(batchRowErr(rowIdx, "سطح سختی نامعتیر است."));
                         continue;
                     }
+
                     jsonObject.put("level", level);
+                    jsonObject.put("neededTime", (int) row.getCell(3).getNumericCellValue());
 
-                    jsonObject.put("neededTime", (int) row.getCell(5).getNumericCellValue());
-
-                    cell = row.getCell(6);
+                    cell = row.getCell(4);
                     if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
                         if (Math.floor(cell.getNumericCellValue()) == cell.getNumericCellValue())
                             jsonObject.put("answer", (int) cell.getNumericCellValue());
                         else
                             jsonObject.put("answer", cell.getNumericCellValue());
                     } else
-                        jsonObject.put("answer", row.getCell(6).getStringCellValue());
+                        jsonObject.put("answer", row.getCell(4).getStringCellValue());
 
-                    jsonObject.put("organizationId", row.getCell(7).getStringCellValue());
 
-                    cell = row.getCell(10);
-                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                        jsonObject.put("sentencesCount", (int) cell.getNumericCellValue());
-
-                    cell = row.getCell(11);
-                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                        jsonObject.put("telorance", cell.getNumericCellValue());
-
-                    cell = row.getCell(12);
-                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                        jsonObject.put("choicesCount", (int) cell.getNumericCellValue());
-
-                    cell = row.getCell(13);
-                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                        jsonObject.put("neededLine", (int) cell.getNumericCellValue());
-
-                    ArrayList<String> tags = new ArrayList<>();
-
-                    cell = row.getCell(14);
-                    if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                        jsonObject.put("year", getCellValue(cell));
-
-                    for (int i = 15; i < 20; i++) {
-                        cell = row.getCell(i);
-                        if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
-                            try {
-
-                                int tagCode = (int) cell.getNumericCellValue();
-
-                                Document t = questionTagRepository.findBySecKey(tagCode);
-                                if (t != null) {
-                                    String tt = t.getString("tag");
-                                    if (!tags.contains(tt))
-                                        tags.add(tt);
-                                }
-
-                            } catch (Exception x) {
-
-                                String t = cell.getStringCellValue();
-                                if (!questionTagRepository.exist(
-                                        eq("tag", t)
-                                )) {
-                                    int tagCode = getRandIntForTag();
-
-                                    while (questionTagRepository.exist(
-                                            eq("code", tagCode)
-                                    ))
-                                        tagCode = getRandIntForTag();
-
-                                    questionTagRepository.insertOne(
-                                            new Document("tag", t).append("code", tagCode)
-                                    );
-                                }
-
-                                tags.add(t);
-                            }
-                        }
+                    cell = row.getCell(6);
+                    if(cell == null || cell.getCellType() == Cell.CELL_TYPE_BLANK) {
+                        excepts.put(rowIdx);
+                        errs.put(batchRowErr(rowIdx, "تعداد گزینه نامعتبر است"));
                     }
 
-//                    checkAnswer(jsonObject);
-                    jsonObject.put("tags", tags);
+                    jsonObject.put("choicesCount", (int) cell.getNumericCellValue());
 
-                    questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionFilename, null);
+                    checkAnswer(jsonObject);
+
+                    questionFilename = FileUtils.renameFile("school_quizzes/questions", questionFilename, null);
 
                     if (questionFilename == null) {
                         errs.put(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
@@ -247,7 +160,7 @@ public class SchoolQuizController {
                     }
 
                     if (answerFilename != null) {
-                        answerFilename = FileUtils.renameFile(QuestionRepository.FOLDER, answerFilename, null);
+                        answerFilename = FileUtils.renameFile("school_quizzes/questions", answerFilename, null);
 
                         if (answerFilename == null) {
                             errs.put(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
@@ -258,18 +171,15 @@ public class SchoolQuizController {
 
                     jsonObject.put("question_file", questionFilename);
                     jsonObject.put("answer_file", answerFilename);
-                    jsonObject.put("visibility", true);
                     jsonObject.put("createdAt", System.currentTimeMillis());
 
                     Document newDoc = new Document("subject_id", subjectId)
-                            .append("author", author.getString("name"));
+                            .append("user_id", userId);
 
                     for (String str : jsonObject.keySet())
                         newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
 
-                    questionRepository.insertOne(newDoc);
-                    addAtLeastOne = true;
-
+                    schoolQuestionRepository.insertOne(newDoc);
                 } catch (Exception ignore) {
                     printException(ignore);
                     excepts.put(rowIdx);
@@ -277,17 +187,14 @@ public class SchoolQuizController {
                 }
             }
 
-            if (addAtLeastOne)
-                new Thread(() -> new Jobs.CalcSubjectQuestions().run()).start();
-
             if (excepts.length() == 0)
                 return generateSuccessMsg(
-                        "excepts", "تمامی سوالات به درستی به سامانه اضافه شدند"
+                        "excepts", "تمامی سوالات به درستی به آزمون اضافه شدند"
                 );
 
             return generateSuccessMsg(
                     "excepts",
-                    "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
+                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts,
                     new PairValue("errs", errs)
             );
 

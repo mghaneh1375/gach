@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Quiz.QuizController;
+import irysc.gachesefid.Controllers.Quiz.SchoolQuizController;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -21,9 +22,11 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
@@ -104,6 +107,18 @@ public class SchoolQuizAPIRoutes extends Router {
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
+        );
+    }
+
+
+    @PostMapping(value = "/addBatchQuestions/{quizId}")
+    @ResponseBody
+    public String addBatchQuestions(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                    @RequestBody @NotNull MultipartFile file)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return SchoolQuizController.addBatchQuestions(file, quizId,
+                getPrivilegeUser(request).getObjectId("_id")
         );
     }
 
