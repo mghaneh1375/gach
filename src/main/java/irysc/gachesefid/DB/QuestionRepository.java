@@ -87,12 +87,12 @@ public class QuestionRepository extends Common {
 
                     document.remove("kind_q");
 
-                    if(document.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+                    if(document.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
                         document.put("answer", document.get("answer").toString().replace("2", "0"));
                         document.put("sentences_count", document.get("answer").toString().length());
                     }
                     else {
-                        if(document.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                        if(document.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
                             document.put("answer", Double.parseDouble(document.get("answer").toString()));
                         else
                             document.put("answer", Integer.parseInt(document.get("answer").toString()));
@@ -102,10 +102,10 @@ public class QuestionRepository extends Common {
                             "easy" :
                             document.getInteger("level") == 2 ? "mid" : "hard");
 
-                    if(!document.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
+                    if(!document.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()))
                         document.remove("telorance");
 
-                    if(!document.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                    if(!document.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                         document.remove("choices_count");
 
                     Document author = authorRepository.findBySecKey(document.getInteger("author"));

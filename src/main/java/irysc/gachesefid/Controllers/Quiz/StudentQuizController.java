@@ -143,7 +143,8 @@ public class StudentQuizController {
         try {
             Document quiz = hasProtectedAccess(db, userId, quizId);
 
-            if (!(boolean) quiz.getOrDefault("show_results_after_correction", true))
+            if ((isStudent || !(db instanceof SchoolQuizRepository)) &&
+                    !(boolean) quiz.getOrDefault("show_results_after_correction", true))
                 return generateErr("زمان رویت نتایج فرانرسیده است.");
 
             long curr = System.currentTimeMillis();
@@ -1331,9 +1332,13 @@ public class StudentQuizController {
             return JSON_NOT_UNKNOWN;
 
         int i = 0;
+        boolean useFromDatabase = (boolean)quiz.getOrDefault("database", true);
+
         for (ObjectId itr : questions) {
 
-            Document question = questionRepository.findById(itr);
+            Document question = useFromDatabase ?
+                    questionRepository.findById(itr) :
+                    schoolQuestionRepository.findById(itr);
 
             if (question == null) {
                 i++;
@@ -1370,7 +1375,7 @@ public class StudentQuizController {
             if (i >= stdAnswers.size())
                 question.put("stdAns", "");
             else {
-                if (question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                     question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
                 else
                     question.put("stdAns", stdAnswers.get(i).getValue());
@@ -1423,9 +1428,9 @@ public class StudentQuizController {
             if (i >= stdAnswers.size())
                 question.put("stdAns", "");
             else {
-                if (question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                     question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
-                else if (question.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
+                else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()))
                     question.put("stdAns", stdAnswers.get(i).getValue().toString().matches("^[_]+$") ? "" : stdAnswers.get(i).getValue());
                 else
                     question.put("stdAns", stdAnswers.get(i).getValue());
@@ -1457,7 +1462,7 @@ public class StudentQuizController {
             if (i >= stdAnswers.size())
                 question.put("stdAns", "");
             else {
-                if (question.getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                     question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
                 else
                     question.put("stdAns", stdAnswers.get(i).getValue());

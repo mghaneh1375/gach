@@ -144,12 +144,12 @@ public class Utilities {
                         .put("oldIncorrect", doc.getInteger("old_incorrect"))
                         .put("oldWhite", doc.getInteger("old_white"));
 
-                if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()) && jsonObject.has("stdAns")) {
+                if(doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()) && jsonObject.has("stdAns")) {
                     jsonObject.put("stdMark",
                             QuizAbstract.QuestionStat.getStdMarkInMultiSentenceQuestion(doc.getString("answer"), jsonObject.getString("stdAns"), doc.getDouble("mark")).getKey()
                     );
                 }
-                else if(doc.getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
+                else if(doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
 
                     double stdAns = jsonObject.getDouble("stdAns");
 
@@ -240,7 +240,7 @@ public class Utilities {
                 jsonObject.put("author", doc.getString("author"));
 
             jsonObject
-                    .put("kindQuestion", doc.getString("kind_question"));
+                    .put("kindQuestion", doc.getOrDefault("kind_question", "test").toString());
 
             jsonArray.put(jsonObject);
         }

@@ -169,7 +169,7 @@ public class QuestionController extends Utilities {
             return JSON_NOT_VALID_ID;
 
         if (!jsonObject.has("kindQuestion"))
-            jsonObject.put("kindQuestion", question.getString("kind_question"));
+            jsonObject.put("kindQuestion", question.getOrDefault("kind_question", "test").toString());
 
         if (jsonObject.getString("kindQuestion").equals(
                 QuestionType.MULTI_SENTENCE.getName()

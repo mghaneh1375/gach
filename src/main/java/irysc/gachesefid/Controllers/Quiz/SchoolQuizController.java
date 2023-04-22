@@ -1,23 +1,35 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionLevel;
+import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Question.Utilities.checkAnswer;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -73,6 +85,9 @@ public class SchoolQuizController {
             int rowIdx = 0;
 
             JSONArray errs = new JSONArray();
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+            List<Document> addedQuestions = new ArrayList<>();
 
             for (Row row : rows) {
 
@@ -179,12 +194,48 @@ public class SchoolQuizController {
                     for (String str : jsonObject.keySet())
                         newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
 
-                    schoolQuestionRepository.insertOne(newDoc);
+                    addedQuestions.add(newDoc);
+                    writes.add(new InsertOneModel<>(newDoc));
+
                 } catch (Exception ignore) {
                     printException(ignore);
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, ignore.getMessage()));
                 }
+            }
+
+            if(writes.size() > 0) {
+
+                schoolQuestionRepository.bulkWrite(writes);
+
+                List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
+                List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
+
+                for (Document addedQuestion : addedQuestions) {
+                    marks.add(3.0);
+                    ids.add(addedQuestion.getObjectId("_id"));
+                }
+
+                byte[] answersByte;
+
+                if (questions.containsKey("answers"))
+                    answersByte = questions.get("answers", Binary.class).getData();
+                else
+                    answersByte = new byte[0];
+
+                for (Document question : addedQuestions) {
+                    answersByte = Utility.addAnswerToByteArr(answersByte, "test",
+                            new PairValue(question.getInteger("choices_count"), question.get("answer"))
+                    );
+                }
+
+                questions.put("answers", answersByte);
+
+                questions.put("marks", marks);
+                questions.put("_ids", ids);
+                quiz.put("questions", questions);
+
+                schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
             }
 
             if (excepts.length() == 0)

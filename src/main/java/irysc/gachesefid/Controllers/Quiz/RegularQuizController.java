@@ -701,7 +701,7 @@ public class RegularQuizController extends QuizAbstract {
 
                 for (QuestionStat aStudentsStat : studentsStat) {
 
-                    if (question.getString("kind_question").equalsIgnoreCase(
+                    if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
                             QuestionType.MULTI_SENTENCE.getName()
                     ))
                         status = aStudentsStat.doCorrectMultiSentence(question, idx);

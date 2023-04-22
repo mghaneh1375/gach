@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.schoolQuestionRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx;
@@ -421,6 +422,24 @@ public class Utility {
         return calcAnswerByteArr(questions);
     }
 
+    static byte[] getSchoolAnswersByteArr(List<ObjectId> ids) {
+
+        ArrayList<Document> questions;
+        questions = new ArrayList<>();
+
+        for (ObjectId id : ids) {
+
+            Document question = schoolQuestionRepository.findById(id);
+
+            if (question == null)
+                continue;
+
+            questions.add(question);
+        }
+
+        return calcAnswerByteArr(questions);
+    }
+
     public static PairValue getAnswersByteArrWithNeededTime(List<ObjectId> ids) {
 
         ArrayList<Document> questions = questionRepository.findByIds(ids, true);
@@ -439,9 +458,9 @@ public class Utility {
         int i = 0;
         while (i < questions.size()) {
 
-            bytes.add(Utilities.convertTypeToByte(questions.get(i).getString("kind_question")));
+            bytes.add(Utilities.convertTypeToByte(questions.get(i).getOrDefault("kind_question", "test").toString()));
 
-            if (questions.get(i).getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName())) {
+            if (questions.get(i).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName())) {
 
                 ArrayList<PairValue> answers = new ArrayList<>();
 
@@ -456,7 +475,7 @@ public class Utility {
 
                 for (j = i + 1; j < questions.size(); j++) {
 
-                    if (!questions.get(j).getString("kind_question").equalsIgnoreCase(QuestionType.TEST.getName()))
+                    if (!questions.get(j).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                         break;
 
                     answers.add(
@@ -471,10 +490,10 @@ public class Utility {
                 bytes.add(new byte[]{(byte) 0xff});
 
                 i = j;
-            } else if (questions.get(i).getString("kind_question").equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
+            } else if (questions.get(i).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
                 bytes.add(getByteArr(questions.get(i).getDouble("answer")));
                 i++;
-            } else if (questions.get(i).getString("kind_question").equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+            } else if (questions.get(i).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
                 bytes.add(getByteArr(questions.get(i).getString("answer").toCharArray()));
                 i++;
             }

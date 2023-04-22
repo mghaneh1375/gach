@@ -505,7 +505,7 @@ public abstract class QuizAbstract {
             if (studentAnswers.size() <= idx)
                 status = 0;
 
-            else if (question.getString("kind_question").equalsIgnoreCase(
+            else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
                     QuestionType.TEST.getName()
             )) {
 
@@ -526,7 +526,7 @@ public abstract class QuizAbstract {
                     mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
                     status = -1;
                 }
-            } else if (question.getString("kind_question").equalsIgnoreCase(
+            } else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
                     QuestionType.SHORT_ANSWER.getName()
             )) {
 

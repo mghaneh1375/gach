@@ -38,6 +38,9 @@ public class Jobs implements Runnable {
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
+    //todo remove redundant transactions
+    //todo remove redundant school questions
+
     private static class QuizReminder extends TimerTask {
 
         @Override
