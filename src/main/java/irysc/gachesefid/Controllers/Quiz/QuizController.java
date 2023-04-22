@@ -860,7 +860,7 @@ public class QuizController {
 
             int i = 0;
             boolean useFromDataset = (boolean)
-                    quiz.getOrDefault("database", false);
+                    quiz.getOrDefault("database", true);
 
             for (ObjectId itr : questions) {
 
@@ -1338,7 +1338,9 @@ public class QuizController {
         Document questions = doc.get("questions", Document.class);
         List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
-        String prefix = (boolean)doc.getOrDefault("database", true) ?
+        boolean useFromDatabase = (boolean)doc.getOrDefault("database", true);
+
+        String prefix = useFromDatabase ?
                 DEV_MODE ? uploadDir_dev + QuestionRepository.FOLDER + "/" :
                 uploadDir + QuestionRepository.FOLDER + "/" :
                 DEV_MODE ? uploadDir_dev + "school_quizzes/questions/":
@@ -1347,7 +1349,10 @@ public class QuizController {
 
         for (ObjectId qId : ids) {
 
-            Document questionDoc = questionRepository.findById(qId);
+            Document questionDoc = useFromDatabase ?
+                    questionRepository.findById(qId) :
+                    schoolQuestionRepository.findById(qId);
+            
             if (questionDoc == null)
                 continue;
 
