@@ -653,7 +653,8 @@ public class QuestionController extends Utilities {
                         questionRepository.find(filters.size() > 0 ?
                                         and(filters) : null, null,
                                 sortByFilter
-                        ), isSubjectsNeeded, isAuthorsNeeded, false, false, true
+                        ), isSubjectsNeeded, isAuthorsNeeded, false,
+                false, true, false
         );
 
         return generateSuccessMsg(
@@ -744,7 +745,7 @@ public class QuestionController extends Utilities {
 
                 jsonObject.put("questions", convertList(
                         questions, false, true,
-                        true, true, true
+                        true, true, true, false
                 ));
             }
 

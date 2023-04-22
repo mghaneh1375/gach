@@ -1245,6 +1245,32 @@ public class AdminReportController {
 
     }
 
+    public static ArrayList<Document> createQuizQuestionsList(List<ObjectId> questions,
+                                                              List<Double> questionsMark,
+                                                              boolean useFromDatabase) {
+
+        ArrayList<Document> questionsList = new ArrayList<>();
+
+        int i = 0;
+
+        for (ObjectId itr : questions) {
+
+            Document question = useFromDatabase ?
+                    questionRepository.findById(itr) :
+                    schoolQuestionRepository.findById(itr);
+
+            if (question == null) {
+                i++;
+                continue;
+            }
+
+            questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
+            i++;
+        }
+
+        return questionsList;
+    }
+
     public static String A1(Common db, ObjectId userId,
                             ObjectId quizId) {
 
@@ -1262,7 +1288,6 @@ public class AdminReportController {
 
             Document questionsDoc = quiz.get("questions", Document.class);
 
-            ArrayList<Document> questionsList = new ArrayList<>();
             List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
                     "_ids", new ArrayList<ObjectId>()
             );
@@ -1273,19 +1298,9 @@ public class AdminReportController {
             if (questionsMark.size() != questions.size())
                 return JSON_NOT_UNKNOWN;
 
-            int i = 0;
-            for (ObjectId itr : questions) {
+            boolean useFromDatabase = (boolean)quiz.getOrDefault("database", true);
+            List<Document> questionsList = createQuizQuestionsList(questions, questionsMark, useFromDatabase);
 
-                Document question = questionRepository.findById(itr);
-
-                if (question == null) {
-                    i++;
-                    continue;
-                }
-
-                questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
-                i++;
-            }
 
             List<Binary> questionStats = null;
             if (quiz.containsKey("question_stat")) {
@@ -1295,11 +1310,12 @@ public class AdminReportController {
             }
 
             JSONArray questionsJSONArr = Utilities.convertList(
-                    questionsList, true, true, true, true, false
+                    questionsList, true, true,
+                    true, true, false, useFromDatabase
             );
 
             if (questionStats != null) {
-                for (i = 0; i < questionsJSONArr.length(); i++) {
+                for (int i = 0; i < questionsJSONArr.length(); i++) {
 
                     JSONObject jsonObject = questionsJSONArr.getJSONObject(i);
 

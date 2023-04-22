@@ -110,7 +110,8 @@ public class Utilities {
                                         boolean isAuthorsNeeded,
                                         boolean isQuestionFileNeeded,
                                         boolean isAnswerFileNeeded,
-                                        boolean isDetailNeeded) {
+                                        boolean isDetailNeeded,
+                                        boolean isFromDataset) {
 
         JSONArray jsonArray = new JSONArray();
         HashMap<ObjectId, String> subjects = new HashMap<>();
@@ -208,11 +209,19 @@ public class Utilities {
             if(doc.containsKey("can_upload"))
                 jsonObject.put("canUpload", doc.get("can_upload"));
 
-            if (isQuestionFileNeeded && doc.containsKey("question_file"))
-                jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
+            if (isQuestionFileNeeded && doc.containsKey("question_file")) {
+                if(isFromDataset)
+                    jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
+                else
+                    jsonObject.put("questionFile", STATICS_SERVER + "school_quizzes/questions/" + doc.getString("question_file"));
+            }
 
-            if (isAnswerFileNeeded && doc.containsKey("answer_file"))
-                jsonObject.put("answerFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("answer_file"));
+            if (isAnswerFileNeeded && doc.containsKey("answer_file")) {
+                if(isFromDataset)
+                    jsonObject.put("answerFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("answer_file"));
+                else
+                    jsonObject.put("answerFile", STATICS_SERVER + "school_quizzes/questions/" + doc.getString("answer_file"));
+            }
 
             if (isSubjectsNeeded) {
 

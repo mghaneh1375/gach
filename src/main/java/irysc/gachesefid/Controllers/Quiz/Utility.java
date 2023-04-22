@@ -167,7 +167,10 @@ public class Utility {
 
         List<Document> questionDocs = questionRepository.findByIds(ids, true);
 
-        JSONArray questionsJSON = Utilities.convertList(questionDocs, true, true, true, true, true);
+        JSONArray questionsJSON = Utilities.convertList(questionDocs, true,
+                true, true,
+                true, true, false
+        );
 
         for (int z = 0; z < questionsJSON.length(); z++) {
 

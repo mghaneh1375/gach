@@ -932,7 +932,9 @@ public class QuizController {
                 i++;
             }
 
-            JSONArray jsonArray = Utilities.convertList(questionsList, true, true, true, true, true);
+            JSONArray jsonArray = Utilities.convertList(questionsList, true, true,
+                    true, true, true, useFromDataset);
+
             return generateSuccessMsg("data", jsonArray);
         } catch (InvalidFieldsException x) {
             return generateErr(
@@ -1634,7 +1636,8 @@ public class QuizController {
             return "ok";
 
         PairValue p = new PairValue("doneIds", Utilities.convertList(
-                addedItems, true, true, true, true, true
+                addedItems, true, true, true,
+                true, true, false
         ));
 
         if (excepts.length() == 0)

@@ -28,6 +28,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Question.Utilities.fetchFilter;
+import static irysc.gachesefid.Controllers.Quiz.AdminReportController.createQuizQuestionsList;
 import static irysc.gachesefid.Controllers.Quiz.QuizController.payFromWallet;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -1304,7 +1305,8 @@ public class StudentQuizController {
         }
 
         JSONArray questionsJSONArr = Utilities.convertList(
-                questionsList, isStatNeeded, isStatNeeded, true, isStatNeeded, false
+                questionsList, isStatNeeded, isStatNeeded,
+                true, isStatNeeded, false, false
         );
 
         JSONObject jsonObject = new JSONObject();
@@ -1320,7 +1322,6 @@ public class StudentQuizController {
 
         Document questionsDoc = quiz.get("questions", Document.class);
 
-        ArrayList<Document> questionsList = new ArrayList<>();
         List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
                 "_ids", new ArrayList<ObjectId>()
         );
@@ -1331,23 +1332,8 @@ public class StudentQuizController {
         if (questionsMark.size() != questions.size())
             return JSON_NOT_UNKNOWN;
 
-        int i = 0;
         boolean useFromDatabase = (boolean)quiz.getOrDefault("database", true);
-
-        for (ObjectId itr : questions) {
-
-            Document question = useFromDatabase ?
-                    questionRepository.findById(itr) :
-                    schoolQuestionRepository.findById(itr);
-
-            if (question == null) {
-                i++;
-                continue;
-            }
-
-            questionsList.add(Document.parse(question.toJson()).append("no", i + 1).append("mark", questionsMark.get(i)));
-            i++;
-        }
+        ArrayList<Document> questionsList = createQuizQuestionsList(questions, questionsMark, useFromDatabase);
 
         List<Binary> questionStats = null;
         if (isStatNeeded && quiz.containsKey("question_stat")) {
@@ -1368,7 +1354,7 @@ public class StudentQuizController {
 
         ArrayList<PairValue> stdAnswers = tmp == null ? new ArrayList<>() : Utility.getAnswers((byte[]) tmp);
 
-        i = 0;
+        int i = 0;
 
         for (Document question : questionsList) {
 
@@ -1384,7 +1370,8 @@ public class StudentQuizController {
         }
 
         JSONArray questionsJSONArr = Utilities.convertList(
-                questionsList, isStatNeeded, isStatNeeded, true, isStatNeeded, false
+                questionsList, isStatNeeded, isStatNeeded, true,
+                isStatNeeded, false, useFromDatabase
         );
 
         JSONObject jsonObject = new JSONObject();
@@ -1439,7 +1426,8 @@ public class StudentQuizController {
         }
 
         JSONArray questionsJSONArr = Utilities.convertList(
-                questionsList, isStatsNeeded, isStatsNeeded, true, isStatsNeeded, false
+                questionsList, isStatsNeeded, isStatsNeeded,
+                true, isStatsNeeded, false, false
         );
 
         JSONObject jsonObject = new JSONObject();
@@ -1471,7 +1459,8 @@ public class StudentQuizController {
         }
 
         JSONArray questionsJSONArr = Utilities.convertList(
-                questions, isStatsNeeded, isStatsNeeded, true, isStatsNeeded, false
+                questions, isStatsNeeded, isStatsNeeded,
+                true, isStatsNeeded, false, false
         );
 
         JSONObject jsonObject = new JSONObject();

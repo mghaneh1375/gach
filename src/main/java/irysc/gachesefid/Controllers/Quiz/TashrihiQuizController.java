@@ -2,7 +2,9 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Question.Utilities;
-import irysc.gachesefid.DB.*;
+import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.IRYSCQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
@@ -19,10 +21,14 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -693,7 +699,7 @@ public class TashrihiQuizController extends QuizAbstract {
             Document student = Utility.searchInDocumentsKeyVal(students, "_id", studentId);
 
             boolean allMarked = (boolean) student.getOrDefault("all_marked", false);
-            if(!allMarked)
+            if (!allMarked)
                 return generateErr("پاسخبرگ شما هنوز تصحیح نشده است");
 
             List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
@@ -770,7 +776,8 @@ public class TashrihiQuizController extends QuizAbstract {
             JSONArray qJSONArr = Utilities.convertList(new ArrayList<>() {{
                                                            add(q);
                                                        }},
-                    true, true, true, true, true
+                    true, true,
+                    true, true, true, false
             );
 
             if (qJSONArr.length() != 1)
@@ -1248,41 +1255,36 @@ public class TashrihiQuizController extends QuizAbstract {
         return jsonObject;
     }
 
+    void createTaraz(Document quiz) {
+        new TashrihiQuizController.Taraz(quiz, iryscQuizRepository);
+    }
 
     static class Taraz {
 
+        public ArrayList<byte[]> questionStats;
+        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
+        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
         private Document quiz;
-
         private ArrayList<TashrihiQuestionStat> lessonsStat;
         private ArrayList<TashrihiQuestionStat> subjectsStat;
         private List<Document> questionsList;
         private List<ObjectId> questionIds;
-
         private List<Double> marks;
         private List<Document> students;
         private ArrayList<TashrihiQuestionStat> studentsStat;
-        public ArrayList<byte[]> questionStats;
         private ArrayList<Document> studentsData;
-
         private HashMap<ObjectId, ObjectId> states;
         private HashMap<ObjectId, PairValue> usersCities;
-
         private HashMap<ObjectId, Integer> cityRanking;
         private HashMap<Object, Integer> stateRanking;
-
         private HashMap<ObjectId, Integer> citySkip;
         private HashMap<Object, Integer> stateSkip;
-
         private HashMap<ObjectId, Double> cityOldT;
         private HashMap<Object, Double> stateOldT;
-
         private ArrayList<Document> rankingList;
         private List<Document> subjectsGeneralStat;
         private List<Document> lessonsGeneralStat;
-
-        HashMap<ObjectId, List<TarazRanking>> lessonsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
-        HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
 
         Taraz(Document quiz, Common db) {
 
@@ -1918,9 +1920,5 @@ public class TashrihiQuizController extends QuizAbstract {
 
         }
 
-    }
-
-    void createTaraz(Document quiz) {
-        new TashrihiQuizController.Taraz(quiz, iryscQuizRepository);
     }
 }
