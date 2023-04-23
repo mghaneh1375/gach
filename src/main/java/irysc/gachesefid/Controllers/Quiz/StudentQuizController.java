@@ -679,7 +679,7 @@ public class StudentQuizController {
                     .put("description", a.quiz.getOrDefault("desc", ""))
                     .put("mode", a.quiz.getString("mode"))
                     .put("attaches", jsonArray)
-                    .put("refresh", 3) //Math.abs(new Random().nextInt(5)) + 5
+                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
                     .put("duration", a.neededTime)
                     .put("reminder", a.reminder)
                     .put("isQRNeeded", a.quiz.getOrDefault("is_q_r_needed", false))
@@ -817,7 +817,7 @@ public class StudentQuizController {
                                       ObjectId quizId, boolean allowDelay
     ) throws InvalidFieldsException {
 
-        long allowedDelay = allowDelay ? 3600000 : 0; // 1hour
+        long allowedDelay = allowDelay ? 300000 : 0; // 1hour
 
         Document doc = hasProtectedAccess(db, studentId, quizId);
 

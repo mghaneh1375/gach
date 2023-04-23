@@ -468,10 +468,13 @@ public class RegularQuizController extends QuizAbstract {
         private ArrayList<Document> rankingList;
         private List<Document> subjectsGeneralStat;
         private List<Document> lessonsGeneralStat;
+        private boolean useFromDatabase;
+
         Taraz(Document quiz, Common db) {
 
             this.quiz = quiz;
             Document questions = quiz.get("questions", Document.class);
+            this.useFromDatabase = (boolean)quiz.getOrDefault("database", true);
 
 //            marks = questions.getList("marks", Double.class);
 
@@ -566,7 +569,9 @@ public class RegularQuizController extends QuizAbstract {
 
             for (ObjectId id : questionIds) {
 
-                Document question = questionRepository.findById(id);
+                Document question = this.useFromDatabase ?
+                        questionRepository.findById(id) :
+                        schoolQuestionRepository.findById(id);
                 k++;
 
                 if (question == null)

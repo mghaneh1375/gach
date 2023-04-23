@@ -1352,7 +1352,7 @@ public class QuizController {
             Document questionDoc = useFromDatabase ?
                     questionRepository.findById(qId) :
                     schoolQuestionRepository.findById(qId);
-            
+
             if (questionDoc == null)
                 continue;
 
