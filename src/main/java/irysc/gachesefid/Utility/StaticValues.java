@@ -24,7 +24,8 @@ public class StaticValues {
     public final static long TOKEN_EXPIRATION_MSEC = 60 * 60 * 24 * 7 * 1000;
     public final static int TOKEN_EXPIRATION = 60 * 60 * 24 * 7;
 
-    public final static int MAX_QUIZ_ATTACH_SIZE = 5; // MB
+    public final static int ONE_MB = 1024 * 1024;
+    public final static int MAX_QUIZ_ATTACH_SIZE = 5 * ONE_MB; // MB
 
     public static int STUDENTS = 0;
     public static int QUESTIONS = 0;
@@ -43,7 +44,6 @@ public class StaticValues {
 
     public final static int MAX_TICKET_FILE_SIZE = 1024 * 1024 * 6;
 
-    public final static int ONE_MB = 1024 * 1024;
     public final static int MAX_QUESTION_FILE_SIZE = ONE_MB;
 
     public final static int MAX_FILE_SIZE = ONE_MB * 6;

@@ -1193,7 +1193,7 @@ public class QuizController {
 
             if (db instanceof SchoolQuizRepository) {
 
-                Document config = irysc.gachesefid.Utility.Utility.getConfig();
+//                Document config = irysc.gachesefid.Utility.Utility.getConfig();
 
 //                if (config.getBoolean("school_quiz_attaches_just_link"))
 //                    return JSON_NOT_ACCESS;
