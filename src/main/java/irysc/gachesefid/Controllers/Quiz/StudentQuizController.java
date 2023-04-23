@@ -666,8 +666,11 @@ public class StudentQuizController {
             List<String> attaches = (List<String>) a.quiz.getOrDefault("attaches", new ArrayList<>());
             JSONArray jsonArray = new JSONArray();
 
+            String folderBase = db instanceof IRYSCQuizRepository ?
+                    IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER;
+
             for (String attach : attaches)
-                jsonArray.put(STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + attach);
+                jsonArray.put(STATICS_SERVER + folderBase + "/" + attach);
 
             JSONObject quizJSON = new JSONObject()
                     .put("title", a.quiz.getString("title"))

@@ -1194,12 +1194,16 @@ public class QuizController {
             if (db instanceof SchoolQuizRepository) {
 
                 Document config = irysc.gachesefid.Utility.Utility.getConfig();
-                if (config.getBoolean("school_quiz_attaches_just_link"))
-                    return JSON_NOT_ACCESS;
 
-                if (attaches.size() >= config.getInteger("schoolQuizAttachesMax"))
+//                if (config.getBoolean("school_quiz_attaches_just_link"))
+//                    return JSON_NOT_ACCESS;
+
+//                config.getInteger("schoolQuizAttachesMax")
+//                config.getInteger("schoolQuizAttachesMax")
+
+                if (attaches.size() >= 2)
                     return generateErr(
-                            "شما می توانید حداکثر " + config.getInteger("schoolQuizAttachesMax") + " پیوست داشته باشید."
+                            "شما می توانید حداکثر " + 2 + " پیوست داشته باشید."
                     );
             }
 
@@ -1229,7 +1233,7 @@ public class QuizController {
             db.replaceOne(quizId, quiz);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                    "url", STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + filename
+                    "url", STATICS_SERVER + base + "/" + filename
             );
 
         } catch (Exception x) {

@@ -161,6 +161,7 @@ public class RegularQuizController extends QuizAbstract {
         if (isAdmin) {
             jsonObject
                     .put("status", quiz.getString("status"))
+                    .put("visibility", quiz.getOrDefault("visibility", true))
                     .put("database", quiz.getBoolean("database"))
                     .put("studentsCount", quiz.getInteger("registered"))
                     .put("questionsCount", questionsCount);
