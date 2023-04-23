@@ -268,10 +268,14 @@ public class ContentQuizController extends QuizAbstract {
         HashMap<ObjectId, List<TarazRanking>> subjectsTarazRanking = new HashMap<>();
         HashMap<ObjectId, ObjectId> statesDic = new HashMap<>();
 
+        private boolean hasMinusMark;
+
         Taraz(Document quiz, Common db) {
 
             this.quiz = quiz;
+
             Document questions = quiz.get("questions", Document.class);
+            hasMinusMark = (boolean)quiz.getOrDefault("minus_mark", true);
 
 //            marks = questions.getList("marks", Double.class);
 
@@ -350,7 +354,7 @@ public class ContentQuizController extends QuizAbstract {
             fetchQuestions(questions);
 
             studentsStat.add(new QuestionStat(
-                    userId, "", studentAnswers
+                    userId, "", studentAnswers, hasMinusMark
             ));
 
             doCorrectStudents();
@@ -489,7 +493,7 @@ public class ContentQuizController extends QuizAbstract {
                         student.getObjectId("_id"), "",
                         Utility.getAnswers(
                                 student.get("answers", Binary.class).getData()
-                        )
+                        ), hasMinusMark
                 ));
             }
         }

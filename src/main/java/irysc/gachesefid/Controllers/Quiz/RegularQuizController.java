@@ -469,12 +469,14 @@ public class RegularQuizController extends QuizAbstract {
         private List<Document> subjectsGeneralStat;
         private List<Document> lessonsGeneralStat;
         private boolean useFromDatabase;
+        private boolean hasMinusMark;
 
         Taraz(Document quiz, Common db) {
 
             this.quiz = quiz;
             Document questions = quiz.get("questions", Document.class);
             this.useFromDatabase = (boolean)quiz.getOrDefault("database", true);
+            this.hasMinusMark = (boolean)quiz.getOrDefault("minus_mark", true);
 
 //            marks = questions.getList("marks", Double.class);
 
@@ -550,7 +552,7 @@ public class RegularQuizController extends QuizAbstract {
             fetchQuestions(questions);
 
             studentsStat.add(new QuestionStat(
-                    userId, "", studentAnswers
+                    userId, "", studentAnswers, this.hasMinusMark
             ));
 
             doCorrectStudents();
@@ -691,7 +693,7 @@ public class RegularQuizController extends QuizAbstract {
                         student.getObjectId("_id"), "",
                         Utility.getAnswers(
                                 student.get("answers", Binary.class).getData()
-                        )
+                        ), this.hasMinusMark
                 ));
             }
         }

@@ -370,6 +370,7 @@ public abstract class QuizAbstract {
 
         HashMap<ObjectId, Double> lessonTaraz;
         HashMap<ObjectId, Double> subjectTaraz;
+        boolean hasMinusMark;
 
         double sd;
         double mean;
@@ -385,11 +386,14 @@ public abstract class QuizAbstract {
         }
 
         QuestionStat(ObjectId id, String name,
-                     List<PairValue> studentAnswers) {
+                     List<PairValue> studentAnswers,
+                     boolean hasMinusMark) {
+
             totalMark = 0;
             this.id = id;
             this.name = name;
 
+            this.hasMinusMark = hasMinusMark;
             this.studentAnswers = studentAnswers;
 
             subjectWhites = new HashMap<>();
@@ -523,7 +527,12 @@ public abstract class QuizAbstract {
                     mark = question.getDouble("mark");
                     status = 1;
                 } else {
-                    mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
+
+                    if(hasMinusMark)
+                        mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
+                    else
+                        mark = 0;
+
                     status = -1;
                 }
             } else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
@@ -544,7 +553,12 @@ public abstract class QuizAbstract {
                         mark = question.getDouble("mark");
                         status = 1;
                     } else {
-                        mark = -question.getDouble("mark");
+
+                        if(hasMinusMark)
+                            mark = -question.getDouble("mark");
+                        else
+                            mark = 0;
+
                         status = -1;
                     }
                 }
