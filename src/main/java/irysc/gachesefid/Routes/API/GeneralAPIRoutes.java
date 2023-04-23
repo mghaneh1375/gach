@@ -18,6 +18,8 @@ import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -83,7 +85,7 @@ public class GeneralAPIRoutes extends Router {
                                 @PathVariable(required = false) String userId,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {"amount"},
-                                        paramsType = {Integer.class},
+                                        paramsType = {Positive.class},
                                         optionals = {"coin"},
                                         optionalsType = {Number.class}
                                 ) @NotBlank String jsonStr
@@ -96,10 +98,24 @@ public class GeneralAPIRoutes extends Router {
         if (userId != null) {
 
             Document doc = user.get("user", Document.class);
-            doc.put("money", (double)jsonObject.getInt("amount"));
 
-            if (jsonObject.has("coin"))
-                doc.put("coin", jsonObject.getNumber("coin").doubleValue());
+            if(Authorization.isPureStudent(doc.getList("accesses", String.class))) {
+
+                doc.put("money", (double) jsonObject.getInt("amount"));
+
+                if (jsonObject.has("coin"))
+                    doc.put("coin", jsonObject.getNumber("coin").doubleValue());
+            }
+            else {
+
+                doc.put("money", doc.getDouble("money") + (double) jsonObject.getInt("amount"));
+
+                if (jsonObject.has("coin")) {
+                    double d = doc.getDouble("coin") + jsonObject.getNumber("coin").doubleValue();
+                    doc.put("coin", Math.round((d * 100.0)) / 100.0);
+                }
+
+            }
 
             userRepository.replaceOne(doc.getObjectId("_id"), doc);
             userRepository.clearFromCache(doc.getObjectId("_id"));

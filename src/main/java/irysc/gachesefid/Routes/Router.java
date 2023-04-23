@@ -1,11 +1,10 @@
 package irysc.gachesefid.Routes;
 
 import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Models.Access;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,29 +12,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import javax.servlet.http.HttpServletRequest;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
-import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class Router {
 
+    private final static JwtTokenFilter JWT_TOKEN_FILTER = new JwtTokenFilter();
     @Autowired
     private UserService userService;
-
-    private final static JwtTokenFilter JWT_TOKEN_FILTER = new JwtTokenFilter();
 
     protected Document getUser(HttpServletRequest request)
             throws NotActivateAccountException, NotCompleteAccountException, UnAuthException {
 
         boolean auth = new JwtTokenFilter().isAuth(request);
 
-        if(auth) {
+        if (auth) {
             Document u = userService.whoAmI(request);
             if (u != null) {
-                if(!u.getString("status").equals("active")) {
+                if (!u.getString("status").equals("active")) {
                     JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
                     throw new NotActivateAccountException("Account not activated");
                 }
 
-                if(Authorization.isPureStudent(u.getList("accesses", String.class))) {
+                if (Authorization.isPureStudent(u.getList("accesses", String.class))) {
 //                    if (!u.containsKey("pic"))
 //                        throw new NotCompleteAccountException("Account not complete");
                 }
@@ -53,16 +50,16 @@ public class Router {
 
         boolean auth = new JwtTokenFilter().isAuth(request);
 
-        if(auth) {
+        if (auth) {
             Document u = userService.whoAmI(request);
             if (u != null) {
 
-                if(!u.getString("status").equals("active")) {
+                if (!u.getString("status").equals("active")) {
                     JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
                     throw new NotActivateAccountException("Account not activated");
                 }
 
-                if(!Authorization.isStudent(u.getList("accesses", String.class)))
+                if (!Authorization.isStudent(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
                 if (
@@ -124,11 +121,11 @@ public class Router {
 
         boolean auth = new JwtTokenFilter().isAuth(request);
         Document u;
-        if(auth) {
+        if (auth) {
             u = userService.whoAmI(request);
             if (u != null) {
 
-                if(!u.getString("status").equals("active")) {
+                if (!u.getString("status").equals("active")) {
                     JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
                     throw new NotActivateAccountException("Account not activated");
                 }
@@ -146,11 +143,11 @@ public class Router {
         boolean auth = new JwtTokenFilter().isAuth(request);
 
         Document u;
-        if(auth) {
+        if (auth) {
             u = userService.whoAmI(request);
             if (u != null) {
 
-                if(!u.getString("status").equals("active")) {
+                if (!u.getString("status").equals("active")) {
                     JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
                     throw new NotActivateAccountException("Account not activated");
                 }
@@ -167,11 +164,11 @@ public class Router {
         boolean auth = new JwtTokenFilter().isAuth(request);
 
         Document u;
-        if(auth) {
+        if (auth) {
             u = userService.whoAmI(request);
             if (u != null) {
 
-                if(!u.getString("status").equals("active"))
+                if (!u.getString("status").equals("active"))
                     return null;
 
                 return u;
@@ -195,19 +192,19 @@ public class Router {
                     throw new NotActivateAccountException("Account not activated");
                 }
 
-                if(wantedAccess.equals(Access.TEACHER.getName()) &&
+                if (wantedAccess.equals(Access.TEACHER.getName()) &&
                         !Authorization.isTeacher(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
-                if(wantedAccess.equals(Access.SCHOOL.getName()) &&
+                if (wantedAccess.equals(Access.SCHOOL.getName()) &&
                         !Authorization.isSchool(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
-                if(wantedAccess.equals(Access.AGENT.getName()) &&
+                if (wantedAccess.equals(Access.AGENT.getName()) &&
                         !Authorization.isAgent(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
-                if(wantedAccess.equals(Access.ADMIN.getName()) &&
+                if (wantedAccess.equals(Access.ADMIN.getName()) &&
                         !Authorization.isAdmin(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
@@ -248,23 +245,61 @@ public class Router {
 
         Document user = checkCompleteness ? getUser(request) : getUserWithOutCheckCompleteness(request);
 
-        if(isPrivilege && Authorization.isPureStudent(user.getList("accesses", String.class)))
+        if (isPrivilege && Authorization.isPureStudent(user.getList("accesses", String.class)))
             throw new InvalidFieldsException("Access denied");
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(userId != null && !isAdmin)
+        if (userId != null && !isAdmin)
             throw new InvalidFieldsException("no access");
 
-        if(userId != null && !ObjectId.isValid(userId))
+        if (userId != null && !ObjectId.isValid(userId))
             throw new InvalidFieldsException("invalid objectId");
 
-        if(userId != null)
+        if (userId != null)
             user = userRepository.findById(new ObjectId(userId));
 
-        if(user == null)
+        if (user == null)
             throw new InvalidFieldsException("invalid userId");
 
         return new Document("user", user).append("isAdmin", isAdmin);
+    }
+
+    protected Document getUserWithSchoolAccess(HttpServletRequest request,
+                                               boolean checkCompleteness,
+                                               boolean isPrivilege,
+                                               String userId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+
+        Document user = checkCompleteness ? getUser(request) : getUserWithOutCheckCompleteness(request);
+
+        if (isPrivilege && Authorization.isPureStudent(user.getList("accesses", String.class)))
+            throw new InvalidFieldsException("Access denied");
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isSchool = Authorization.isSchool(user.getList("accesses", String.class));
+
+        if (userId != null && !isAdmin && !isSchool)
+            throw new InvalidFieldsException("no access");
+
+        if (userId != null && !ObjectId.isValid(userId))
+            throw new InvalidFieldsException("invalid objectId");
+
+
+        if (userId != null) {
+
+            ObjectId oId = new ObjectId(userId);
+            if(isSchool && !isAdmin &&
+                    !Authorization.hasAccessToThisStudent(oId, user.getObjectId("_id"))
+            )
+                throw new InvalidFieldsException("Access denied");
+
+            user = userRepository.findById(oId);
+        }
+
+        if (user == null)
+            throw new InvalidFieldsException("invalid userId");
+
+        return new Document("user", user).append("isAdmin", isSchool);
     }
 }

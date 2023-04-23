@@ -668,7 +668,7 @@ public class UserAPIRoutes extends Router {
                                          }) String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotCompleteAccountException, InvalidFieldsException {
 
-        Document doc = getUserWithAdminAccess(request, false, false, userId);
+        Document doc = getUserWithSchoolAccess(request, false, false, userId);
         Document user = (Document) doc.get("user");
         boolean isAdmin = doc.getBoolean("isAdmin");
 
