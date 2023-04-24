@@ -68,6 +68,14 @@ public class RegularQuizController extends QuizAbstract {
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
                 Utility.checkFields(schoolMandatoryFields, schoolForbiddenFields, jsonObject);
+
+                if(jsonObject.getLong("end") < jsonObject.getLong("start"))
+                    return generateErr("زمان پایان آزمون باید بزرگ تر از زمان آغاز آن باشد");
+
+                if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 3)
+                    return generateErr("زمان پایان آزمون حداکثر می تواند سه روز بعد از زمان آغاز آن باشد");
+
+
             } else {
                 Utility.checkFields(mandatoryFields, forbiddenFields, jsonObject);
                 jsonObject.put("mode", "regular");
@@ -132,8 +140,9 @@ public class RegularQuizController extends QuizAbstract {
         } catch (Exception ignore) {
         }
 
+        long curr = System.currentTimeMillis();
+
         if (afterBuy) {
-            long curr = System.currentTimeMillis();
 
             if (quiz.getLong("end") < curr) {
                 boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
@@ -159,11 +168,17 @@ public class RegularQuizController extends QuizAbstract {
         }
 
         if (isAdmin) {
+
+            long nextWeek = quiz.getLong("end") + ONE_DAY_MIL_SEC * 7;
+
             jsonObject
                     .put("status", quiz.getString("status"))
                     .put("visibility", quiz.getOrDefault("visibility", true))
                     .put("database", quiz.getBoolean("database"))
                     .put("studentsCount", quiz.getInteger("registered"))
+                    .put("isStart", quiz.getLong("start") < curr)
+                    .put("isEnd", quiz.getLong("end") < curr)
+                    .put("isStop", nextWeek < curr)
                     .put("questionsCount", questionsCount);
         }
 

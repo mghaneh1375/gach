@@ -252,7 +252,7 @@ public class UserAPIRoutes extends Router {
                             @PathVariable(required = false) String userId)
             throws NotActivateAccountException, UnAuthException, InvalidFieldsException, NotCompleteAccountException {
 
-        Document user = (Document) getUserWithAdminAccess(request, false, false, userId).get("user");
+        Document user = (Document) getUserWithSchoolAccess(request, false, false, userId).get("user");
 
         return generateSuccessMsg("user",
                 UserController.isAuth(user)
@@ -356,16 +356,17 @@ public class UserAPIRoutes extends Router {
                              ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         return UserController.updateInfo(convertPersian(new JSONObject(json)),
-                (Document) getUserWithAdminAccess(request, false, false, userId).get("user")
+                (Document) getUserWithSchoolAccess(request, false, false, userId).get("user")
         );
     }
 
 
-    @PutMapping(value = "/blockNotif")
+    @PutMapping(value = {"/blockNotif", "/blockNotif/{studentId}"})
     @ResponseBody
-    public String blockNotif(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return UserController.blockNotif(getUser(request));
+    public String blockNotif(HttpServletRequest request,
+                             @PathVariable(required = false) String studentId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+        return UserController.blockNotif((Document) getUserWithSchoolAccess(request, false, false, studentId).get("user"));
     }
 
 
@@ -601,7 +602,8 @@ public class UserAPIRoutes extends Router {
                                  @NotBlank String json
 
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
-        Document doc = getUserWithAdminAccess(request, false, false, userId);
+
+        Document doc = getUserWithSchoolAccess(request, false, false, userId);
 
         if (doc.getBoolean("isAdmin"))
             return UserController.forceUpdateUsername(
@@ -742,7 +744,7 @@ public class UserAPIRoutes extends Router {
                             @PathVariable(required = false) String userId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         return UserController.setAvatar((
-                        Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
+                        Document) getUserWithSchoolAccess(request, false, false, userId).get("user"),
                 avatarId
         );
     }
@@ -751,8 +753,8 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/myTransactions")
     @ResponseBody
     public String myTransactions(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException, NotCompleteAccountException {
-        return PayPing.myTransactions(getStudentUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return PayPing.myTransactions(getUser(request).getObjectId("_id"));
     }
 
 //    @GetMapping(value = "/myTransaction/{referenceId}")

@@ -948,6 +948,8 @@ public class QuizController {
         JSONArray excepts = new JSONArray();
         JSONArray removedIds = new JSONArray();
 
+        boolean schoolQuizzes = db instanceof SchoolQuizRepository;
+
         for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
@@ -963,9 +965,13 @@ public class QuizController {
 
                 Document quiz = hasAccess(db, userId, quizId);
 
-                if (quiz.getList("students", Document.class).size() > 0) {
-                    excepts.put("مورد " + (i + 1) + " " + "دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
-                    continue;
+                if(!schoolQuizzes || quiz.getString("status").equals("finish")) {
+
+                    if (quiz.getList("students", Document.class).size() > 0) {
+                        excepts.put("مورد " + (i + 1) + " " + "دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
+                        continue;
+                    }
+
                 }
 
                 db.deleteOne(quizId);
@@ -1559,6 +1565,11 @@ public class QuizController {
                         excepts.put(i + 1);
                         continue;
                     }
+                    else if(!isTashrihi &&
+                            question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())) {
+                        excepts.put(i + 1);
+                        continue;
+                    }
 
                     int used = (int) question.getOrDefault("used", 0);
                     question.put("used", used + 1);
@@ -1598,7 +1609,19 @@ public class QuizController {
                 questionRepository.bulkWrite(writes);
         } else if (questionsList instanceof Document) {
 
-            ObjectId qIdTmp = ((Document) questionsList).getObjectId("_id");
+            Document qTmp = (Document) questionsList;
+
+            if (isTashrihi &&
+                    !qTmp.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())
+            ) {
+                throw new InvalidFieldsException("تنها سوالات تشریحی می توانند به این آزمون افزوده شوند");
+            }
+            else if(!isTashrihi &&
+                    qTmp.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())) {
+                throw new InvalidFieldsException("سوالات تشریحی نمی توانند به این آزمون افزوده شوند");
+            }
+
+            ObjectId qIdTmp = qTmp.getObjectId("_id");
 
             if (ids.contains(qIdTmp)) {
                 throw new InvalidFieldsException("duplicate");

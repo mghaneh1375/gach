@@ -500,7 +500,7 @@ public class UserController {
                 .put("phone", user.getOrDefault("phone", ""));
 
         if(user.containsKey("block_notif"))
-            user.put("blockNotif", true);
+            jsonObject.put("blockNotif", true);
 
         if (user.containsKey("form_list")) {
 
@@ -1119,10 +1119,10 @@ public class UserController {
 
     public static String blockNotif(Document user) {
 
-        if(user.containsKey("block_user"))
-            user.remove("block_user");
+        if(user.containsKey("block_notif"))
+            user.remove("block_notif");
         else
-            user.put("block_user", true);
+            user.put("block_notif", true);
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;

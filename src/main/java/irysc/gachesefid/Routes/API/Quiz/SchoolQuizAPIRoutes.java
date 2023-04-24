@@ -122,6 +122,18 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
+    @PostMapping(value = "/copy/{quizId}")
+    @ResponseBody
+    public String copy(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId quizId,
+                       @RequestBody @StrongJSONConstraint(
+                               params = {"start", "end", "title", "launchMode", "copyStudents"},
+                               paramsType = {Long.class, Long.class, String.class, String.class, Boolean.class}
+                       ) @NotBlank String jsonStr
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return SchoolQuizController.copy(getPrivilegeUser(request).getObjectId("_id"), quizId, new JSONObject(jsonStr));
+    }
+
 
     @GetMapping(path = "getMyMarkListForSpecificQuestion/{mode}/{quizId}/{questionId}")
     @ResponseBody

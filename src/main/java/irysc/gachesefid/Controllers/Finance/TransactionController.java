@@ -32,19 +32,19 @@ public class TransactionController {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("status", "success"));
 
-        if(userId != null)
+        if (userId != null)
             filters.add(eq("user_id", userId));
 
-        if(section != null)
+        if (section != null)
             filters.add(eq("section", section));
 
-        if(useOffCode != null)
+        if (useOffCode != null)
             filters.add(exists("off_code", useOffCode));
 
-        if(start != null)
+        if (start != null)
             filters.add(gte("created_at", start));
 
-        if(end != null)
+        if (end != null)
             filters.add(lte("created_at", end));
 
         AggregateIterable<Document> docs = transactionRepository.all(
@@ -55,9 +55,9 @@ public class TransactionController {
         double sum = 0;
         double accountMoneySum = 0;
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
-            if(!doc.containsKey("user") || doc.get("user") == null)
+            if (!doc.containsKey("user") || doc.get("user") == null)
                 continue;
 
             Document user = doc.get("user", Document.class);
@@ -86,19 +86,40 @@ public class TransactionController {
         );
     }
 
+    public static void fetchSchoolQuizInvoice(StringBuilder section,
+                                              Document transaction) {
+
+        Object products = transaction.get("products");
+
+        Document quiz = schoolQuizRepository.findById((ObjectId) products);
+        if (quiz != null) {
+            section.append(" - ").append(quiz.getString("title")).append(" ( تعداد دانش آموزان: ");
+            section.append(quiz.getList("students", Document.class).size()).append(" - تعداد سوالات: ");
+            section.append(quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size());
+
+            if((boolean)quiz.getOrDefault("database", true))
+                section.append(" - استفاده شده از مجموعه سوالات آیریسک ");
+            else
+                section.append(" - استفاده شده از مجموعه سوالات مدرسه ");
+
+            section.append(" )");
+        }
+
+    }
+
     public static void fetchQuizInvoice(StringBuilder section,
-                                          Document transaction) {
+                                        Document transaction) {
         boolean checkAllItems = true;
 
-        if(transaction.containsKey("package_id")) {
+        if (transaction.containsKey("package_id")) {
             Document wantedPackage = packageRepository.findById(transaction.getObjectId("package_id"));
-            if(wantedPackage != null) {
+            if (wantedPackage != null) {
                 section.append(" - ").append("بسته آزمونی ").append(wantedPackage.getString("title"));
                 checkAllItems = false;
             }
         }
 
-        if(checkAllItems) {
+        if (checkAllItems) {
             Object products = transaction.get("products");
             if (products instanceof ObjectId) {
                 Document quiz = iryscQuizRepository.findById((ObjectId) products);
@@ -106,8 +127,13 @@ public class TransactionController {
                     section.append(" - ").append(quiz.getString("title"));
                 else {
                     quiz = openQuizRepository.findById((ObjectId) products);
-                    if(quiz != null)
+                    if (quiz != null)
                         section.append(" - ").append(quiz.getString("title"));
+                    else {
+                        quiz = schoolQuizRepository.findById((ObjectId) products);
+                        if (quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    }
                 }
             } else if (products instanceof List) {
                 for (ObjectId quizId : (List<ObjectId>) products) {
@@ -131,27 +157,31 @@ public class TransactionController {
                 transaction.getString("section")
         ));
 
-        if(transaction.getString("section").equalsIgnoreCase(
+        if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.GACH_EXAM.getName()
         ))
             fetchQuizInvoice(section, transaction);
 
-        else if(transaction.getString("section").equalsIgnoreCase(
+        else if (transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.SCHOOL_QUIZ.getName()
+        ))
+            fetchSchoolQuizInvoice(section, transaction);
+
+        else if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.BANK_EXAM.getName()
         )) {
             Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
 
-            if(quiz != null)
+            if (quiz != null)
                 section.append(" - ").append("خرید ").append(
                         quiz.getList("questions", ObjectId.class).size()
                 ).append(" سوال ");
-        }
-        else if(transaction.getString("section").equalsIgnoreCase(
+        } else if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.CONTENT.getName()
         )) {
             Document content = contentRepository.findById(transaction.getObjectId("products"));
 
-            if(content != null)
+            if (content != null)
                 section.append(" - ").append(content.getString("title"));
         }
 
@@ -168,7 +198,7 @@ public class TransactionController {
                 ), null
         );
 
-        if(transaction == null)
+        if (transaction == null)
             return JSON_NOT_VALID_ID;
 
         return generateSuccessMsg("data",

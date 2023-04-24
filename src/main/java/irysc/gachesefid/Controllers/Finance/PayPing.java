@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
@@ -440,7 +441,7 @@ public class PayPing {
         filters.add(eq("user_id", userId));
         filters.add(eq("status", "success"));
 
-        ArrayList<Document> transactions = transactionRepository.find(and(filters), null);
+        ArrayList<Document> transactions = transactionRepository.find(and(filters), null, Sorts.descending("created_at"));
 
         JSONArray jsonArray = new JSONArray();
 

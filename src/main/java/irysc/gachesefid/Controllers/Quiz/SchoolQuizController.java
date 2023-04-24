@@ -39,7 +39,6 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class SchoolQuizController {
 
-
     public static String addBatchQuestions(MultipartFile file, ObjectId quizId, ObjectId userId) {
 
         Document quiz;
@@ -255,4 +254,50 @@ public class SchoolQuizController {
 
     }
 
+    public static String copy(ObjectId userId, ObjectId quizId, JSONObject data) {
+
+        try {
+
+            Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
+
+            Document newDoc = new Document("_id", new ObjectId())
+                    .append("created_at", System.currentTimeMillis())
+                    .append("created_by", userId)
+                    .append("status", "init")
+                    .append("visibility", false)
+                    .append("title", data.getString("title"))
+                    .append("start", data.getLong("start"))
+                    .append("end", data.getLong("end"))
+                    .append("launch_mode", data.getString("launchMode"))
+                    .append("database", quiz.get("database"))
+                    .append("duration", quiz.get("duration"))
+                    .append("desc_after", quiz.get("desc_after"))
+                    .append("desc", quiz.get("desc"))
+                    .append("minus_mark", quiz.get("minus_mark"))
+                    .append("show_results_after_correction", quiz.get("show_results_after_correction"))
+                    .append("removed_questions", quiz.get("removed_questions"))
+                    .append("attaches", quiz.get("attaches"))
+                    .append("questions", quiz.get("questions"))
+                    .append("mode", quiz.get("mode"))
+                    .append("tags", quiz.get("tags"));
+
+            if(data.getBoolean("copyStudents")) {
+                newDoc.append("students", quiz.get("students"))
+                        .append("registered", quiz.get("registered"));
+            }
+            else {
+                newDoc.append("students", new ArrayList<>())
+                        .append("registered", 0);
+            }
+
+            schoolQuizRepository.insertOne(newDoc);
+
+            return generateSuccessMsg("data",
+                    new RegularQuizController().convertSchoolDocToJSON(newDoc, true, true, true));
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
 }

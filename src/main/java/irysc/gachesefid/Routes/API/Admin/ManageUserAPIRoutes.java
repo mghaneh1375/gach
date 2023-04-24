@@ -432,7 +432,7 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.getMySchools(isAdmin ? null : user.getObjectId("_id"));
     }
 
-    @GetMapping(value = {"/getStudents", "/getStudents/{schoolId"})
+    @GetMapping(value = {"/getStudents", "/getStudents/{schoolId}"})
     @ResponseBody
     public String getStudents(HttpServletRequest request,
                               @PathVariable(required = false) String schoolId
