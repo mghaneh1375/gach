@@ -777,7 +777,7 @@ public class TashrihiQuizController extends QuizAbstract {
                                                            add(q);
                                                        }},
                     true, true,
-                    true, true, true, false
+                    true, true, true, true
             );
 
             if (qJSONArr.length() != 1)

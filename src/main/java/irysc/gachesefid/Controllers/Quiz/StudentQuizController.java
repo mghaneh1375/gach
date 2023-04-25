@@ -1312,7 +1312,7 @@ public class StudentQuizController {
 
         JSONArray questionsJSONArr = Utilities.convertList(
                 questionsList, isStatNeeded, isStatNeeded,
-                true, isStatNeeded, false, false
+                true, isStatNeeded, false, true
         );
 
         JSONObject jsonObject = new JSONObject();
@@ -1433,7 +1433,7 @@ public class StudentQuizController {
 
         JSONArray questionsJSONArr = Utilities.convertList(
                 questionsList, isStatsNeeded, isStatsNeeded,
-                true, isStatsNeeded, false, false
+                true, isStatsNeeded, false, true
         );
 
         JSONObject jsonObject = new JSONObject();
@@ -1466,7 +1466,7 @@ public class StudentQuizController {
 
         JSONArray questionsJSONArr = Utilities.convertList(
                 questions, isStatsNeeded, isStatsNeeded,
-                true, isStatsNeeded, false, false
+                true, isStatsNeeded, false, true
         );
 
         JSONObject jsonObject = new JSONObject();

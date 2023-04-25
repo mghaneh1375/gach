@@ -654,7 +654,7 @@ public class QuestionController extends Utilities {
                                         and(filters) : null, null,
                                 sortByFilter
                         ), isSubjectsNeeded, isAuthorsNeeded, false,
-                false, true, false
+                false, true, true
         );
 
         return generateSuccessMsg(
@@ -745,7 +745,7 @@ public class QuestionController extends Utilities {
 
                 jsonObject.put("questions", convertList(
                         questions, false, true,
-                        true, true, true, false
+                        true, true, true, true
                 ));
             }
 

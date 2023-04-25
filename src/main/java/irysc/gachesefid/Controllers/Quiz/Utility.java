@@ -169,7 +169,7 @@ public class Utility {
 
         JSONArray questionsJSON = Utilities.convertList(questionDocs, true,
                 true, true,
-                true, true, false
+                true, true, true
         );
 
         for (int z = 0; z < questionsJSON.length(); z++) {

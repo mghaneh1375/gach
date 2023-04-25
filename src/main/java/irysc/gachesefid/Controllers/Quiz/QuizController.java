@@ -1669,7 +1669,7 @@ public class QuizController {
 
         PairValue p = new PairValue("doneIds", Utilities.convertList(
                 addedItems, true, true, true,
-                true, true, false
+                true, true, true
         ));
 
         if (excepts.length() == 0)
