@@ -6,7 +6,6 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -49,30 +48,30 @@ public class AdvisorAPIRoutes extends Router {
                          ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return AdvisorController.remove(adviseTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
+        return AdvisorController.removeTags(adviseTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
     }
 
     @DeleteMapping(value = "removeLifeTags")
     @ResponseBody
     public String removeLifeTags(HttpServletRequest request,
-                         @RequestBody @StrongJSONConstraint(
-                                 params = {"items"},
-                                 paramsType = {JSONArray.class}
-                         ) String jsonStr
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {"items"},
+                                         paramsType = {JSONArray.class}
+                                 ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return AdvisorController.remove(lifeStyleTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
+        return AdvisorController.removeTags(lifeStyleTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
     }
 
     @PostMapping(value = "createTag")
     @ResponseBody
     public String createTag(HttpServletRequest request,
-                        @RequestBody @StrongJSONConstraint(
-                                params = {"label"},
-                                paramsType = {
-                                        String.class
-                                }
-                        ) @NotBlank String jsonStr
+                            @RequestBody @StrongJSONConstraint(
+                                    params = {"label"},
+                                    paramsType = {
+                                            String.class
+                                    }
+                            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return AdvisorController.createTag(adviseTagRepository, new JSONObject(jsonStr));
@@ -81,12 +80,12 @@ public class AdvisorAPIRoutes extends Router {
     @PostMapping(value = "createLifeTag")
     @ResponseBody
     public String createLifeTag(HttpServletRequest request,
-                            @RequestBody @StrongJSONConstraint(
-                                    params = {"label"},
-                                    paramsType = {
-                                            String.class
-                                    }
-                            ) @NotBlank String jsonStr
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"label"},
+                                        paramsType = {
+                                                String.class
+                                        }
+                                ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return AdvisorController.createTag(lifeStyleTagRepository, new JSONObject(jsonStr));

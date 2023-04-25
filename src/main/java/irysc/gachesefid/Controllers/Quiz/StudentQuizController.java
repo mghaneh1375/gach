@@ -1647,6 +1647,8 @@ public class StudentQuizController {
         int totalPrice = 0;
         List<ObjectId> questionIds = new ArrayList<>();
 
+        int totalWantedQuestions = 0;
+
         for (int i = 0; i < filters.length(); i++) {
 
             JSONObject jsonObject = filters.getJSONObject(i);
@@ -1662,6 +1664,11 @@ public class StudentQuizController {
             )
                 return JSON_NOT_VALID_PARAMS;
 
+            totalWantedQuestions += Integer.parseInt(jsonObject.get("qNo").toString());
+        }
+
+        if(totalWantedQuestions > 100) {
+            return generateErr("حداکثر 100 سوال در هر آزمون میتوان خریداری کرد");
         }
 
         for (int i = 0; i < filters.length(); i++) {

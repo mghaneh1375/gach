@@ -69,14 +69,14 @@ public class StaticValues {
                     .append("questions", 1)
                     .append("start", 1).append("end", 1);
 
-    public final static BasicDBObject QUESTION_REPORT_DIGEST_FOR_ADMIN =
-            new BasicDBObject("label", 1).append("_id", 1)
-                    .append("can_has_desc", 1).append("visibility", 1)
-                    .append("priority", 1);
-
-    public final static BasicDBObject QUESTION_REPORT_DIGEST_FOR_STUDENT =
-            new BasicDBObject("label", 1).append("_id", 1)
-                    .append("can_has_desc", 1).append("priority", 1);
+    public final static BasicDBObject ADVISOR_PUBLIC_DIGEST =
+            new BasicDBObject("first_name", 1).append("_id", 1)
+                    .append("last_name", 1).append("accept_std", 1)
+                    .append("rate", 1)
+                    .append("rate_count", 1)
+                    .append("students", 1)
+                    .append("bio", 1)
+            ;
 
     public final static BasicDBObject QUIZ_DIGEST =
             new BasicDBObject("title", 1).append("_id", 1)

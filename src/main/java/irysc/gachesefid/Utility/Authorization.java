@@ -25,6 +25,12 @@ public class Authorization {
                 accesses.contains(Access.SCHOOL.getName());
     }
 
+    public static boolean isAdvisor(List<String> accesses) {
+        return accesses.contains(Access.ADMIN.getName()) ||
+                accesses.contains(Access.SUPERADMIN.getName()) ||
+                accesses.contains(Access.ADVISOR.getName());
+    }
+
     public static boolean isTeacher(List<String> accesses) {
         return accesses.contains(Access.ADMIN.getName()) ||
                 accesses.contains(Access.SUPERADMIN.getName()) ||

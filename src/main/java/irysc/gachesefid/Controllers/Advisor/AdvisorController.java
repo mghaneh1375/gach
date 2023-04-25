@@ -1,7 +1,9 @@
 package irysc.gachesefid.Controllers.Advisor;
 
 
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -9,16 +11,74 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
-import static com.mongodb.client.model.Filters.exists;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.adviseTagRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.lifeStyleTagRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
+import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
 
 public class AdvisorController {
+
+    public static String toggleStdAcceptance(Document user) {
+
+        user.put("accept_std", !(boolean)user.getOrDefault("accept_std", true));
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+
+        return JSON_OK;
+
+    }
+
+    public static String getAllAdvisors() {
+
+        List<Document> advisors = userRepository.find(
+                eq("accesses", Access.ADVISOR.getName()),
+                ADVISOR_PUBLIC_DIGEST, Sorts.descending("rate")
+        );
+
+    }
+
+    public static String rate(ObjectId userId, ObjectId advisorId, int rate) {
+
+        Document advisor = userRepository.findById(advisorId);
+        if(advisor == null || !advisor.containsKey("students"))
+            return JSON_NOT_UNKNOWN;
+
+        List<Document> students = advisor.getList("students", Document.class);
+
+        Document stdDoc = searchInDocumentsKeyVal(
+                students, "_id", userId
+        );
+
+        if(stdDoc == null)
+            return JSON_NOT_UNKNOWN;
+
+        int oldRate = (int)stdDoc.getOrDefault("rate", 0);
+        stdDoc.put("rate", rate);
+        stdDoc.put("rate_at", System.currentTimeMillis());
+
+        double oldTotalRate = (double)advisor.getOrDefault("rate", (double)0);
+        int rateCount = (int)advisor.getOrDefault("rate_count", 0);
+
+        oldTotalRate *= rateCount;
+
+        if(oldRate == 0)
+            rateCount++;
+
+        oldTotalRate -= oldRate;
+        oldTotalRate += rate;
+
+        advisor.put("rate", Math.round(oldTotalRate / rateCount * 100.0) / 100.0);
+        advisor.put("rate_count", rateCount);
+
+        userRepository.replaceOne(advisorId, advisor);
+        return JSON_OK;
+
+    }
 
     public static String createTag(Common db, JSONObject jsonObject) {
 
@@ -35,7 +95,7 @@ public class AdvisorController {
         );
     }
 
-    public static String remove(Common db, JSONArray jsonArray) {
+    public static String removeTags(Common db, JSONArray jsonArray) {
 
         JSONArray doneIds = new JSONArray();
         JSONArray excepts = new JSONArray();

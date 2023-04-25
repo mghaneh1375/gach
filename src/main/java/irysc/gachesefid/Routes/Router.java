@@ -106,6 +106,11 @@ public class Router {
         return isWantedAccess(request, Access.SCHOOL.getName());
     }
 
+    protected Document getAdvisorUser(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return isWantedAccess(request, Access.ADVISOR.getName());
+    }
+
     protected void getPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         isPrivilegeUser(request);
@@ -198,6 +203,10 @@ public class Router {
 
                 if (wantedAccess.equals(Access.SCHOOL.getName()) &&
                         !Authorization.isSchool(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                if (wantedAccess.equals(Access.ADVISOR.getName()) &&
+                        !Authorization.isAdvisor(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
                 if (wantedAccess.equals(Access.AGENT.getName()) &&
