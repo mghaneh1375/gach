@@ -33,14 +33,14 @@ public class AdvisorController {
 
     }
 
-    public static String getAllAdvisors() {
-
-        List<Document> advisors = userRepository.find(
-                eq("accesses", Access.ADVISOR.getName()),
-                ADVISOR_PUBLIC_DIGEST, Sorts.descending("rate")
-        );
-
-    }
+//    public static String getAllAdvisors() {
+//
+//        List<Document> advisors = userRepository.find(
+//                eq("accesses", Access.ADVISOR.getName()),
+//                ADVISOR_PUBLIC_DIGEST, Sorts.descending("rate")
+//        );
+//
+//    }
 
     public static String rate(ObjectId userId, ObjectId advisorId, int rate) {
 

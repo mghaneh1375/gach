@@ -26,18 +26,18 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class StudentAdviceRoutes extends Router {
 
-    @GetMapping(value = "getAllAdvisors")
-    @ResponseBody
-    public String getAllAdvisors() {
-        return AdvisorController.getAllAdvisors();
-    }
+//    @GetMapping(value = "getAllAdvisors")
+//    @ResponseBody
+//    public String getAllAdvisors() {
+//        return AdvisorController.getAllAdvisors();
+//    }
 
-    @GetMapping(value = "getMyAdvisor")
-    @ResponseBody
-    public String getMyAdvisor(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.getMyAdvisor(getStudentUser(request));
-    }
+//    @GetMapping(value = "getMyAdvisor")
+//    @ResponseBody
+//    public String getMyAdvisor(HttpServletRequest request
+//    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+//        return AdvisorController.getMyAdvisor(getStudentUser(request));
+//    }
 
     @PutMapping(value = "rate")
     @ResponseBody

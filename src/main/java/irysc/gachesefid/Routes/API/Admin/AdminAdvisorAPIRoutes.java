@@ -21,7 +21,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.lifeStyleTagRepository
 @Controller
 @RequestMapping(path = "/api/advisor/tag")
 @Validated
-public class AdvisorAPIRoutes extends Router {
+public class AdminAdvisorAPIRoutes extends Router {
 
     @GetMapping(value = "getAllTags")
     @ResponseBody
