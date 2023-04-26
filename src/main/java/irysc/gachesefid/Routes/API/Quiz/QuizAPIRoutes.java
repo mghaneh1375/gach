@@ -1241,7 +1241,7 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(value = "/resetStudentQuizEntryTime/{mode}/{quizId}/{userId}")
     @ResponseBody
     public String resetStudentQuizEntryTime(HttpServletRequest request,
-                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                             @PathVariable @ObjectIdConstraint ObjectId quizId,
                                             @PathVariable @ObjectIdConstraint ObjectId userId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -1256,11 +1256,20 @@ public class QuizAPIRoutes extends Router {
                     userId
             );
 
-        return QuizController.resetStudentQuizEntryTime(
-                schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId, userId
-        );
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return QuizController.resetStudentQuizEntryTime(
+                    openQuizRepository, null, quizId,
+                    userId
+            );
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+            return QuizController.resetStudentQuizEntryTime(
+                    schoolQuizRepository,
+                    isAdmin ? null : user.getObjectId("_id"),
+                    quizId, userId
+            );
+
+        return JSON_NOT_VALID_PARAMS;
     }
 
 
