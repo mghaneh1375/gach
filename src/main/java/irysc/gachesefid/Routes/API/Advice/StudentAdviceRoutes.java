@@ -8,8 +8,10 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -26,18 +28,40 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class StudentAdviceRoutes extends Router {
 
-//    @GetMapping(value = "getAllAdvisors")
-//    @ResponseBody
-//    public String getAllAdvisors() {
-//        return AdvisorController.getAllAdvisors();
-//    }
+    @GetMapping(value = "getAllAdvisors")
+    @ResponseBody
+    public String getAllAdvisors() {
+        return AdvisorController.getAllAdvisors();
+    }
 
-//    @GetMapping(value = "getMyAdvisor")
-//    @ResponseBody
-//    public String getMyAdvisor(HttpServletRequest request
-//    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-//        return AdvisorController.getMyAdvisor(getStudentUser(request));
-//    }
+    @GetMapping(value = "getMyAdvisor")
+    @ResponseBody
+    public String getMyAdvisor(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+
+        Document user = getStudentUser(request);
+
+        if (!user.containsKey("advisor_id"))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.getMyAdvisor(user.getObjectId("advisor_id"));
+    }
+
+    @DeleteMapping(value = "cancelRequest/{reqId}")
+    @ResponseBody
+    public String cancelRequest(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId reqId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.cancelRequest(getStudentUser(request).getObjectId("_id"), reqId);
+    }
+
+    @PostMapping(value = "request/{advisorId}")
+    @ResponseBody
+    public String request(HttpServletRequest request,
+                          @PathVariable @ObjectIdConstraint ObjectId advisorId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.request(getStudentUser(request), advisorId);
+    }
 
     @PutMapping(value = "rate")
     @ResponseBody
@@ -49,12 +73,12 @@ public class StudentAdviceRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
 
         Document user = getStudentUser(request);
-        if(!user.containsKey("advisor_id"))
+        if (!user.containsKey("advisor_id"))
             return JSON_NOT_ACCESS;
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
         int rate = jsonObject.getInt("rate");
-        if(rate < 1 || rate > 5)
+        if (rate < 1 || rate > 5)
             return JSON_NOT_VALID_PARAMS;
 
         return AdvisorController.rate(

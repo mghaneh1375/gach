@@ -6,6 +6,8 @@ import org.bson.types.ObjectId;
 
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+
 public class Authorization {
 
     public static boolean isAdmin(List<String> accesses) {
@@ -70,7 +72,20 @@ public class Authorization {
 
     // todo : complete this section
     public static boolean hasAccessToThisStudent(ObjectId studentId, ObjectId applicatorId) {
-        return true;
+
+        Document applicator = userRepository.findById(applicatorId);
+        if(applicator == null)
+            return false;
+
+        if(isSchool(applicator.getList("accesses", String.class)))
+            return applicator.getList("students", ObjectId.class).contains(studentId);
+
+        if(isAdvisor(applicator.getList("accesses", String.class)))
+            return Utility.searchInDocumentsKeyValIdx(
+                    applicator.getList("students", Document.class), "_id", studentId
+            ) > -1;
+
+        return false;
     }
 
     // todo : complete this section

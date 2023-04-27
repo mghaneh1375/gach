@@ -11,7 +11,6 @@ import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
-import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -313,9 +312,15 @@ public class TashrihiQuizController extends QuizAbstract {
                 ObjectId teacherId = new ObjectId(jsonObject.getString("teacherId"));
 
                 Document teacher = userRepository.findById(teacherId);
-                if (teacher == null ||
-                        (userId != null && !Authorization.hasAccessToThisTeacher(teacherId, userId))
-                ) {
+
+//                if (teacher == null ||
+//                        (userId != null && !Authorization.hasAccessToThisTeacher(teacherId, userId))
+//                ) {
+//                    skipped.put(i);
+//                    continue;
+//                }
+
+                if (teacher == null) {
                     skipped.put(i);
                     continue;
                 }

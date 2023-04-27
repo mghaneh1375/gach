@@ -53,7 +53,7 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
-            "kind"
+            "kind", "payByStudent"
     };
 
     private final static String[] schoolForbiddenFields = {
@@ -62,12 +62,26 @@ public class RegularQuizController extends QuizAbstract {
             "priority", "showResultsAfterCorrectionNotLoginUsers"
     };
 
-    public static String create(ObjectId userId, JSONObject jsonObject, String mode) {
+    public static String create(ObjectId userId, JSONObject jsonObject,
+                                String mode, boolean isAdvisor) {
 
         try {
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
+
                 Utility.checkFields(schoolMandatoryFields, schoolForbiddenFields, jsonObject);
+
+                if(!isAdvisor && jsonObject.has("payByStudent"))
+                    jsonObject.remove("payByStudent");
+
+                if(isAdvisor && !jsonObject.has("payByStudent"))
+                    return JSON_NOT_VALID_PARAMS;
+
+                if(isAdvisor)
+                    jsonObject.put("launchMode", "online");
+
+                if(jsonObject.getLong("start") < System.currentTimeMillis())
+                    return generateErr("زمان شروع آزمون باید از امروز بزرگتر باشد");
 
                 if(jsonObject.getLong("end") < jsonObject.getLong("start"))
                     return generateErr("زمان پایان آزمون باید بزرگ تر از زمان آغاز آن باشد");

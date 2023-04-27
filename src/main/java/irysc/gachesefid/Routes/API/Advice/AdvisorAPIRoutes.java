@@ -4,15 +4,20 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
+import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.types.ObjectId;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.NotBlank;
 
 @Controller
 @RequestMapping(path = "/api/advisor/manage/")
@@ -27,6 +32,26 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.toggleStdAcceptance(getAdvisorUser(request));
     }
 
+    @PostMapping(value = "answerToRequest/{reqId}/{answer}")
+    @ResponseBody
+    public String answerToRequest(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId reqId,
+                                  @PathVariable @EnumValidator(enumClazz = YesOrNo.class) String answer
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.answerToRequest(getAdvisorUser(request), reqId, answer);
+    }
 
+    @DeleteMapping(value = "removeStudents")
+    @ResponseBody
+    public String removeStudents(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {"items"},
+                                         paramsType = {JSONArray.class}
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.removeStudents(getAdvisorUser(request),
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
 
 }

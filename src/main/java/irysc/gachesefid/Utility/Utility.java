@@ -1372,4 +1372,15 @@ public class Utility {
                 ), null
         );
     }
+
+    public static List<ObjectId> pluckIds(List<Document> docs) {
+
+        ArrayList<ObjectId> tmp = new ArrayList<>();
+
+        for(Document doc : docs) {
+            tmp.add(doc.getObjectId("_id"));
+        }
+
+        return tmp;
+    }
 }

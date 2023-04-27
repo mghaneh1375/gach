@@ -31,11 +31,12 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.convertPersian;
-import static irysc.gachesefid.Utility.Utility.generateErr;
-import static irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal;
+import static irysc.gachesefid.Utility.Utility.*;
 
 @Controller
 @RequestMapping(path = "/api/admin/user")
@@ -444,7 +445,10 @@ public class ManageUserAPIRoutes extends Router {
 
         if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))
             return JSON_NOT_ACCESS;
-        else if (schoolId == null && !Authorization.isSchool(user.getList("accesses", String.class)))
+        else if (schoolId == null &&
+                !Authorization.isSchool(user.getList("accesses", String.class)) &&
+                !Authorization.isAdvisor(user.getList("accesses", String.class))
+        )
             return JSON_NOT_ACCESS;
 
         Document school;
@@ -467,7 +471,10 @@ public class ManageUserAPIRoutes extends Router {
         } else
             school = user;
 
-        return ManageUserController.getMyStudents(school.getList("students", ObjectId.class));
+        if(!isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class)))
+            return ManageUserController.getMyStudents(pluckIds((List<Document>) school.getOrDefault("students", new ArrayList<Document>())));
+
+        return ManageUserController.getMyStudents((List<ObjectId>) school.getOrDefault("students", new ArrayList<ObjectId>()));
     }
 
 }

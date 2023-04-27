@@ -47,16 +47,21 @@ public class SchoolQuizAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+//        Document user = getPrivilegeUser(request);
+//        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+//
+//        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
+//            return TashrihiQuizController.setCorrectors(iryscQuizRepository, null, quizId,
+//                    new JSONObject(jsonStr).getJSONArray("correctors")
+//            );
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return TashrihiQuizController.setCorrectors(iryscQuizRepository, null, quizId,
-                    new JSONObject(jsonStr).getJSONArray("correctors")
-            );
+//        return TashrihiQuizController.setCorrectors(schoolQuizRepository,
+//                isAdmin ? null : user.getObjectId("_id"), quizId,
+//                new JSONObject(jsonStr).getJSONArray("correctors")
+//        );
 
-        return TashrihiQuizController.setCorrectors(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId,
+        getAdminPrivilegeUserVoid(request);
+        return TashrihiQuizController.setCorrectors(iryscQuizRepository, null, quizId,
                 new JSONObject(jsonStr).getJSONArray("correctors")
         );
     }
@@ -228,7 +233,7 @@ public class SchoolQuizAPIRoutes extends Router {
                                 @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getSchoolUser(request);
+        Document user = getQuizUser(request);
 
         return QuizController.getTotalPrice(quizId,
                 user.getObjectId("_id"),

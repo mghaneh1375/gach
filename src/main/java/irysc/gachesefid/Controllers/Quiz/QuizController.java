@@ -195,10 +195,19 @@ public class QuizController {
     }
 
     public static String update(Common db, ObjectId userId,
-                                ObjectId quizId, JSONObject data) {
+                                ObjectId quizId, JSONObject data, boolean isAdvisor) {
 
         try {
+
             Document quiz = hasAccess(db, userId, quizId);
+
+            if(!isAdvisor && data.has("payByStudent"))
+                data.remove("payByStudent");
+
+            if(isAdvisor && data.has("launchMode"))
+                data.remove("launchMode");
+
+            //todo : check after finish status in school quiz
 
             for (String key : data.keySet())
                 quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
@@ -385,8 +394,20 @@ public class QuizController {
                                        double money) {
 
         try {
+
             Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
+            if(quiz.getString("status").equalsIgnoreCase("finish"))
+                return generateErr("این آزمون قبلا نهایی شده است");
+
             PairValue p = isSchoolQuizReadyForPay(quiz);
+
+            if((boolean)quiz.getOrDefault("pay_by_student", false)) {
+                quiz.put("status", "semi_finish");
+                schoolQuizRepository.replaceOne(quizId, quiz);
+
+                return generateSuccessMsg("data", new JSONObject().put("status", "ready"));
+            }
+
             int studentsCount = (int) p.getKey();
             int total;
 
@@ -651,7 +672,7 @@ public class QuizController {
 
     public static String forceRegistry(Common db, ObjectId userId,
                                        ObjectId quizId, JSONArray jsonArray,
-                                       int paid) {
+                                       int paid, boolean isAdvisor) {
 
         try {
             Document quiz = hasAccess(db, userId, quizId);
@@ -680,9 +701,24 @@ public class QuizController {
 
                 Document student = userRepository.findBySecKey(NID);
 
-                if (student == null || !student.containsKey("city") ||
-                        student.get("city") == null || !student.containsKey("school") ||
-                        student.get("school") == null
+                if (student == null) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+//                !student.containsKey("city") ||
+//                        student.get("city") == null
+
+                if(db instanceof SchoolQuizRepository && isAdvisor && !student.containsKey("advisor_id")) {
+                    excepts.put(i + 1);
+                    continue;
+                }
+
+                if(db instanceof SchoolQuizRepository && !isAdvisor &&
+                        (
+                                !student.containsKey("school") ||
+                                        student.get("school") == null
+                        )
                 ) {
                     excepts.put(i + 1);
                     continue;
