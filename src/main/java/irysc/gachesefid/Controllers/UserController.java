@@ -494,6 +494,7 @@ public class UserController {
                         .put("name", state.getString("name"))
                 )
                 .put("branches", branchesJSON)
+                .put("bio", user.getOrDefault("bio", ""))
                 .put("lastName", user.getString("last_name"))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
@@ -1046,6 +1047,14 @@ public class UserController {
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String setAboutMe(Document user, String bio) {
+
+        user.put("bio", bio);
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+
+        return JSON_OK;
     }
 
     public static String getMySummary(Document user) {

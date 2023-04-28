@@ -57,10 +57,10 @@ public class UserAPIRoutes extends Router {
 
         Document newDoc = new Document("_id", doc1.getObjectId("_id"))
                 .append("register_at", Math.min(doc1.getLong("register_at"), doc2.getLong("register_at")))
-                .append("paid", Math.max((int)((Number)doc1.get("paid")).doubleValue(), (int)((Number)doc2.get("paid")).doubleValue()));
+                .append("paid", Math.max((int) ((Number) doc1.get("paid")).doubleValue(), (int) ((Number) doc2.get("paid")).doubleValue()));
 
         int rate = Math.max((Integer) doc1.getOrDefault("rate", 0), (Integer) doc2.getOrDefault("rate", 0));
-        if(rate > 0)
+        if (rate > 0)
             newDoc.append("rate", rate);
 
         return newDoc;
@@ -161,20 +161,19 @@ public class UserAPIRoutes extends Router {
         JSONObject jsonObject = new JSONObject(jsonStr);
         String mode = jsonObject.getString("mode");
 
-        if(!mode.equalsIgnoreCase("charge") && !mode.equalsIgnoreCase("coin"))
+        if (!mode.equalsIgnoreCase("charge") && !mode.equalsIgnoreCase("coin"))
             return JSON_NOT_VALID_PARAMS;
 
         int amount;
 
-        if(mode.equalsIgnoreCase("charge")) {
+        if (mode.equalsIgnoreCase("charge")) {
             double mainMoney = ((Number) (user.get("money"))).doubleValue();
             int money = (int) mainMoney;
             amount = jsonObject.getInt("amount");
 
             if (amount > money)
                 return generateErr("حداکثر مقدار قابل تبدیل برای شما " + money + " می باشد.");
-        }
-        else {
+        } else {
 
             double coin = ((Number) (user.get("coin"))).doubleValue();
 
@@ -185,8 +184,8 @@ public class UserAPIRoutes extends Router {
             amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getDouble("amount"));
         }
 
-        if(amount > 500000 || amount < 40000)
-           return generateErr("حداکثر تخفیف ۵۰۰۰۰۰ و حداقل ۴۰۰۰۰ تومان می باشد.");
+        if (amount > 500000 || amount < 40000)
+            return generateErr("حداکثر تخفیف ۵۰۰۰۰۰ و حداقل ۴۰۰۰۰ تومان می باشد.");
 
         while (true) {
             String code = "ir-" + Utility.simpleRandomString(3).replace("_", "") + Utility.getRandIntForGift(1000);
@@ -208,11 +207,10 @@ public class UserAPIRoutes extends Router {
                     String res = jsonResponse.getBody();
                     if (res.equals("ok")) {
 
-                        if(mode.equalsIgnoreCase("charge")) {
+                        if (mode.equalsIgnoreCase("charge")) {
                             double mainMoney = ((Number) (user.get("money"))).doubleValue();
                             user.put("money", ((mainMoney - jsonObject.getInt("amount")) * 100.0) / 100.0);
-                        }
-                        else {
+                        } else {
                             double coin = ((Number) (user.get("coin"))).doubleValue();
                             user.put("coin", ((coin - jsonObject.getDouble("amount")) * 100.0) / 100.0);
                         }
@@ -231,7 +229,6 @@ public class UserAPIRoutes extends Router {
                 return generateErr(e.getMessage());
             }
         }
-
 
 
     }
@@ -306,6 +303,18 @@ public class UserAPIRoutes extends Router {
 
         return JSON_NOT_VALID_TOKEN;
     }
+
+    @PutMapping(value = "/aboutMe")
+    @ResponseBody
+    public String aboutMe(HttpServletRequest request,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"aboutMe"},
+                                  paramsType = {String.class}
+                          ) String json
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json).getString("aboutMe"));
+    }
+
 
     @PostMapping(value = "/signUp")
     @ResponseBody

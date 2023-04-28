@@ -77,10 +77,67 @@ public class AdvisorController {
                 )
         );
 
-        if(doc == null)
+        if (doc == null)
             return generateErr("تنها درخواست های پاسخ داده نشده می توانند حذف شوند");
 
         return JSON_OK;
+    }
+
+    public static String hasOpenRequest(ObjectId userId) {
+
+        if (advisorRequestsRepository.count(
+                and(
+                        eq("user_id", userId),
+                        eq("answer", "pending")
+                )) > 0
+        )
+            return generateSuccessMsg("data", "yes");
+
+        return generateSuccessMsg("data", "no");
+    }
+
+    private static String returnRequests(String key, List<Document> requests) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document request : requests) {
+
+            Document advisor = userRepository.findById(request.getObjectId(key));
+            if(advisor == null)
+                continue;
+
+            jsonArray.put(new JSONObject()
+                    .put("id", request.getObjectId("_id").toString())
+                    .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                    .put("createdAt", Utility.getSolarDate(request.getLong("created_at")))
+                    .put("answerAt", request.containsValue("answer_at") ?
+                            Utility.getSolarDate(request.getLong("answer_at")) :
+                            ""
+                    )
+                    .put("status", request.getString("answer"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String myRequests(ObjectId userId) {
+
+        List<Document> requests = advisorRequestsRepository.find(
+                eq("user_id", userId), null
+        );
+
+        return returnRequests("advisor_id", requests);
+    }
+
+
+    public static String myStudentRequests(ObjectId advisorId) {
+
+        List<Document> requests = advisorRequestsRepository.find(
+                eq("advisor_id", advisorId), null
+        );
+
+        return returnRequests("user_id", requests);
     }
 
     public static String request(Document user, ObjectId advisorId) {
@@ -148,6 +205,8 @@ public class AdvisorController {
                 .append("created_at", System.currentTimeMillis())
         );
 
+        advisor.put("students", students);
+
         userRepository.replaceOne(student.getObjectId("_id"), student);
         userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
 
@@ -164,8 +223,10 @@ public class AdvisorController {
         )
             return JSON_NOT_ACCESS;
 
-        if (answer.equalsIgnoreCase(YesOrNo.NO.getName()))
+        if (answer.equalsIgnoreCase(YesOrNo.NO.getName())) {
             req.put("answer", "reject");
+            req.put("answer_at", System.currentTimeMillis());
+        }
         else {
 
             Document student = userRepository.findById(req.getObjectId("user_id"));

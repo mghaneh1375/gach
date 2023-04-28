@@ -22,6 +22,7 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 
 @Controller
 @RequestMapping(path = "/api/advisor/public/")
@@ -42,9 +43,16 @@ public class StudentAdviceRoutes extends Router {
         Document user = getStudentUser(request);
 
         if (!user.containsKey("advisor_id"))
-            return JSON_NOT_ACCESS;
+            return Utility.generateSuccessMsg("data", new JSONObject());
 
         return AdvisorController.getMyAdvisor(user.getObjectId("advisor_id"));
+    }
+
+    @GetMapping(value = "hasOpenRequest")
+    @ResponseBody
+    public String hasOpenRequest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.hasOpenRequest(getStudentUser(request).getObjectId("_id"));
     }
 
     @DeleteMapping(value = "cancelRequest/{reqId}")
@@ -61,6 +69,13 @@ public class StudentAdviceRoutes extends Router {
                           @PathVariable @ObjectIdConstraint ObjectId advisorId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
         return AdvisorController.request(getStudentUser(request), advisorId);
+    }
+
+    @GetMapping(value = "myRequests")
+    @ResponseBody
+    public String myRequests(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.myRequests(getStudentUser(request).getObjectId("_id"));
     }
 
     @PutMapping(value = "rate")

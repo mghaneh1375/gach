@@ -54,4 +54,11 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "myRequests")
+    @ResponseBody
+    public String myRequests(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        return AdvisorController.myStudentRequests(getAdvisorUser(request).getObjectId("_id"));
+    }
+
 }
