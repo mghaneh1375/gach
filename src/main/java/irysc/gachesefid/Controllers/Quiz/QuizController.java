@@ -1995,7 +1995,7 @@ public class QuizController {
         filters.add(exists("ranking_list"));
         filters.add(eq("report_status", "ready"));
 
-        ArrayList<Document> docs = iryscQuizRepository.find(and(filters), QUIZ_DIGEST);
+        ArrayList<Document> docs = iryscQuizRepository.find(and(filters), QUIZ_DIGEST, Sorts.descending("created_at"));
 
         JSONArray jsonArray = new JSONArray();
 

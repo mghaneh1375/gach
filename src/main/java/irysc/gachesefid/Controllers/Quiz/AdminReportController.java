@@ -1383,13 +1383,25 @@ public class AdminReportController {
 
                 JSONArray lessonsStats = new JSONArray();
 
+                int totalCorrects = 0;
+                int totalInCorrects = 0;
+                int totalWhites = 0;
+
                 for (Document lessonStat : studentResult.getList("lessons", Document.class)) {
                     Object[] lessonStats = QuizAbstract.decode(lessonStat.get("stat", Binary.class).getData());
                     lessonsStats.put(
                             new JSONObject()
                                     .put("name", lessonStat.getString("name"))
                                     .put("percent", lessonStats[4])
+                                    .put("whites", lessonStats[1])
+                                    .put("corrects", lessonStats[2])
+                                    .put("inCorrects", lessonStats[3])
                     );
+
+                    totalCorrects += (int)lessonStats[2];
+                    totalInCorrects += (int)lessonStats[3];
+                    totalWhites += (int)lessonStats[1];
+
                 }
 
                 jsonObject.put("lessonsStats", lessonsStats);
@@ -1422,6 +1434,10 @@ public class AdminReportController {
                 else
                     jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
 
+                jsonObject.put("totalCorrects", totalCorrects);
+                jsonObject.put("totalInCorrects", totalInCorrects);
+                jsonObject.put("totalWhites", totalWhites);
+
                 jsonArray.put(jsonObject);
                 k++;
             }
@@ -1435,5 +1451,6 @@ public class AdminReportController {
         }
 
     }
+
 
 }

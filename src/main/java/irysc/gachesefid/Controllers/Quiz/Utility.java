@@ -163,7 +163,7 @@ public class Utility {
             prefix = StaticValues.STATICS_SERVER + folder + "/studentAnswers/";
 
         List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
-        List<Double> marks = questions.getList("marks", Double.class);
+        List<Number> marks = questions.getList("marks", Number.class);
 
         List<Document> questionDocs = questionRepository.findByIds(ids, true);
 
@@ -218,7 +218,12 @@ public class Utility {
 
                     questionObj.put("stdAns", studentAnswerObj);
                 }
+                else
+                    questionObj.put("stdAns", "");
+
             }
+            else
+                questionObj.put("stdAns", "");
         }
 
         return questionsJSON;

@@ -495,6 +495,7 @@ public class UserController {
                 )
                 .put("branches", branchesJSON)
                 .put("bio", user.getOrDefault("bio", ""))
+                .put("acceptStd", user.getOrDefault("accept_std", true))
                 .put("lastName", user.getString("last_name"))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
@@ -1050,6 +1051,9 @@ public class UserController {
     }
 
     public static String setAboutMe(Document user, String bio) {
+
+        if(bio.length() > 150)
+            return generateErr("متن درباره من می تواند حداکثر ۱۵۰ کاراکتر باشد");
 
         user.put("bio", bio);
         userRepository.replaceOne(user.getObjectId("_id"), user);
