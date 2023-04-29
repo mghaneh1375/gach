@@ -579,7 +579,7 @@ public class StudentContentController {
                 .put("generalMode", "content")
                 .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                 .put("description", quiz.getOrDefault("description", ""))
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("refresh", 2)
                 .put("duration", neededTime)
                 .put("reminder", neededTime)
@@ -676,7 +676,7 @@ public class StudentContentController {
                 .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                 .put("description", quiz.getOrDefault("description", ""))
                 .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("duration", neededTime);
 
         List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());

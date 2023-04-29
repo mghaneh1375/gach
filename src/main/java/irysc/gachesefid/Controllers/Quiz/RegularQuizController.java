@@ -141,7 +141,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
                 .put("generalMode", AllKindQuiz.SCHOOL.getName())
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
@@ -235,7 +235,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
                 .put("generalMode", AllKindQuiz.IRYSC.getName())
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
                 .put("isRegistrable", true)
@@ -341,7 +341,7 @@ public class RegularQuizController extends QuizAbstract {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
-                if (quiz == null || quiz.getString("mode").equalsIgnoreCase("tashrihi"))
+                if (quiz == null || quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);

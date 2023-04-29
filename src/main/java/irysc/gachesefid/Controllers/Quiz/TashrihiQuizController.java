@@ -297,7 +297,7 @@ public class TashrihiQuizController extends QuizAbstract {
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
-            if (!quiz.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+            if (!quiz.getOrDefault("mode", "regular").toString().equals(KindQuiz.TASHRIHI.getName()))
                 return JSON_NOT_ACCESS;
 
             List<Document> correctors = new ArrayList<>();
@@ -670,7 +670,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", quiz.getOrDefault("desc", ""))
                     .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("mode", quiz.getString("mode"))
+                    .put("mode", quiz.getOrDefault("mode", "regular").toString())
                     .put("attaches", jsonArray);
 
 
@@ -721,7 +721,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", quiz.getOrDefault("desc", ""))
                     .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("mode", quiz.getString("mode"))
+                    .put("mode", quiz.getOrDefault("mode", "regular").toString())
                     .put("totalMark", student.get("total_mark"))
                     .put("attaches", jsonArray);
 
@@ -807,7 +807,7 @@ public class TashrihiQuizController extends QuizAbstract {
                     .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", quiz.getOrDefault("desc", ""))
                     .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("mode", quiz.getString("mode"))
+                    .put("mode", quiz.getOrDefault("mode", "regular").toString())
                     .put("attaches", jsonArray);
 
 
@@ -1084,7 +1084,7 @@ public class TashrihiQuizController extends QuizAbstract {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
-                if (quiz == null || !quiz.getString("mode").equalsIgnoreCase("tashrihi"))
+                if (quiz == null || !quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
@@ -1139,7 +1139,7 @@ public class TashrihiQuizController extends QuizAbstract {
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
                 .put("generalMode", AllKindQuiz.IRYSC.getName())
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("tags", quiz.getList("tags", String.class))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("isQRNeeded", quiz.getBoolean("is_q_r_needed"))

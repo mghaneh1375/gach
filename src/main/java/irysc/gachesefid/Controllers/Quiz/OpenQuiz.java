@@ -78,7 +78,7 @@ public class OpenQuiz extends QuizAbstract {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("generalMode", AllKindQuiz.OPEN.getName())
                 .put("tags", quiz.getList("tags", String.class))
                 .put("rate", quiz.getOrDefault("rate", 5))

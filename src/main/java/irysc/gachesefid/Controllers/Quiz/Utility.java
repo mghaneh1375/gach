@@ -769,7 +769,7 @@ public class Utility {
     ) throws InvalidFieldsException {
 
         Document quiz = db.findById(quizId);
-        if (quiz == null || !quiz.getString("mode").equals(KindQuiz.TASHRIHI.getName()))
+        if (quiz == null || !quiz.getOrDefault("mode", "regular").toString().equals(KindQuiz.TASHRIHI.getName()))
             throw new InvalidFieldsException(JSON_NOT_VALID_ID);
 
         int idx = -1;

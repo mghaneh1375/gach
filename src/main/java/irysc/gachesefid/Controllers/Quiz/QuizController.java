@@ -652,7 +652,7 @@ public class QuizController {
         for (Document quiz : docs) {
 
             if (db instanceof IRYSCQuizRepository) {
-                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                     quizAbstract = new TashrihiQuizController();
                 else
                     quizAbstract = new RegularQuizController();
@@ -679,7 +679,7 @@ public class QuizController {
             QuizAbstract quizAbstract;
 
             // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();
@@ -775,7 +775,7 @@ public class QuizController {
             QuizAbstract quizAbstract;
 
             // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();
@@ -864,7 +864,7 @@ public class QuizController {
             );
 
             List<Boolean> uploadableList = null;
-            if (quiz.containsKey("mode") && quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.containsKey("mode") && quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 uploadableList = (List<Boolean>) questionsDoc.getOrDefault(
                         "uploadable_list", new ArrayList<Double>()
                 );
@@ -876,7 +876,7 @@ public class QuizController {
             List<Document> correctorDocs = null;
 
             if (quiz.containsKey("mode") &&
-                    quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+                    quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
                     quiz.containsKey("correctors")
             ) {
 
@@ -924,7 +924,7 @@ public class QuizController {
                 if(!tmpDoc.containsKey("kind_question"))
                     tmpDoc.append("kind_question", "test");
 
-                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                     int marked = 0;
                     for (Document student : students) {
@@ -1043,7 +1043,7 @@ public class QuizController {
             HashMap<ObjectId, String> correctors = null;
             List<Document> correctorDocs = null;
 
-            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
+            if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) &&
                     quiz.containsKey("correctors")
             ) {
 
@@ -1086,7 +1086,7 @@ public class QuizController {
                 if (user == null)
                     continue;
 
-                if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                     JSONObject jsonObject = convertStudentDocToJSONInTashrihiQuiz(student, user);
 
@@ -1509,7 +1509,7 @@ public class QuizController {
             }
 
             return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3,
-                    quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                    quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                             true : null
             );
 
@@ -1528,7 +1528,7 @@ public class QuizController {
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return doAddQuestionsToQuiz(db, quiz, jsonArray,
                         new JSONArray(), mark, true
                 );
@@ -1559,7 +1559,7 @@ public class QuizController {
         List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
         List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
         List<Boolean> uploadable_list = null;
-        boolean isTashrihi = quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
+        boolean isTashrihi = quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
         if (can_upload != null)
             uploadable_list = questions.containsKey("uploadable_list") ?
@@ -2098,7 +2098,7 @@ public class QuizController {
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
             else if (db instanceof SchoolQuizRepository)
                 new RegularQuizController.Taraz(quiz, schoolQuizRepository);
-            else if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+            else if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                 new TashrihiQuizController().createTaraz(quiz);
 

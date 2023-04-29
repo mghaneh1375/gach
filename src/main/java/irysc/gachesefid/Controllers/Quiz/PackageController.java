@@ -366,7 +366,7 @@ public class PackageController {
 
                 QuizAbstract quizAbstract;
 
-                if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+                if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                     quizAbstract = new RegularQuizController();
                 else
                     quizAbstract = new TashrihiQuizController();
@@ -643,7 +643,7 @@ public class PackageController {
 
             QuizAbstract quizAbstract;
 
-            if (KindQuiz.REGULAR.getName().equals(quiz.getString("mode")))
+            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();

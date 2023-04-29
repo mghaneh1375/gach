@@ -94,7 +94,7 @@ public class ContentQuizController extends QuizAbstract {
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
                 .put("generalMode", AllKindQuiz.CONTENT.getName())
-                .put("mode", quiz.getString("mode"))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("tags", quiz.getList("tags", String.class))
                 .put("id", quiz.getObjectId("_id").toString());
 

@@ -77,7 +77,7 @@ public class StudentReportController {
             }
             double totalQuizMark = 0;
 
-            if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+            if(quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
                 List<Double> marks = quiz.get("questions", Document.class).getList("marks", Double.class);
 
                 for (Double mark : marks)
@@ -104,7 +104,7 @@ public class StudentReportController {
                 if(counter >= 5)
                     break;
 
-                Object[] stat = quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                Object[] stat = quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                         QuizAbstract.decodeFormatGeneralTashrihi(doc.get("stat", Binary.class).getData())
                         : QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
@@ -116,7 +116,7 @@ public class StudentReportController {
                         .put("stateRank", stat[2])
                         .put("rank", stat[1]);
 
-                if(quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+                if(quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
                     jsonObject.put("mark", stat[4]);
                     jsonObject.put("totalMark", totalQuizMark);
                 }

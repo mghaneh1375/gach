@@ -199,11 +199,11 @@ public class StudentQuizController {
                     .put("questionsNo", qNo)
                     .put("description", quiz.getOrDefault("desc", ""))
                     .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("mode", quiz.getString("mode"))
+                    .put("mode", quiz.getOrDefault("mode", "regular").toString())
                     .put("attaches", jsonArray)
                     .put("duration", neededTime);
 
-            if (quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return returnTashrihiQuiz(quiz, stdDoc.getList("answers", Document.class), quizJSON, true, db);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
@@ -382,7 +382,7 @@ public class StudentQuizController {
                         quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
                 QuizAbstract quizAbstract = isIRYSCQuiz ?
-                        quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                        quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                                 tashrihiQuizController :
                                 regularQuizController : openQuizAbstract;
 
@@ -683,7 +683,7 @@ public class StudentQuizController {
                                     db instanceof OpenQuizRepository ? AllKindQuiz.OPEN.getName() : "school")
                     .put("questionsNo", a.quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", a.quiz.getOrDefault("desc", ""))
-                    .put("mode", a.quiz.getString("mode"))
+                    .put("mode", a.quiz.getOrDefault("mode", "regular").toString())
                     .put("attaches", jsonArray)
                     .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
                     .put("duration", a.neededTime)
@@ -694,7 +694,7 @@ public class StudentQuizController {
                             a.student.getLong("start_at") == curr
                     );
 
-            if (a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+            if (a.quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                 if ((boolean) a.quiz.getOrDefault("is_q_r_needed", false)) {
 
@@ -893,7 +893,7 @@ public class StudentQuizController {
 
             String result;
 
-            if (a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (a.quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 result = saveStudentTashrihiAnswers(a.quiz, answers,
                         a.student.getList("answers", Document.class), db
                 );
@@ -920,7 +920,7 @@ public class StudentQuizController {
 
             A a = checkStoreAnswer(db, studentId, quizId, true);
 
-            if (!a.quiz.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (!a.quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return JSON_NOT_ACCESS;
 
             long curr = System.currentTimeMillis();
