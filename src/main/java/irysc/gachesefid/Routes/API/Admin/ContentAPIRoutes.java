@@ -277,9 +277,11 @@ public class ContentAPIRoutes extends Router {
     @ResponseBody
     public String all(
             @RequestParam(required = false) ObjectId lessonId,
-            @RequestParam(required = false) ObjectId gradeId
+            @RequestParam(required = false) ObjectId gradeId,
+            @RequestParam(required = false) String subject,
+            @RequestParam(required = false) String code
     ) {
-        return ContentController.all(lessonId, gradeId);
+        return ContentController.all(lessonId, gradeId, subject, code);
     }
 
     @GetMapping(value = "/search")

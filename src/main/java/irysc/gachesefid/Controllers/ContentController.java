@@ -654,9 +654,29 @@ public class ContentController {
         return returnRemoveResponse(excepts, doneIds);
     }
 
-    public static String all(ObjectId lessonId, ObjectId gradeId) {
+    public static String all(ObjectId lessonId, ObjectId gradeId,
+                             String subject, String code
+    ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
+        ArrayList<Document> docs;
+
+        if(subject != null || code != null) {
+
+            if(subject != null)
+                filters.add(eq("name", Pattern.compile(Pattern.quote(subject), Pattern.CASE_INSENSITIVE)));
+
+            if(code != null)
+                filters.add(eq("code", Utility.convertPersianDigits(code)));
+
+            JSONArray jsonArray = new JSONArray();
+
+            getSubjects(
+                    jsonArray, null, null, filters
+            );
+
+            return generateSuccessMsg("data", jsonArray);
+        }
 
         if (lessonId != null)
             filters.add(eq("lesson._id", lessonId));
@@ -664,7 +684,7 @@ public class ContentController {
         if (gradeId != null)
             filters.add(eq("grade._id", gradeId));
 
-        ArrayList<Document> docs = gradeRepository.find(
+        docs = gradeRepository.find(
                 filters.size() == 0 ? null : and(filters), null
         );
 
@@ -678,7 +698,8 @@ public class ContentController {
                 getSubjects(
                         jsonArray,
                         doc.getObjectId("_id"),
-                        lesson.getObjectId("_id")
+                        lesson.getObjectId("_id"),
+                        null
                 );
             }
         }
@@ -743,13 +764,16 @@ public class ContentController {
 
     private static void getSubjects(JSONArray jsonArray,
                                     ObjectId gradeId,
-                                    ObjectId lessonId) {
+                                    ObjectId lessonId,
+                                    List<Bson> filters
+    ) {
 
         ArrayList<Document> subjects = subjectRepository.find(
+                filters == null ?
                 and(
                         eq("lesson._id", lessonId),
                         eq("grade._id", gradeId)
-                ), null
+                ) : and(filters), null
         );
 
         for (Document subject : subjects) {
