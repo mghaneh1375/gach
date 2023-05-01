@@ -678,8 +678,9 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             QuizAbstract quizAbstract;
 
-            // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
+            if(db instanceof OpenQuizRepository)
+                quizAbstract = new OpenQuiz();
+            else if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();
