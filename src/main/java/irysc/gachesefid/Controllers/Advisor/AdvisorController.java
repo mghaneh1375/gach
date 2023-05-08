@@ -67,6 +67,31 @@ public class AdvisorController {
         return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
+    public static String cancel(Document user) {
+
+        if(!user.containsKey("advisor_id"))
+            return JSON_NOT_ACCESS;
+
+        Document advisor = userRepository.findById(user.getObjectId("advisor_id"));
+        if(advisor != null) {
+
+            List<Document> students = advisor.getList("students", Document.class);
+            int idx = searchInDocumentsKeyValIdx(students, "_id", user.getObjectId("_id"));
+
+            if(idx > -1) {
+
+                students.remove(idx);
+                userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
+
+            }
+        }
+
+        user.remove("advisor_id");
+        userRepository.replaceOne(user.getObjectId("_id"), user);
+
+        return JSON_OK;
+    }
+
     public static String cancelRequest(ObjectId userId, ObjectId reqId) {
 
         Document doc = advisorRequestsRepository.findOneAndDelete(
@@ -124,7 +149,7 @@ public class AdvisorController {
     public static String myRequests(ObjectId userId) {
 
         List<Document> requests = advisorRequestsRepository.find(
-                eq("user_id", userId), null
+                eq("user_id", userId), null, Sorts.descending("created_at")
         );
 
         return returnRequests("advisor_id", requests);
@@ -134,7 +159,7 @@ public class AdvisorController {
     public static String myStudentRequests(ObjectId advisorId) {
 
         List<Document> requests = advisorRequestsRepository.find(
-                eq("advisor_id", advisorId), null
+                eq("advisor_id", advisorId), null, Sorts.descending("created_at")
         );
 
         return returnRequests("user_id", requests);
