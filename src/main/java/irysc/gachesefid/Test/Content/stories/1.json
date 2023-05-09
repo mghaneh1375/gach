@@ -1,0 +1,16 @@
+{
+  "grade": {
+    "name": "$randStr"
+  },
+  "lesson": {
+    "name": "$randStr",
+    "description": "$randStr"
+  },
+  "subject": {
+    "name": "$randStr",
+    "description": "$randStr",
+    "midPrice": 2000,
+    "hardPrice": 3000,
+    "easyPrice": 1000
+  }
+}

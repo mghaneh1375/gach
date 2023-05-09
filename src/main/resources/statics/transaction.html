@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>صفحه انتقال</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://e.irysc.com/assets/transaction/style.css" />
+    <link
+            rel="stylesheet"
+            href="https://e.irysc.com/assets/fonts/AtFontFace.css"
+    />
+</head>
+<body dir="rtl">
+
+<span id="payStatus" class="hidden">[[${status}]]</span>
+
+<div id="boxSuccess" class="box hidden">
+
+    <p>
+        <span class="blue-bold">بازگشت از درگاه</span>
+    </p>
+    <div class="marginRight25">
+        <img src="https://e.irysc.com/assets/transaction/img/1F600.svg" alt="success" />
+        <p class="colorGreen marginTop0">پرداخت شما با موفقیت انجام گردید</p>
+        <p id="refDiv">
+            <span class="blue-bold fontSize15">کد رهگیری</span>
+            <span class="blue-bold" id="refId">[[${refId}]]</span>
+        </p>
+
+        <span class="hidden" id="getRecpHref" >[[${getRecpUrl}]]</span>
+        <span class="hidden" id="section" >[[${section}]]</span>
+        <button id="getRecp" class="my-link btn">دریافت رسید</button>
+
+        <div id="quizDIV" class="hidden">
+
+            <p class="marginTop50 blue-bold fontSize13 marginBottom0">
+                نام خرید :<span>[[${forWhat}]]</span>
+            </p>
+
+            <p class="colorOrange marginUpDown fontSize13">
+                <span>برای مشاهده آزمون ها به صفحه</span>
+                <span class="hidden" id="myQuizzesLinkHref">[[${myQuizzesUrl}]]</span>
+                <span class="my-link" id="myQuizzesLink">آزمون های من</span>
+                <span>بروید.</span>
+            </p>
+        </div>
+
+        <div id="contentDIV" class="hidden">
+
+            <p class="marginTop50 blue-bold fontSize13 marginBottom0">
+                نام خرید :<span>[[${forWhat}]]</span>
+            </p>
+
+            <p class="colorOrange marginUpDown fontSize13">
+                <span>برای مشاهده بسته های آموزشی خود به صفحه</span>
+                <span class="hidden" id="myContentsLinkHref">[[${myQuizzesUrl}]]</span>
+                <span class="my-link" id="myContentsLink">بسته های آموزشی من</span>
+                <span>بروید.</span>
+            </p>
+        </div>
+
+        <div id="charge" class="hidden">
+            <p class="marginTop50 blue-bold fontSize13 marginBottom0">
+                افزایش شارژ حساب
+            </p>
+        </div>
+
+        <span id="homeLinkHref" class="hidden">[[${homeUrl}]]</span>
+        <p class="blue-bold marginUpDown fontSize13">
+            برای بازگشت به خانه <span class="my-link" id="homeLink">اینجا</span> را کلیک کنید.
+        </p>
+        <span id="financeUrlHref" class="hidden">[[${financeUrl}]]</span>
+        <p class="colorOrange marginUpDown fontSize13">
+            شما همواره می توانید برای مشاهده سوابق تراکنش ها و دریافت رسید پرداخت
+            به صفحه <span id="financeUrl" class="my-link">سوابق مالی</span> بروید.
+        </p>
+    </div>
+</div>
+<div id="boxFail" class="box hidden">
+    <p>
+        <span class="blue-bold">بازگشت از درگاه</span>
+    </p>
+    <div class="marginRight25">
+        <img src="https://e.irysc.com/assets/transaction/img/Icon-material-close.svg" alt="fail" />
+        <p class="colorRed marginTop0">پرداخت ناموفق بود.</p>
+
+        <p class="blue-bold fontSize15 marginBottom0">
+            متاسفانه عملیات پرداخت با مشکل مواجه گردید.
+        </p>
+        <p class="blue-bold fontSize15 marginBottom0">
+            در صورت کسر مبلغ از حساب شما، حداکثر تا 72 ساعت بعد مبلغ کسر شده به
+            حساب شما باز خواهد گردید.
+        </p>
+        <p class="blue-bold fontSize13 marginBottom0 marginTop25">
+            در صورت عدم عودت از بانک خود پیگیری نمایید.
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            این امر می تواند به دلایل زیر باشد :
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            در بعضی موارد اتصال خارج از کشور به درگاه ها با اختلال مواجه می گردد.
+        </p>
+        <p class="blue-bold marginUpDown fontSize13">
+            مشکل موقتی در سایت و یا درگاه پرداخت به وجود آمده است.
+        </p>
+        <p class="blue-bold fontSize13 marginTop25">
+            اگر این مشکل برای شما به دفعات تکرار می شود از طریق پشتیبانی ما را در
+            جریان بگذارید.
+        </p>
+
+        <span class="hidden" id="backHref" >[[${homeUrl}]]</span>
+        <button id="back" class="my-link btn">بازگشت به خانه</button>
+
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function () {
+
+        $(".my-link").on('click', function () {
+            document.location.href = $("#" + $(this).attr("id") + "Href").text();
+        });
+
+        const status = $("#payStatus").text();
+
+        if (status === "success") {
+
+            const section = $("#section").text();
+            if(section === 'quiz')
+                $("#quizDIV").removeClass('hidden');
+            else if(section === 'content')
+                $("#contentDIV").removeClass('hidden');
+
+            $("#boxSuccess").removeClass('hidden');
+        } else {
+            $("#boxFail").removeClass('hidden');
+        }
+    });
+</script>
+</body>
+</html>
