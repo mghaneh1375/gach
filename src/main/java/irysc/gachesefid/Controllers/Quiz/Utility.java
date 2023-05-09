@@ -743,8 +743,10 @@ public class Utility {
         }
 
         if (db instanceof SchoolQuizRepository) {
+
             if(quiz.getObjectId("created_by").equals(userId))
                 return quiz;
+
             else if(quiz.getString("status").equals("finish") && quiz.getBoolean("visibility") &&
                     searchInDocumentsKeyValIdx(
                             quiz.getList("students", Document.class),
@@ -752,6 +754,18 @@ public class Utility {
                     ) != -1
             )
                 return quiz;
+
+            else if(quiz.getString("status").equals("semi_finish") && quiz.getBoolean("visibility")) {
+
+                Document studentDoc = searchInDocumentsKeyVal(
+                        quiz.getList("students", Document.class),
+                        "_id", userId
+                );
+
+                if(studentDoc != null && studentDoc.containsKey("paid"))
+                    return quiz;
+
+            }
 
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
         }

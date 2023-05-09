@@ -108,7 +108,7 @@ public class GeneralAPIRoutes extends Router {
             }
             else {
 
-                doc.put("money", doc.getDouble("money") + (double) jsonObject.getInt("amount"));
+                doc.put("money", ((Number)doc.get("money")).doubleValue() + (double) jsonObject.getInt("amount"));
 
                 if (jsonObject.has("coin")) {
                     double d = doc.getDouble("coin") + jsonObject.getNumber("coin").doubleValue();

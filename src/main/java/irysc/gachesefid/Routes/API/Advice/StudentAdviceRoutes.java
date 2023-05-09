@@ -45,7 +45,7 @@ public class StudentAdviceRoutes extends Router {
         if (!user.containsKey("advisor_id"))
             return Utility.generateSuccessMsg("data", new JSONObject());
 
-        return AdvisorController.getMyAdvisor(user.getObjectId("advisor_id"));
+        return AdvisorController.getMyAdvisor(user.getObjectId("_id"), user.getObjectId("advisor_id"));
     }
 
     @GetMapping(value = "hasOpenRequest")

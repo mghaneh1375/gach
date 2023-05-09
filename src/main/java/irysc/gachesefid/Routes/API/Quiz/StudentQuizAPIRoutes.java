@@ -249,13 +249,26 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "mySchoolQuizzes")
     @ResponseBody
     public String mySchoolQuizzes(HttpServletRequest request,
+                                  @RequestParam(value = "forAdvisor") boolean forAdvisor,
                                   @RequestParam(required = false) String status
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.mySchoolQuizzes(
-                user, status
+                user, status, forAdvisor
         );
     }
+
+    @PostMapping(value = "buyAdvisorQuiz/{quizId}")
+    @ResponseBody
+    public String buyAdvisorQuiz(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.buyAdvisorQuiz(
+                user.getObjectId("_id"), quizId, ((Number)user.get("money")).doubleValue()
+        );
+    }
+
 
     @GetMapping(value = "myCustomQuizzes")
     @ResponseBody

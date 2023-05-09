@@ -1202,7 +1202,12 @@ public class UserController {
 
         Document school = null;
 
-        if(jsonObject.has("schoolId")) {
+        if(jsonObject.has("schoolId") &&
+                (
+                        !user.containsKey("school") ||
+                        !user.get("school", Document.class).getObjectId("_id").toString().equals(jsonObject.getString("schoolId"))
+                )
+        ) {
            school = schoolRepository.findById(
                     new ObjectId(jsonObject.getString("schoolId"))
             );
@@ -1226,10 +1231,31 @@ public class UserController {
                 .append("name", city.getString("name"))
         );
 
-        if(school != null)
+        if(school != null) {
+
             user.put("school", new Document("_id", school.getObjectId("_id"))
                     .append("name", school.getString("name"))
             );
+
+            if(school.containsKey("user_id")) {
+
+                Document schoolUser = userRepository.findById(school.getObjectId("user_id"));
+
+                if(schoolUser != null) {
+
+                    List<ObjectId> students = (List<ObjectId>) schoolUser.getOrDefault("students", new ArrayList<>());
+
+                    if(!students.contains(user.getObjectId("_id"))) {
+                        students.add(user.getObjectId("_id"));
+                        userRepository.replaceOne(schoolUser.getObjectId("_id"), schoolUser);
+                    }
+
+                }
+
+            }
+
+        }
+
         else
             user.remove("school");
 

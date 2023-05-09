@@ -1197,6 +1197,22 @@ public class AdminReportController {
                     studentsIdAfterFilter.add(std);
                 }
             }
+
+            if (Authorization.isAdvisor(accesses)) {
+
+                if (!user.containsKey("students"))
+                    return null;
+
+                List<Document> myStudents = user.getList("students", Document.class);
+                for (ObjectId std : students) {
+
+                    if (searchInDocumentsKeyValIdx(myStudents, "_id", std) == -1)
+                        continue;
+
+                    studentsIdAfterFilter.add(std);
+                }
+            }
+
         }
 
         return userRepository.findByIds(
@@ -1214,8 +1230,15 @@ public class AdminReportController {
         List<Document> students = quiz.getList("students", Document.class);
         ArrayList<ObjectId> studentsIdBeforeFilter = new ArrayList<>();
 
-        for (Document student : students)
+        boolean payByStudent = (boolean)quiz.getOrDefault("pay_by_student", false);
+
+        for (Document student : students) {
+
+            if(payByStudent && !student.containsKey("paid"))
+                continue;
+
             studentsIdBeforeFilter.add(student.getObjectId("_id"));
+        }
 
         ArrayList<Document> studentsInfo = filterStudentsWithAccess(
                 studentsIdBeforeFilter,

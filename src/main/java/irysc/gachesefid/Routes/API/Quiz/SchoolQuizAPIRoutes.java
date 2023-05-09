@@ -237,7 +237,7 @@ public class SchoolQuizAPIRoutes extends Router {
 
         return QuizController.getTotalPrice(quizId,
                 user.getObjectId("_id"),
-                user.getDouble("money")
+                ((Number)user.get("money")).doubleValue()
         );
     }
 }

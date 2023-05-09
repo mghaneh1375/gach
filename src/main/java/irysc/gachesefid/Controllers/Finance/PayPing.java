@@ -158,6 +158,30 @@ public class PayPing {
                     }
                 }
 
+
+                if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.COUNSELING_QUIZ.getName())
+                ) {
+
+                    Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
+
+                    if(quiz != null) {
+
+                        Document studentDoc = searchInDocumentsKeyVal(
+                                quiz.getList("students", Document.class),
+                                "_id", studentId
+                        );
+
+                        if(studentDoc != null) {
+                            studentDoc.put("pay_at", System.currentTimeMillis());
+                            studentDoc.put("paid", transaction.getInteger("amount"));
+                            schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+                        }
+
+                    }
+                }
+
+
                 if(transaction.containsKey("package_id")) {
                     Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
                     if(thePackage != null) {

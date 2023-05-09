@@ -401,13 +401,6 @@ public class QuizController {
 
             PairValue p = isSchoolQuizReadyForPay(quiz);
 
-            if((boolean)quiz.getOrDefault("pay_by_student", false)) {
-                quiz.put("status", "semi_finish");
-                schoolQuizRepository.replaceOne(quizId, quiz);
-
-                return generateSuccessMsg("data", new JSONObject().put("status", "ready"));
-            }
-
             int studentsCount = (int) p.getKey();
             int total;
 
@@ -418,6 +411,14 @@ public class QuizController {
             } else {
                 int price = (int) p.getValue();
                 total = studentsCount * price;
+            }
+
+            if((boolean)quiz.getOrDefault("pay_by_student", false)) {
+                quiz.put("status", "semi_finish");
+                quiz.put("price", total);
+                schoolQuizRepository.replaceOne(quizId, quiz);
+
+                return generateSuccessMsg("data", new JSONObject().put("status", "ready"));
             }
 
             long curr = System.currentTimeMillis();

@@ -287,19 +287,19 @@ public class AdvisorController {
         JSONArray jsonArray = new JSONArray();
 
         for (Document advisor : advisors)
-            jsonArray.put(convertToJSONDigest(advisor));
+            jsonArray.put(convertToJSONDigest(null, advisor));
 
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getMyAdvisor(ObjectId advisorId) {
+    public static String getMyAdvisor(ObjectId userId, ObjectId advisorId) {
 
         Document advisor = userRepository.findById(advisorId);
 
         if (advisor == null)
             return JSON_NOT_UNKNOWN;
 
-        return generateSuccessMsg("data", convertToJSONDigest(advisor));
+        return generateSuccessMsg("data", convertToJSONDigest(userId, advisor));
     }
 
     public static String rate(ObjectId userId, ObjectId advisorId, int rate) {
@@ -332,11 +332,12 @@ public class AdvisorController {
         oldTotalRate -= oldRate;
         oldTotalRate += rate;
 
-        advisor.put("rate", Math.round(oldTotalRate / rateCount * 100.0) / 100.0);
+        double newRate = Math.round(oldTotalRate / rateCount * 100.0) / 100.0;
+        advisor.put("rate", newRate);
         advisor.put("rate_count", rateCount);
 
         userRepository.replaceOne(advisorId, advisor);
-        return JSON_OK;
+        return generateSuccessMsg("rate", newRate);
 
     }
 
