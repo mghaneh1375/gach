@@ -15,6 +15,7 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
@@ -764,6 +765,19 @@ public class UserAPIRoutes extends Router {
     public String myTransactions(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return PayPing.myTransactions(getUser(request).getObjectId("_id"));
+    }
+
+    @GetMapping(value = "/getEducationalHistory/{userId}")
+    @ResponseBody
+    public String getEducationalHistory(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        if(!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
+            return JSON_NOT_ACCESS;
+
+        return UserController.getEducationalHistory(userId);
     }
 
 //    @GetMapping(value = "/myTransaction/{referenceId}")

@@ -1097,17 +1097,21 @@ public class QuizAPIRoutes extends Router {
                     quizId, studentId
             );
 
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        Authorization.hasAccessToThisStudent(studentId, user.getObjectId("_id"));
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+        if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return AdminReportController.getStudentAnswerSheet(
                     iryscQuizRepository, null, quizId, studentId
             );
 
+        if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return AdminReportController.getStudentAnswerSheet(
+                    openQuizRepository, null, quizId, studentId
+            );
+
         return AdminReportController.getStudentAnswerSheet(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId, studentId
+                null, quizId, studentId
         );
     }
 

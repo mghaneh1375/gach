@@ -12,7 +12,7 @@ import java.util.List;
 
 public class Utility {
 
-    static JSONObject convertToJSONDigest(ObjectId stdId, Document advisor) {
+    public static JSONObject convertToJSONDigest(ObjectId stdId, Document advisor) {
 
         List<Document> students = (List<Document>)advisor.getOrDefault("students", new ArrayList<>());
 

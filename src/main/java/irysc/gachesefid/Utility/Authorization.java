@@ -77,6 +77,9 @@ public class Authorization {
         if(applicator == null)
             return false;
 
+        if(isAdmin(applicator.getList("accesses", String.class)))
+            return true;
+
         if(isSchool(applicator.getList("accesses", String.class)))
             return applicator.getList("students", ObjectId.class).contains(studentId);
 

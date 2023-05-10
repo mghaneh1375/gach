@@ -4,18 +4,17 @@ package irysc.gachesefid.Controllers;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
-import irysc.gachesefid.Utility.Enc;
-import irysc.gachesefid.Utility.Excel;
-import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Utility.*;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -1352,7 +1351,6 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-
     public static ByteArrayInputStream getAuthorCodesExcel() {
 
         JSONArray jsonArray = new JSONArray();
@@ -1366,5 +1364,225 @@ public class UserController {
         }
 
         return Excel.write(jsonArray);
+    }
+
+    private static JSONArray convertQuizzesToJSON(List<Document> quizzes, ObjectId userId) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document quiz : quizzes) {
+
+            try {
+
+                List<Document> rankingList = quiz.getList("ranking_list", Document.class);
+
+                Document studentDocInQuiz = searchInDocumentsKeyVal(
+                        rankingList, "_id", userId
+                );
+
+                if (studentDocInQuiz == null)
+                    continue;
+
+                boolean isTashrihi = quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi");
+
+                double totalQuizMark = 0;
+                List<Number> marks = quiz.get("questions", Document.class).getList("marks", Number.class);
+
+                if(isTashrihi) {
+
+                    for (Number mark : marks)
+                        totalQuizMark += mark.doubleValue();
+
+                }
+
+                Object[] stats = isTashrihi ? QuizAbstract.decodeFormatGeneralTashrihi(studentDocInQuiz.get("stat", Binary.class).getData()) :
+                        QuizAbstract.decodeFormatGeneral(studentDocInQuiz.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject;
+
+                jsonObject = new JSONObject()
+                        .put("taraz", stats[0])
+                        .put("cityRank", stats[3])
+                        .put("stateRank", stats[2])
+                        .put("rank", stats[1]);
+
+                if(isTashrihi) {
+                    jsonObject.put("mark", stats[4])
+                            .put("mode", "tashrihi")
+                            .put("totalMark", totalQuizMark);
+                }
+
+                jsonObject.put("name", quiz.getString("title"))
+                        .put("studentsCount", rankingList.size())
+                        .put("questionsCount", marks.size())
+                        .put("id", quiz.getObjectId("_id").toString());
+
+                if (quiz.containsKey("start") && quiz.containsKey("end"))
+                    jsonObject.put("date", getSolarDate(quiz.getLong("start")) + " تا " + getSolarDate(quiz.getLong("end")));
+
+                else if(studentDocInQuiz.containsKey("finish_at"))
+                    jsonObject.put("date", getSolarDate(studentDocInQuiz.getLong("finish_at")));
+
+                jsonArray.put(jsonObject);
+            }
+            catch (Exception ignore) {
+                ignore.printStackTrace();
+            }
+        }
+
+        return jsonArray;
+    }
+
+    private static JSONObject convertCustomQuizStats(Document std) {
+
+        JSONObject data = new JSONObject();
+        JSONArray lessons = new JSONArray();
+
+        int totalCorrect = 0;
+        for (Document lesson : std.getList("lessons", Document.class)) {
+
+            Object[] stats = QuizAbstract.decodeCustomQuiz(lesson.get("stat", Binary.class).getData());
+            totalCorrect += (int) stats[2];
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", lesson.getString("name"))
+                    .put("whites", stats[0])
+                    .put("corrects", stats[1])
+                    .put("incorrects", stats[2])
+                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2]);
+
+            lessons.put(jsonObject);
+        }
+
+        JSONArray subjects = new JSONArray();
+        for (Document subject : std.getList("subjects", Document.class)) {
+
+            Object[] stats = QuizAbstract.decodeCustomQuiz(subject.get("stat", Binary.class).getData());
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("name", subject.getString("name"))
+                    .put("whites", stats[0])
+                    .put("corrects", stats[1])
+                    .put("incorrects", stats[2])
+                    .put("total", (int) stats[0] + (int) stats[1] + (int) stats[2]);
+
+            subjects.put(jsonObject);
+        }
+
+        data.put("lessons", lessons);
+        data.put("subjects", subjects);
+        data.put("date", getSolarDate(std.getLong("start_at")));
+        data.put("totalCorrects", totalCorrect);
+        data.put("name", std.getString("name"));
+
+        return data;
+    }
+
+
+
+    public static String getEducationalHistory(ObjectId userId) {
+
+        Document student = userRepository.findById(userId);
+        if(student == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<Document> iryscQuizzes = iryscQuizRepository.find(and(
+                eq("students._id", userId),
+                exists("report_status"),
+                eq("report_status", "ready")
+        ), new BasicDBObject("title", 1).append("_id", 1)
+                .append("start", 1).append("end", 1)
+                .append("ranking_list", 1).append("mode", 1)
+                .append("questions", 1), Sorts.descending("created_at")
+        );
+
+        List<Document> openQuizzes = openQuizRepository.find(and(
+                        eq("students._id", userId),
+                        exists("report_status"),
+                        eq("report_status", "ready")
+                ), new BasicDBObject("title", 1).append("_id", 1)
+                        .append("ranking_list", 1).append("mode", 1)
+                        .append("questions", 1), Sorts.descending("created_at")
+        );
+
+        List<Document> customQuizzes = customQuizRepository.find(and(
+                        eq("user_id", userId),
+                        eq("status", "finished")
+                ), new BasicDBObject("name", 1).append("_id", 1)
+                        .append("lessons", 1).append("subjects", 1)
+                        .append("start_at", 1)
+        );
+
+        JSONObject output = new JSONObject();
+
+        output.put("iryscQuizzes", convertQuizzesToJSON(iryscQuizzes, userId));
+        output.put("openQuizzes", convertQuizzesToJSON(openQuizzes, userId));
+
+        JSONArray customQuizzesJSON = new JSONArray();
+        for (Document customQuiz : customQuizzes) {
+            customQuizzesJSON.put(convertCustomQuizStats(customQuiz));
+        }
+
+        output.put("customQuizzes", customQuizzesJSON);
+
+        if(student.containsKey("school") && student.get("school") != null)
+            output.put("school", student.get("school", Document.class).getString("name"));
+        else
+            output.put("school", "");
+
+        if(student.containsKey("city")) {
+            Document city = (Document) student.get("city");
+            if(city != null && city.containsKey("name"))
+                output.put("city", city.getString("name"));
+            else
+                output.put("city", "");
+        }
+        else
+            output.put("city", "");
+
+        if(student.containsKey("grade")) {
+            Document grade = (Document) student.get("grade");
+            if(grade != null && grade.containsKey("name"))
+                output.put("grade", grade.getString("name"));
+        }
+        else
+            output.put("grade", "");
+
+        if(student.containsKey("branches")) {
+            List<Document> branches = student.getList("branches", Document.class);
+            if(branches.size() > 0) {
+
+                StringBuilder sb = new StringBuilder();
+
+                for (Document branch : branches) {
+                    sb.append(branch.getString("name")).append(" - ");
+                }
+
+                output.put("branches", sb.substring(0, sb.toString().length() - 3));
+            }
+            else output.put("branches", "");
+        }
+        else
+            output.put("branches", "");
+
+        if(student.containsKey("rank"))
+            output.put("rank", student.get("rank"));
+        else {
+            Document rank = tarazRepository.findOne(eq("user_id", student.getObjectId("_id")), JUST_RANK);
+            output.put("rank", rank == null ? -1 : rank.get("rank"));
+        }
+
+        if(student.containsKey("advisor_id")) {
+            Document advisor = userRepository.findById(student.getObjectId("advisor_id"));
+            if(advisor != null)
+                output.put("advisor", irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
+                        null, advisor
+                ));
+        }
+
+        output.put("name", student.getString("first_name") + " " + student.getString("last_name"))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + student.getString("pic"));
+
+        return generateSuccessMsg("data", output);
     }
 }
