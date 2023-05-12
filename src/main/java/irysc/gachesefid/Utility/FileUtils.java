@@ -163,7 +163,8 @@ public class FileUtils {
 
             if (!fileType.equals("image") && !fileType.equals("word") &&
                     !fileType.equals("pdf") && !fileType.equals("voice") &&
-                    !fileType.equals("video") && !fileType.equals("excel")
+                    !fileType.equals("video") && !fileType.equals("excel") &&
+                    !fileType.equals("powerpoint")
             )
                 return null;
 
@@ -254,6 +255,9 @@ public class FileUtils {
             case "xls":
             case "xlsx":
                 return new PairValue("excel", ext);
+            case "pptx":
+            case "ppt":
+                return new PairValue("powerpoint", ext);
             case "doc":
             case "docx":
                 return new PairValue("word", ext);

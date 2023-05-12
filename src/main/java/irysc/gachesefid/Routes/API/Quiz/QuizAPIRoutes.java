@@ -252,13 +252,17 @@ public class QuizAPIRoutes extends Router {
 
         }
 
-        if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
-            return QuizController.getAll(schoolQuizRepository, user.getObjectId("_id"),
-                    name, startDateSolar, startDateSolarEndLimit,
-                    startRegistryDateSolar, startRegistrySolarEndLimit, kind
-            );
+        if(!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.HW.getName())
+        )
+            return JSON_NOT_VALID_PARAMS;
 
-        return JSON_NOT_VALID_PARAMS;
+        return QuizController.getAll(
+                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) ? schoolQuizRepository : hwRepository,
+                user.getObjectId("_id"),
+                name, startDateSolar, startDateSolarEndLimit,
+                startRegistryDateSolar, startRegistrySolarEndLimit, kind
+        );
     }
 
     @GetMapping(value = "/get/{mode}/{quizId}")
@@ -318,7 +322,7 @@ public class QuizAPIRoutes extends Router {
     @PostMapping(value = "/toggleVisibility/{mode}/{quizId}")
     @ResponseBody
     public String toggleVisibility(HttpServletRequest request,
-                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
@@ -328,7 +332,9 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.toggleVisibility(iryscQuizRepository, null, quizId);
 
-        return QuizController.toggleVisibility(schoolQuizRepository,
+        return QuizController.toggleVisibility(
+                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ?
+                        hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
@@ -353,7 +359,8 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.forceRegistry(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
                 jsonArray, paid, !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class))
         );

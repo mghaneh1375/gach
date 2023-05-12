@@ -1,8 +1,8 @@
 package irysc.gachesefid.Models;
 
-public enum AllKindQuiz {
+public enum HWAnswerType {
 
-    IRYSC, SCHOOL, CUSTOM, OPEN, CONTENT, HW;
+    WORD, PDF, AUDIO, VIDEO, IMAGE, POWERPOINT;
 
     public String getName() {
         return name().toLowerCase();

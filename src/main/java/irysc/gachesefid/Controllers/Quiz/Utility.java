@@ -78,23 +78,6 @@ public class Utility {
 
         }
 
-        if (quiz.containsKey("desc_after_mode") &&
-                quiz.getString("desc_after_mode").equals(DescMode.FILE.getName()) &&
-                quiz.containsKey("desc_after")
-        )
-            throw new InvalidFieldsException("زمانی که فایل توضیحات بعد آزمون را بر روی فایل ست می کنید نباید فیلد descAfter را ست نمایید.");
-
-        if (quiz.containsKey("desc_mode") &&
-                quiz.getString("desc_mode").equals(DescMode.FILE.getName()) &&
-                quiz.containsKey("desc")
-        )
-            throw new InvalidFieldsException("زمانی که فایل توضیحات آزمون را بر روی فایل ست می کنید نباید فیلد desc را ست نمایید.");
-
-//        if(
-//                !quiz.getString("desc_after_mode").equals(DescMode.NONE.getName()) &&
-//                        !quiz.containsKey()
-//        )
-
     }
 
     static JSONObject convertTashrihiQuizToJSONDigestForTeachers(Document quiz, Document corrector, String mode) {

@@ -1,16 +1,15 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
-import irysc.gachesefid.Controllers.Quiz.QuizController;
-import irysc.gachesefid.Controllers.Quiz.SchoolQuizController;
-import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
+import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Models.GeneralKindQuiz;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -28,8 +27,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.contentQuizRepository;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 
 @Controller
 @RequestMapping(path = "/api/quiz/school")
@@ -217,13 +219,46 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
+
+    @PostMapping(value = "/finalizeHW/{hwId}")
+    @ResponseBody
+    public String finalizeHW(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId hwId,
+                             @RequestBody(required = false) @StrongJSONConstraint(
+                                     params = {},
+                                     paramsType = {},
+                                     optionals = {"off"},
+                                     optionalsType = {String.class}
+                             ) String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getSchoolUser(request);
+
+        return SchoolQuizController.finalizeHW(
+                hwId, user.getObjectId("_id"),
+                jsonStr != null && !jsonStr.isEmpty() ?
+                        new JSONObject(jsonStr).getString("off") :
+                        null, ((Number) user.get("money")).doubleValue()
+        );
+    }
+
     @GetMapping(value = "/recp/{quizId}")
     @ResponseBody
     public String recp(HttpServletRequest request,
                        @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return QuizController.recp(quizId,
-                getSchoolUser(request).getObjectId("_id")
+                getQuizUser(request).getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "/recpHW/{hwId}")
+    @ResponseBody
+    public String recpHW(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId hwId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return QuizController.recp(hwId,
+                getQuizUser(request).getObjectId("_id")
         );
     }
 
@@ -237,7 +272,116 @@ public class SchoolQuizAPIRoutes extends Router {
 
         return QuizController.getTotalPrice(quizId,
                 user.getObjectId("_id"),
-                ((Number)user.get("money")).doubleValue()
+                ((Number) user.get("money")).doubleValue()
         );
     }
+
+    @GetMapping(value = "/getTotalHWPrice/{hwId}")
+    @ResponseBody
+    public String getTotalHWPrice(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId hwId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+
+        return SchoolQuizController.getTotalHWPrice(hwId,
+                user.getObjectId("_id"),
+                ((Number) user.get("money")).doubleValue()
+        );
+    }
+
+
+    @PostMapping(value = "/createHW")
+    @ResponseBody
+    public String createHW(HttpServletRequest request,
+                           @RequestBody @StrongJSONConstraint(
+                                   params = {
+                                           "title", "start",
+                                           "end", "showResultsAfterCorrection",
+                                           "answerType", "maxUploadSize"
+                                   },
+                                   paramsType = {
+                                           String.class, Long.class,
+                                           Long.class, Boolean.class,
+                                           HWAnswerType.class, Positive.class
+                                   },
+                                   optionals = {
+                                           "description", "descAfter",
+                                           "delayPenalty", "delayEnd"
+                                   },
+                                   optionalsType = {
+                                           String.class, String.class,
+                                           Positive.class, Long.class
+                                   }
+                           ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        if (
+                !user.containsKey("students") ||
+                        user.getList("students", Document.class).size() == 0
+        )
+            return generateErr("در حال حاضر دانش آموزی ندارید و امکان ساخت تمرین/آزمون برای شما میسر نمی باشد.");
+
+        return SchoolQuizController.createHW(
+                user.getObjectId("_id"),
+                jsonObject, Authorization.isAdvisor(user.getList("accesses", String.class))
+        );
+    }
+
+    @PostMapping(value = "/editHW/{hwId}")
+    @ResponseBody
+    public String editHW(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId hwId,
+                       @RequestBody @StrongJSONConstraint(
+                               params = {
+                                       "title", "start",
+                                       "end", "showResultsAfterCorrection",
+                                       "answerType", "maxUploadSize"
+                               },
+                               paramsType = {
+                                       String.class, Long.class,
+                                       Long.class, Boolean.class,
+                                       HWAnswerType.class, Positive.class
+                               },
+                               optionals = {
+                                       "description", "descAfter",
+                                       "delayPenalty", "delayEnd"
+                               },
+                               optionalsType = {
+                                       String.class, String.class,
+                                       Positive.class, Long.class
+                               }
+                       ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+
+        return SchoolQuizController.updateHW(
+                user.getObjectId("_id"), hwId,
+                Utility.convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
+
+    @PostMapping(value = "/setAnswer/{hwId}")
+    @ResponseBody
+    public String setAnswer(HttpServletRequest request,
+                            @PathVariable @ObjectIdConstraint ObjectId hwId,
+                            @RequestBody MultipartFile file
+    ) throws UnAuthException, NotActivateAccountException {
+
+        if(file == null)
+            return JSON_NOT_ACCESS;
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        return SchoolQuizController.setAnswer(
+                user.getObjectId("_id"), hwId,
+                file
+        );
+    }
+
 }

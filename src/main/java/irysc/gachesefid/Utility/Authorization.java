@@ -73,6 +73,9 @@ public class Authorization {
     // todo : complete this section
     public static boolean hasAccessToThisStudent(ObjectId studentId, ObjectId applicatorId) {
 
+        if(studentId.equals(applicatorId))
+            return true;
+
         Document applicator = userRepository.findById(applicatorId);
         if(applicator == null)
             return false;

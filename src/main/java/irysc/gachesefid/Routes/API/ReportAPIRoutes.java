@@ -183,15 +183,16 @@ public class ReportAPIRoutes extends Router {
         if (user == null)
             return JSON_NOT_ACCESS;
 
+        if(!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
+            return JSON_NOT_ACCESS;
+
         if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return AdminReportController.getStudentStat(
-                    openQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, userId, false
+                    openQuizRepository, null, quizId, userId, false
             );
 
         return AdminReportController.getStudentStat(
-                schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId, userId, false
+                schoolQuizRepository, null, quizId, userId, false
         );
     }
 

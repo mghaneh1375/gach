@@ -4,6 +4,7 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;

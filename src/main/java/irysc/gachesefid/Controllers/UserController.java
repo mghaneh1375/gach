@@ -1380,7 +1380,9 @@ public class UserController {
                         rankingList, "_id", userId
                 );
 
-                if (studentDocInQuiz == null)
+                if (studentDocInQuiz == null || (
+                        (boolean)quiz.getOrDefault("pay_by_student", false) && !studentDocInQuiz.containsKey("paid")
+                ))
                     continue;
 
                 boolean isTashrihi = quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi");
@@ -1420,8 +1422,14 @@ public class UserController {
                 if (quiz.containsKey("start") && quiz.containsKey("end"))
                     jsonObject.put("date", getSolarDate(quiz.getLong("start")) + " تا " + getSolarDate(quiz.getLong("end")));
 
-                else if(studentDocInQuiz.containsKey("finish_at"))
-                    jsonObject.put("date", getSolarDate(studentDocInQuiz.getLong("finish_at")));
+                else if(quiz.containsKey("students")) {
+                    Document tmp = searchInDocumentsKeyVal(quiz.getList("students", Document.class),
+                            "_id", userId
+                    );
+
+                    if(tmp != null && tmp.containsKey("finish_at") && tmp.get("finish_at") != null)
+                        jsonObject.put("date", getSolarDate(tmp.getLong("finish_at")));
+                }
 
                 jsonArray.put(jsonObject);
             }
@@ -1502,6 +1510,35 @@ public class UserController {
                         eq("report_status", "ready")
                 ), new BasicDBObject("title", 1).append("_id", 1)
                         .append("ranking_list", 1).append("mode", 1)
+                        .append("students", 1)
+                        .append("questions", 1), Sorts.descending("created_at")
+        );
+
+        List<Document> schoolQuizzes = schoolQuizRepository.find(and(
+                        eq("students._id", userId),
+                        exists("report_status"),
+                        eq("report_status", "ready"),
+                        exists("pay_by_student", false),
+                        eq("status", "finish")
+                ), new BasicDBObject("title", 1).append("_id", 1)
+                        .append("ranking_list", 1)
+                        .append("students", 1)
+                        .append("questions", 1), Sorts.descending("created_at")
+        );
+
+
+        List<Document> advisorQuizzes = schoolQuizRepository.find(and(
+                        eq("students._id", userId),
+                        exists("report_status"),
+                        eq("report_status", "ready"),
+                        exists("pay_by_student"),
+                        or(
+                                eq("status", "finish"),
+                                eq("status", "semi_finish")
+                        )
+                ), new BasicDBObject("title", 1).append("_id", 1)
+                        .append("students", 1)
+                        .append("ranking_list", 1).append("pay_by_student", 1)
                         .append("questions", 1), Sorts.descending("created_at")
         );
 
@@ -1516,6 +1553,8 @@ public class UserController {
         JSONObject output = new JSONObject();
 
         output.put("iryscQuizzes", convertQuizzesToJSON(iryscQuizzes, userId));
+        output.put("schoolQuizzes", convertQuizzesToJSON(schoolQuizzes, userId));
+        output.put("advisorQuizzes", convertQuizzesToJSON(advisorQuizzes, userId));
         output.put("openQuizzes", convertQuizzesToJSON(openQuizzes, userId));
 
         JSONArray customQuizzesJSON = new JSONArray();

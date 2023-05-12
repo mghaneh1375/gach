@@ -47,6 +47,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
+
     );
     public static Connection con = null;
     public static Map<String, Integer> commonVals = new HashMap<>();
@@ -71,6 +72,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ContentQuizRepository contentQuizRepository;
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
+    public static HWRepository hwRepository;
     public static LifeStyleTagRepository lifeStyleTagRepository;
     public static OffcodeRepository offcodeRepository;
     public static OpenQuizRepository openQuizRepository;
@@ -133,6 +135,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             contentQuizRepository = new ContentQuizRepository();
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
+            hwRepository = new HWRepository();
             lifeStyleTagRepository = new LifeStyleTagRepository();
             mailRepository = new MailRepository();
             mailQueueRepository = new MailQueueRepository();
