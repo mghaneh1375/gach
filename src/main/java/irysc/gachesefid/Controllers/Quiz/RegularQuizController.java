@@ -137,7 +137,6 @@ public class RegularQuizController extends QuizAbstract {
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
-                .put("description", quiz.getLong("description"))
                 .put("id", quiz.getObjectId("_id").toString());
 
         long curr = System.currentTimeMillis();
@@ -176,20 +175,29 @@ public class RegularQuizController extends QuizAbstract {
                     .put("isStart", quiz.getLong("start") < curr)
                     .put("isEnd", end < curr)
                     .put("isStop", nextWeek < curr)
-                    .put("attachesCount", quiz.getList("attaches", String.class).size());
+                    .put("attachesCount", quiz.containsKey("attaches") ?
+                            quiz.getList("attaches", String.class).size() : 0
+                    );
         }
 
         if (!isDigest) {
 
             jsonObject
-                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"));
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"))
+                    .put("desc", quiz.getString("desc"));
 
             JSONArray attaches = new JSONArray();
             for (String attach : quiz.getList("attaches", String.class))
                 attaches.put(STATICS_SERVER + HWRepository.FOLDER + "/" + attach);
 
-            jsonObject.put("attaches", attaches);
-            jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+            jsonObject.put("attaches", attaches)
+                    .put("descAfter", quiz.getOrDefault("desc_after", ""))
+                    .put("answerType", quiz.getString("answer_type"));
+
+            if(quiz.containsKey("delay_end")) {
+                    jsonObject.put("delayEnd", quiz.getLong("delay_end"));
+            }
+
         }
 
         return jsonObject;

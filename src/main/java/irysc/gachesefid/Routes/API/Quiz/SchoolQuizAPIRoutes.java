@@ -28,9 +28,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Main.GachesefidApplication.contentQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 @Controller
@@ -306,7 +304,7 @@ public class SchoolQuizAPIRoutes extends Router {
                                            HWAnswerType.class, Positive.class
                                    },
                                    optionals = {
-                                           "description", "descAfter",
+                                           "desc", "descAfter",
                                            "delayPenalty", "delayEnd"
                                    },
                                    optionalsType = {
@@ -321,7 +319,7 @@ public class SchoolQuizAPIRoutes extends Router {
 
         if (
                 !user.containsKey("students") ||
-                        user.getList("students", Document.class).size() == 0
+                        user.getList("students", ObjectId.class).size() == 0
         )
             return generateErr("در حال حاضر دانش آموزی ندارید و امکان ساخت تمرین/آزمون برای شما میسر نمی باشد.");
 

@@ -108,7 +108,7 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin) {
 
-            if(mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
+            if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
 
                 if (jsonObject.has("kind") &&
                         jsonObject.getString("kind").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())
@@ -138,7 +138,7 @@ public class QuizAPIRoutes extends Router {
 
         }
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
+        if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
             return RegularQuizController.create(
                     user.getObjectId("_id"),
                     jsonObject, mode,
@@ -232,7 +232,7 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin) {
 
-            if(mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
+            if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
                 return QuizController.getAll(iryscQuizRepository, null,
                         name, startDateSolar, startDateSolarEndLimit,
                         startRegistryDateSolar, startRegistrySolarEndLimit,
@@ -252,7 +252,7 @@ public class QuizAPIRoutes extends Router {
 
         }
 
-        if(!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) &&
+        if (!mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.HW.getName())
         )
             return JSON_NOT_VALID_PARAMS;
@@ -291,7 +291,8 @@ public class QuizAPIRoutes extends Router {
         if (user == null)
             return JSON_NOT_ACCESS;
 
-        return QuizController.get(schoolQuizRepository,
+        return QuizController.get(
+                mode.equals(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
@@ -306,14 +307,14 @@ public class QuizAPIRoutes extends Router {
 
         getAdminPrivilegeUserVoid(request);
 
-        if(!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+        if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())
         )
             return JSON_NOT_VALID_PARAMS;
 
         return QuizController.getLog(
                 mode.equals(AllKindQuiz.IRYSC.getName()) ?
-                    iryscQuizRepository : schoolQuizRepository,
+                        iryscQuizRepository : schoolQuizRepository,
                 quizId
         );
     }
@@ -360,7 +361,7 @@ public class QuizAPIRoutes extends Router {
         return QuizController.forceRegistry(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
+                                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
                 jsonArray, paid, !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class))
         );
@@ -560,7 +561,7 @@ public class QuizAPIRoutes extends Router {
         return QuizController.addAttach(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                                schoolQuizRepository,
+                                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, file
         );
     }
@@ -576,12 +577,12 @@ public class QuizAPIRoutes extends Router {
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.removeAttach(iryscQuizRepository, null,
-                    quizId, attach);
-
-        return QuizController.removeAttach(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, attach);
+        return QuizController.removeAttach(
+                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
+                isAdmin ? null : user.getObjectId("_id"), quizId, attach
+        );
     }
 
     @PutMapping(value = "/arrangeQuestions/{mode}/{quizId}")
@@ -1267,7 +1268,7 @@ public class QuizAPIRoutes extends Router {
                     userId
             );
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.resetStudentQuizEntryTime(
                     schoolQuizRepository,
                     isAdmin ? null : user.getObjectId("_id"),
@@ -1287,7 +1288,7 @@ public class QuizAPIRoutes extends Router {
         getAdminPrivilegeUser(request);
         return QuizController.rates(mode.equalsIgnoreCase(
                 GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        openQuizRepository, id
+                openQuizRepository, id
         );
     }
 }

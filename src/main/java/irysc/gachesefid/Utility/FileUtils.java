@@ -199,7 +199,10 @@ public class FileUtils {
 
             String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
 
-            if (!fileType.equals("image") && !fileType.equals("pdf") && !fileType.equals("voice"))
+            if (
+                    !fileType.equals("image") && !fileType.equals("pdf") && !fileType.equals("voice") &&
+                    !fileType.equals("powerpoint") && !fileType.equals("word") && !fileType.equals("video")
+            )
                 return null;
 
             return fileType;

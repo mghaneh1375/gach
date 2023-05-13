@@ -642,13 +642,15 @@ public class QuizController {
         if (startRegistrySolarEndLimit != null)
             filters.add(lte("start_registry", startRegistrySolarEndLimit));
 
-        docs = db.find(filters.size() == 0 ? null : and(filters), QUIZ_DIGEST_MANAGEMENT,
+        docs = db.find(filters.size() == 0 ? null : and(filters),
+                db instanceof HWRepository ? HW_DIGEST_MANAGEMENT : QUIZ_DIGEST_MANAGEMENT,
                 Sorts.descending("created_at")
         );
 
         QuizAbstract quizAbstract;
 
         JSONArray jsonArray = new JSONArray();
+        RegularQuizController regularQuizController = new RegularQuizController();
 
         for (Document quiz : docs) {
 
@@ -659,12 +661,15 @@ public class QuizController {
                     quizAbstract = new RegularQuizController();
             } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
-            else if (db instanceof SchoolQuizRepository)
-                quizAbstract = new RegularQuizController();
+            else if (db instanceof SchoolQuizRepository || db instanceof HWRepository)
+                quizAbstract = regularQuizController;
             else
                 quizAbstract = new OpenQuiz();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
+            if(db instanceof HWRepository)
+                jsonArray.put(regularQuizController.convertHWDocToJSON(quiz, true, true));
+            else
+                jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -825,7 +830,14 @@ public class QuizController {
             Document quiz = hasPublicAccess(db, user, quizId);
             QuizAbstract quizAbstract = null;
 
-            if (db instanceof IRYSCQuizRepository || db instanceof SchoolQuizRepository)
+            if(db instanceof HWRepository)
+                return generateSuccessMsg("data",
+                        new RegularQuizController().convertHWDocToJSON(quiz, false, true)
+                );
+
+            if (db instanceof IRYSCQuizRepository ||
+                    db instanceof SchoolQuizRepository
+            )
                 quizAbstract = new RegularQuizController();
 
             else if (db instanceof OpenQuizRepository)
@@ -1235,7 +1247,9 @@ public class QuizController {
             List<String> attaches = quiz.containsKey("attaches") ?
                     quiz.getList("attaches", String.class) : new ArrayList<>();
 
-            if (db instanceof SchoolQuizRepository) {
+            if (db instanceof SchoolQuizRepository ||
+                    db instanceof HWRepository
+            ) {
 
 //                Document config = irysc.gachesefid.Utility.Utility.getConfig();
 
@@ -1250,6 +1264,7 @@ public class QuizController {
                             "شما می توانید حداکثر " + 2 + " پیوست داشته باشید."
                     );
             }
+
 
             String base = db instanceof SchoolQuizRepository ?
                     SchoolQuizRepository.FOLDER :

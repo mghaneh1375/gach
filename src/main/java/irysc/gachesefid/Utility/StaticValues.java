@@ -50,7 +50,7 @@ public class StaticValues {
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -106,6 +106,19 @@ public class StaticValues {
                     .append("is_q_r_needed", 1)
                     .append("is_registrable", 1)
             ;
+
+    public final static BasicDBObject HW_DIGEST_MANAGEMENT =
+            new BasicDBObject("title", 1).append("_id", 1)
+                    .append("start", 1).append("end", 1)
+                    .append("visibility", 1)
+                    .append("status", 1)
+                    .append("report_status", 1)
+                    .append("registered", 1)
+                    .append("registered", 1)
+                    .append("attaches", 1)
+                    .append("delay_end", 1)
+            ;
+
 
     public final static BasicDBObject JUST_RANK = new BasicDBObject("rank", 1);
 
