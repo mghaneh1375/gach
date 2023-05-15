@@ -255,7 +255,7 @@ public class SchoolQuizAPIRoutes extends Router {
     public String recpHW(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId hwId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return QuizController.recp(hwId,
+        return SchoolQuizController.recp(hwId,
                 getQuizUser(request).getObjectId("_id")
         );
     }
@@ -332,27 +332,27 @@ public class SchoolQuizAPIRoutes extends Router {
     @PostMapping(value = "/editHW/{hwId}")
     @ResponseBody
     public String editHW(HttpServletRequest request,
-                       @PathVariable @ObjectIdConstraint ObjectId hwId,
-                       @RequestBody @StrongJSONConstraint(
-                               params = {
-                                       "title", "start",
-                                       "end", "showResultsAfterCorrection",
-                                       "answerType", "maxUploadSize"
-                               },
-                               paramsType = {
-                                       String.class, Long.class,
-                                       Long.class, Boolean.class,
-                                       HWAnswerType.class, Positive.class
-                               },
-                               optionals = {
-                                       "description", "descAfter",
-                                       "delayPenalty", "delayEnd"
-                               },
-                               optionalsType = {
-                                       String.class, String.class,
-                                       Positive.class, Long.class
-                               }
-                       ) @NotBlank String jsonStr
+                         @PathVariable @ObjectIdConstraint ObjectId hwId,
+                         @RequestBody @StrongJSONConstraint(
+                                 params = {
+                                         "title", "start",
+                                         "end", "showResultsAfterCorrection",
+                                         "answerType", "maxUploadSize"
+                                 },
+                                 paramsType = {
+                                         String.class, Long.class,
+                                         Long.class, Boolean.class,
+                                         HWAnswerType.class, Positive.class
+                                 },
+                                 optionals = {
+                                         "desc", "descAfter",
+                                         "delayPenalty", "delayEnd"
+                                 },
+                                 optionalsType = {
+                                         String.class, String.class,
+                                         Positive.class, Long.class
+                                 }
+                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getQuizUser(request);
@@ -371,7 +371,7 @@ public class SchoolQuizAPIRoutes extends Router {
                             @RequestBody MultipartFile file
     ) throws UnAuthException, NotActivateAccountException {
 
-        if(file == null)
+        if (file == null)
             return JSON_NOT_ACCESS;
 
         Document user = getUserWithOutCheckCompleteness(request);
@@ -381,5 +381,6 @@ public class SchoolQuizAPIRoutes extends Router {
                 file
         );
     }
+
 
 }

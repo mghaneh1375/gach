@@ -237,7 +237,7 @@ public class QuizController {
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
-            quiz.put("visibility", quiz.getBoolean("visibility"));
+            quiz.put("visibility", !quiz.getBoolean("visibility"));
             db.replaceOne(quizId, quiz);
 
             return JSON_OK;
@@ -667,7 +667,7 @@ public class QuizController {
                 quizAbstract = new OpenQuiz();
 
             if(db instanceof HWRepository)
-                jsonArray.put(regularQuizController.convertHWDocToJSON(quiz, true, true));
+                jsonArray.put(regularQuizController.convertHWDocToJSON(quiz, true, null));
             else
                 jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
         }
@@ -743,7 +743,14 @@ public class QuizController {
                             student.getObjectId("_id"), quiz
                     ))
                         addedItems.put(student.getObjectId("_id"));
-                } else {
+                }
+                else if (db instanceof HWRepository) {
+                    if (((RegularQuizController) quizAbstract).hwRegistry(
+                            student.getObjectId("_id"), quiz
+                    ))
+                        addedItems.put(student.getObjectId("_id"));
+                }
+                else {
                     List<Document> added = quizAbstract.registry(
                             student.getObjectId("_id"), student.getString("phone"),
                             student.getString("mail"), quizIds, paid,
@@ -832,7 +839,7 @@ public class QuizController {
 
             if(db instanceof HWRepository)
                 return generateSuccessMsg("data",
-                        new RegularQuizController().convertHWDocToJSON(quiz, false, true)
+                        new RegularQuizController().convertHWDocToJSON(quiz, false, null)
                 );
 
             if (db instanceof IRYSCQuizRepository ||

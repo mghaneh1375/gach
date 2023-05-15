@@ -300,7 +300,7 @@ public class SchoolQuizController {
 
         return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                 "quiz", new RegularQuizController()
-                        .convertHWDocToJSON(newDoc, false, true)
+                        .convertHWDocToJSON(newDoc, false, null)
         );
     }
 

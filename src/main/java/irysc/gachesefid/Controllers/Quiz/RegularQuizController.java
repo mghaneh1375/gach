@@ -129,10 +129,23 @@ public class RegularQuizController extends QuizAbstract {
         return JSON_OK;
     }
 
-    JSONObject convertHWDocToJSON(Document quiz, boolean isDigest,
-                                  boolean isAdmin) {
+    JSONObject convertHWDocToJSON(Document quiz, boolean isDigest, ObjectId userId) {
 
-        JSONObject jsonObject = new JSONObject()
+        JSONObject jsonObject = new JSONObject();
+        Document studentDoc = null;
+
+        if(userId != null) {
+
+            studentDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class), "_id", userId
+            );
+
+            if(studentDoc == null)
+                return jsonObject;
+
+        }
+
+        jsonObject
                 .put("title", quiz.getString("title"))
                 .put("start", quiz.getLong("start"))
                 .put("end", quiz.getLong("end"))
@@ -141,9 +154,12 @@ public class RegularQuizController extends QuizAbstract {
 
         long curr = System.currentTimeMillis();
 
-        if (!isAdmin) {
+        if (userId != null) {
 
-            if (quiz.getLong("end") < curr) {
+            long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
+
+            if (end < curr) {
+
                 boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
                         quiz.containsKey("report_status") &&
                         quiz.getString("report_status").equalsIgnoreCase("ready");
@@ -153,17 +169,27 @@ public class RegularQuizController extends QuizAbstract {
                 else
                     jsonObject.put("status", "waitForResult");
 
-            } else if (quiz.getLong("start") <= curr &&
-                    quiz.getLong("end") > curr
-            ) {
-                jsonObject
-                        .put("status", "inProgress");
+            } else if (quiz.getLong("start") <= curr && end > curr) {
+                jsonObject.put("status", "inProgress");
             } else
                 jsonObject.put("status", "notStart");
 
+            if(!jsonObject.getString("status").equalsIgnoreCase("notStart")) {
+
+                if(studentDoc.containsKey("upload_at")) {
+
+                    long uploadAt = studentDoc.getLong("upload_at");
+
+                    if(uploadAt > quiz.getLong("end"))
+                        jsonObject.put("delay", uploadAt - quiz.getLong("end"));
+
+                    jsonObject.put("upload_at", getSolarDate(uploadAt));
+                }
+            }
+
         }
 
-        if (isAdmin) {
+        if (userId == null) {
 
             long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
             long nextWeek = end + ONE_DAY_MIL_SEC * 7;
@@ -192,10 +218,12 @@ public class RegularQuizController extends QuizAbstract {
 
             jsonObject.put("attaches", attaches)
                     .put("descAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("answerType", quiz.getString("answer_type"));
+                    .put("answerType", quiz.getString("answer_type"))
+                    .put("maxUploadSize", quiz.getInteger("max_upload_size"));
 
             if(quiz.containsKey("delay_end")) {
                     jsonObject.put("delayEnd", quiz.getLong("delay_end"));
+                    jsonObject.put("delayPenalty", quiz.getInteger("delay_penalty"));
             }
 
         }
@@ -469,6 +497,27 @@ public class RegularQuizController extends QuizAbstract {
 
             students.add(stdDoc);
             quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
+        } catch (Exception ignore) {
+        }
+
+        return true;
+    }
+
+    boolean hwRegistry(ObjectId studentId, Document hw) {
+        try {
+
+            List<Document> students = hw.getList("students", Document.class);
+
+            if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    students, "_id", studentId
+            ) != -1)
+                return false;
+
+            Document stdDoc = new Document("_id", studentId);
+            students.add(stdDoc);
+
+            hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
 
         } catch (Exception ignore) {
         }

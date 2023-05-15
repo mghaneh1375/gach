@@ -493,7 +493,7 @@ public class StudentQuizController {
 
             jsonObject.put("paid", paid);
 
-            if(!paid)
+            if (!paid)
                 jsonObject.put("price", quiz.getInteger("price"));
 
             jsonObject.put("payByStudent", payByStudent);
@@ -1069,12 +1069,12 @@ public class StudentQuizController {
                                         double money) {
 
         Document quiz = schoolQuizRepository.findById(quizId);
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
-        if(
-                !(boolean)quiz.getOrDefault("pay_by_student", false)
-                || !quiz.getBoolean("visibility")
+        if (
+                !(boolean) quiz.getOrDefault("pay_by_student", false)
+                        || !quiz.getBoolean("visibility")
         )
             return JSON_NOT_ACCESS;
 
@@ -1083,13 +1083,13 @@ public class StudentQuizController {
                 "_id", userId
         );
 
-        if(studentDoc == null)
+        if (studentDoc == null)
             return JSON_NOT_ACCESS;
 
-        if(studentDoc.containsKey("paid"))
+        if (studentDoc.containsKey("paid"))
             return generateErr("شما این آزمون را خریداری کرده اید");
 
-        if(!quiz.containsKey("price"))
+        if (!quiz.containsKey("price"))
             return JSON_NOT_UNKNOWN;
 
         int shouldPay = quiz.getInteger("price");
@@ -2036,6 +2036,80 @@ public class StudentQuizController {
             return sum;
         }
 
+    }
+
+    public static String myHWs(ObjectId userId, String status, boolean forAdvisor) {
+
+        JSONArray data = new JSONArray();
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        filters.add(in("students._id", userId));
+        filters.add(in("visibility", true));
+        filters.add(eq("status", "finish"));
+
+        if(forAdvisor)
+            filters.add(eq("is_for_advisor", true));
+
+        long curr = System.currentTimeMillis();
+
+        if (status != null) {
+
+            if (status.equalsIgnoreCase("finished"))
+                filters.add(lt("end", curr));
+            else if (status.equalsIgnoreCase("inProgress"))
+                filters.add(
+                        and(
+                                lte("start", curr),
+                                gt("end", curr)
+                        )
+                );
+            else
+                filters.add(gt("start", curr));
+        }
+
+        ArrayList<Document> quizzes = hwRepository.find(and(filters), null);
+
+        RegularQuizController quizAbstract = new RegularQuizController();
+
+        for (Document quiz : quizzes) {
+
+            Document studentDoc = searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class),
+                    "_id", userId
+            );
+
+            if (studentDoc == null)
+                continue;
+
+            JSONObject jsonObject = quizAbstract.convertHWDocToJSON(
+                    quiz, true, userId
+            );
+
+            if (jsonObject.getString("status")
+                    .equalsIgnoreCase("inProgress") &&
+                    studentDoc.containsKey("start_at") &&
+                    studentDoc.get("start_at") != null
+            ) {
+                int neededTime = quizAbstract.calcLen(quiz);
+                int untilYetInSecondFormat =
+                        (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+
+                int reminder = neededTime - untilYetInSecondFormat;
+
+                if (reminder < 0)
+                    jsonObject.put("status", "waitForResult");
+                else {
+                    jsonObject.put("timeReminder", reminder);
+                }
+
+                jsonObject.put("startAt", studentDoc.getLong("start_at"));
+            }
+
+
+            data.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", data);
     }
 
 }

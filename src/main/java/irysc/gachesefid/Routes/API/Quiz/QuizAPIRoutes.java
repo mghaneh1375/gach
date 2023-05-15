@@ -370,7 +370,7 @@ public class QuizAPIRoutes extends Router {
     @DeleteMapping(value = "/forceDeportation/{mode}/{quizId}")
     @ResponseBody
     public String forceDeportation(HttpServletRequest request,
-                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
                                    @RequestBody @StrongJSONConstraint(
                                            params = {"items"},
@@ -386,7 +386,8 @@ public class QuizAPIRoutes extends Router {
             return QuizController.forceDeportation(iryscQuizRepository, null, quizId,
                     jsonArray);
 
-        return QuizController.forceDeportation(schoolQuizRepository,
+        return QuizController.forceDeportation(
+                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
                 jsonArray
         );
@@ -540,7 +541,10 @@ public class QuizAPIRoutes extends Router {
                     justNotMarked, justAbsents, justPresence
             );
 
-        return QuizController.getParticipants(schoolQuizRepository,
+        return QuizController.getParticipants(
+                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ?
+                        hwRepository :
+                        schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, studentId, justMarked,
                 justNotMarked, justAbsents, justPresence
@@ -569,7 +573,7 @@ public class QuizAPIRoutes extends Router {
     @DeleteMapping(path = "removeAttach/{mode}/{quizId}")
     @ResponseBody
     public String removeAttach(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId,
                                @RequestParam(name = "attach") @NotBlank String attach
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

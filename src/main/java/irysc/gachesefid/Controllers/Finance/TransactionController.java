@@ -107,6 +107,20 @@ public class TransactionController {
 
     }
 
+    public static void fetchSchoolHWInvoice(StringBuilder section,
+                                              Document transaction) {
+
+        Object products = transaction.get("products");
+
+        Document quiz = hwRepository.findById((ObjectId) products);
+        if (quiz != null) {
+            section.append(" - ").append(quiz.getString("title")).append(" ( تعداد دانش آموزان: ");
+            section.append(quiz.getList("students", Document.class).size());
+            section.append(" )");
+        }
+
+    }
+
     public static void fetchQuizInvoice(StringBuilder section,
                                         Document transaction) {
         boolean checkAllItems = true;
@@ -166,6 +180,11 @@ public class TransactionController {
                 OffCodeSections.SCHOOL_QUIZ.getName()
         ))
             fetchSchoolQuizInvoice(section, transaction);
+
+        else if (transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.SCHOOL_HW.getName()
+        ))
+            fetchSchoolHWInvoice(section, transaction);
 
         else if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.BANK_EXAM.getName()

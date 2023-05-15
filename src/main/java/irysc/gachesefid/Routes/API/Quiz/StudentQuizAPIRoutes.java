@@ -258,6 +258,18 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "myHWs")
+    @ResponseBody
+    public String myHWs(HttpServletRequest request,
+                        @RequestParam(value = "forAdvisor") boolean forAdvisor,
+                        @RequestParam(required = false) String status
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.myHWs(
+                user.getObjectId("_id"), status, forAdvisor
+        );
+    }
+
     @PostMapping(value = "buyAdvisorQuiz/{quizId}")
     @ResponseBody
     public String buyAdvisorQuiz(HttpServletRequest request,
