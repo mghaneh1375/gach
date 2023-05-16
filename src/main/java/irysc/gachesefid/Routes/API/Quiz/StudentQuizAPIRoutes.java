@@ -4,11 +4,13 @@ package irysc.gachesefid.Routes.API.Quiz;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
+import irysc.gachesefid.Controllers.Quiz.SchoolQuizController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
@@ -38,6 +40,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @Controller
@@ -270,6 +273,71 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "myHW/{id}")
+    @ResponseBody
+    public String myHW(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.myHW(
+                user.getObjectId("_id"), id
+        );
+    }
+
+    @PostMapping(value = "/uploadHW/{hwId}")
+    @ResponseBody
+    public String uploadHW(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId hwId,
+                           @RequestBody MultipartFile file
+    ) throws UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_ACCESS;
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        return SchoolQuizController.setAnswer(
+                hwId, user.getObjectId("_id"),
+                file
+        );
+    }
+
+    @GetMapping(value = "/downloadHW/{hwId}")
+    @ResponseBody
+    public ResponseEntity<InputStreamResource> downloadHw(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId hwId
+    ) throws UnAuthException, NotActivateAccountException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        PairValue p = SchoolQuizController.downloadHw(
+                hwId, user.getObjectId("_id")
+        );
+
+        if (p == null)
+            return null;
+
+        File f = (File) p.getKey();
+
+        try {
+            InputStreamResource file = new InputStreamResource(
+                    new ByteArrayInputStream(FileUtils.readFileToByteArray(f))
+            );
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + p.getValue().toString())
+                    .contentType(MediaType.parseMediaType("application/octet-stream"))
+                    .body(file);
+
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+
+        return null;
+
+    }
+
+
     @PostMapping(value = "buyAdvisorQuiz/{quizId}")
     @ResponseBody
     public String buyAdvisorQuiz(HttpServletRequest request,
@@ -277,7 +345,7 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.buyAdvisorQuiz(
-                user.getObjectId("_id"), quizId, ((Number)user.get("money")).doubleValue()
+                user.getObjectId("_id"), quizId, ((Number) user.get("money")).doubleValue()
         );
     }
 

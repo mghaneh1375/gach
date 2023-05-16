@@ -364,23 +364,4 @@ public class SchoolQuizAPIRoutes extends Router {
     }
 
 
-    @PostMapping(value = "/setAnswer/{hwId}")
-    @ResponseBody
-    public String setAnswer(HttpServletRequest request,
-                            @PathVariable @ObjectIdConstraint ObjectId hwId,
-                            @RequestBody MultipartFile file
-    ) throws UnAuthException, NotActivateAccountException {
-
-        if (file == null)
-            return JSON_NOT_ACCESS;
-
-        Document user = getUserWithOutCheckCompleteness(request);
-
-        return SchoolQuizController.setAnswer(
-                user.getObjectId("_id"), hwId,
-                file
-        );
-    }
-
-
 }

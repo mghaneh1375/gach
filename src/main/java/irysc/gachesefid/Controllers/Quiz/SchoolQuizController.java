@@ -23,6 +23,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -266,9 +267,6 @@ public class SchoolQuizController {
         if (jsonObject.getLong("end") < jsonObject.getLong("start"))
             return generateErr("زمان پایان تمرین باید بزرگ تر از زمان آغاز آن باشد");
 
-        if (jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 3)
-            return generateErr("زمان پایان تمرین حداکثر می تواند سه روز بعد از زمان آغاز آن باشد");
-
         if (jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") < jsonObject.getLong("end"))
             return generateErr("زمان پایان ثبت تمرین با تاخیر باید بزرگ تر از زمان اتمام آن باشد");
 
@@ -296,6 +294,9 @@ public class SchoolQuizController {
         newDoc.put("status", "init");
         newDoc.put("visibility", false);
 
+        if(newDoc.containsKey("delay_penalty") && newDoc.get("delay_penalty").toString().equalsIgnoreCase("0"))
+            newDoc.put("delay_penalty", 0);
+
         hwRepository.insertOne(newDoc);
 
         return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
@@ -313,14 +314,13 @@ public class SchoolQuizController {
             if (jsonObject.getInt("maxUploadSize") > 20)
                 return generateErr("حداکثر حجم مجاز برای آپلود 20 مگابایت می باشد");
 
-            if (jsonObject.getLong("start") < System.currentTimeMillis())
+            if (jsonObject.getLong("start") != hw.getLong("start") &&
+                    jsonObject.getLong("start") < System.currentTimeMillis())
                 return generateErr("زمان شروع تمرین باید از امروز بزرگتر باشد");
 
-            if (jsonObject.getLong("end") < jsonObject.getLong("start"))
+            if (jsonObject.getLong("end") != hw.getLong("end") &&
+                    jsonObject.getLong("end") < jsonObject.getLong("start"))
                 return generateErr("زمان پایان تمرین باید بزرگ تر از زمان آغاز آن باشد");
-
-            if (jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 3)
-                return generateErr("زمان پایان تمرین حداکثر می تواند سه روز بعد از زمان آغاز آن باشد");
 
             if (!jsonObject.has("delayEnd") && hw.containsKey("delay_end"))
                 jsonObject.put("delayEnd", hw.getLong("delay_end"));
@@ -665,14 +665,54 @@ public class SchoolQuizController {
         if(filename == null)
             return JSON_NOT_UNKNOWN;
 
-        if(stdDoc.containsKey("filename"))
-            FileUtils.removeFile(stdDoc.getString("filename"), HWRepository.FOLDER);
+        if(stdDoc.containsKey("filename")) {
 
-        stdDoc.put("filename", filename);
+            String ext = stdDoc.getString("filename").substring(
+                    stdDoc.getString("filename").lastIndexOf(".")
+            );
+
+            FileUtils.removeFile(stdDoc.getString("filename").split("__")[0] + ext, HWRepository.FOLDER);
+        }
+
+        stdDoc.put("filename", filename.substring(0, filename.lastIndexOf(".")) + "__" + file.getOriginalFilename());
         stdDoc.put("upload_at", curr);
 
         hwRepository.replaceOne(hwId, hw);
 
-        return JSON_OK;
+        return StudentQuizController.myHW(studentId, hwId);
+    }
+
+    public static PairValue downloadHw(ObjectId hwId, ObjectId studentId) {
+
+        Document hw = hwRepository.findById(hwId);
+
+        if(hw == null)
+            return null;
+
+        if(!hw.getBoolean("visibility") ||
+                !hw.containsKey("students")
+        )
+            return null;
+
+        List<Document> students = hw.getList("students", Document.class);
+        Document stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                students, "_id", studentId
+        );
+
+        if(stdDoc == null || !stdDoc.containsKey("filename"))
+            return null;
+
+        String filename = stdDoc.getString("filename");
+        String[] splited = filename.split("__");
+        String ext = filename.substring(filename.lastIndexOf("."));
+
+        return new PairValue(
+                new File(
+                        DEV_MODE ?
+                                FileUtils.uploadDir_dev + HWRepository.FOLDER + "/" + splited[0] + ext :
+                                FileUtils.uploadDir + HWRepository.FOLDER + "/" + splited[0] + ext
+                ),
+                splited[0] + ext
+        );
     }
 }

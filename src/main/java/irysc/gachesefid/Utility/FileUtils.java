@@ -4,6 +4,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Exception.InvalidFileTypeException;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONArray;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -23,12 +24,12 @@ public class FileUtils {
     public final static String baseDir_dev = "./src/main/";
 
     public final static String uploadDir = "/var/www/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
 
@@ -269,6 +270,32 @@ public class FileUtils {
             default:
                 throw new InvalidFileTypeException(ext + " is not a valid extension");
         }
+    }
+
+    public static JSONArray getAppropriateExt(String type) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        switch (type) {
+            case "image":
+                return jsonArray.put(".jpg").put(".png").put(".jpeg");
+            case "video":
+                return jsonArray.put(".mp4").put(".m4v")
+                        .put(".mov").put("mpeg").put("mkv").put("avi")
+                        .put("flv");
+            case "audio":
+                return jsonArray.put(".mp3").put(".ogg");
+            case "pdf":
+                return jsonArray.put(".pdf");
+            case "excel":
+                return jsonArray.put(".xls").put(".xlsx");
+            case "powerpoint":
+                return jsonArray.put(".pptx").put(".ppt");
+            case "word":
+                return jsonArray.put(".doc").put(".docx");
+        }
+
+        return jsonArray;
     }
 
     private static final int BUFFER_SIZE = 4096;

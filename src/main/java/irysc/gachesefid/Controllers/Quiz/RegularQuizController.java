@@ -10,6 +10,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -183,15 +184,16 @@ public class RegularQuizController extends QuizAbstract {
                     if(uploadAt > quiz.getLong("end"))
                         jsonObject.put("delay", uploadAt - quiz.getLong("end"));
 
-                    jsonObject.put("upload_at", getSolarDate(uploadAt));
+                    jsonObject.put("uploadAt", getSolarDate(uploadAt));
                 }
             }
 
         }
 
+        long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
+
         if (userId == null) {
 
-            long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
             long nextWeek = end + ONE_DAY_MIL_SEC * 7;
 
             jsonObject
@@ -210,20 +212,35 @@ public class RegularQuizController extends QuizAbstract {
 
             jsonObject
                     .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"))
-                    .put("desc", quiz.getString("desc"));
+                    .put("desc", quiz.getOrDefault("desc", ""));
 
             JSONArray attaches = new JSONArray();
             for (String attach : quiz.getList("attaches", String.class))
                 attaches.put(STATICS_SERVER + HWRepository.FOLDER + "/" + attach);
 
             jsonObject.put("attaches", attaches)
-                    .put("descAfter", quiz.getOrDefault("desc_after", ""))
                     .put("answerType", quiz.getString("answer_type"))
                     .put("maxUploadSize", quiz.getInteger("max_upload_size"));
 
             if(quiz.containsKey("delay_end")) {
                     jsonObject.put("delayEnd", quiz.getLong("delay_end"));
                     jsonObject.put("delayPenalty", quiz.getInteger("delay_penalty"));
+            }
+
+            if(userId == null || curr > end)
+                jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+
+            if(userId != null) {
+
+                if(studentDoc.containsKey("mark"))
+                    jsonObject.put("mark", studentDoc.get("mark"));
+
+                if(studentDoc.containsKey("filename"))
+                    jsonObject.put("filename", studentDoc.getString("filename").split("__")[1]);
+
+                jsonObject.put("reminder", Math.max(0, quiz.getLong("end") - curr) / 1000)
+                        .put("canUpload", curr < end)
+                        .put("validExt", FileUtils.getAppropriateExt(quiz.getString("answer_type")));
             }
 
         }

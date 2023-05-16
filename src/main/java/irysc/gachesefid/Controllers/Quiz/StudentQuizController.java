@@ -2081,35 +2081,40 @@ public class StudentQuizController {
             if (studentDoc == null)
                 continue;
 
-            JSONObject jsonObject = quizAbstract.convertHWDocToJSON(
+            data.put(quizAbstract.convertHWDocToJSON(
                     quiz, true, userId
-            );
-
-            if (jsonObject.getString("status")
-                    .equalsIgnoreCase("inProgress") &&
-                    studentDoc.containsKey("start_at") &&
-                    studentDoc.get("start_at") != null
-            ) {
-                int neededTime = quizAbstract.calcLen(quiz);
-                int untilYetInSecondFormat =
-                        (int) ((curr - studentDoc.getLong("start_at")) / 1000);
-
-                int reminder = neededTime - untilYetInSecondFormat;
-
-                if (reminder < 0)
-                    jsonObject.put("status", "waitForResult");
-                else {
-                    jsonObject.put("timeReminder", reminder);
-                }
-
-                jsonObject.put("startAt", studentDoc.getLong("start_at"));
-            }
-
-
-            data.put(jsonObject);
+            ));
         }
 
         return generateSuccessMsg("data", data);
+    }
+
+    public static String myHW(ObjectId userId, ObjectId hwId) {
+
+        Document hw = hwRepository.findById(hwId);
+
+        if(hw == null || !hw.getBoolean("visibility") ||
+            !hw.getString("status").equalsIgnoreCase("finish")
+        )
+            return JSON_NOT_ACCESS;
+
+        Document studentDoc = searchInDocumentsKeyVal(
+                hw.getList("students", Document.class),
+                "_id", userId
+        );
+
+        if (studentDoc == null)
+            return JSON_NOT_ACCESS;
+
+        if(hw.getLong("start") > System.currentTimeMillis())
+            return generateErr("تمرین موردنظر هنوز شروع نشده است");
+
+        RegularQuizController quizAbstract = new RegularQuizController();
+        JSONObject jsonObject = quizAbstract.convertHWDocToJSON(
+                hw, false, userId
+        );
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
 }
