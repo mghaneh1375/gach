@@ -201,7 +201,7 @@ public class RegularQuizController extends QuizAbstract {
                     .put("visibility", quiz.getOrDefault("visibility", true))
                     .put("studentsCount", quiz.getInteger("registered"))
                     .put("isStart", quiz.getLong("start") < curr)
-                    .put("isEnd", end < curr)
+                    .put("isEnd", quiz.getLong("end") < curr)
                     .put("isStop", nextWeek < curr)
                     .put("attachesCount", quiz.containsKey("attaches") ?
                             quiz.getList("attaches", String.class).size() : 0
@@ -232,8 +232,14 @@ public class RegularQuizController extends QuizAbstract {
 
             if(userId != null) {
 
-                if(studentDoc.containsKey("mark"))
-                    jsonObject.put("mark", studentDoc.get("mark"));
+                if(curr > end && quiz.getBoolean("show_results_after_correction")) {
+
+                    if (studentDoc.containsKey("mark"))
+                        jsonObject.put("mark", studentDoc.get("mark"));
+
+                    if (studentDoc.containsKey("mark_desc"))
+                        jsonObject.put("markDesc", studentDoc.get("mark_desc"));
+                }
 
                 if(studentDoc.containsKey("filename"))
                     jsonObject.put("filename", studentDoc.getString("filename").split("__")[1]);

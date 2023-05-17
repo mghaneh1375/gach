@@ -541,10 +541,15 @@ public class QuizAPIRoutes extends Router {
                     justNotMarked, justAbsents, justPresence
             );
 
+        if (mode.equalsIgnoreCase(AllKindQuiz.HW.getName()))
+            return SchoolQuizController.getParticipants(
+                    isAdmin ? null : user.getObjectId("_id"),
+                    quizId, justMarked,
+                    justNotMarked, justAbsents, justPresence
+            );
+
         return QuizController.getParticipants(
-                mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ?
-                        hwRepository :
-                        schoolQuizRepository,
+                schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId, studentId, justMarked,
                 justNotMarked, justAbsents, justPresence

@@ -7,10 +7,7 @@ import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.HWRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.HWAnswerType;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
-import irysc.gachesefid.Models.QuestionLevel;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -273,6 +270,12 @@ public class SchoolQuizController {
         if (jsonObject.has("delayPenalty") && jsonObject.getInt("delayPenalty") > 100)
             return generateErr("حداکثر جریمه روزانه می تواند کسر 100% نمره باشد");
 
+        if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
+            return generateErr("زمان اتمام آپلود حداکثر می تواند تا ۱۵ روز بعد از زمان شروع تمرین باشد");
+
+        if(jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
+            return generateErr("زمان آپلود با تاخیر حداکثر می تواند تا ۱۰ روز بعد از زمان پایان تمرین باشد");
+
         jsonObject.put("isForAdvisor", isAdvisor);
 
         Document newDoc = new Document();
@@ -294,7 +297,7 @@ public class SchoolQuizController {
         newDoc.put("status", "init");
         newDoc.put("visibility", false);
 
-        if(newDoc.containsKey("delay_penalty") && newDoc.get("delay_penalty").toString().equalsIgnoreCase("0"))
+        if (newDoc.containsKey("delay_penalty") && newDoc.get("delay_penalty").toString().equalsIgnoreCase("0"))
             newDoc.put("delay_penalty", 0);
 
         hwRepository.insertOne(newDoc);
@@ -322,14 +325,22 @@ public class SchoolQuizController {
                     jsonObject.getLong("end") < jsonObject.getLong("start"))
                 return generateErr("زمان پایان تمرین باید بزرگ تر از زمان آغاز آن باشد");
 
-            if (!jsonObject.has("delayEnd") && hw.containsKey("delay_end"))
-                jsonObject.put("delayEnd", hw.getLong("delay_end"));
+            if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
+                return generateErr("زمان اتمام آپلود حداکثر می تواند تا ۱۵ روز بعد از زمان شروع تمرین باشد");
 
             if (jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") < jsonObject.getLong("end"))
                 return generateErr("زمان پایان ثبت تمرین با تاخیر باید بزرگ تر از زمان اتمام آن باشد");
 
-            for (String key : jsonObject.keySet()) {
+            if(jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
+                return generateErr("زمان آپلود با تاخیر حداکثر می تواند تا ۱۰ روز بعد از زمان پایان تمرین باشد");
 
+            if (!jsonObject.has("delayEnd")) {
+                hw.remove("delay_end");
+                hw.remove("delay_penalty");
+                jsonObject.remove("delayPenalty");
+            }
+
+            for (String key : jsonObject.keySet()) {
                 hw.put(
                         CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
                         jsonObject.get(key)
@@ -337,7 +348,11 @@ public class SchoolQuizController {
             }
 
             hwRepository.replaceOne(hwId, hw);
-            return JSON_OK;
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "quiz", new RegularQuizController()
+                            .convertHWDocToJSON(hw, false, null)
+            );
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
@@ -433,7 +448,7 @@ public class SchoolQuizController {
 
 
     public static String finalizeHW(ObjectId hwId, ObjectId userId,
-                                      String off, double money) {
+                                    String off, double money) {
 
         try {
 
@@ -564,7 +579,7 @@ public class SchoolQuizController {
         try {
 
             Document hw = hasAccess(hwRepository, userId, hwId);
-            if(hw.getString("status").equalsIgnoreCase("finish"))
+            if (hw.getString("status").equalsIgnoreCase("finish"))
                 return generateErr("این تمرین قبلا نهایی شده است");
 
             PairValue p = isHWReadyForPay(hw);
@@ -622,10 +637,10 @@ public class SchoolQuizController {
 
         Document hw = hwRepository.findById(hwId);
 
-        if(hw == null)
+        if (hw == null)
             return JSON_NOT_VALID_ID;
 
-        if(!hw.getBoolean("visibility") ||
+        if (!hw.getBoolean("visibility") ||
                 !hw.getString("status").equalsIgnoreCase("finish") ||
                 !hw.containsKey("students")
         )
@@ -634,7 +649,7 @@ public class SchoolQuizController {
         long curr = System.currentTimeMillis();
         long end = hw.containsKey("delay_end") ? hw.getLong("delay_end") : hw.getLong("end");
 
-        if(hw.getLong("start") > curr || end < curr)
+        if (hw.getLong("start") > curr || end < curr)
             return generateErr("در زمان بارگذاری تمرین قرار نداریم");
 
         List<Document> students = hw.getList("students", Document.class);
@@ -642,16 +657,16 @@ public class SchoolQuizController {
                 students, "_id", studentId
         );
 
-        if(stdDoc == null)
+        if (stdDoc == null)
             return JSON_NOT_ACCESS;
 
-        if(file.getSize() > hw.getInteger("max_upload_size") * ONE_MB)
+        if (file.getSize() > hw.getInteger("max_upload_size") * ONE_MB)
             return generateErr("حداکثر حجم قابل بارگذاری در این قسمت " + hw.getInteger("max_upload_size") + " مگابایت می باشد");
 
         String fileType = FileUtils.uploadDocOrMultimediaFile(file);
         String answerType = hw.getString("answer_type");
 
-        if(fileType == null ||
+        if (fileType == null ||
                 (answerType.equalsIgnoreCase(HWAnswerType.PDF.getName()) && !fileType.equals("pdf")) ||
                 (answerType.equalsIgnoreCase(HWAnswerType.WORD.getName()) && !fileType.equals("word")) ||
                 (answerType.equalsIgnoreCase(HWAnswerType.POWERPOINT.getName()) && !fileType.equals("powerpoint")) ||
@@ -662,10 +677,10 @@ public class SchoolQuizController {
             return generateErr("فرمت فایل موردنظر معتبر نمی باشد. باید یک فایل " + answerType + " آپلود نمایید.");
 
         String filename = FileUtils.uploadFile(file, HWRepository.FOLDER);
-        if(filename == null)
+        if (filename == null)
             return JSON_NOT_UNKNOWN;
 
-        if(stdDoc.containsKey("filename")) {
+        if (stdDoc.containsKey("filename")) {
 
             String ext = stdDoc.getString("filename").substring(
                     stdDoc.getString("filename").lastIndexOf(".")
@@ -682,14 +697,52 @@ public class SchoolQuizController {
         return StudentQuizController.myHW(studentId, hwId);
     }
 
+    public static String setMark(ObjectId hwId, ObjectId userId, ObjectId studentId, JSONObject data) {
+
+        if (data.getInt("mark") < 0 || data.getInt("mark") > 100)
+            return generateErr("نمره باید یک عدد صحیح بین ۰ تا ۱۰۰ باشد");
+
+        if (data.has("markDesc") && data.getString("markDesc").length() > 300)
+            return generateErr("توضیحات نمره می تواند حداکثر ۳۰۰ کاراکتر باشد");
+
+        try {
+
+            Document hw = hasAccess(hwRepository, userId, hwId);
+
+            if (!hw.containsKey("students"))
+                return JSON_NOT_ACCESS;
+
+            List<Document> students = hw.getList("students", Document.class);
+            Document student = searchInDocumentsKeyVal(students, "_id", studentId);
+
+            if (student == null)
+                return JSON_NOT_VALID_ID;
+
+            student.put("mark", data.getInt("mark"));
+            student.put("mark_at", System.currentTimeMillis());
+
+            if (data.has("markDesc") && !data.getString("markDesc").isEmpty())
+                student.put("mark_desc", data.getString("markDesc"));
+            else
+                student.remove("mark_desc");
+
+            hwRepository.replaceOne(hwId, hw);
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
+
     public static PairValue downloadHw(ObjectId hwId, ObjectId studentId) {
 
         Document hw = hwRepository.findById(hwId);
 
-        if(hw == null)
+        if (hw == null)
             return null;
 
-        if(!hw.getBoolean("visibility") ||
+        if (!hw.getBoolean("visibility") ||
                 !hw.containsKey("students")
         )
             return null;
@@ -699,7 +752,7 @@ public class SchoolQuizController {
                 students, "_id", studentId
         );
 
-        if(stdDoc == null || !stdDoc.containsKey("filename"))
+        if (stdDoc == null || !stdDoc.containsKey("filename"))
             return null;
 
         String filename = stdDoc.getString("filename");
@@ -714,5 +767,87 @@ public class SchoolQuizController {
                 ),
                 splited[0] + ext
         );
+    }
+
+    private static JSONObject convertStudentDocToJSON(
+            Document student, Document user
+    ) {
+
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("id", user.getObjectId("_id").toString())
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("NID", user.getString("NID"));
+
+        if (student.containsKey("upload_at"))
+            jsonObject.put("uploadAt", student.getLong("upload_at"));
+        else
+            jsonObject.put("uploadAt", 0);
+
+        jsonObject.put("mark", student.getOrDefault("mark", -1))
+                .put("markDesc", student.getOrDefault("mark_desc", ""))
+                .put("markAt", student.getOrDefault("mark_at", 0));
+
+        if (student.containsKey("filename")) {
+
+            String filename = student.getString("filename");
+            String[] splited = filename.split("__");
+            String ext = filename.substring(filename.lastIndexOf("."));
+
+            jsonObject.put("url", STATICS_SERVER + HWRepository.FOLDER + "/" + splited[0] + ext);
+            jsonObject.put("filename", splited[1]);
+        }
+
+        return jsonObject;
+    }
+
+
+    public static String getParticipants(
+            ObjectId userId,
+            ObjectId quizId,
+            Boolean justMarked,
+            Boolean justNotMarked,
+            Boolean justAbsents,
+            Boolean justPresence) {
+
+        try {
+            Document quiz = hasAccess(hwRepository, userId, quizId);
+
+            JSONArray jsonArray = new JSONArray();
+            List<Document> students = quiz.getList("students", Document.class);
+
+
+            for (Document student : students) {
+
+                if (justAbsents != null && justAbsents && student.containsKey("upload_at"))
+                    continue;
+
+                if (justPresence != null && justPresence && !student.containsKey("upload_at"))
+                    continue;
+
+                if (justMarked != null && justMarked &&
+                        !(boolean) student.getOrDefault("mark", false)
+                )
+                    continue;
+
+                if (justNotMarked != null && justNotMarked &&
+                        (boolean) student.getOrDefault("mark", false)
+                )
+                    continue;
+
+                Document user = userRepository.findById(student.getObjectId("_id"));
+                if (user == null)
+                    continue;
+
+                jsonArray.put(convertStudentDocToJSON(student, user));
+            }
+
+            return generateSuccessMsg("students", jsonArray);
+
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
+        }
     }
 }

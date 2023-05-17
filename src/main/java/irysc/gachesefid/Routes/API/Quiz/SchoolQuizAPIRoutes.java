@@ -29,6 +29,7 @@ import javax.validation.constraints.NotNull;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 @Controller
@@ -363,5 +364,24 @@ public class SchoolQuizAPIRoutes extends Router {
         );
     }
 
+    @PutMapping(value = "setMark/{hwId}/{studentId}")
+    @ResponseBody
+    public String setMark(HttpServletRequest request,
+                          @PathVariable @ObjectIdConstraint ObjectId hwId,
+                          @PathVariable @ObjectIdConstraint ObjectId studentId,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"mark"},
+                                  paramsType = {Positive.class},
+                                  optionals = {"markDesc"},
+                                  optionalsType = {String.class}
+                          ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        return SchoolQuizController.setMark(
+                hwId, getQuizUser(request).getObjectId("_id"),
+                studentId, convertPersian(new JSONObject(jsonStr))
+        );
+
+    }
 
 }
