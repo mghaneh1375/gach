@@ -207,6 +207,12 @@ public class QuizController {
             if(isAdvisor && data.has("launchMode"))
                 data.remove("launchMode");
 
+            if(data.has("max_teams") && data.getInt("max_teams") < 2)
+                return generateErr("تعداد تیم ها باید حداقل دو باشد");
+
+            if(data.has("per_team") && data.getInt("per_team") < 1)
+                return generateErr("تعداد نفرات هر تیم باید حداقل یک باشد");
+
             //todo : check after finish status in school quiz
 
             for (String key : data.keySet())
@@ -661,6 +667,8 @@ public class QuizController {
                     quizAbstract = new RegularQuizController();
             } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
             else if (db instanceof SchoolQuizRepository || db instanceof HWRepository)
                 quizAbstract = regularQuizController;
             else
@@ -852,6 +860,9 @@ public class QuizController {
 
             else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
+
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
@@ -1203,7 +1214,7 @@ public class QuizController {
         return jsonObject;
     }
 
-    private static JSONObject convertStudentDocToJSON(
+    public static JSONObject convertStudentDocToJSON(
             Document student, Document user
     ) {
 

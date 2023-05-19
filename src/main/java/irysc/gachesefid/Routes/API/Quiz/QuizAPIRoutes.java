@@ -81,7 +81,7 @@ public class QuizAPIRoutes extends Router {
                                         "showResultsAfterCorrectionNotLoginUsers",
                                         "isRegistrable", "isUploadable",
                                         "kind", "isQRNeeded", "priority",
-                                        "payByStudent"
+                                        "payByStudent", "perTeam", "maxTeams"
                                 },
                                 optionalsType = {
                                         Positive.class, Boolean.class,
@@ -97,7 +97,8 @@ public class QuizAPIRoutes extends Router {
                                         Positive.class, Boolean.class,
                                         Boolean.class, Boolean.class,
                                         KindQuiz.class, Boolean.class,
-                                        Positive.class, Boolean.class
+                                        Positive.class, Boolean.class,
+                                        Positive.class, Positive.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -107,6 +108,9 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin) {
+
+            if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+                return OnlineStandingController.create(user.getObjectId("_id"), jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
 
@@ -174,7 +178,8 @@ public class QuizAPIRoutes extends Router {
                                        "showResultsAfterCorrectionNotLoginUsers",
                                        "isRegistrable", "isUploadable",
                                        "kind", "isQRNeeded",
-                                       "priority", "payByStudent"
+                                       "priority", "payByStudent",
+                                       "perTeam", "maxTeams"
                                },
                                optionalsType = {
                                        String.class, Positive.class, Boolean.class,
@@ -191,7 +196,8 @@ public class QuizAPIRoutes extends Router {
                                        Boolean.class, Boolean.class,
                                        Boolean.class, KindQuiz.class,
                                        Boolean.class, Positive.class,
-                                       Boolean.class
+                                       Boolean.class, Positive.class,
+                                       Positive.class
                                }
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -205,8 +211,9 @@ public class QuizAPIRoutes extends Router {
                         iryscQuizRepository :
                         isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                 openQuizRepository :
-                                isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
-                                        schoolQuizRepository,
+                                isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
+                                        isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
+                                                schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"),
                 quizId,
                 Utility.convertPersian(new JSONObject(jsonStr)),
@@ -234,6 +241,13 @@ public class QuizAPIRoutes extends Router {
 
             if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
                 return QuizController.getAll(iryscQuizRepository, null,
+                        name, startDateSolar, startDateSolarEndLimit,
+                        startRegistryDateSolar, startRegistrySolarEndLimit,
+                        kind
+                );
+
+            if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+                return QuizController.getAll(onlineStandQuizRepository, null,
                         name, startDateSolar, startDateSolarEndLimit,
                         startRegistryDateSolar, startRegistrySolarEndLimit,
                         kind
@@ -277,11 +291,13 @@ public class QuizAPIRoutes extends Router {
 
         if (mode.equals(GeneralKindQuiz.IRYSC.getName()) ||
                 mode.equals(AllKindQuiz.OPEN.getName()) ||
+                mode.equals(AllKindQuiz.ONLINESTANDING.getName()) ||
                 mode.equals(AllKindQuiz.CONTENT.getName())
         )
             return QuizController.get(
                     mode.equals(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository :
+                            mode.equals(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                             mode.equals(AllKindQuiz.CONTENT.getName()) ?
                                     contentQuizRepository : iryscQuizRepository,
                     isAdmin ? null : "",
@@ -360,6 +376,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.forceRegistry(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
@@ -532,13 +549,23 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         ))
             return QuizController.getParticipants(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                            openQuizRepository : iryscQuizRepository, null,
+                            openQuizRepository : mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                            onlineStandQuizRepository : iryscQuizRepository, null,
                     quizId, studentId, justMarked,
                     justNotMarked, justAbsents, justPresence
+            );
+
+
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.getParticipants(
+                    onlineStandQuizRepository, null,
+                    quizId, studentId,
+                    justAbsents, justPresence
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.HW.getName()))
@@ -609,6 +636,7 @@ public class QuizAPIRoutes extends Router {
         return QuizController.arrangeQuestions(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
                                         contentQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
@@ -634,12 +662,14 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin &&
                 (
                         mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
+                                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ||
                                 mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
                                 mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
                 )
         )
             return QuizController.removeQuestions(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
                                     iryscQuizRepository, quizId, jsonArray
             );
@@ -666,6 +696,9 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, file);
+
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return QuizController.addBatchQuestionsToQuiz(onlineStandQuizRepository, null, quizId, file);
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, file);
@@ -703,6 +736,9 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
             return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, jsonArray, mark);
+
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return QuizController.addBatchQuestionsToQuiz(onlineStandQuizRepository, null, quizId, jsonArray, mark);
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return QuizController.addBatchQuestionsToQuiz(contentQuizRepository, null, quizId, jsonArray, mark);
@@ -929,12 +965,15 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
         ))
             return QuizController.fetchQuestions(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                            onlineStandQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
                                     contentQuizRepository : iryscQuizRepository, null,
                     quizId

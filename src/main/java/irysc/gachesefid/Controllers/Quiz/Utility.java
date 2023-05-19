@@ -40,6 +40,7 @@ public class Utility {
         for (String mandatoryFiled : mandatoryFields) {
 
             if (!keys.contains(mandatoryFiled)) {
+                System.out.println(mandatoryFiled);
                 error = true;
                 break;
             }
@@ -52,6 +53,7 @@ public class Utility {
         for (String forbiddenField : forbiddenFields) {
 
             if (keys.contains(forbiddenField)) {
+                System.out.println("dwq " + forbiddenField);
                 error = true;
                 break;
             }

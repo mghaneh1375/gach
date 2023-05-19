@@ -75,6 +75,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static HWRepository hwRepository;
     public static LifeStyleTagRepository lifeStyleTagRepository;
     public static OffcodeRepository offcodeRepository;
+    public static OnlineStandQuizRepository onlineStandQuizRepository;
     public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
@@ -140,6 +141,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             mailRepository = new MailRepository();
             mailQueueRepository = new MailQueueRepository();
             offcodeRepository = new OffcodeRepository();
+            onlineStandQuizRepository = new OnlineStandQuizRepository();
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
             iryscQuizRepository = new IRYSCQuizRepository();

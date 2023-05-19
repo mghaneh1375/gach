@@ -105,6 +105,7 @@ public class StaticValues {
                     .append("is_uploadable", 1)
                     .append("is_q_r_needed", 1)
                     .append("is_registrable", 1)
+                    .append("max_teams", 1).append("per_team", 1)
             ;
 
     public final static BasicDBObject HW_DIGEST_MANAGEMENT =
