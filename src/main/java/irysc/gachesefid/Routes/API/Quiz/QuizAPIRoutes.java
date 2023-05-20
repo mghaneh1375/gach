@@ -38,6 +38,7 @@ import java.io.File;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.generateErr;
 
 
 @Controller
@@ -298,8 +299,8 @@ public class QuizAPIRoutes extends Router {
                     mode.equals(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository :
                             mode.equals(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                            mode.equals(AllKindQuiz.CONTENT.getName()) ?
-                                    contentQuizRepository : iryscQuizRepository,
+                                    mode.equals(AllKindQuiz.CONTENT.getName()) ?
+                                            contentQuizRepository : iryscQuizRepository,
                     isAdmin ? null : "",
                     quizId
             );
@@ -356,6 +357,99 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+    @DeleteMapping(value = "/removeMember/{quizId}/{currMainMember}")
+    @ResponseBody
+    public String removeMember(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId,
+                               @PathVariable @ObjectIdConstraint ObjectId currMainMember,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {
+                                               "items"
+                                       },
+                                       paramsType = {
+                                               JSONArray.class
+                                       }
+                               ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return OnlineStandingController.removeMember(isAdmin ? null : user.getObjectId("_id"),
+                quizId, currMainMember, new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
+
+    @PutMapping(value = "/onlineStandingAddMember/{quizId}/{currMainMember}")
+    @ResponseBody
+    public String onlineStandingAddMember(HttpServletRequest request,
+                                          @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                          @PathVariable @ObjectIdConstraint ObjectId currMainMember,
+                                          @RequestBody @StrongJSONConstraint(
+                                                  params = {
+                                                          "items"
+                                                  },
+                                                  paramsType = {
+                                                          JSONArray.class
+                                                  }
+                                          ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return OnlineStandingController.addMember(isAdmin ? null : user.getObjectId("_id"),
+                quizId, currMainMember, new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
+
+
+    @PutMapping(value = "/changeMainMember/{quizId}/{currMainMember}")
+    @ResponseBody
+    public String changeMainMember(HttpServletRequest request,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                   @PathVariable @ObjectIdConstraint ObjectId currMainMember,
+                                   @RequestBody @StrongJSONConstraint(
+                                           params = {
+                                                   "items"
+                                           },
+                                           paramsType = {
+                                                   JSONArray.class
+                                           }
+                                   ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        if (jsonObject.getJSONArray("items").length() != 1)
+            return generateErr("لطفا تنها یک دانش آموز را انتخاب کنید");
+
+        String id = jsonObject.getJSONArray("items").getString(0);
+        if (!ObjectId.isValid(id))
+            return JSON_NOT_VALID_PARAMS;
+
+        return OnlineStandingController.changeMainMember(quizId, currMainMember, new ObjectId(id));
+    }
+
+    @PutMapping(value = "/onlineStandingForceRegistry/{quizId}")
+    @ResponseBody
+    public String onlineStandingForceRegistry(HttpServletRequest request,
+                                              @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                              @RequestBody @StrongJSONConstraint(
+                                                      params = {"items", "paid", "teamName"},
+                                                      paramsType = {JSONArray.class, Positive.class, String.class}
+                                              ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        return OnlineStandingController.forceRegistry(quizId, jsonObject.getJSONArray("items"),
+                jsonObject.getInt("paid"), jsonObject.getString("teamName")
+        );
+    }
+
     @PutMapping(value = "/forceRegistry/{mode}/{quizId}")
     @ResponseBody
     public String forceRegistry(HttpServletRequest request,
@@ -376,7 +470,6 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.forceRegistry(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId,
@@ -401,6 +494,10 @@ public class QuizAPIRoutes extends Router {
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.forceDeportation(iryscQuizRepository, null, quizId,
+                    jsonArray);
+
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return QuizController.forceDeportation(onlineStandQuizRepository, null, quizId,
                     jsonArray);
 
         return QuizController.forceDeportation(
@@ -547,15 +644,22 @@ public class QuizAPIRoutes extends Router {
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
+        if (isAdmin &&
+                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName())
+        ) {
+            return OnlineStandingController.getParticipants(
+                    onlineStandQuizRepository, null,
+                    quizId, studentId, justAbsents, justPresence
+            );
+        }
+
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
-                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         ))
             return QuizController.getParticipants(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                            openQuizRepository : mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
-                            onlineStandQuizRepository : iryscQuizRepository, null,
+                            openQuizRepository : iryscQuizRepository, null,
                     quizId, studentId, justMarked,
                     justNotMarked, justAbsents, justPresence
             );
@@ -637,8 +741,8 @@ public class QuizAPIRoutes extends Router {
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
-                                        contentQuizRepository : schoolQuizRepository,
+                                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                                contentQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
         );
     }
@@ -670,8 +774,8 @@ public class QuizAPIRoutes extends Router {
             return QuizController.removeQuestions(
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                            mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
-                                    iryscQuizRepository, quizId, jsonArray
+                                    mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
+                                            iryscQuizRepository, quizId, jsonArray
             );
 
         return QuizController.removeQuestions(
@@ -973,9 +1077,9 @@ public class QuizAPIRoutes extends Router {
                     mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
-                            onlineStandQuizRepository :
-                            mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
-                                    contentQuizRepository : iryscQuizRepository, null,
+                                    onlineStandQuizRepository :
+                                    mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                            contentQuizRepository : iryscQuizRepository, null,
                     quizId
             );
 
@@ -1208,6 +1312,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.getQuizAnswerSheet(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
                                         contentQuizRepository : schoolQuizRepository,

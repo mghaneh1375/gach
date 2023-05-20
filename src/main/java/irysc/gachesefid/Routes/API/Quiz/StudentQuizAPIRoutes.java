@@ -123,6 +123,8 @@ public class StudentQuizAPIRoutes extends Router {
         return StudentQuizController.reviewQuiz(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                                onlineStandQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                 openQuizRepository : schoolQuizRepository,
                 quizId, isAdmin ? null : user.getObjectId("_id"), isStudent

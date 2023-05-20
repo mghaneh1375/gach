@@ -480,9 +480,20 @@ public class PackageController {
                     if(userId != null)
                         openQuizFilter.add(nin("students._id", userId));
 
+                    docs.addAll(iryscQuizRepository.find(
+                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
+                    ));
+
+                    ArrayList<Bson> onlineStandingQuizFilter = new ArrayList<>();
+
+                    if(userId != null)
+                        onlineStandingQuizFilter.add(nin("students._id", userId));
+
                     docs.addAll(openQuizRepository.find(
                             openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
                     ));
+
+
                 }
 
                 RegularQuizController quizController = new RegularQuizController();

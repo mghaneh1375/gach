@@ -541,6 +541,7 @@ public class AdminReportController {
                                              ObjectId quizId, ObjectId studentId) {
         try {
             Document doc = hasAccess(db, userId, quizId);
+            System.out.println(doc);
             List<Document> students = doc.getList("students", Document.class);
             int idx = -1;
 

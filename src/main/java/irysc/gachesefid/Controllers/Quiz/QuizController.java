@@ -796,7 +796,9 @@ public class QuizController {
 
             QuizAbstract quizAbstract;
 
-            // todo : complete this section
+            if(db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+
             if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
