@@ -230,8 +230,13 @@ public class PackageController {
             if(quiz == null) {
 
                 quiz = openQuizRepository.findById(quizIdFilter);
-                if(quiz == null)
-                    return JSON_NOT_VALID_PARAMS;
+                if(quiz == null) {
+
+                    quiz = onlineStandQuizRepository.findById(quizIdFilter);
+                    if (quiz == null)
+                        return JSON_NOT_VALID_PARAMS;
+                }
+
             }
 
             if(searchInDocumentsKeyValIdx(
@@ -472,7 +477,10 @@ public class PackageController {
                 );
 
                 if (!isSchool) {
+
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();
+
+                    openQuizFilter.add(eq("visibility", true));
 
                     if(quizIdFilter != null)
                         openQuizFilter.add(eq("_id", quizIdFilter));
@@ -480,25 +488,32 @@ public class PackageController {
                     if(userId != null)
                         openQuizFilter.add(nin("students._id", userId));
 
-                    docs.addAll(iryscQuizRepository.find(
-                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
+                    docs.addAll(openQuizRepository.find(
+                            and(openQuizFilter), null, Sorts.ascending("priority")
                     ));
 
                     ArrayList<Bson> onlineStandingQuizFilter = new ArrayList<>();
 
+                    onlineStandingQuizFilter.add(eq("visibility", true));
+                    onlineStandingQuizFilter.add(lte("start_registry", curr));
+                    onlineStandingQuizFilter.add(gte("end_registry", curr));
+
                     if(userId != null)
                         onlineStandingQuizFilter.add(nin("students._id", userId));
 
-                    docs.addAll(openQuizRepository.find(
-                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
-                    ));
+                    if(quizIdFilter != null)
+                        onlineStandingQuizFilter.add(eq("_id", quizIdFilter));
 
+                    docs.addAll(onlineStandQuizRepository.find(
+                            and(onlineStandingQuizFilter), null, Sorts.ascending("priority")
+                    ));
 
                 }
 
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
                 TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+                OnlineStandingController onlineStandingController = new OnlineStandingController();
 
 
                 for (Document doc : docs) {
@@ -542,8 +557,11 @@ public class PackageController {
                         }
                     }
                     JSONObject object;
-
-                    if (doc.containsKey("launch_mode"))
+                    if(doc.containsKey("max_teams"))
+                        object = onlineStandingController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else if (doc.containsKey("launch_mode"))
                         object = quizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");

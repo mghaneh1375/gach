@@ -426,10 +426,20 @@ public class OnlineStandingController extends QuizAbstract {
             } else
                 jsonObject.put("status", "notStart");
 
-        } else
+        } else {
+
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
+
+            JSONArray teams = new JSONArray();
+            for(Document std : quiz.getList("students", Document.class)) {
+                Document user = userRepository.findById(std.getObjectId("_id"));
+                teams.put(convertOnlineStandingStudentToJSON(std, user));
+            }
+
+            jsonObject.put("teams", teams);
+        }
 
         if (isAdmin) {
             jsonObject
