@@ -125,8 +125,8 @@ public class StudentQuizAPIRoutes extends Router {
                         iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
                                 onlineStandQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                                openQuizRepository : schoolQuizRepository,
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                        openQuizRepository : schoolQuizRepository,
                 quizId, isAdmin ? null : user.getObjectId("_id"), isStudent
         );
 
@@ -307,7 +307,7 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "/downloadHW/{hwId}")
     @ResponseBody
     public ResponseEntity<InputStreamResource> downloadHw(HttpServletRequest request,
-                             @PathVariable @ObjectIdConstraint ObjectId hwId
+                                                          @PathVariable @ObjectIdConstraint ObjectId hwId
     ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUserWithOutCheckCompleteness(request);
@@ -408,6 +408,39 @@ public class StudentQuizAPIRoutes extends Router {
                 jsonObject.has("packageId") ?
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"), null,
+                ((Number) user.get("money")).doubleValue(),
+                user.getString("phone"),
+                user.getString("mail"),
+                user.getString("first_name") + " " + user.getString("last_name"),
+                jsonObject.has("code") ?
+                        jsonObject.getString("code") : null
+        );
+    }
+
+    @PostMapping(path = "buyOnlineQuiz/{id}")
+    @ResponseBody
+    public String buyOnlineQuiz(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"teamName", "members"},
+                                        paramsType = {String.class, JSONArray.class},
+                                        optionals = {"code"},
+                                        optionalsType = {String.class}
+                                )
+                                @NotBlank String jsonStr
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+
+        Document user = getUser(request);
+
+        JSONObject jsonObject = Utility.convertPersian(
+                new JSONObject(jsonStr)
+        );
+
+        return StudentQuizController.buyOnlineQuiz(
+                user.getObjectId("_id"),
+                id,
+                jsonObject.getString("teamName"),
+                jsonObject.getJSONArray("members"),
                 ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),

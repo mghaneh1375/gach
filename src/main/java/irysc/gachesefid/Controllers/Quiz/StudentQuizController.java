@@ -13,6 +13,7 @@ import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Validator.EnumValidatorImp;
+import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.Binary;
@@ -32,6 +33,7 @@ import static irysc.gachesefid.Controllers.Quiz.AdminReportController.createQuiz
 import static irysc.gachesefid.Controllers.Quiz.QuizController.payFromWallet;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Test.Utility.studentId;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -1064,6 +1066,203 @@ public class StudentQuizController {
         );
     }
 
+    public static String buyOnlineQuiz(ObjectId userId, ObjectId id, String teamName,
+                                       JSONArray members, double money, String phone,
+                                       String mail, String name, String offcode) {
+
+        Document off = null;
+        long curr = System.currentTimeMillis();
+
+        if (offcode != null) {
+
+            off = validateOffCode(
+                    offcode, userId, curr,
+                    OffCodeSections.GACH_EXAM.getName()
+            );
+
+            if (off == null)
+                return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
+        }
+
+        Document quiz = onlineStandQuizRepository.findById(id);
+        if(
+                quiz == null || !quiz.getBoolean("visibility") ||
+                        quiz.getLong("start_registry") > curr ||
+                        quiz.getLong("end_registry") < curr
+        )
+            return JSON_NOT_ACCESS;
+
+        if(members.length() + 1 > quiz.getInteger("per_team"))
+            return generateErr("در هر تیم حداکثر " + quiz.getInteger("per_team") + " می توانند حضور داشته باشند");
+
+        List<Document> students = quiz.getList("students", Document.class);
+        if(searchInDocumentsKeyValIdx(students, "_id", userId) >= 0)
+            return generateErr("شما در این آزمون قبلا ثبت نام کرده اید");
+
+        List<ObjectId> memberIds = new ArrayList<>();
+        List<String> NIDs = new ArrayList<>();
+
+        try {
+
+            for (int i = 0; i < members.length(); i++) {
+
+                JSONObject jsonObject = members.getJSONObject(i);
+
+                String NID = jsonObject.getString("NID");
+                String phone1 = jsonObject.getString("phone");
+
+                if (!irysc.gachesefid.Utility.Utility.validationNationalCode(NID))
+                    return generateErr("کد ملی " + NID + " معتبر نمی باشد");
+
+                if (!PhoneValidator.isValid(phone1))
+                    return generateErr("شماره همراه " + phone1 + " معتبر نمی باشد");
+
+                Document user = userRepository.findBySecKey(NID);
+                if(user == null || !user.getString("phone").equalsIgnoreCase(phone1))
+                    return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
+
+                memberIds.add(user.getObjectId("_id"));
+                NIDs.add(NID);
+            }
+        }
+        catch (Exception x) {
+            return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
+        }
+
+        for(Document student : students) {
+
+            if(student.getString("team_name").equalsIgnoreCase(teamName))
+                return generateErr("نام تیم شما قبلا توسط تیم دیگری انتخاب شده است");
+
+            int idx = memberIds.indexOf(student.getObjectId("_id"));
+
+            if(idx >= 0)
+                return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
+
+            if(student.containsKey("team")) {
+                for(ObjectId objectId : student.getList("team", ObjectId.class)) {
+
+                    if(objectId == userId)
+                        return generateErr("شما در این آزمون قبلا ثبت نام کرده اید");
+
+                    idx = memberIds.indexOf(objectId);
+
+                    if(idx >= 0)
+                        return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
+
+                }
+            }
+
+        }
+
+        int totalPrice = quiz.getInteger("price");
+
+        if (off == null)
+            off = findAccountOff(
+                    userId, curr, OffCodeSections.GACH_EXAM.getName()
+            );
+
+        double offAmount = 0;
+        double shouldPayDouble = totalPrice;
+
+        if (off != null) {
+            offAmount +=
+                    off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
+                            shouldPayDouble * off.getInteger("amount") / 100.0 :
+                            off.getInteger("amount")
+            ;
+            shouldPayDouble = totalPrice - offAmount;
+        }
+
+        int shouldPay = (int) shouldPayDouble;
+
+        if (shouldPay - money <= 100) {
+
+            double newUserMoney = money;
+
+            if (shouldPay > 100)
+                newUserMoney = payFromWallet(shouldPay, money, userId);
+
+            Document finalOff = off;
+            double finalOffAmount = offAmount;
+            new Thread(() -> {
+
+                Document doc = new Document("user_id", userId)
+                        .append("amount", 0)
+                        .append("account_money", shouldPay)
+                        .append("created_at", curr)
+                        .append("status", "success")
+                        .append("section", AllKindQuiz.ONLINESTANDING.getName())
+                        .append("products", id);
+
+                if (finalOff != null) {
+                    doc.append("off_code", finalOff.getObjectId("_id"));
+                    doc.append("off_amount", (int) finalOffAmount);
+                }
+
+                transactionRepository.insertOne(doc);
+                new OnlineStandingController()
+                        .registry(userId, phone + "__" + mail, id + "__" + teamName,
+                                memberIds, 0, doc.getObjectId("_id"), name
+                        );
+
+                if (finalOff != null) {
+
+                    BasicDBObject update;
+
+                    if (finalOff.containsKey("is_public") &&
+                            finalOff.getBoolean("is_public")
+                    ) {
+                        List<ObjectId> stds = finalOff.getList("students", ObjectId.class);
+                        stds.add(userId);
+                        update = new BasicDBObject("students", stds);
+                    } else {
+                        update = new BasicDBObject("used", true)
+                                .append("used_at", curr)
+                                .append("used_section", AllKindQuiz.ONLINESTANDING.getName())
+                                .append("used_for", id);
+                    }
+
+                    offcodeRepository.updateOne(
+                            finalOff.getObjectId("_id"),
+                            new BasicDBObject("$set", update)
+                    );
+                }
+
+            }).start();
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                    "action", "success",
+                    new PairValue("refId", newUserMoney)
+            );
+        }
+
+
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        )) {
+            orderId = Math.abs(new Random().nextLong());
+        }
+
+        Document doc =
+                new Document("user_id", userId)
+                        .append("account_money", money)
+                        .append("amount", (int) (shouldPay - money))
+                        .append("created_at", curr)
+                        .append("status", "init")
+                        .append("order_id", orderId)
+                        .append("products", id)
+                        .append("section", AllKindQuiz.ONLINESTANDING.getName());
+
+        if (off != null) {
+            doc.append("off_code", off.getObjectId("_id"));
+            doc.append("off_amount", (int) offAmount);
+        }
+
+        return goToPayment((int) (shouldPay - money), doc);
+    }
+
 
     public static String buyAdvisorQuiz(ObjectId userId, ObjectId quizId,
                                         double money) {
@@ -2047,7 +2246,7 @@ public class StudentQuizController {
         filters.add(in("visibility", true));
         filters.add(eq("status", "finish"));
 
-        if(forAdvisor)
+        if (forAdvisor)
             filters.add(eq("is_for_advisor", true));
 
         long curr = System.currentTimeMillis();
@@ -2093,8 +2292,8 @@ public class StudentQuizController {
 
         Document hw = hwRepository.findById(hwId);
 
-        if(hw == null || !hw.getBoolean("visibility") ||
-            !hw.getString("status").equalsIgnoreCase("finish")
+        if (hw == null || !hw.getBoolean("visibility") ||
+                !hw.getString("status").equalsIgnoreCase("finish")
         )
             return JSON_NOT_ACCESS;
 
@@ -2106,7 +2305,7 @@ public class StudentQuizController {
         if (studentDoc == null)
             return JSON_NOT_ACCESS;
 
-        if(hw.getLong("start") > System.currentTimeMillis())
+        if (hw.getLong("start") > System.currentTimeMillis())
             return generateErr("تمرین موردنظر هنوز شروع نشده است");
 
         RegularQuizController quizAbstract = new RegularQuizController();

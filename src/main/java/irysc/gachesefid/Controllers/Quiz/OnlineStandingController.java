@@ -432,13 +432,15 @@ public class OnlineStandingController extends QuizAbstract {
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
 
-            JSONArray teams = new JSONArray();
-            for(Document std : quiz.getList("students", Document.class)) {
-                Document user = userRepository.findById(std.getObjectId("_id"));
-                teams.put(convertOnlineStandingStudentToJSON(std, user));
-            }
+            if(quiz.containsKey("students")) {
+                JSONArray teams = new JSONArray();
+                for (Document std : quiz.getList("students", Document.class)) {
+                    Document user = userRepository.findById(std.getObjectId("_id"));
+                    teams.put(convertOnlineStandingStudentToJSON(std, user));
+                }
 
-            jsonObject.put("teams", teams);
+                jsonObject.put("teams", teams);
+            }
         }
 
         if (isAdmin) {
