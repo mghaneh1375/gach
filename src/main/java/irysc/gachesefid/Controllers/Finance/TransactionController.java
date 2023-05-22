@@ -147,6 +147,11 @@ public class TransactionController {
                         quiz = schoolQuizRepository.findById((ObjectId) products);
                         if (quiz != null)
                             section.append(" - ").append(quiz.getString("title"));
+                        else {
+                            quiz = onlineStandQuizRepository.findById((ObjectId) products);
+                            if(quiz != null)
+                                section.append(" - ").append(quiz.getString("title"));
+                        }
                     }
                 }
             } else if (products instanceof List) {

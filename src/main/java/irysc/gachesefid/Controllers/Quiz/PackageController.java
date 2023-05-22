@@ -224,6 +224,8 @@ public class PackageController {
                               ObjectId quizIdFilter
     ) {
 
+        boolean isOnlineStanding = false;
+
         if(quizIdFilter != null) {
 
             Document quiz = iryscQuizRepository.findById(quizIdFilter);
@@ -235,16 +237,28 @@ public class PackageController {
                     quiz = onlineStandQuizRepository.findById(quizIdFilter);
                     if (quiz == null)
                         return JSON_NOT_VALID_PARAMS;
+
+                    isOnlineStanding = true;
+
                 }
 
             }
 
             if(searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class), "_id", userId
-            ) != -1)
+            ) != -1) {
+
+                if(isOnlineStanding)
+                    return generateSuccessMsg("data",
+                            new OnlineStandingController().convertDocToJSON(quiz, true, false,
+                                    true, true
+                            )
+                    );
+
                 return generateSuccessMsg("data", new JSONObject()
                         .put("registered", true)
                 );
+            }
         }
 
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);

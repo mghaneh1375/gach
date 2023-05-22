@@ -312,7 +312,7 @@ public class OnlineStandingController extends QuizAbstract {
     }
 
     @Override
-    List<Document> registry(ObjectId studentId, String phoneAndMail, String quizIdAndTeamStr, List<ObjectId> members,
+    public List<Document> registry(ObjectId studentId, String phoneAndMail, String quizIdAndTeamStr, List<ObjectId> members,
                             int paid, ObjectId transactionId, String stdName) {
 
         ArrayList<Document> added = new ArrayList<>();
@@ -381,7 +381,8 @@ public class OnlineStandingController extends QuizAbstract {
     }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
+    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin,
+                                boolean afterBuy, boolean isDescNeeded) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))
@@ -431,16 +432,16 @@ public class OnlineStandingController extends QuizAbstract {
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
+        }
 
-            if(quiz.containsKey("students")) {
-                JSONArray teams = new JSONArray();
-                for (Document std : quiz.getList("students", Document.class)) {
-                    Document user = userRepository.findById(std.getObjectId("_id"));
-                    teams.put(convertOnlineStandingStudentToJSON(std, user));
-                }
-
-                jsonObject.put("teams", teams);
+        if(quiz.containsKey("students")) {
+            JSONArray teams = new JSONArray();
+            for (Document std : quiz.getList("students", Document.class)) {
+                Document user = userRepository.findById(std.getObjectId("_id"));
+                teams.put(convertOnlineStandingStudentToJSON(std, user));
             }
+
+            jsonObject.put("teams", teams);
         }
 
         if (isAdmin) {

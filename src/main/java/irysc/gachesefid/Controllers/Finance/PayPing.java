@@ -4,10 +4,12 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Controllers.Quiz.OnlineStandingController;
 import irysc.gachesefid.Controllers.Quiz.OpenQuiz;
 import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
 import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import org.bson.Document;
@@ -156,6 +158,20 @@ public class PayPing {
                         quiz.put("status", "finish");
                         schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                     }
+                }
+
+
+                if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(AllKindQuiz.ONLINESTANDING.getName())
+                ) {
+                    new OnlineStandingController().registry(studentId,
+                            user.getString("phone") + "__" + user.getString("mail"),
+                            transaction.get("products").toString() + "__" + transaction.getString("team_name"),
+                            transaction.getList("members", ObjectId.class),
+                            transaction.getInteger("amount"),
+                            transaction.getObjectId("_id"),
+                            user.getString("first_name") + " " + user.getString("last_name")
+                    );
                 }
 
 

@@ -4,10 +4,7 @@ import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.GiftTarget;
-import irysc.gachesefid.Models.GiftType;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
@@ -44,6 +41,9 @@ public class GiftController {
 
         if (useFor.equalsIgnoreCase("charge"))
             return "افزایش شارژ حساب";
+
+        if (useFor.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return "آزمون پای تخته";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()))
             return "آزمون های آیریسک";

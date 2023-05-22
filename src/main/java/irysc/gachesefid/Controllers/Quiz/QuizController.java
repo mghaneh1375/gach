@@ -215,11 +215,25 @@ public class QuizController {
 
             //todo : check after finish status in school quiz
 
-            for (String key : data.keySet())
-                quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+            for (String key : data.keySet()) {
 
-            if (!data.has("tags"))
-                quiz.put("tags", new ArrayList<>());
+                if (key.equalsIgnoreCase("tags") || key.equalsIgnoreCase("kind"))
+                    continue;
+
+                quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+            }
+
+            ArrayList<String> tagsArr = new ArrayList<>();
+
+            if (data.has("tags")) {
+
+                JSONArray tags = data.getJSONArray("tags");
+
+                for (int i = 0; i < tags.length(); i++)
+                    tagsArr.add(tags.getString(i));
+            }
+
+            quiz.put("tags", tagsArr);
 
             if (quiz.containsKey("price") && quiz.get("price") instanceof String) {
                 try {
@@ -230,12 +244,41 @@ public class QuizController {
             }
 
             db.replaceOne(quizId, quiz);
+            QuizAbstract quizAbstract = null;
+
+            if(db instanceof HWRepository)
+                return generateSuccessMsg("data",
+                        new RegularQuizController().convertHWDocToJSON(quiz, false, null)
+                );
+
+            if (db instanceof IRYSCQuizRepository ||
+                    db instanceof SchoolQuizRepository
+            )
+                quizAbstract = new RegularQuizController();
+
+            else if (db instanceof OpenQuizRepository)
+                quizAbstract = new OpenQuiz();
+
+            else if (db instanceof ContentQuizRepository)
+                quizAbstract = new ContentQuizController();
+
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+
+            if(quizAbstract != null)
+                return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                        "quiz",
+                        quizAbstract.convertDocToJSON(
+                                quiz, false, true,
+                                false, false
+                        )
+                );
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
 
-        return JSON_OK;
+        return JSON_NOT_UNKNOWN;
     }
 
     public static String toggleVisibility(Common db, ObjectId userId, ObjectId quizId) {

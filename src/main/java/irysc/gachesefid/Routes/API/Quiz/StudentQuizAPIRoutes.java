@@ -92,8 +92,10 @@ public class StudentQuizAPIRoutes extends Router {
         return StudentQuizController.getMyRecp(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                                openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                                onlineStandQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                        openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
     }
@@ -144,6 +146,7 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUser(request);
 
         if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         )
             return JSON_NOT_VALID_PARAMS;
@@ -154,7 +157,9 @@ public class StudentQuizAPIRoutes extends Router {
 
         return StudentQuizController.rate(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository : openQuizRepository,
+                        iryscQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                        onlineStandQuizRepository : openQuizRepository,
                 quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
         );
 

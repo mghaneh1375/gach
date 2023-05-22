@@ -3,10 +3,7 @@ package irysc.gachesefid.Controllers.Quiz;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Question.Utilities;
-import irysc.gachesefid.DB.Common;
-import irysc.gachesefid.DB.IRYSCQuizRepository;
-import irysc.gachesefid.DB.OpenQuizRepository;
-import irysc.gachesefid.DB.SchoolQuizRepository;
+import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
@@ -99,7 +96,10 @@ public class StudentQuizController {
                     "_id", userId
             );
 
-            String section = OffCodeSections.GACH_EXAM.getName();
+            String section = db instanceof IRYSCQuizRepository ?
+                    OffCodeSections.GACH_EXAM.getName() : db instanceof OpenQuizRepository ?
+                    OffCodeSections.OPEN_EXAM.getName() : db instanceof OnlineStandQuizRepository ?
+                    AllKindQuiz.ONLINESTANDING.getName() : OffCodeSections.SCHOOL_QUIZ.getName();
 
             Document transaction = transactionRepository.findOne(
                     and(
@@ -433,6 +433,58 @@ public class StudentQuizController {
 
                     data.put(jsonObject);
                 }
+            }
+
+        }
+
+        if(generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName())) {
+
+            ArrayList<Document> quizzes = onlineStandQuizRepository.find(and(filters), null);
+            if(quizzes.size() > 0) {
+
+                QuizAbstract quizAbstract = new OnlineStandingController();
+
+                for (Document quiz : quizzes) {
+
+                    Document studentDoc = searchInDocumentsKeyVal(
+                            quiz.getList("students", Document.class),
+                            "_id", userId
+                    );
+
+                    if (studentDoc == null)
+                        continue;
+
+                    JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                            quiz, true, false, true, true
+                    );
+
+                    if (jsonObject.getString("status")
+                            .equalsIgnoreCase("inProgress") &&
+                            studentDoc.containsKey("start_at") &&
+                            studentDoc.get("start_at") != null
+                    ) {
+                        int neededTime = quizAbstract.calcLen(quiz);
+                        int untilYetInSecondFormat =
+                                (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+
+                        int reminder = neededTime - untilYetInSecondFormat;
+
+                        if (reminder < 0)
+                            jsonObject.put("status", "waitForResult");
+                        else {
+                            jsonObject.put("timeReminder", reminder);
+                            jsonObject.put("status", "continue");
+                        }
+
+                        jsonObject.put("startAt", studentDoc.getLong("start_at"));
+                    }
+
+                    if (studentDoc.containsKey("rate"))
+                        jsonObject.put("stdRate", studentDoc.getInteger("rate"));
+
+                    data.put(jsonObject);
+                }
+
             }
 
         }
@@ -1253,7 +1305,9 @@ public class StudentQuizController {
                         .append("status", "init")
                         .append("order_id", orderId)
                         .append("products", id)
-                        .append("section", AllKindQuiz.ONLINESTANDING.getName());
+                        .append("section", AllKindQuiz.ONLINESTANDING.getName())
+                        .append("members", memberIds)
+                        .append("team_name", teamName);
 
         if (off != null) {
             doc.append("off_code", off.getObjectId("_id"));
