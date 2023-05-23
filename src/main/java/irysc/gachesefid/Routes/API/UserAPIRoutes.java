@@ -357,11 +357,11 @@ public class UserAPIRoutes extends Router {
                                              String.class
                                      },
                                      optionals = {
-                                             "branches", "schoolId", "gradeId",
+                                             "branches", "schoolId", "gradeId", "birthDay"
                                      },
                                      optionalsType = {
                                              JSONArray.class, ObjectId.class,
-                                             ObjectId.class,
+                                             ObjectId.class, Long.class
                                      }
                              ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {

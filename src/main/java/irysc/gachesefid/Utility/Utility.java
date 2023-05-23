@@ -1051,6 +1051,17 @@ public class Utility {
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
     }
 
+    public static String getSolarJustDate(long time) {
+
+        if(time < 1610494635)
+            return "";
+
+        Date d = new Date(time);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        String[] splited = simpleDateFormat.format(d).split("-");
+        return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/");
+    }
+
 
     public static String getMonthSolarDate(long time) {
 

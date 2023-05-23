@@ -50,7 +50,7 @@ public class StaticValues {
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -162,6 +162,7 @@ public class StaticValues {
             .append("sex", 1)
             .append("city", 1)
             .append("branches", 1)
+            .append("created_at", 1)
             .append("grade", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);

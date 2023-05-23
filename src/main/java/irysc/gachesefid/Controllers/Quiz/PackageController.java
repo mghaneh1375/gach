@@ -244,17 +244,33 @@ public class PackageController {
 
             }
 
-            if(searchInDocumentsKeyValIdx(
-                    quiz.getList("students", Document.class), "_id", userId
-            ) != -1) {
+            if(isOnlineStanding) {
 
-                if(isOnlineStanding)
+                boolean registered = false;
+
+                for(Document student : quiz.getList("students", Document.class)) {
+
+                    if(student.getObjectId("_id").equals(userId))
+                        registered = true;
+                    else if(student.getList("team", ObjectId.class).contains(userId))
+                        registered = true;
+
+                    if(registered)
+                        break;
+
+                }
+
+                if(registered)
                     return generateSuccessMsg("data",
                             new OnlineStandingController().convertDocToJSON(quiz, true, false,
                                     true, true
                             )
                     );
+            }
 
+            else if(searchInDocumentsKeyValIdx(
+                    quiz.getList("students", Document.class), "_id", userId
+            ) != -1) {
                 return generateSuccessMsg("data", new JSONObject()
                         .put("registered", true)
                 );

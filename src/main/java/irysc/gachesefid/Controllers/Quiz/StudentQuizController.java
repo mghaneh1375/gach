@@ -349,6 +349,7 @@ public class StudentQuizController {
         else
             filters.add(in("students._id", userId));
 
+
         long curr = System.currentTimeMillis();
 
         if (status != null) {
@@ -437,19 +438,39 @@ public class StudentQuizController {
 
         }
 
-        if(generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName())) {
+        if(!isSchool &&
+                (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+        ) {
+
+            filters.remove(0);
+            filters.add(
+                    or(
+                            in("students._id", userId),
+                            in("students.team", userId)
+                    )
+            );
 
             ArrayList<Document> quizzes = onlineStandQuizRepository.find(and(filters), null);
+
             if(quizzes.size() > 0) {
 
                 QuizAbstract quizAbstract = new OnlineStandingController();
 
                 for (Document quiz : quizzes) {
 
-                    Document studentDoc = searchInDocumentsKeyVal(
-                            quiz.getList("students", Document.class),
-                            "_id", userId
-                    );
+                    Document studentDoc = null;
+                    boolean isOwner = false;
+
+                    for(Document student : quiz.getList("students", Document.class)) {
+
+                        if(student.getObjectId("_id").equals(userId)) {
+                            studentDoc = student;
+                            isOwner = true;
+                        }
+                        else if(student.getList("team", ObjectId.class).contains(userId))
+                            studentDoc = student;
+
+                    }
 
                     if (studentDoc == null)
                         continue;
@@ -482,6 +503,7 @@ public class StudentQuizController {
                     if (studentDoc.containsKey("rate"))
                         jsonObject.put("stdRate", studentDoc.getInteger("rate"));
 
+                    jsonObject.put("isOwner", isOwner);
                     data.put(jsonObject);
                 }
 

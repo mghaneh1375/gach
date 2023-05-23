@@ -427,6 +427,8 @@ public class OnlineStandingController extends QuizAbstract {
             } else
                 jsonObject.put("status", "notStart");
 
+            jsonObject.put("canChange", quiz.getLong("start") > curr);
+
         } else {
 
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))

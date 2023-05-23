@@ -500,6 +500,9 @@ public class UserController {
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""));
 
+//        jsonObject.put("birthDay", user.containsKey("birth_day") ? getSolarJustDate(user.getLong("birth_day")) : "");
+        jsonObject.put("birthDay", user.getOrDefault("birth_day", ""));
+
         if(user.containsKey("block_notif"))
             jsonObject.put("blockNotif", true);
 
@@ -1146,6 +1149,12 @@ public class UserController {
         if (!Utility.validationNationalCode(NID))
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
+        if(jsonObject.has("birthDay")) {
+            long age = (System.currentTimeMillis() - jsonObject.getLong("birthDay")) / (ONE_DAY_MIL_SEC * 365);
+            if(age <= 5)
+                return generateErr("تاریخ تولد وارد شده معتبر نمی باشد");
+        }
+
         String sex = jsonObject.getString("sex");
         boolean dontCheckNID = user.containsKey("NID") && user.getString("NID").equals(NID);
 
@@ -1265,6 +1274,10 @@ public class UserController {
             user.put("branches", branchesDoc);
         else
             user.remove("branches");
+
+        if(jsonObject.has("birthDay")) {
+            user.put("birth_day", jsonObject.getLong("birthDay"));
+        }
 
         userRepository.replaceOne(
                 user.getObjectId("_id"),
