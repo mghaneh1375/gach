@@ -367,149 +367,115 @@ public class StudentQuizController {
                 filters.add(gt("start", curr));
         }
 
-        if (generalMode == null ||
-                generalMode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName())
-        ) {
-            ArrayList<Document> quizzes = iryscQuizRepository.find(and(filters), null);
+        ArrayList<Document> quizzes = new ArrayList<>();
 
-            if (generalMode == null)
-                quizzes.addAll(openQuizRepository.find(and(filters), null));
-
-            QuizAbstract regularQuizController = new RegularQuizController();
-            QuizAbstract tashrihiQuizController = new TashrihiQuizController();
-            QuizAbstract openQuizAbstract = new OpenQuiz();
-
-            for (Document quiz : quizzes) {
-
-                boolean isIRYSCQuiz = quiz.containsKey("launch_mode") ||
-                        quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
-
-                QuizAbstract quizAbstract = isIRYSCQuiz ?
-                        quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
-                                tashrihiQuizController :
-                                regularQuizController : openQuizAbstract;
-
-                if (isSchool) {
-                    data.put(quizAbstract.convertDocToJSON(
-                            quiz, true, false, true, true
-                    ));
-                } else {
-
-                    Document studentDoc = searchInDocumentsKeyVal(
-                            quiz.getList("students", Document.class),
-                            "_id", userId
-                    );
-
-                    if (studentDoc == null)
-                        continue;
-
-                    JSONObject jsonObject = quizAbstract.convertDocToJSON(
-                            quiz, true, false, true, true
-                    );
-
-                    if (jsonObject.getString("status")
-                            .equalsIgnoreCase("inProgress") &&
-                            studentDoc.containsKey("start_at") &&
-                            studentDoc.get("start_at") != null
-                    ) {
-                        int neededTime = quizAbstract.calcLen(quiz);
-                        int untilYetInSecondFormat =
-                                (int) ((curr - studentDoc.getLong("start_at")) / 1000);
-
-                        int reminder = neededTime - untilYetInSecondFormat;
-
-                        if (reminder < 0)
-                            jsonObject.put("status", isIRYSCQuiz ? "waitForResult" : "finished");
-                        else {
-                            jsonObject.put("timeReminder", reminder);
-                            if (!isIRYSCQuiz)
-                                jsonObject.put("status", "continue");
-                        }
-
-                        jsonObject.put("startAt", studentDoc.getLong("start_at"));
-                    }
-
-                    if (studentDoc.containsKey("rate"))
-                        jsonObject.put("stdRate", studentDoc.getInteger("rate"));
-
-                    data.put(jsonObject);
-                }
-            }
-
-        }
+        if(generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
+            quizzes.addAll(iryscQuizRepository.find(and(filters), null));
 
         if(!isSchool &&
                 (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
         ) {
 
-            filters.remove(0);
-            filters.add(
+            ArrayList<Bson> newFilters = (ArrayList<Bson>) filters.clone();
+            newFilters.remove(0);
+            newFilters.add(
                     or(
                             in("students._id", userId),
                             in("students.team", userId)
                     )
             );
 
-            ArrayList<Document> quizzes = onlineStandQuizRepository.find(and(filters), null);
+            quizzes.addAll(onlineStandQuizRepository.find(and(newFilters), null));
+        }
 
-            if(quizzes.size() > 0) {
+        if (generalMode == null)
+            quizzes.addAll(openQuizRepository.find(and(filters), null));
 
-                QuizAbstract quizAbstract = new OnlineStandingController();
+        QuizAbstract onlineStandingController = new OnlineStandingController();
+        QuizAbstract regularQuizController = new RegularQuizController();
+        QuizAbstract tashrihiQuizController = new TashrihiQuizController();
+        QuizAbstract openQuizAbstract = new OpenQuiz();
 
-                for (Document quiz : quizzes) {
+        for (Document quiz : quizzes) {
 
-                    Document studentDoc = null;
-                    boolean isOwner = false;
+            boolean isIRYSCQuiz = quiz.containsKey("launch_mode") ||
+                    quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
-                    for(Document student : quiz.getList("students", Document.class)) {
+            boolean isOnlineStandingQuiz = quiz.containsKey("per_team");
 
-                        if(student.getObjectId("_id").equals(userId)) {
+            QuizAbstract quizAbstract = isIRYSCQuiz ?
+                    quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
+                            tashrihiQuizController :
+                            regularQuizController : isOnlineStandingQuiz ? onlineStandingController : openQuizAbstract;
+
+            if (isSchool) {
+                data.put(quizAbstract.convertDocToJSON(
+                        quiz, true, false, true, true
+                ));
+            } else {
+
+
+                Document studentDoc = null;
+                boolean isOwner = false;
+
+                if(isOnlineStandingQuiz) {
+
+                    for (Document student : quiz.getList("students", Document.class)) {
+
+                        if (student.getObjectId("_id").equals(userId)) {
                             studentDoc = student;
                             isOwner = true;
-                        }
-                        else if(student.getList("team", ObjectId.class).contains(userId))
+                        } else if (student.getList("team", ObjectId.class).contains(userId))
                             studentDoc = student;
 
                     }
-
-                    if (studentDoc == null)
-                        continue;
-
-                    JSONObject jsonObject = quizAbstract.convertDocToJSON(
-                            quiz, true, false, true, true
+                }
+                else {
+                    studentDoc = searchInDocumentsKeyVal(
+                            quiz.getList("students", Document.class),
+                            "_id", userId
                     );
-
-                    if (jsonObject.getString("status")
-                            .equalsIgnoreCase("inProgress") &&
-                            studentDoc.containsKey("start_at") &&
-                            studentDoc.get("start_at") != null
-                    ) {
-                        int neededTime = quizAbstract.calcLen(quiz);
-                        int untilYetInSecondFormat =
-                                (int) ((curr - studentDoc.getLong("start_at")) / 1000);
-
-                        int reminder = neededTime - untilYetInSecondFormat;
-
-                        if (reminder < 0)
-                            jsonObject.put("status", "waitForResult");
-                        else {
-                            jsonObject.put("timeReminder", reminder);
-                            jsonObject.put("status", "continue");
-                        }
-
-                        jsonObject.put("startAt", studentDoc.getLong("start_at"));
-                    }
-
-                    if (studentDoc.containsKey("rate"))
-                        jsonObject.put("stdRate", studentDoc.getInteger("rate"));
-
-                    jsonObject.put("isOwner", isOwner);
-                    data.put(jsonObject);
                 }
 
-            }
+                if (studentDoc == null)
+                    continue;
 
+                JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                        quiz, true, false, true, true
+                );
+
+                if (jsonObject.getString("status")
+                        .equalsIgnoreCase("inProgress") &&
+                        studentDoc.containsKey("start_at") &&
+                        studentDoc.get("start_at") != null
+                ) {
+                    int neededTime = quizAbstract.calcLen(quiz);
+                    int untilYetInSecondFormat =
+                            (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+
+                    int reminder = neededTime - untilYetInSecondFormat;
+
+                    if (reminder < 0)
+                        jsonObject.put("status", isIRYSCQuiz || isOnlineStandingQuiz ? "waitForResult" : "finished");
+                    else {
+                        jsonObject.put("timeReminder", reminder);
+                        if (!isIRYSCQuiz)
+                            jsonObject.put("status", "continue");
+                    }
+
+                    jsonObject.put("startAt", studentDoc.getLong("start_at"));
+                }
+
+                if (studentDoc.containsKey("rate"))
+                    jsonObject.put("stdRate", studentDoc.getInteger("rate"));
+
+                if(isOnlineStandingQuiz)
+                    jsonObject.put("isOwner", isOwner);
+
+                data.put(jsonObject);
+            }
         }
+
 
         return generateSuccessMsg("data", data);
     }

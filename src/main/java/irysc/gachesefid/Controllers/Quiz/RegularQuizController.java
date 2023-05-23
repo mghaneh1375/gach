@@ -397,10 +397,16 @@ public class RegularQuizController extends QuizAbstract {
             } else
                 jsonObject.put("status", "notStart");
 
-        } else
+        } else {
+
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
+
+            if (quiz.containsKey("capacity"))
+                jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
+
+        }
 
         if (isAdmin) {
             jsonObject
@@ -411,8 +417,6 @@ public class RegularQuizController extends QuizAbstract {
                     .put("capacity", quiz.getInteger("capacity"));
         }
 
-        if (quiz.containsKey("capacity"))
-            jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
 
         if (!isDigest || isDescNeeded)
             jsonObject

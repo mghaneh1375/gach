@@ -430,10 +430,10 @@ public class OnlineStandingController extends QuizAbstract {
             jsonObject.put("canChange", quiz.getLong("start") > curr);
 
         } else {
-
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
-                    .put("price", quiz.get("price"));
+                    .put("price", quiz.get("price"))
+                    .put("reminder", Math.max(quiz.getInteger("max_teams") - quiz.getInteger("registered"), 0));
         }
 
         if(quiz.containsKey("students")) {
@@ -453,8 +453,6 @@ public class OnlineStandingController extends QuizAbstract {
                     .put("priority", quiz.getInteger("priority"))
                     .put("questionsCount", questionsCount);
         }
-
-        jsonObject.put("reminder", Math.max(quiz.getInteger("max_teams") - quiz.getInteger("registered"), 0));
 
         if (!isDigest || isDescNeeded)
             jsonObject
