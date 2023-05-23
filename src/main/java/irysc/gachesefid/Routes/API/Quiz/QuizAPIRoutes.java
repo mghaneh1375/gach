@@ -403,7 +403,6 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
-
     @PutMapping(value = "/changeMainMember/{quizId}/{currMainMember}")
     @ResponseBody
     public String changeMainMember(HttpServletRequest request,
@@ -1313,9 +1312,9 @@ public class QuizAPIRoutes extends Router {
         return QuizController.getQuizAnswerSheet(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
-                                        contentQuizRepository : schoolQuizRepository,
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                                contentQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }

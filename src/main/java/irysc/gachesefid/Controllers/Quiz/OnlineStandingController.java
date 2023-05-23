@@ -212,6 +212,38 @@ public class OnlineStandingController extends QuizAbstract {
         return JSON_OK;
     }
 
+    public static String leftTeam(ObjectId userId, ObjectId quizId) {
+
+        Document quiz = onlineStandQuizRepository.findById(quizId);
+        if(quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        if(quiz.getLong("start") <= System.currentTimeMillis())
+            return JSON_NOT_ACCESS;
+
+        boolean find = false;
+
+        for(Document student : quiz.getList("students", Document.class)) {
+
+            List<ObjectId> memberIds = student.getList("team", ObjectId.class);
+
+            int idx = memberIds.indexOf(userId);
+            if(idx < 0)
+                continue;
+
+            memberIds.remove(idx);
+            find = true;
+            break;
+        }
+
+        if(find) {
+            onlineStandQuizRepository.replaceOne(quizId, quiz);
+            return JSON_OK;
+        }
+
+        return JSON_NOT_VALID_PARAMS;
+    }
+
     public static String removeMember(ObjectId userId, ObjectId quizId, ObjectId mainMember, JSONArray items) {
 
         if(userId != null && !mainMember.equals(userId))

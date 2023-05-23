@@ -2,10 +2,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Content.StudentContentController;
-import irysc.gachesefid.Controllers.Quiz.AdminReportController;
-import irysc.gachesefid.Controllers.Quiz.QuizController;
-import irysc.gachesefid.Controllers.Quiz.SchoolQuizController;
-import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -419,6 +416,18 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
                         jsonObject.getString("code") : null
+        );
+    }
+
+
+    @DeleteMapping(value = "/leftTeam/{quizId}")
+    @ResponseBody
+    public String leftTeam(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException {
+        return OnlineStandingController.leftTeam(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                quizId
         );
     }
 
