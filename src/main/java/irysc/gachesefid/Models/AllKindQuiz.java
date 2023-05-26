@@ -2,7 +2,7 @@ package irysc.gachesefid.Models;
 
 public enum AllKindQuiz {
 
-    IRYSC, SCHOOL, CUSTOM, OPEN, CONTENT, HW, ONLINESTANDING;
+    IRYSC, SCHOOL, CUSTOM, OPEN, CONTENT, HW, ONLINESTANDING, ESCAPE;
 
     public String getName() {
 

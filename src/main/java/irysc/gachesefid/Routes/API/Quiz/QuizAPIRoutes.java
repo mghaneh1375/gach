@@ -113,6 +113,9 @@ public class QuizAPIRoutes extends Router {
             if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
                 return OnlineStandingController.create(user.getObjectId("_id"), jsonObject);
 
+            if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+                return EscapeQuizController.create(user.getObjectId("_id"), jsonObject);
+
             if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
 
                 if (jsonObject.has("kind") &&
@@ -249,6 +252,13 @@ public class QuizAPIRoutes extends Router {
 
             if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
                 return QuizController.getAll(onlineStandQuizRepository, null,
+                        name, startDateSolar, startDateSolarEndLimit,
+                        startRegistryDateSolar, startRegistrySolarEndLimit,
+                        kind
+                );
+
+            if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+                return QuizController.getAll(escapeQuizRepository, null,
                         name, startDateSolar, startDateSolarEndLimit,
                         startRegistryDateSolar, startRegistrySolarEndLimit,
                         kind

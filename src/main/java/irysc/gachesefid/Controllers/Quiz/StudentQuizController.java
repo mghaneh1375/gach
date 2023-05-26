@@ -369,10 +369,13 @@ public class StudentQuizController {
 
         ArrayList<Document> quizzes = new ArrayList<>();
 
-        if(generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
-            quizzes.addAll(iryscQuizRepository.find(and(filters), null));
+        if (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
+            quizzes.addAll(iryscQuizRepository.find(and(
+                    and(filters), ne("mode", "tashrihi")
+            ), null));
+        }
 
-        if(!isSchool &&
+        if (!isSchool &&
                 (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
         ) {
 
@@ -386,6 +389,12 @@ public class StudentQuizController {
             );
 
             quizzes.addAll(onlineStandQuizRepository.find(and(newFilters), null));
+        }
+
+        if (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
+            quizzes.addAll(iryscQuizRepository.find(and(
+                    and(filters), eq("mode", "tashrihi")
+            ), null));
         }
 
         if (generalMode == null)
@@ -418,7 +427,7 @@ public class StudentQuizController {
                 Document studentDoc = null;
                 boolean isOwner = false;
 
-                if(isOnlineStandingQuiz) {
+                if (isOnlineStandingQuiz) {
 
                     for (Document student : quiz.getList("students", Document.class)) {
 
@@ -429,8 +438,7 @@ public class StudentQuizController {
                             studentDoc = student;
 
                     }
-                }
-                else {
+                } else {
                     studentDoc = searchInDocumentsKeyVal(
                             quiz.getList("students", Document.class),
                             "_id", userId
@@ -469,7 +477,7 @@ public class StudentQuizController {
                 if (studentDoc.containsKey("rate"))
                     jsonObject.put("stdRate", studentDoc.getInteger("rate"));
 
-                if(isOnlineStandingQuiz)
+                if (isOnlineStandingQuiz)
                     jsonObject.put("isOwner", isOwner);
 
                 data.put(jsonObject);
@@ -1125,18 +1133,18 @@ public class StudentQuizController {
         }
 
         Document quiz = onlineStandQuizRepository.findById(id);
-        if(
+        if (
                 quiz == null || !quiz.getBoolean("visibility") ||
                         quiz.getLong("start_registry") > curr ||
                         quiz.getLong("end_registry") < curr
         )
             return JSON_NOT_ACCESS;
 
-        if(members.length() + 1 > quiz.getInteger("per_team"))
+        if (members.length() + 1 > quiz.getInteger("per_team"))
             return generateErr("در هر تیم حداکثر " + quiz.getInteger("per_team") + " می توانند حضور داشته باشند");
 
         List<Document> students = quiz.getList("students", Document.class);
-        if(searchInDocumentsKeyValIdx(students, "_id", userId) >= 0)
+        if (searchInDocumentsKeyValIdx(students, "_id", userId) >= 0)
             return generateErr("شما در این آزمون قبلا ثبت نام کرده اید");
 
         List<ObjectId> memberIds = new ArrayList<>();
@@ -1158,36 +1166,35 @@ public class StudentQuizController {
                     return generateErr("شماره همراه " + phone1 + " معتبر نمی باشد");
 
                 Document user = userRepository.findBySecKey(NID);
-                if(user == null || !user.getString("phone").equalsIgnoreCase(phone1))
+                if (user == null || !user.getString("phone").equalsIgnoreCase(phone1))
                     return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
 
                 memberIds.add(user.getObjectId("_id"));
                 NIDs.add(NID);
             }
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
         }
 
-        for(Document student : students) {
+        for (Document student : students) {
 
-            if(student.getString("team_name").equalsIgnoreCase(teamName))
+            if (student.getString("team_name").equalsIgnoreCase(teamName))
                 return generateErr("نام تیم شما قبلا توسط تیم دیگری انتخاب شده است");
 
             int idx = memberIds.indexOf(student.getObjectId("_id"));
 
-            if(idx >= 0)
+            if (idx >= 0)
                 return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
 
-            if(student.containsKey("team")) {
-                for(ObjectId objectId : student.getList("team", ObjectId.class)) {
+            if (student.containsKey("team")) {
+                for (ObjectId objectId : student.getList("team", ObjectId.class)) {
 
-                    if(objectId == userId)
+                    if (objectId == userId)
                         return generateErr("شما در این آزمون قبلا ثبت نام کرده اید");
 
                     idx = memberIds.indexOf(objectId);
 
-                    if(idx >= 0)
+                    if (idx >= 0)
                         return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
 
                 }
@@ -1305,6 +1312,87 @@ public class StudentQuizController {
         return goToPayment((int) (shouldPay - money), doc);
     }
 
+    public static String updateOnlineQuizProfile(ObjectId userId, ObjectId id,
+                                                 String teamName, JSONArray members) {
+
+        Document quiz = onlineStandQuizRepository.findById(id);
+
+        if (
+                quiz == null || !quiz.getBoolean("visibility") ||
+                        quiz.getLong("start") <= System.currentTimeMillis()
+        )
+            return JSON_NOT_ACCESS;
+
+        if (members.length() + 1 > quiz.getInteger("per_team"))
+            return generateErr("در هر تیم حداکثر " + quiz.getInteger("per_team") + " می توانند حضور داشته باشند");
+
+        List<Document> students = quiz.getList("students", Document.class);
+        Document stdDoc = searchInDocumentsKeyVal(students, "_id", userId);
+        if (stdDoc == null)
+            return JSON_NOT_ACCESS;
+
+        List<ObjectId> memberIds = new ArrayList<>();
+        List<String> NIDs = new ArrayList<>();
+
+        try {
+
+            for (int i = 0; i < members.length(); i++) {
+
+                JSONObject jsonObject = members.getJSONObject(i);
+
+                String NID = jsonObject.getString("NID");
+                String phone1 = jsonObject.getString("phone");
+
+                if (!irysc.gachesefid.Utility.Utility.validationNationalCode(NID))
+                    return generateErr("کد ملی " + NID + " معتبر نمی باشد");
+
+                if (!PhoneValidator.isValid(phone1))
+                    return generateErr("شماره همراه " + phone1 + " معتبر نمی باشد");
+
+                Document user = userRepository.findBySecKey(NID);
+                if (user == null || !user.getString("phone").equalsIgnoreCase(phone1))
+                    return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
+
+                memberIds.add(user.getObjectId("_id"));
+                NIDs.add(NID);
+            }
+        } catch (Exception x) {
+            return generateErr("لطفا اعضای تیم خود را به درستی تعیین کنید");
+        }
+
+        for (Document student : students) {
+
+            if (student.getObjectId("_id").equals(stdDoc.getObjectId("_id")))
+                continue;
+
+            if (student.getString("team_name").equalsIgnoreCase(teamName))
+                return generateErr("نام تیم شما قبلا توسط تیم دیگری انتخاب شده است");
+
+            int idx = memberIds.indexOf(student.getObjectId("_id"));
+
+            if (idx >= 0)
+                return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
+
+            if (student.containsKey("team")) {
+                for (ObjectId objectId : student.getList("team", ObjectId.class)) {
+
+                    if (objectId == userId)
+                        return generateErr("شما در این آزمون قبلا ثبت نام کرده اید");
+
+                    idx = memberIds.indexOf(objectId);
+
+                    if (idx >= 0)
+                        return generateErr("کدملی " + NIDs.get(idx) + " قبلا در این آزمون ثبت نام شده است");
+
+                }
+            }
+        }
+
+        stdDoc.put("team_name", teamName);
+        stdDoc.put("team", memberIds);
+
+        return JSON_OK;
+    }
 
     public static String buyAdvisorQuiz(ObjectId userId, ObjectId quizId,
                                         double money) {

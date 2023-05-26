@@ -382,7 +382,7 @@ public class QuestionController extends Utilities {
 
             try {
 
-                if(row.getCell(1) == null)
+                if (row.getCell(1) == null)
                     break;
 
                 if (row.getLastCellNum() < 9) {
@@ -662,36 +662,35 @@ public class QuestionController extends Utilities {
         );
     }
 
-    public static String subjectQuestions(Boolean isQuestionNeeded,
-                                          Integer criticalThresh,
-                                          String organizationCode,
-                                          ObjectId subjectId,
-                                          ObjectId lessonId,
-                                          ObjectId gradeId) {
+    public static String getQuestions(Boolean isQuestionNeeded,
+                                      Integer criticalThresh,
+                                      String organizationCode,
+                                      ObjectId subjectId,
+                                      ObjectId lessonId,
+                                      ObjectId gradeId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
         ArrayList<Document> docs;
 
-        if(organizationCode != null) {
+        if (organizationCode != null) {
 
             Document question = questionRepository.findOne(eq("organization_id", organizationCode.replaceAll("\\s+", "")),
                     new BasicDBObject("subject_id", true)
             );
 
-            if(question == null)
+            if (question == null)
                 return generateSuccessMsg("data", new JSONArray());
 
             Document doc = subjectRepository.findById(
                     question.getObjectId("subject_id")
             );
 
-            if(doc == null)
+            if (doc == null)
                 return generateSuccessMsg("data", new JSONArray());
 
             docs = new ArrayList<>();
             docs.add(doc);
-        }
-        else {
+        } else {
 
             if (subjectId != null)
                 filters.add(eq("_id", subjectId));
@@ -737,10 +736,102 @@ public class QuestionController extends Utilities {
 
                 ArrayList<Document> questions = questionRepository.find(
                         organizationCode == null ? eq("subject_id", doc.getObjectId("_id")) :
-                        and(
-                                eq("subject_id", doc.getObjectId("_id")),
-                                eq("organization_id", organizationCode)
-                        ), null
+                                and(
+                                        eq("subject_id", doc.getObjectId("_id")),
+                                        eq("organization_id", organizationCode)
+                                ), null
+                );
+
+                jsonObject.put("questions", convertList(
+                        questions, false, true,
+                        true, true, true, true
+                ));
+            }
+
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String subjectQuestions(Boolean isQuestionNeeded,
+                                          Integer criticalThresh,
+                                          String organizationCode,
+                                          ObjectId subjectId,
+                                          ObjectId lessonId,
+                                          ObjectId gradeId) {
+
+        ArrayList<Bson> filters = new ArrayList<>();
+        ArrayList<Document> docs;
+
+        if (organizationCode != null) {
+
+            Document question = questionRepository.findOne(eq("organization_id", organizationCode.replaceAll("\\s+", "")),
+                    new BasicDBObject("subject_id", true)
+            );
+
+            if (question == null)
+                return generateSuccessMsg("data", new JSONArray());
+
+            Document doc = subjectRepository.findById(
+                    question.getObjectId("subject_id")
+            );
+
+            if (doc == null)
+                return generateSuccessMsg("data", new JSONArray());
+
+            docs = new ArrayList<>();
+            docs.add(doc);
+        } else {
+
+            if (subjectId != null)
+                filters.add(eq("_id", subjectId));
+
+            if (lessonId != null)
+                filters.add(eq("lesson._id", lessonId));
+
+            if (gradeId != null)
+                filters.add(eq("grade._id", gradeId));
+
+            if (criticalThresh != null)
+                filters.add(or(
+                        exists("q_no", false),
+                        lte("q_no", criticalThresh)
+                ));
+
+            docs = subjectRepository.find(
+                    filters.size() == 0 ? null : and(filters),
+                    null
+            );
+        }
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("qNo", doc.getOrDefault("q_no", 0))
+                    .put("subject", new JSONObject()
+                            .put("name", doc.getString("name"))
+                            .put("id", doc.getObjectId("_id").toString()))
+                    .put("lesson", new JSONObject()
+                            .put("name", ((Document) doc.get("lesson")).getString("name"))
+                            .put("id", ((Document) doc.get("lesson")).getObjectId("_id").toString())
+                    )
+                    .put("grade", new JSONObject()
+                            .put("name", ((Document) doc.get("grade")).getString("name"))
+                            .put("id", ((Document) doc.get("grade")).getObjectId("_id").toString())
+                    );
+
+            if (isQuestionNeeded != null && isQuestionNeeded) {
+
+                ArrayList<Document> questions = questionRepository.find(
+                        organizationCode == null ? eq("subject_id", doc.getObjectId("_id")) :
+                                and(
+                                        eq("subject_id", doc.getObjectId("_id")),
+                                        eq("organization_id", organizationCode)
+                                ), null
                 );
 
                 jsonObject.put("questions", convertList(
@@ -787,8 +878,8 @@ public class QuestionController extends Utilities {
 
         ArrayList<Document> subjects = subjectRepository.find(
                 config.containsKey("min_question_for_custom_quiz") ?
-                    gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
-                    gt("q_no", 0)
+                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+                        gt("q_no", 0)
                 ,
                 new BasicDBObject("_id", 1)
                         .append("q_no", 1)
@@ -831,8 +922,7 @@ public class QuestionController extends Utilities {
                 lessons.get(lessonId).put("q_no_easy", lessons.get(lessonId).getInteger("q_no_easy") + qNoEasy);
                 lessons.get(lessonId).put("q_no_mid", lessons.get(lessonId).getInteger("q_no_mid") + qNoMid);
                 lessons.get(lessonId).put("q_no_hard", lessons.get(lessonId).getInteger("q_no_hard") + qNoHard);
-            }
-            else {
+            } else {
                 lessons.put(lessonId,
                         new Document("name", lesson)
                                 .append("q_no_easy", qNoEasy)
@@ -850,8 +940,7 @@ public class QuestionController extends Utilities {
                         .put("q_no_mid", grades.get(gradeId).getInteger("q_no_mid") + qNoMid);
                 grades.get(gradeId)
                         .put("q_no_hard", grades.get(gradeId).getInteger("q_no_hard") + qNoHard);
-            }
-            else {
+            } else {
                 grades.put(gradeId,
                         new Document("name",
                                 subject.get("grade", Document.class).getString("name")

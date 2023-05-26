@@ -29,8 +29,7 @@ import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
@@ -40,6 +39,22 @@ import static irysc.gachesefid.Utility.Utility.printException;
 @RequestMapping(path = "/api/admin/question")
 @Validated
 public class QuestionAPIRoutes extends Router {
+
+    @GetMapping(value = "/escapeQuizQuestions")
+    @ResponseBody
+    public String escapeQuizQuestions(HttpServletRequest request,
+                                      @RequestParam(required = false) Boolean isQuestionNeeded,
+                                      @RequestParam(required = false) Integer criticalThresh,
+                                      @RequestParam(required = false) ObjectId subjectId,
+                                      @RequestParam(required = false) ObjectId lessonId,
+                                      @RequestParam(required = false) ObjectId gradeId,
+                                      @RequestParam(required = false) String organizationCode
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getPrivilegeUser(request);
+        return QuestionController.subjectQuestions(
+                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode, subjectId, lessonId, gradeId
+        );
+    }
 
     @GetMapping(value = "/subjectQuestions")
     @ResponseBody
@@ -103,6 +118,29 @@ public class QuestionAPIRoutes extends Router {
             );
 
         }
+
+        return (String) p.getKey();
+    }
+
+
+    @DeleteMapping(value = "removeEscapeQuizQuestion")
+    @ResponseBody
+    public String removeEscapeQuizQuestion(HttpServletRequest request,
+                                           @RequestBody @StrongJSONConstraint(
+                                                   params = {"items"},
+                                                   paramsType = {JSONArray.class}
+                                           ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+        PairValue p = CommonController.removeAllReturnDocs(
+                escapeQuizQuestionRepository,
+                new JSONObject(jsonStr).getJSONArray("items"),
+                or(
+                        exists("used", false),
+                        eq("used", 0)
+                )
+        );
 
         return (String) p.getKey();
     }
@@ -174,35 +212,35 @@ public class QuestionAPIRoutes extends Router {
     @PostMapping(value = "edit/{questionId}")
     @ResponseBody
     public String edit(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId questionId,
-                        @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
-                        @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
-                        @RequestPart(value = "json") @StrongJSONConstraint(
-                                params = {
-                                        "level",
-                                        "neededTime", "answer",
-                                        "kindQuestion", "subjectId",
-                                        "organizationId",
-                                },
-                                paramsType = {
-                                        QuestionLevel.class,
-                                        Positive.class, Object.class,
-                                        QuestionType.class, ObjectId.class,
-                                        String.class,
-                                },
-                                optionals = {
-                                        "sentencesCount", "telorance",
-                                        "choicesCount", "neededLine",
-                                        "visibility", "authorId",
-                                        "year", "tags"
-                                },
-                                optionalsType = {
-                                        Positive.class, Number.class,
-                                        Positive.class, Positive.class,
-                                        Boolean.class, ObjectId.class,
-                                        Positive.class, JSONArray.class
-                                }
-                        ) @NotBlank String jsonStr)
+                       @PathVariable @ObjectIdConstraint ObjectId questionId,
+                       @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
+                       @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                       @RequestPart(value = "json") @StrongJSONConstraint(
+                               params = {
+                                       "level",
+                                       "neededTime", "answer",
+                                       "kindQuestion", "subjectId",
+                                       "organizationId",
+                               },
+                               paramsType = {
+                                       QuestionLevel.class,
+                                       Positive.class, Object.class,
+                                       QuestionType.class, ObjectId.class,
+                                       String.class,
+                               },
+                               optionals = {
+                                       "sentencesCount", "telorance",
+                                       "choicesCount", "neededLine",
+                                       "visibility", "authorId",
+                                       "year", "tags"
+                               },
+                               optionalsType = {
+                                       Positive.class, Number.class,
+                                       Positive.class, Positive.class,
+                                       Boolean.class, ObjectId.class,
+                                       Positive.class, JSONArray.class
+                               }
+                       ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return QuestionController.updateQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));

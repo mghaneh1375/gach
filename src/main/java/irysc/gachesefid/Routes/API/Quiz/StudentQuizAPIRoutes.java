@@ -431,15 +431,37 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @PostMapping(path = "/updateOnlineQuizProfile/{id}")
+    @ResponseBody
+    public String updateOnlineQuizProfile(HttpServletRequest request,
+                                          @PathVariable @ObjectIdConstraint ObjectId id,
+                                          @RequestBody @StrongJSONConstraint(
+                                                  params = {"teamName"},
+                                                  paramsType = {String.class},
+                                                  optionals = {"members"},
+                                                  optionalsType = {JSONArray.class}
+                                          ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException {
+
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        return StudentQuizController.updateOnlineQuizProfile(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                id, jsonObject.getString("teamName"),
+                jsonObject.has("members") ? jsonObject.getJSONArray("members") :
+                        new JSONArray()
+        );
+    }
+
     @PostMapping(path = "buyOnlineQuiz/{id}")
     @ResponseBody
     public String buyOnlineQuiz(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId id,
                                 @RequestBody @StrongJSONConstraint(
-                                        params = {"teamName", "members"},
-                                        paramsType = {String.class, JSONArray.class},
-                                        optionals = {"code"},
-                                        optionalsType = {String.class}
+                                        params = {"teamName"},
+                                        paramsType = {String.class},
+                                        optionals = {"code", "members"},
+                                        optionalsType = {String.class, JSONArray.class}
                                 )
                                 @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
@@ -454,7 +476,7 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getObjectId("_id"),
                 id,
                 jsonObject.getString("teamName"),
-                jsonObject.getJSONArray("members"),
+                jsonObject.has("members") ? jsonObject.getJSONArray("members") : new JSONArray(),
                 ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
