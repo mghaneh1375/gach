@@ -457,14 +457,16 @@ public class StudentQuizController {
                         studentDoc.containsKey("start_at") &&
                         studentDoc.get("start_at") != null
                 ) {
-                    int neededTime = quizAbstract.calcLen(quiz);
+                    int neededTime = isOnlineStandingQuiz ?
+                            ((int) (quiz.getLong("end") - quiz.getLong("start"))) / 1000 :
+                            quizAbstract.calcLen(quiz);
                     int untilYetInSecondFormat =
                             (int) ((curr - studentDoc.getLong("start_at")) / 1000);
 
                     int reminder = neededTime - untilYetInSecondFormat;
 
                     if (reminder < 0)
-                        jsonObject.put("status", isIRYSCQuiz || isOnlineStandingQuiz ? "waitForResult" : "finished");
+                        jsonObject.put("status", isIRYSCQuiz ? "waitForResult" : "finished");
                     else {
                         jsonObject.put("timeReminder", reminder);
                         if (!isIRYSCQuiz)
@@ -890,7 +892,7 @@ public class StudentQuizController {
                                       ObjectId quizId, boolean allowDelay
     ) throws InvalidFieldsException {
 
-        long allowedDelay = allowDelay ? 300000 : 0; // 1hour
+        long allowedDelay = allowDelay ? 300000 : 0; // 5min
 
         Document doc = hasProtectedAccess(db, studentId, quizId);
 

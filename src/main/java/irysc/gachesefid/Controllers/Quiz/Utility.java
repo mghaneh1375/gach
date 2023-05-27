@@ -589,27 +589,70 @@ public class Utility {
                 bytes.add(t);
                 i++;
             }
-//            else if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
-//
-//            }
-//            else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
-//                bytes.add(getByteArr(ans));
-//                i++;
-//            }
         }
 
         int neededSize = 0;
         for (byte[] itr : bytes) {
-//            if(itr == null)
-//                continue;
             neededSize += itr.length;
         }
 
         ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
 
         for (byte[] itr : bytes) {
-//            if(itr == null)
-//                continue;
+            buff.put(itr);
+        }
+
+        return buff.array();
+    }
+
+    public static byte[] getStdAnswersByteArr2(ArrayList<PairValue> pairValues) {
+
+        ArrayList<byte[]> bytes = new ArrayList<>();
+
+        int i = 0;
+
+        while (i < pairValues.size()) {
+
+            String type = pairValues.get(i).getKey().toString();
+
+            bytes.add(Utilities.convertTypeToByte(type));
+            Object ans = pairValues.get(i).getValue();
+
+            if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+
+                ArrayList<PairValue> answers = new ArrayList<>();
+
+                answers.add((PairValue) ans);
+                int j;
+
+                for (j = i + 1; j < pairValues.size(); j++) {
+
+                    String tmpType = pairValues.get(j).getKey().toString();
+                    if (!tmpType.equalsIgnoreCase(QuestionType.TEST.getName()))
+                        break;
+
+                    answers.add((PairValue) pairValues.get(j).getValue());
+                }
+
+                bytes.add(getByteArr(answers));
+                bytes.add(new byte[]{(byte) 0xff});
+
+                i = j;
+            } else {
+                byte[] t = getByteArr(ans);
+                bytes.add(t);
+                i++;
+            }
+        }
+
+        int neededSize = 0;
+        for (byte[] itr : bytes) {
+            neededSize += itr.length;
+        }
+
+        ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
+
+        for (byte[] itr : bytes) {
             buff.put(itr);
         }
 

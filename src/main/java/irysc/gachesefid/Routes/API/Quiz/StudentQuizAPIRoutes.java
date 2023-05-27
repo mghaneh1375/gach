@@ -156,7 +156,7 @@ public class StudentQuizAPIRoutes extends Router {
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
-                        onlineStandQuizRepository : openQuizRepository,
+                                onlineStandQuizRepository : openQuizRepository,
                 quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
         );
 
@@ -180,6 +180,11 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, getUser(request).getObjectId("_id")
             );
 
+        if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.launch(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
         return StudentQuizController.launch(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
@@ -189,6 +194,14 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getOnlineQuizRankingTable/{quizId}")
+    @ResponseBody
+    public String getOnlineQuizRankingTable(HttpServletRequest request,
+                                            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException {
+        getUserWithOutCheckCompleteness(request);
+        return OnlineStandingController.getOnlineQuizRankingTable(quizId);
+    }
 
     @GetMapping(value = "getMySubmits/{mode}/{quizId}")
     @ResponseBody
@@ -552,6 +565,27 @@ public class StudentQuizAPIRoutes extends Router {
                                 openQuizRepository : schoolQuizRepository,
                 quizId,
                 user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("answers")
+        );
+    }
+
+
+    @PutMapping(value = "/storeOnlineQuizAnswer/{quizId}/{questionId}")
+    @ResponseBody
+    public String storeOnlineQuizAnswer(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                        @PathVariable @ObjectIdConstraint ObjectId questionId,
+                                        @RequestBody @StrongJSONConstraint(
+                                                params = {"answer"},
+                                                paramsType = {Object.class}
+                                        ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        return OnlineStandingController.storeAnswer(
+                quizId, questionId,
+                user.getObjectId("_id"),
+                new JSONObject(jsonStr).get("answer")
         );
     }
 
