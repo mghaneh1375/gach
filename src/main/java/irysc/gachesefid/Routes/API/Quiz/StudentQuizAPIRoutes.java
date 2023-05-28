@@ -116,8 +116,13 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.reviewQuiz(
+                    quizId, user.getObjectId("_id"), !isAdmin
+            );
 
         return StudentQuizController.reviewQuiz(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
@@ -202,6 +207,7 @@ public class StudentQuizAPIRoutes extends Router {
         getUserWithOutCheckCompleteness(request);
         return OnlineStandingController.getOnlineQuizRankingTable(quizId);
     }
+
 
     @GetMapping(value = "getMySubmits/{mode}/{quizId}")
     @ResponseBody

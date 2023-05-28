@@ -15,7 +15,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.createQuizQuestionsList;
 import static irysc.gachesefid.Controllers.Quiz.QuizAbstract.QuestionStat.getStdMarkInMultiSentenceQuestion;
@@ -450,7 +449,7 @@ public class OnlineStandingController extends QuizAbstract {
                 questionStats = null;
         }
 
-        ArrayList<Object> stdAnswers = (ArrayList<Object>) stdDoc.getOrDefault("answers", new ArrayList<>());
+        ArrayList<Document> stdAnswers = (ArrayList<Document>) stdDoc.getOrDefault("answers", new ArrayList<>());
 
         int i = 0;
 
@@ -459,7 +458,7 @@ public class OnlineStandingController extends QuizAbstract {
             if (i >= stdAnswers.size() || stdAnswers.get(i) == null)
                 question.put("stdAns", "");
             else
-                question.put("stdAns", stdAnswers.get(i));
+                question.put("stdAns", stdAnswers.get(i).get("ans"));
 
             i++;
         }
@@ -499,7 +498,7 @@ public class OnlineStandingController extends QuizAbstract {
                     .put("questionsNo", a.quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
                     .put("description", a.quiz.getOrDefault("desc", ""))
                     .put("attaches", jsonArray)
-                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
+                    .put("refresh", 1) //Math.abs(new Random().nextInt(5)) + 5
                     .put("duration", a.neededTime)
                     .put("reminder", a.reminder)
                     .put("isNewPerson", !a.student.containsKey("start_at") ||
@@ -538,10 +537,124 @@ public class OnlineStandingController extends QuizAbstract {
         }
 
         teams.sort(Comparator.comparing(jsonObject -> jsonObject.getInt("point"), Comparator.reverseOrder()));
+        long curr = System.currentTimeMillis();
 
-        return generateSuccessMsg("data", teams);
+        return generateSuccessMsg("data", new JSONObject()
+                .put("ranking", teams)
+                .put("now", curr)
+                .put("reminder", (quiz.getLong("end") - curr) / 1000)
+        );
     }
 
+    public static String getOnlineQuizRankingTableDetail(ObjectId quizId, boolean isAdmin) {
+
+        Document quiz = onlineStandQuizRepository.findById(quizId);
+
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        if (quiz.getLong("end") > System.currentTimeMillis() ||
+                !quiz.getBoolean("visibility")
+        )
+            return JSON_NOT_ACCESS;
+
+        List<Document> students = quiz.getList("students", Document.class);
+        Document questions = quiz.get("questions", Document.class);
+        List<Number> marks = questions.getList("marks", Number.class);
+        double totalMark = 0;
+
+        for(Number mark : marks)
+            totalMark += mark.doubleValue();
+
+        List<JSONObject> teams = new ArrayList<>();
+        long start = quiz.getLong("start");
+        double duration = (quiz.getLong("end") - quiz.getLong("start")) * 1.0;
+
+        for (Document student : students) {
+
+            Document user = userRepository.findById(student.getObjectId("_id"));
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", student.getObjectId("_id").toString())
+                    .put("teamName", student.getString("team_name"))
+                    .put("stdName", user.getString("first_name") + " " + user.getString("last_name"))
+                    .put("point", student.getOrDefault("point", 0));
+
+            if(isAdmin) {
+
+                jsonObject
+                        .put("startAt", irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")))
+                        .put("finishAt", irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")));
+
+            }
+
+            JSONArray answers = new JSONArray();
+
+            if(student.containsKey("answers")) {
+
+                for(Document ans : student.getList("answers", Document.class)) {
+
+                    if(ans.get("ans") != null && ans.containsKey("mark") &&
+                            ((Number)ans.get("mark")).doubleValue() > 0) {
+
+                        double m = ((Number)ans.get("mark")).doubleValue();
+                        double p = (m / totalMark) * ((quiz.getLong("end") - ans.getLong("answer_at")) / duration) * 1000;
+
+                        answers.put(new JSONObject()
+                                .put("mark", m)
+                                .put("time", (ans.getLong("answer_at") - start) / 1000)
+                                .put("point", String.format("%.2f", p))
+                        );
+                    }
+                    else {
+                        answers.put(new JSONObject());
+                    }
+                }
+
+            }
+            else {
+                for (Number mark : marks) answers.put(new JSONObject());
+            }
+
+            JSONArray members = new JSONArray();
+
+            if(student.containsKey("team")) {
+
+
+                for(ObjectId objectId : student.getList("team", ObjectId.class)) {
+
+                    Document u = userRepository.findById(objectId);
+                    if(u == null)
+                        continue;
+
+                    if(isAdmin) {
+                        JSONObject jsonObject1 = new JSONObject();
+                        irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject1, u);
+                        members.put(jsonObject1);
+                    }
+                    else {
+                        members.put(new JSONObject()
+                                .put("name", u.getString("first_name") + " " + u.getString("last_name"))
+                        );
+                    }
+                }
+
+            }
+
+            jsonObject
+                    .put("answers", answers)
+                    .put("marks", marks)
+                    .put("members", members)
+            ;
+
+            teams.add(jsonObject);
+        }
+
+        teams.sort(Comparator.comparing(jsonObject -> jsonObject.getInt("point"), Comparator.reverseOrder()));
+
+        return generateSuccessMsg("data", teams
+        );
+    }
 
     private static double doCorrect(double qMark, String type, Object studentAnswer,
                                     ObjectId questionId, Object answer) {
@@ -578,7 +691,7 @@ public class OnlineStandingController extends QuizAbstract {
     }
 
     public static String saveStudentAnswers(Document doc, Object stdAns,
-                                            Document student, ObjectId questionId) {
+                                            Document student, ObjectId questionId, Object studentId) {
 
         if (stdAns.toString().isEmpty())
             return generateErr("لطفا پاسخ خود را وارد نمایید");
@@ -598,7 +711,7 @@ public class OnlineStandingController extends QuizAbstract {
         if (idx >= pairValues.size())
             return JSON_NOT_UNKNOWN;
 
-        List<Object> stdAnswers = (List<Object>) student.getOrDefault("answers", new ArrayList<>());
+        List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
         if(stdAnswers.size() > idx && stdAnswers.get(idx) != null)
             return generateErr("تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد");
 
@@ -647,7 +760,8 @@ public class OnlineStandingController extends QuizAbstract {
                 stdAnswers.add(null);
         }
 
-        stdAnswers.set(idx, stdAns);
+        long curr = System.currentTimeMillis();
+        Document d = new Document("answer_at", curr).append("ans", stdAns).append("user_id", studentId);
 
         if(stdMark > 0) {
             int point = (int) student.getOrDefault("point", 0);
@@ -655,12 +769,15 @@ public class OnlineStandingController extends QuizAbstract {
             for (Number n : marks)
                 totalMark += n.doubleValue();
 
-            double reminder = Math.max(0, (1.0 * doc.getLong("end") - System.currentTimeMillis()) /
+            double reminder = Math.max(0, (1.0 * doc.getLong("end") - curr) /
                     (doc.getLong("end") - doc.getLong("start")));
 
             point += (stdMark / totalMark) * reminder * 1000.0;
             student.put("point", point);
+            d.put("mark", stdMark);
         }
+
+        stdAnswers.set(idx, d);
         student.put("answers", stdAnswers);
 
         onlineStandQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
@@ -670,11 +787,10 @@ public class OnlineStandingController extends QuizAbstract {
     public static String storeAnswer(ObjectId quizId, ObjectId questionId,
                                      ObjectId studentId, Object answer) {
 
-
         try {
 
             QuizInfo a = checkStoreAnswer(studentId, quizId, true);
-            String result = saveStudentAnswers(a.quiz, answer, a.student, questionId);
+            String result = saveStudentAnswers(a.quiz, answer, a.student, questionId, studentId);
 
             if (result.contains("nok"))
                 return result;
@@ -686,6 +802,74 @@ public class OnlineStandingController extends QuizAbstract {
             return generateErr(x.getMessage());
         }
 
+    }
+
+    public static String reviewQuiz(ObjectId quizId, ObjectId studentId, boolean isStudent) {
+        try {
+
+            Document doc = onlineStandQuizRepository.findById(quizId);
+
+            if (doc == null)
+                return JSON_NOT_VALID_ID;
+
+            List<Document> students = doc.getList("students", Document.class);
+            Document stdDoc = null;
+
+            if(isStudent) {
+
+                for (Document student : students) {
+
+                    if (student.getObjectId("_id").equals(studentId)) {
+                        stdDoc = student;
+                        break;
+                    }
+
+                    if (student.containsKey("team") &&
+                            student.getList("team", ObjectId.class).contains(studentId)) {
+                        stdDoc = student;
+                        break;
+                    }
+
+                }
+
+                if (stdDoc == null)
+                    return JSON_NOT_ACCESS;
+
+                if (doc.getLong("end") > System.currentTimeMillis())
+                    return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+            }
+
+            int neededTime = (int) ((doc.getLong("end") - doc.getLong("start")) / 1000);
+
+            Document questions = doc.get("questions", Document.class);
+
+            int qNo = 0;
+
+            if (questions.containsKey("_ids"))
+                qNo = questions.getList("_ids", ObjectId.class).size();
+
+            List<String> attaches = (List<String>) doc.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            String baseFolder = OnlineStandQuizRepository.FOLDER;
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + baseFolder + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", doc.getString("title"))
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("questionsNo", qNo)
+                    .put("description", doc.getOrDefault("description", ""))
+                    .put("attaches", jsonArray)
+                    .put("duration", neededTime);
+
+            return returnQuiz(doc, stdDoc, true, quizJSON);
+
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
     }
 
     @Override
@@ -792,7 +976,7 @@ public class OnlineStandingController extends QuizAbstract {
             ) {
                 jsonObject
                         .put("status", "inProgress")
-                        .put("duration", calcLen(quiz))
+                        .put("duration", (quiz.getLong("end") - quiz.getLong("start")) / 1000)
                         .put("questionsCount", questionsCount);
             } else
                 jsonObject.put("status", "notStart");

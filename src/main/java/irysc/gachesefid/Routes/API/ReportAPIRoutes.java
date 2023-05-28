@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Quiz.AdminReportController;
+import irysc.gachesefid.Controllers.Quiz.OnlineStandingController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -129,6 +130,9 @@ public class ReportAPIRoutes extends Router {
 
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.getOnlineQuizRankingTableDetail(quizId, isAdmin);
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return StudentReportController.getRanking(iryscQuizRepository, isAdmin, null, quizId);

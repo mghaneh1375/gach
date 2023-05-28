@@ -30,7 +30,6 @@ import static irysc.gachesefid.Controllers.Quiz.AdminReportController.createQuiz
 import static irysc.gachesefid.Controllers.Quiz.QuizController.payFromWallet;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Test.Utility.studentId;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir;
 import static irysc.gachesefid.Utility.FileUtils.uploadDir_dev;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -400,12 +399,17 @@ public class StudentQuizController {
         if (generalMode == null)
             quizzes.addAll(openQuizRepository.find(and(filters), null));
 
+        long zero = 0;
+        quizzes.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
+
         QuizAbstract onlineStandingController = new OnlineStandingController();
         QuizAbstract regularQuizController = new RegularQuizController();
         QuizAbstract tashrihiQuizController = new TashrihiQuizController();
         QuizAbstract openQuizAbstract = new OpenQuiz();
 
-        for (Document quiz : quizzes) {
+        for (int z = quizzes.size() - 1; z >= 0; z--) {
+
+            Document quiz = quizzes.get(z);
 
             boolean isIRYSCQuiz = quiz.containsKey("launch_mode") ||
                     quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
@@ -460,10 +464,17 @@ public class StudentQuizController {
                     int neededTime = isOnlineStandingQuiz ?
                             ((int) (quiz.getLong("end") - quiz.getLong("start"))) / 1000 :
                             quizAbstract.calcLen(quiz);
-                    int untilYetInSecondFormat =
-                            (int) ((curr - studentDoc.getLong("start_at")) / 1000);
 
-                    int reminder = neededTime - untilYetInSecondFormat;
+                    int reminder;
+                    if(isOnlineStandingQuiz) {
+                        reminder = ((int) (quiz.getLong("end") - curr)) / 1000;
+                    }
+                    else {
+                        int untilYetInSecondFormat =
+                                (int) ((curr - studentDoc.getLong("start_at")) / 1000);
+
+                        reminder = neededTime - untilYetInSecondFormat;
+                    }
 
                     if (reminder < 0)
                         jsonObject.put("status", isIRYSCQuiz ? "waitForResult" : "finished");
