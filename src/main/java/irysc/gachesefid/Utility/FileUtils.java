@@ -88,8 +88,6 @@ public class FileUtils {
 
     public static boolean checkExist(String filename, String folder) {
 
-        if(1 == 1)
-        return true;
         Path location = Paths.get(DEV_MODE ?
                 uploadDir_dev + folder + File.separator + filename :
                 uploadDir + folder + File.separator + filename

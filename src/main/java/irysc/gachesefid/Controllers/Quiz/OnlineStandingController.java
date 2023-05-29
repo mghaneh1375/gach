@@ -449,7 +449,8 @@ public class OnlineStandingController extends QuizAbstract {
                 questionStats = null;
         }
 
-        ArrayList<Document> stdAnswers = (ArrayList<Document>) stdDoc.getOrDefault("answers", new ArrayList<>());
+        ArrayList<Document> stdAnswers = stdDoc == null ? new ArrayList<>() :
+                (ArrayList<Document>) stdDoc.getOrDefault("answers", new ArrayList<>());
 
         int i = 0;
 
@@ -589,10 +590,18 @@ public class OnlineStandingController extends QuizAbstract {
             }
 
             JSONArray answers = new JSONArray();
+            JSONArray allAnswers = new JSONArray();
 
             if(student.containsKey("answers")) {
 
                 for(Document ans : student.getList("answers", Document.class)) {
+
+                    if(isAdmin) {
+                        if (ans.get("ans") != null)
+                            allAnswers.put(ans.get("ans"));
+                        else
+                            allAnswers.put("");
+                    }
 
                     if(ans.get("ans") != null && ans.containsKey("mark") &&
                             ((Number)ans.get("mark")).doubleValue() > 0) {
@@ -613,13 +622,18 @@ public class OnlineStandingController extends QuizAbstract {
 
             }
             else {
-                for (Number mark : marks) answers.put(new JSONObject());
+                for (Number mark : marks) {
+
+                    if(isAdmin)
+                        allAnswers.put("");
+
+                    answers.put(new JSONObject());
+                }
             }
 
             JSONArray members = new JSONArray();
 
             if(student.containsKey("team")) {
-
 
                 for(ObjectId objectId : student.getList("team", ObjectId.class)) {
 
@@ -630,7 +644,7 @@ public class OnlineStandingController extends QuizAbstract {
                     if(isAdmin) {
                         JSONObject jsonObject1 = new JSONObject();
                         irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject1, u);
-                        members.put(jsonObject1);
+                        members.put(jsonObject1.getJSONObject("student"));
                     }
                     else {
                         members.put(new JSONObject()
@@ -646,6 +660,9 @@ public class OnlineStandingController extends QuizAbstract {
                     .put("marks", marks)
                     .put("members", members)
             ;
+
+            if(isAdmin)
+                jsonObject.put("allAnswers", allAnswers);
 
             teams.add(jsonObject);
         }
@@ -1001,8 +1018,13 @@ public class OnlineStandingController extends QuizAbstract {
         }
 
         if (isAdmin) {
+
+            long curr = System.currentTimeMillis();
+
             jsonObject
                     .put("teamsCount", quiz.getInteger("registered"))
+                    .put("status", quiz.getLong("start") > curr ? "notStart" :
+                            quiz.getLong("end") > curr ? "inProgress" : "finished")
                     .put("visibility", quiz.getBoolean("visibility"))
                     .put("priority", quiz.getInteger("priority"))
                     .put("questionsCount", questionsCount);
