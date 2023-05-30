@@ -56,9 +56,13 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) || mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
+                mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
+                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.getRegistrable(
-                    mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                    mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ? escapeQuizRepository :
+                            schoolQuizRepository,
                     isAdmin, tag, finishedIsNeeded
             );
 

@@ -43,16 +43,11 @@ public class QuestionAPIRoutes extends Router {
     @GetMapping(value = "/escapeQuizQuestions")
     @ResponseBody
     public String escapeQuizQuestions(HttpServletRequest request,
-                                      @RequestParam(required = false) Boolean isQuestionNeeded,
-                                      @RequestParam(required = false) Integer criticalThresh,
-                                      @RequestParam(required = false) ObjectId subjectId,
-                                      @RequestParam(required = false) ObjectId lessonId,
-                                      @RequestParam(required = false) ObjectId gradeId,
                                       @RequestParam(required = false) String organizationCode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getPrivilegeUser(request);
-        return QuestionController.subjectQuestions(
-                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode, subjectId, lessonId, gradeId
+        return QuestionController.getEscapeQuizQuestions(
+                organizationCode != null && organizationCode.isEmpty() ? null : organizationCode
         );
     }
 
@@ -136,10 +131,7 @@ public class QuestionAPIRoutes extends Router {
         PairValue p = CommonController.removeAllReturnDocs(
                 escapeQuizQuestionRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
-                or(
-                        exists("used", false),
-                        eq("used", 0)
-                )
+                null
         );
 
         return (String) p.getKey();
@@ -209,6 +201,30 @@ public class QuestionAPIRoutes extends Router {
         return QuestionController.addQuestion(subjectId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PostMapping(value = "storeEscapeQuizQuestion")
+    @ResponseBody
+    public String storeEscapeQuizQuestion(HttpServletRequest request,
+                                          @RequestPart(value = "questionFile") MultipartFile questionFile,
+                                          @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                                          @RequestPart(value = "json") @StrongJSONConstraint(
+                                                  params = {
+                                                          "answer",
+                                                          "organizationId",
+                                                  },
+                                                  paramsType = {
+                                                          Object.class,
+                                                          String.class,
+                                                  }
+                                          ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (questionFile == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.addEscapeQuizQuestion(questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
+    }
+
     @PostMapping(value = "edit/{questionId}")
     @ResponseBody
     public String edit(HttpServletRequest request,
@@ -246,6 +262,27 @@ public class QuestionAPIRoutes extends Router {
         return QuestionController.updateQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PostMapping(value = "editEscapeQuizQuestion/{questionId}")
+    @ResponseBody
+    public String editEscapeQuizQuestion(HttpServletRequest request,
+                                         @PathVariable @ObjectIdConstraint ObjectId questionId,
+                                         @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
+                                         @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                                         @RequestPart(value = "json") @StrongJSONConstraint(
+                                                 params = {
+                                                         "answer",
+                                                         "organizationId",
+                                                 },
+                                                 paramsType = {
+                                                         Object.class,
+                                                         String.class,
+                                                 }
+                                         ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.updateEscapeQuizQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
+    }
+
     @PostMapping(value = "/addBatch")
     @ResponseBody
     public String addBatch(HttpServletRequest request,
@@ -257,6 +294,19 @@ public class QuestionAPIRoutes extends Router {
 
         getAdminPrivilegeUserVoid(request);
         return QuestionController.addBatch(file);
+    }
+
+    @PostMapping(value = "/addBatchEscapeQuizQuestions")
+    @ResponseBody
+    public String addBatchEscapeQuizQuestions(HttpServletRequest request,
+                                              @RequestBody MultipartFile file)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.addBatchEscapeQuizQuestions(file);
     }
 
     @GetMapping

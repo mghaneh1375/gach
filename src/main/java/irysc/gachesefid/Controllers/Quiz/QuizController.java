@@ -909,6 +909,9 @@ public class QuizController {
             else if (db instanceof OnlineStandQuizRepository)
                 quizAbstract = new OnlineStandingController();
 
+            else if (db instanceof EscapeQuizQuestionRepository)
+                quizAbstract = new EscapeQuizController();
+
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
                         quizAbstract.convertDocToJSON(quiz, false, true, false, false)
@@ -2046,22 +2049,37 @@ public class QuizController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document doc : docs) {
+        QuizAbstract quizAbstract;
 
-            QuizAbstract quizAbstract;
+        if(db instanceof EscapeQuizRepository) {
 
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
-                quizAbstract = new RegularQuizController();
-            else
-                quizAbstract = new TashrihiQuizController();
+            quizAbstract = new EscapeQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            for (Document doc : docs) {
+                jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            }
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("items", jsonArray)
+            );
+        }
+        else {
+            for (Document doc : docs) {
+
+                if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                    quizAbstract = new RegularQuizController();
+                else
+                    quizAbstract = new TashrihiQuizController();
+
+                jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            }
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("items", jsonArray)
+                    .put("tags", db.distinctTags("tags"))
+            );
         }
 
-        return generateSuccessMsg("data", new JSONObject()
-                .put("items", jsonArray)
-                .put("tags", db.distinctTags("tags"))
-        );
     }
 
     public static String getFinishedQuizzes() {

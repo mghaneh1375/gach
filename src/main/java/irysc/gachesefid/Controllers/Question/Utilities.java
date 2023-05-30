@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
+import irysc.gachesefid.DB.EscapeQuizQuestionRepository;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.QuestionLevel;
@@ -126,16 +127,16 @@ public class Utilities {
                             doc.getString("level").equals("mid") ? "متوسط" : "آسان");
 
             if (doc.containsKey("stdAns")) {
-                if(doc.get("stdAns") instanceof Double && Double.isNaN((Double) doc.get("stdAns")))
+                if (doc.get("stdAns") instanceof Double && Double.isNaN((Double) doc.get("stdAns")))
                     jsonObject.put("stdAns", "");
                 else
                     jsonObject.put("stdAns", doc.get("stdAns"));
             }
 
-            if(doc.containsKey("stdMark"))
+            if (doc.containsKey("stdMark"))
                 jsonObject.put("stdMark", doc.get("stdMark"));
 
-            if(doc.containsKey("markDesc"))
+            if (doc.containsKey("markDesc"))
                 jsonObject.put("markDesc", doc.get("markDesc"));
 
             if (isDetailNeeded || isAnswerFileNeeded) {
@@ -145,12 +146,11 @@ public class Utilities {
                         .put("oldIncorrect", doc.getInteger("old_incorrect"))
                         .put("oldWhite", doc.getInteger("old_white"));
 
-                if(doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()) && jsonObject.has("stdAns")) {
+                if (doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName()) && jsonObject.has("stdAns")) {
                     jsonObject.put("stdMark",
                             QuizAbstract.QuestionStat.getStdMarkInMultiSentenceQuestion(doc.getString("answer"), jsonObject.getString("stdAns"), doc.getDouble("mark")).getKey()
                     );
-                }
-                else if(doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
+                } else if (doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
 
                     double stdAns = jsonObject.getDouble("stdAns");
 
@@ -206,18 +206,18 @@ public class Utilities {
             if (doc.containsKey("sentences_count"))
                 jsonObject.put("sentencesCount", doc.get("sentences_count"));
 
-            if(doc.containsKey("can_upload"))
+            if (doc.containsKey("can_upload"))
                 jsonObject.put("canUpload", doc.get("can_upload"));
 
             if (isQuestionFileNeeded && doc.containsKey("question_file")) {
-                if(isFromDataset)
+                if (isFromDataset)
                     jsonObject.put("questionFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("question_file"));
                 else
                     jsonObject.put("questionFile", STATICS_SERVER + "school_quizzes/questions/" + doc.getString("question_file"));
             }
 
             if (isAnswerFileNeeded && doc.containsKey("answer_file")) {
-                if(isFromDataset)
+                if (isFromDataset)
                     jsonObject.put("answerFile", STATICS_SERVER + QuestionRepository.FOLDER + "/" + doc.getString("answer_file"));
                 else
                     jsonObject.put("answerFile", STATICS_SERVER + "school_quizzes/questions/" + doc.getString("answer_file"));
@@ -250,6 +250,49 @@ public class Utilities {
 
             jsonObject
                     .put("kindQuestion", doc.getOrDefault("kind_question", "test").toString());
+
+            jsonArray.put(jsonObject);
+        }
+
+        return jsonArray;
+    }
+
+    public static JSONArray convertEscapeQuestionsList(List<Document> docs,
+                                                       boolean isQuestionFileNeeded,
+                                                       boolean isAnswerFileNeeded,
+                                                       boolean isDetailNeeded) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("no", doc.getInteger("no"));
+
+            if (doc.containsKey("stdAns")) {
+                if (doc.get("stdAns") instanceof Double && Double.isNaN((Double) doc.get("stdAns")))
+                    jsonObject.put("stdAns", "");
+                else
+                    jsonObject.put("stdAns", doc.get("stdAns"));
+            }
+
+            if (isDetailNeeded || isAnswerFileNeeded) {
+                jsonObject.put("answer", doc.get("answer"));
+            }
+
+            if (isDetailNeeded) {
+                jsonObject
+                        .put("organizationId", doc.getString("organization_id"));
+            }
+
+            if (isQuestionFileNeeded && doc.containsKey("question_file")) {
+                jsonObject.put("questionFile", STATICS_SERVER + EscapeQuizQuestionRepository.FOLDER + "/" + doc.getString("question_file"));
+            }
+
+            if (isAnswerFileNeeded && doc.containsKey("answer_file")) {
+                jsonObject.put("answerFile", STATICS_SERVER + EscapeQuizQuestionRepository.FOLDER + "/" + doc.getString("answer_file"));
+            }
 
             jsonArray.put(jsonObject);
         }
@@ -363,14 +406,14 @@ public class Utilities {
         int corrects = (bytes[1] & 0xff);
         int incorrects = (bytes[2] & 0xff);
 
-        int oldWhite = (int)question.getOrDefault("old_white", 0) + whites;
-        int oldCorrect = (int)question.getOrDefault("old_correct", 0) + corrects;
-        int oldIncorrect = (int)question.getOrDefault("old_incorrect", 0) + incorrects;
+        int oldWhite = (int) question.getOrDefault("old_white", 0) + whites;
+        int oldCorrect = (int) question.getOrDefault("old_correct", 0) + corrects;
+        int oldIncorrect = (int) question.getOrDefault("old_incorrect", 0) + incorrects;
         int total = oldCorrect + oldIncorrect + oldWhite;
 
         String level = question.getString("level");
 
-        if(total < 100) {
+        if (total < 100) {
 
             double p = (oldCorrect * 100.0) / total;
 

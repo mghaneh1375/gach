@@ -302,6 +302,7 @@ public class QuizAPIRoutes extends Router {
 
         if (mode.equals(GeneralKindQuiz.IRYSC.getName()) ||
                 mode.equals(AllKindQuiz.OPEN.getName()) ||
+                mode.equals(AllKindQuiz.ESCAPE.getName()) ||
                 mode.equals(AllKindQuiz.ONLINESTANDING.getName()) ||
                 mode.equals(AllKindQuiz.CONTENT.getName())
         )
@@ -309,6 +310,7 @@ public class QuizAPIRoutes extends Router {
                     mode.equals(AllKindQuiz.OPEN.getName()) ?
                             openQuizRepository :
                             mode.equals(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
+                                    mode.equals(AllKindQuiz.ESCAPE.getName()) ? escapeQuizRepository :
                                     mode.equals(AllKindQuiz.CONTENT.getName()) ?
                                             contentQuizRepository : iryscQuizRepository,
                     isAdmin ? null : "",
