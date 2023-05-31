@@ -56,6 +56,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static AccessRequestRepository accessRequestRepository;
     public static ActivationRepository activationRepository;
     public static AdminNotifRepository adminNotifRepository;
+    public static AdviseExamTagRepository adviseExamTagRepository;
     public static AdviseTagRepository adviseTagRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
     public static AlertsRepository alertsRepository;
@@ -75,6 +76,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
     public static HWRepository hwRepository;
+    public static LifeScheduleRepository lifeScheduleRepository;
     public static LifeStyleTagRepository lifeStyleTagRepository;
     public static OffcodeRepository offcodeRepository;
     public static OnlineStandQuizRepository onlineStandQuizRepository;
@@ -122,6 +124,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             accessRequestRepository = new AccessRequestRepository();
             activationRepository = new ActivationRepository();
             adminNotifRepository = new AdminNotifRepository();
+            adviseExamTagRepository = new AdviseExamTagRepository();
             adviseTagRepository = new AdviseTagRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
             alertsRepository = new AlertsRepository();
@@ -141,6 +144,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
             hwRepository = new HWRepository();
+            lifeScheduleRepository = new LifeScheduleRepository();
             lifeStyleTagRepository = new LifeStyleTagRepository();
             mailRepository = new MailRepository();
             mailQueueRepository = new MailQueueRepository();

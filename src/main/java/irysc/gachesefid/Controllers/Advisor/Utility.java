@@ -5,6 +5,7 @@ import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -39,6 +40,45 @@ public class Utility {
 
 
         return jsonObject;
+    }
+
+    private static String getWeekDay(int dayIdx) {
+
+        switch (dayIdx) {
+            case 0:
+            default:
+                return "شنبه";
+            case 1:
+                return "یک شنبه";
+            case 2:
+                return "دو شنبه";
+            case 3:
+                return "سه شنبه";
+            case 4:
+                return "چهار شنبه";
+            case 5:
+                return "پنج شنبه";
+            case 6:
+                return "جمعه";
+        }
+
+    }
+
+    static JSONArray convertLifeScheduleToJSON(Document schedule) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document day : schedule.getList("days", Document.class)) {
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("label", schedule.getString("label"))
+                    .put("day", getWeekDay(day.getInteger("day")))
+                    .put("items", day.getList("items", Document.class));
+
+            jsonArray.put(jsonObject);
+        }
+
+        return jsonArray;
     }
 
 }

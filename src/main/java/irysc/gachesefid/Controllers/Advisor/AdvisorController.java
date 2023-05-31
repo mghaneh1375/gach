@@ -16,9 +16,9 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Controllers.Advisor.Utility.convertLifeScheduleToJSON;
 import static irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest;
-import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -407,4 +407,25 @@ public class AdvisorController {
         return Utility.generateSuccessMsg("data", jsonArray);
     }
 
+    public static String myLifeStyle(ObjectId userId) {
+
+        Document schedule = lifeScheduleRepository.findBySecKey(userId);
+        System.out.println(schedule);
+
+        if(schedule == null) {
+            schedule = new Document("days", new ArrayList<>() {{
+                add(new Document("day", 0).append("items", new ArrayList<>()));
+                add(new Document("day", 1).append("items", new ArrayList<>()));
+                add(new Document("day", 2).append("items", new ArrayList<>()));
+                add(new Document("day", 3).append("items", new ArrayList<>()));
+                add(new Document("day", 4).append("items", new ArrayList<>()));
+                add(new Document("day", 5).append("items", new ArrayList<>()));
+                add(new Document("day", 6).append("items", new ArrayList<>()));
+            }}).append("user_id", userId);
+
+            lifeScheduleRepository.insertOne(schedule);
+        }
+
+        return generateSuccessMsg("data", convertLifeScheduleToJSON(schedule));
+    }
 }

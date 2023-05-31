@@ -11,7 +11,6 @@ import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -72,7 +71,8 @@ public class ConfigAPIRoutes extends Router {
                                          "secondRankCertId", "thirdRankCertId",
                                          "forthRankCertId", "fifthRankCertId",
                                          "minQuestionForCustomQuiz", "moneyRateCoef",
-                                         "maxQuestionPerQuiz"
+                                         "maxQuestionPerQuiz", "hwPerStudentPrice",
+                                         "minAdvicePrice"
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -92,7 +92,8 @@ public class ConfigAPIRoutes extends Router {
                                          JSONArray.class, JSONArray.class,
                                          ObjectId.class, ObjectId.class, ObjectId.class,
                                          ObjectId.class, ObjectId.class, Integer.class,
-                                         Number.class, Positive.class
+                                         Number.class, Positive.class, Positive.class,
+                                         Positive.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

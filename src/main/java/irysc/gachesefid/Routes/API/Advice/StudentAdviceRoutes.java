@@ -85,6 +85,14 @@ public class StudentAdviceRoutes extends Router {
         return AdvisorController.myRequests(getStudentUser(request).getObjectId("_id"));
     }
 
+
+    @GetMapping(value = "myLifeStyle")
+    @ResponseBody
+    public String myLifeStyle(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.myLifeStyle(getStudentUser(request).getObjectId("_id"));
+    }
+
     @PutMapping(value = "rate")
     @ResponseBody
     public String rate(HttpServletRequest request,
