@@ -36,7 +36,7 @@ public class OnlineStandingController extends QuizAbstract {
             "kind", "payByStudent", "launchMode", "duration", "permute",
             "minusMark", "backEn", "capacity", "showResultsAfterCorrection",
             "showResultsAfterCorrectionNotLoginUsers",
-            "isQRNeeded"
+            "isQRNeeded", "maxTry", "shouldComplete"
 
     };
 

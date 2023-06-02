@@ -51,14 +51,14 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
-            "kind", "payByStudent", "perTeam", "maxTeams"
+            "kind", "payByStudent", "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
     private final static String[] schoolForbiddenFields = {
             "paperTheme", "isRegistrable", "isUploadable",
             "kind", "startRegistry", "endRegistry", "price",
             "priority", "showResultsAfterCorrectionNotLoginUsers",
-            "perTeam", "maxTeams"
+            "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject,

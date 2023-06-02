@@ -26,13 +26,16 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class GiftController {
 
-    private static String translateType(String type) {
+    public static String translateType(String type) {
 
         if (type.equalsIgnoreCase(GiftType.COIN.getName()))
             return "ایکس پول    ";
 
         if (type.equalsIgnoreCase(GiftType.MONEY.getName()))
             return "پول";
+
+        if (type.equalsIgnoreCase(GiftType.FREE.getName()))
+            return "آزاد";
 
         return "کد تخفیف";
     }
@@ -75,7 +78,7 @@ public class GiftController {
         return "همه";
     }
 
-    private static String translateOffCodeType(String offCodeType) {
+    public static String translateOffCodeType(String offCodeType) {
 
         if (offCodeType.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()))
             return "درصد";

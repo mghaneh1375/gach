@@ -23,6 +23,7 @@ public class OpenQuizController {
             "end", "launchMode", "showResultsAfterCorrection",
             "topStudentsGiftCoin", "topStudentsGiftMoney",
             "topStudentsCount", "paperTheme", "database",
+            "maxTeams", "perTeam", "maxTry", "shouldComplete"
     };
 
     private final static String[] forbiddenTransferFields = {

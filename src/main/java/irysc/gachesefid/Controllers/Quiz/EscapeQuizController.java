@@ -1,19 +1,22 @@
 package irysc.gachesefid.Controllers.Quiz;
 
-import irysc.gachesefid.DB.Common;
+import com.google.common.base.CaseFormat;
+import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.EscapeQuizRepository;
-import irysc.gachesefid.DB.OnlineStandQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
+import irysc.gachesefid.Models.GiftType;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-import static irysc.gachesefid.Controllers.Quiz.QuizController.convertStudentDocToJSON;
+import static irysc.gachesefid.Controllers.Config.GiftController.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -23,17 +26,16 @@ public class EscapeQuizController extends QuizAbstract {
 
     private final static String[] mandatoryFields = {
             "startRegistry", "start", "price", "title",
-            "end", "priority", "endRegistry", "duration",
-            "capacity", "topStudentsCount"
+            "end", "priority", "endRegistry",
+            "capacity", "topStudentsCount", "maxTry", "shouldComplete"
     };
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
-            "kind", "payByStudent", "launchMode", "permute",
+            "kind", "payByStudent", "launchMode", "permute", "duration",
             "minusMark", "backEn", "showResultsAfterCorrection",
             "showResultsAfterCorrectionNotLoginUsers",
-            "isQRNeeded"
-
+            "isQRNeeded", "maxTeams", "perTeam"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject) {
@@ -53,10 +55,10 @@ public class EscapeQuizController extends QuizAbstract {
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "quiz",
-                            new EscapeQuizController().convertDocToJSON(
-                                    newDoc, false, true,
-                                    false, false
-                            )
+                    new EscapeQuizController().convertDocToJSON(
+                            newDoc, false, true,
+                            false, false
+                    )
             );
 
         } catch (InvalidFieldsException e) {
@@ -67,64 +69,226 @@ public class EscapeQuizController extends QuizAbstract {
 
     }
 
-    public static JSONObject convertOnlineStandingStudentToJSON(Document student, Document user) {
+    private static ArrayList<Document> createQuizQuestionsList(List<ObjectId> questions) {
 
-        JSONObject jsonObject = convertStudentDocToJSON(student, user);
-        jsonObject.put("point", student.getOrDefault("point", 0))
-                .put("teamName", student.getString("team_name"))
-                .put("teamCount", student.getList("team", ObjectId.class).size() + 1)
-        ;
+        ArrayList<Document> questionsList = new ArrayList<>();
 
-        JSONArray team = new JSONArray();
-        for (ObjectId stdId : student.getList("team", ObjectId.class)) {
+        int i = 0;
 
-            Document u = userRepository.findById(stdId);
-            if(u == null)
+        for (ObjectId itr : questions) {
+
+            Document question = escapeQuizQuestionRepository.findById(itr);
+
+            if (question == null) {
+                i++;
                 continue;
-
-            JSONObject jsonObject1 = new JSONObject();
-            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject1, u);
-            jsonObject1.put("id", stdId.toString());
-            team.put(jsonObject1);
-        }
-
-        jsonObject.put("team", team);
-        return jsonObject;
-    }
-
-    public static String getParticipants(Common db,
-                                         ObjectId userId,
-                                         ObjectId quizId,
-                                         ObjectId studentId,
-                                         Boolean justAbsents,
-                                         Boolean justPresence) {
-
-        try {
-            Document quiz = hasAccess(db, userId, quizId);
-
-            JSONArray jsonArray = new JSONArray();
-            List<Document> students = quiz.getList("students", Document.class);
-
-            for (Document student : students) {
-
-                if (studentId != null && !student.getObjectId("_id").equals(studentId))
-                    continue;
-
-                if (justAbsents != null && justAbsents && student.containsKey("start_at"))
-                    continue;
-
-                if (justPresence != null && justPresence && !student.containsKey("start_at"))
-                    continue;
-
-                Document user = userRepository.findById(student.getObjectId("_id"));
-                if (user == null)
-                    continue;
-
-
-                jsonArray.put(convertOnlineStandingStudentToJSON(student, user));
             }
 
-            return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
+            questionsList.add(Document.parse(question.toJson()).append("no", i + 1));
+            i++;
+        }
+
+        return questionsList;
+    }
+
+    public static String returnQuiz(Document quiz, Document stdDoc,
+                                    boolean isStatNeeded, JSONObject quizJSON) {
+
+        Document questionsDoc = quiz.get("questions", Document.class);
+
+        List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                "_ids", new ArrayList<ObjectId>()
+        );
+
+        ArrayList<Document> questionsList = createQuizQuestionsList(questions);
+
+        ArrayList<Document> stdAnswers = stdDoc == null ? new ArrayList<>() :
+                (ArrayList<Document>) stdDoc.getOrDefault("answers", new ArrayList<>());
+
+        int i = 0;
+
+        for (Document question : questionsList) {
+
+            if (i >= stdAnswers.size() || stdAnswers.get(i) == null)
+                question.put("stdAns", "");
+            else
+                question.put("stdAns", stdAnswers.get(i).get("ans"));
+
+            i++;
+        }
+
+        JSONArray questionsJSONArr = Utilities.convertEscapeQuestionsList(
+                questionsList, true, isStatNeeded, isStatNeeded
+        );
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("questions", questionsJSONArr);
+        jsonObject.put("quizInfo", quizJSON);
+
+        return generateSuccessMsg("data", jsonObject);
+
+    }
+
+    public static boolean saveStudentAnswers(Document doc, Object stdAns,
+                                             Document student, ObjectId questionId
+    ) throws InvalidFieldsException {
+
+        if (stdAns.toString().isEmpty())
+            throw new InvalidFieldsException("لطفا پاسخ خود را وارد نمایید");
+
+        Document questions = doc.get("questions", Document.class);
+        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
+
+        int idx = questionIds.indexOf(questionId);
+
+        if (idx < 0)
+            throw new InvalidFieldsException("id is not valid");
+
+        List<Object> answers = questions.getList("answers", Object.class);
+        List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
+        Object questionAnswer = answers.get(idx);
+
+        if (stdAnswers.size() != answers.size()) {
+            for (int i = 0; i < answers.size(); i++)
+                stdAnswers.add(null);
+        }
+
+        boolean isCorrect = questionAnswer.toString().equals(stdAns.toString());
+        Document d = stdAnswers.get(idx) == null ? new Document("tries", 0) : stdAnswers.get(idx);
+
+        int maxTry = doc.getInteger("max_try");
+
+        if (d.getInteger("tries") >= maxTry)
+            throw new InvalidFieldsException("شما حداکثر می توانید " + maxTry + " بار به این سوال پاسخ دهید");
+
+        d.put("tries", d.getInteger("tries") + 1);
+
+        if (isCorrect) {
+            d.put("ans", stdAns);
+            d.put("answer_at", System.currentTimeMillis());
+        }
+
+        stdAnswers.set(idx, d);
+        student.put("answers", stdAnswers);
+
+        escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+        return isCorrect;
+    }
+
+    public static String storeAnswer(ObjectId quizId, ObjectId questionId,
+                                     ObjectId studentId, Object answer) {
+
+        try {
+
+            OnlineStandingController.QuizInfo a = checkStoreAnswer(studentId, quizId, true);
+
+            try {
+                boolean isCorrect = saveStudentAnswers(a.quiz, answer, a.student, questionId);
+                return generateSuccessMsg("reminder", a.reminder,
+                        new PairValue("isCorrect", isCorrect)
+                );
+            } catch (Exception x) {
+                return generateErr(x.getMessage());
+            }
+
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+
+    }
+
+    public static String reviewQuiz(ObjectId quizId, ObjectId studentId, boolean isStudent) {
+        try {
+
+            Document doc = escapeQuizRepository.findById(quizId);
+
+            if (doc == null)
+                return JSON_NOT_VALID_ID;
+
+            List<Document> students = doc.getList("students", Document.class);
+            Document stdDoc = null;
+
+            if (isStudent) {
+
+                stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        students, "_id", studentId
+                );
+
+                if (stdDoc == null)
+                    return JSON_NOT_ACCESS;
+
+                if (doc.getLong("end") > System.currentTimeMillis())
+                    return generateErr("زمان مرور آزمون هنوز فرانرسیده است.");
+            }
+
+            int neededTime = (int) ((doc.getLong("end") - doc.getLong("start")) / 1000);
+
+            Document questions = doc.get("questions", Document.class);
+
+            int qNo = 0;
+
+            if (questions.containsKey("_ids"))
+                qNo = questions.getList("_ids", ObjectId.class).size();
+
+            List<String> attaches = (List<String>) doc.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            String baseFolder = EscapeQuizRepository.FOLDER;
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + baseFolder + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", doc.getString("title"))
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("questionsNo", qNo)
+                    .put("description", doc.getOrDefault("description", ""))
+                    .put("attaches", jsonArray);
+
+            return returnQuiz(doc, stdDoc, true, quizJSON);
+
+        } catch (Exception x) {
+            x.printStackTrace();
+            return generateErr(x.getMessage());
+        }
+    }
+
+    public static String fetchQuestions(ObjectId quizId) {
+
+        try {
+
+            Document quiz = hasAccess(escapeQuizRepository, null, quizId);
+            Document questionsDoc = quiz.get("questions", Document.class);
+
+            ArrayList<Document> questionsList = new ArrayList<>();
+            List<ObjectId> questions = (List<ObjectId>) questionsDoc.getOrDefault(
+                    "_ids", new ArrayList<ObjectId>()
+            );
+
+            int i = 0;
+
+            for (ObjectId itr : questions) {
+
+                Document question = escapeQuizQuestionRepository.findById(itr);
+
+                if (question == null) {
+                    i++;
+                    continue;
+                }
+
+                Document tmpDoc = Document.parse(question.toJson())
+                        .append("no", i + 1);
+
+                questionsList.add(tmpDoc);
+                i++;
+            }
+
+            JSONArray jsonArray = Utilities.convertEscapeQuestionsList(
+                    questionsList, true, true, true
+            );
+
+            return generateSuccessMsg("data", jsonArray);
         } catch (InvalidFieldsException x) {
             return generateErr(
                     x.getMessage()
@@ -132,108 +296,460 @@ public class EscapeQuizController extends QuizAbstract {
         }
     }
 
-    public static String forceRegistry(ObjectId quizId, JSONArray jsonArray,
-                                       int paid, String teamName) {
 
-        Document quiz = onlineStandQuizRepository.findById(quizId);
-        if(quiz == null)
-            return JSON_NOT_VALID_ID;
+    private static OnlineStandingController.QuizInfo checkStoreAnswer(ObjectId studentId, ObjectId quizId, boolean allowDelay
+    ) throws InvalidFieldsException {
 
-        if(jsonArray.length() == 0)
-            return JSON_NOT_VALID_PARAMS;
+        long allowedDelay = allowDelay ? 300000 : 0; // 5min
 
-        if(jsonArray.length() > quiz.getInteger("per_team"))
-            return generateErr("حداکثر تعداد نفرات هر گروه می تواند " + quiz.getInteger("per_team") + " می تواند باشد");
+        Document doc = escapeQuizRepository.findById(quizId);
 
-        List<ObjectId> teamMembers = new ArrayList<>();
-        Document mainMember = null;
+        if (doc == null)
+            throw new InvalidFieldsException("id is not valid");
 
-        for(int i = 0; i < jsonArray.length(); i++) {
-
-            String NID = jsonArray.getString(i);
-
-            Document user = userRepository.findBySecKey(NID);
-            if(user == null)
-                return JSON_NOT_VALID_PARAMS;
-
-            if(i == 0)
-                mainMember = user;
-            else
-                teamMembers.add(user.getObjectId("_id"));
-        }
-
-        if(mainMember == null)
-            return JSON_NOT_UNKNOWN;
-
-        List<Document> added = new EscapeQuizController().registry(
-                mainMember.getObjectId("_id"),
-                mainMember.getOrDefault("phone", "").toString() + "__" +
-                        mainMember.getOrDefault("mail", "").toString(),
-                quizId.toString() + "__" + teamName, teamMembers, paid, null,
-                mainMember.getString("first_name") + " " + mainMember.getString("last_name")
+        List<Document> students = doc.getList("students", Document.class);
+        Document stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                students, "_id", studentId
         );
 
-        if(added == null)
-            return JSON_NOT_UNKNOWN;
+        if (stdDoc == null)
+            throw new InvalidFieldsException("not access");
 
-        return irysc.gachesefid.Utility.Utility.returnAddResponse(null, new JSONArray().put(
-                convertOnlineStandingStudentToJSON(added.get(0), mainMember)
-        ));
+        long end = doc.getLong("end") + allowedDelay;
+        long curr = System.currentTimeMillis();
+
+        if (doc.containsKey("start") &&
+                (
+                        doc.getLong("start") > curr ||
+                                end < curr
+                )
+        )
+            throw new InvalidFieldsException("در زمان ارزیابی قرار نداریم.");
+
+        long neededTime = (doc.getLong("end") - doc.getLong("start")) / 1000;
+        int reminder = (int) ((doc.getLong("end") - curr) / 1000);
+
+        if (reminder + allowedDelay / 1000 <= 0)
+            throw new InvalidFieldsException("زمان این آزمون به پایان رسیده است");
+
+        OnlineStandingController.QuizInfo a = new OnlineStandingController.QuizInfo(doc, reminder, stdDoc, neededTime);
+        if (stdDoc.getOrDefault("start_at", null) == null)
+            stdDoc.put("start_at", curr);
+
+        stdDoc.put("finish_at", curr);
+        escapeQuizRepository.replaceOne(quizId, doc);
+
+        return a;
+    }
+
+    public static String launch(ObjectId quizId, ObjectId studentId) {
+
+        try {
+
+            OnlineStandingController.QuizInfo a = checkStoreAnswer(studentId, quizId, false);
+
+            long curr = System.currentTimeMillis();
+
+            List<String> attaches = (List<String>) a.quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            String folderBase = EscapeQuizRepository.FOLDER;
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + folderBase + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", a.quiz.getString("title"))
+                    .put("id", a.quiz.getObjectId("_id").toString())
+                    .put("questionsNo", a.quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                    .put("description", a.quiz.getOrDefault("desc", ""))
+                    .put("attaches", jsonArray)
+                    .put("duration", a.neededTime)
+                    .put("reminder", a.reminder)
+                    .put("isNewPerson", !a.student.containsKey("start_at") ||
+                            a.student.get("start_at") == null ||
+                            a.student.getLong("start_at") == curr
+                    );
+
+            return returnQuiz(a.quiz, a.student, false, quizJSON);
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+
+    }
+
+    public static String gifts(ObjectId quizId) {
+
+        Document quiz = escapeQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Document> gifts = (List<Document>) quiz.getOrDefault("gifts", new ArrayList<Document>());
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (int i = 1; i <= quiz.getInteger("top_students_count"); i++) {
+
+            Document gift = searchInDocumentsKeyVal(gifts, "rank", i);
+            if (gift == null)
+                jsonArray.put(new JSONObject().put("rank", i));
+            else
+                jsonArray.put(convertGiftDocToJSON(gift));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String removeGift(ObjectId quizId, int rank) {
+
+        Document quiz = escapeQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        if (!quiz.containsKey("gifts"))
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Document> gifts = quiz.getList("gifts", Document.class);
+
+        int idx = searchInDocumentsKeyValIdx(gifts, "rank", rank);
+        if (idx < 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        gifts.remove(idx);
+
+        escapeQuizRepository.replaceOne(quizId, quiz);
+        return JSON_OK;
+    }
+
+    public static String addGift(ObjectId quizId, JSONObject data) {
+
+        if (data.getString("type").equalsIgnoreCase(
+                GiftType.FREE.getName()
+        ) !=
+                data.has("description")
+        )
+            return generateErr("لطفا جایزه موردنظر خود را وارد کنید");
+
+
+        if (data.getString("type").equalsIgnoreCase(GiftType.FREE.getName()) == data.has("amount"))
+            return generateErr("لطفا مقدار موردنظر خود را وارد نمایید");
+
+        if (data.getString("type").equalsIgnoreCase(
+                GiftType.OFFCODE.getName()
+        ) !=
+                data.has("useFor")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        if (data.getString("type").equalsIgnoreCase(
+                GiftType.OFFCODE.getName()
+        ) !=
+                data.has("offCodeType")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        if (data.getString("type").equalsIgnoreCase(
+                GiftType.OFFCODE.getName()
+        ) !=
+                data.has("expireAt")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        if (data.has("expireAt") && data.getLong("expireAt") < System.currentTimeMillis())
+            return JSON_NOT_VALID_PARAMS;
+
+        Document quiz = escapeQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if (data.getInt("rank") > quiz.getInteger("top_students_count"))
+            return generateErr("رتبه باید کمتر مساوی " + quiz.getInteger("top_students_count") + " باشد");
+
+        List<Document> gifts = (List<Document>) quiz.getOrDefault("gifts", new ArrayList<Document>());
+
+        Document newDoc = searchInDocumentsKeyVal(gifts, "rank", data.getInt("rank"));
+        if (newDoc != null)
+            return generateErr("برای این رتبه جایزه ساخته شده است");
+
+        newDoc = new Document();
+
+        for (String key : data.keySet()) {
+            newDoc.put(
+                    CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
+                    data.get(key)
+            );
+        }
+
+        gifts.add(newDoc);
+        quiz.put("gifts", gifts);
+
+        escapeQuizRepository.replaceOne(quizId, quiz);
+        return generateSuccessMsg("data", convertGiftDocToJSON(newDoc));
+    }
+
+    private static JSONObject convertGiftDocToJSON(Document doc) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("type", doc.getString("type"))
+                .put("rank", doc.get("rank"));
+
+        if (doc.getString("type").equalsIgnoreCase(GiftType.OFFCODE.getName()))
+            jsonObject
+                    .put("typeFa",
+                            translateType(doc.getString("type")) + " - " +
+                                    "برای " + translateUseFor(doc.getString("use_for")) + " - " +
+                                    " به صورت " + translateOffCodeType(doc.getString("off_code_type")) + " -" +
+                                    " تاریخ انقضا " + irysc.gachesefid.Utility.Utility.getSolarDate(doc.getLong("expire_at"))
+                    )
+                    .put("offCodeType", doc.getString("off_code_type"))
+                    .put("expireAt", doc.getLong("expire_at"))
+                    .put("useFor", doc.getString("use_for"));
+        else
+            jsonObject
+                    .put("typeFa", translateType(doc.getString("type")));
+
+        if (doc.containsKey("amount"))
+            jsonObject.put("amount", doc.get("amount"));
+
+        if (doc.containsKey("description"))
+            jsonObject.put("description", doc.getString("description"));
+
+        return jsonObject;
+    }
+
+    public static String getRanking(ObjectId quizId, boolean isAdmin) {
+
+        Document quiz = escapeQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        if (isAdmin && !quiz.containsKey("ranking"))
+            return generateErr("لطفا ابتدا با اهدای جوایز جدول رتبه بندی را بسازید");
+
+        if (!isAdmin && !quiz.containsKey("ranking"))
+            return JSON_NOT_ACCESS;
+
+        JSONArray jsonArray = new JSONArray();
+        List<Document> students = quiz.getList("students", Document.class);
+
+        for (Document rank : quiz.getList("ranking", Document.class)) {
+
+            Document user = userRepository.findById(rank.getObjectId("user_id"));
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("user", user.getString("first_name") + " " + user.getString("last_name"))
+                    .put("rank", rank.get("rank"))
+                    .put("solved", rank.get("solved"))
+                    .put("isComplete", rank.getBoolean("is_complete"))
+                    .put("lastAnswer", (rank.getLong("last_answer") - quiz.getLong("start")) / 1000);
+
+
+            if (isAdmin) {
+
+                Document std = searchInDocumentsKeyVal(students, "_id", rank.getObjectId("user_id"));
+                if (std == null) {
+                    jsonArray.put(jsonObject);
+                    continue;
+                }
+
+                jsonObject.put("startAt", getSolarDate(std.getLong("start_at")))
+                        .put("finishAt", getSolarDate(std.getLong("finish_at")));
+
+                if (std.containsKey("answers")) {
+
+                    List<Object> answers = (List<Object>) std.get("answers");
+                    JSONArray jsonArray1 = new JSONArray();
+
+                    for (Object ans : answers) {
+
+                        if(ans == null)
+                            continue;
+
+                        Document answer = (Document)ans;
+
+                        jsonArray1.put(new JSONObject()
+                                .put("tries", answer.get("tries"))
+                                .put("answerAt", answer.containsKey("answer_at") ?
+                                        (answer.getLong("answer_at") - quiz.getLong("start")) / 1000 : ""
+                                )
+                        );
+                    }
+
+                    jsonObject.put("answers", jsonArray1);
+                } else
+                    jsonObject.put("answers", new JSONArray());
+            }
+
+            jsonArray.put(jsonObject);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    static class Rank {
+
+        boolean isComplete;
+        long lastComplete;
+        int solved;
+        ObjectId userId;
+        int rank;
+
+        public Rank(boolean isComplete, long lastComplete, int solved, ObjectId userId) {
+            this.isComplete = isComplete;
+            this.lastComplete = lastComplete;
+            this.solved = solved;
+            this.userId = userId;
+        }
+    }
+
+    public static String giveGifts(Document quiz) {
+
+        if (!quiz.containsKey("gifts"))
+            return generateErr("لطفا ابتدا جوایز را تعیین کنید");
+
+        boolean shouldComplete = quiz.getBoolean("should_complete");
+
+        Document questions = quiz.get("questions", Document.class);
+        List<Object> answers = questions.getList("answers", Object.class);
+
+        List<Document> students = quiz.getList("students", Document.class);
+        List<Rank> ranks = new ArrayList<>();
+
+        for (Document student : students) {
+
+            int stdSolved = 0;
+            long stdLastSolved = -1;
+
+            List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
+
+            for (int i = 0; i < answers.size(); i++) {
+
+                if (stdAnswers.size() <= i || stdAnswers.get(i) == null || !stdAnswers.get(i).containsKey("answer_at"))
+                    continue;
+
+                stdSolved++;
+                stdLastSolved = stdAnswers.get(i).getLong("answer_at");
+            }
+
+            ranks.add(
+                    new Rank(stdSolved == answers.size(), stdLastSolved,
+                            stdSolved, student.getObjectId("_id"))
+            );
+
+        }
+
+        ranks.sort((o1, o2) -> {
+
+            if (o1.solved == o2.solved && o1.solved > 0)
+                return o1.lastComplete < o2.lastComplete ? -1 : 1;
+
+            return o1.solved > o2.solved ? -1 : 1;
+        });
+
+        int r = 1;
+
+        for (Rank rank : ranks)
+            rank.rank = r++;
+
+        List<Document> gifts = quiz.getList("gifts", Document.class);
+        List<Document> rankingList = new ArrayList<>();
+
+        for (Rank rank : ranks) {
+
+            rankingList.add(new Document("user_id", rank.userId)
+                    .append("rank", rank.rank).append("solved", rank.solved)
+                    .append("last_answer", rank.lastComplete).append("is_complete", rank.isComplete)
+            );
+
+            if (shouldComplete && !rank.isComplete)
+                break;
+
+            Document gift = searchInDocumentsKeyVal(gifts, "rank", rank.rank);
+            if (gift == null || gift.getString("type").equalsIgnoreCase("free"))
+                continue;
+
+            Document user = userRepository.findById(rank.userId);
+            if (user == null)
+                continue;
+
+            switch (gift.getString("type")) {
+                case "coin":
+                    double d = user.getDouble("coin") + ((Number) gift.get("amount")).doubleValue();
+                    user.put("coin", Math.round((d * 100.0)) / 100.0);
+                    userRepository.replaceOne(user.getObjectId("_id"), user);
+                    break;
+                case "money":
+                    user.put("money", ((Number) user.get("money")).doubleValue() + ((Number) gift.get("amount")).doubleValue());
+                    userRepository.replaceOne(user.getObjectId("_id"), user);
+                    break;
+                case "offcode":
+                    Document newDoc = new Document("type", gift.getString("off_code_type"))
+                            .append("amount", gift.getInteger("amount"))
+                            .append("expire_at", gift.getLong("expire_at"))
+                            .append("section", gift.getString("use_for"))
+                            .append("user_id", user.getObjectId("_id"))
+                            .append("used", false)
+                            .append("created_at", System.currentTimeMillis());
+
+                    offcodeRepository.insertOne(newDoc);
+                    break;
+            }
+
+        }
+
+        quiz.put("ranking", rankingList);
+        escapeQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+        return JSON_OK;
     }
 
     @Override
-    public List<Document> registry(ObjectId studentId, String phoneAndMail, String quizIdAndTeamStr, List<ObjectId> members,
-                            int paid, ObjectId transactionId, String stdName) {
+    public List<Document> registry(ObjectId studentId, String phone,
+                                   String mail, List<ObjectId> quizIds,
+                                   int paid, ObjectId transactionId, String stdName
+    ) {
 
         ArrayList<Document> added = new ArrayList<>();
-        String[] splited = quizIdAndTeamStr.split("__");
-        ObjectId quizId = new ObjectId(splited[0]);
 
-        try {
-            Document quiz = onlineStandQuizRepository.findById(quizId);
+        for (ObjectId quizId : quizIds) {
 
-            if (quiz == null)
-                return null;
+            try {
+                Document quiz = escapeQuizRepository.findById(quizId);
 
-            List<Document> students = quiz.getList("students", Document.class);
+                List<Document> students = quiz.getList("students", Document.class);
 
-            if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                    students, "_id", studentId
-            ) != -1)
-                return null;
+                if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                        students, "_id", studentId
+                ) != -1)
+                    continue;
 
-            Document stdDoc = new Document("_id", studentId)
-                    .append("paid", paid)
-                    .append("register_at", System.currentTimeMillis())
-                    .append("finish_at", null)
-                    .append("team_name", splited[1])
-                    .append("team", members)
-                    .append("start_at", null)
-                    .append("answers", new byte[0]);
+                Document stdDoc = new Document("_id", studentId)
+                        .append("paid", paid / quizIds.size())
+                        .append("register_at", System.currentTimeMillis())
+                        .append("finish_at", null)
+                        .append("start_at", null);
 
-            students.add(stdDoc);
-            added.add(stdDoc);
-            quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+                students.add(stdDoc);
+                added.add(stdDoc);
+                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
 
-            onlineStandQuizRepository.replaceOne(
-                    quizId, quiz
-            );
+                escapeQuizRepository.replaceOne(
+                        quizId, quiz
+                );
 
-            splited = phoneAndMail.split("__");
-            String phone = splited[0];
-            String mail = splited[1];
+                if (transactionId != null && mail != null) {
+                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
+                }
 
-            if (transactionId != null && mail != null) {
-                new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
+                //todo : send notif
+            } catch (Exception ignore) {
             }
-
-            //todo : send notif
-        } catch (Exception ignore) {
         }
 
         return added;
-
     }
+
 
     @Override
     void quit(Document student, Document quiz) {
@@ -261,7 +777,10 @@ public class EscapeQuizController extends QuizAbstract {
                 .put("generalMode", AllKindQuiz.ESCAPE.getName())
                 .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("tags", quiz.getList("tags", String.class))
+                .put("capacity", quiz.getInteger("capacity"))
                 .put("rate", quiz.getOrDefault("rate", 5))
+                .put("shouldComplete", quiz.getBoolean("should_complete"))
+                .put("maxTry", quiz.getInteger("max_try"))
                 .put("id", quiz.getObjectId("_id").toString());
 
         int questionsCount = 0;
@@ -271,26 +790,18 @@ public class EscapeQuizController extends QuizAbstract {
         } catch (Exception ignore) {
         }
 
+        long curr = System.currentTimeMillis();
+
         if (afterBuy) {
-            long curr = System.currentTimeMillis();
 
             if (quiz.getLong("end") < curr) {
-                boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
-                        quiz.containsKey("report_status") &&
-                        quiz.getString("report_status").equalsIgnoreCase("ready");
-
-                if (canSeeResult)
-                    jsonObject.put("status", "finished")
-                            .put("questionsCount", questionsCount);
-                else
-                    jsonObject.put("status", "waitForResult")
-                            .put("questionsCount", questionsCount);
+                jsonObject.put("status", "finished")
+                        .put("questionsCount", questionsCount);
             } else if (quiz.getLong("start") <= curr &&
                     quiz.getLong("end") > curr
             ) {
                 jsonObject
                         .put("status", "inProgress")
-                        .put("duration", calcLen(quiz))
                         .put("questionsCount", questionsCount);
             } else
                 jsonObject.put("status", "notStart");
@@ -310,6 +821,10 @@ public class EscapeQuizController extends QuizAbstract {
                     .put("questionsCount", questionsCount);
         }
 
+        if (isAdmin && quiz.getLong("end") < curr)
+            jsonObject.put("reportStatus", "ready");
+
+
         if (!isDigest || isDescNeeded)
             jsonObject
                     .put("description", quiz.getOrDefault("description", ""));
@@ -324,7 +839,8 @@ public class EscapeQuizController extends QuizAbstract {
                 if (quiz.containsKey("attaches")) {
                     for (String attach : quiz.getList("attaches", String.class))
                         attaches.put(STATICS_SERVER + EscapeQuizRepository.FOLDER + "/" + attach);
-                };
+                }
+                ;
 
                 jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
                 jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));

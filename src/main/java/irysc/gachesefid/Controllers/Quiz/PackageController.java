@@ -235,10 +235,14 @@ public class PackageController {
                 if(quiz == null) {
 
                     quiz = onlineStandQuizRepository.findById(quizIdFilter);
-                    if (quiz == null)
-                        return JSON_NOT_VALID_PARAMS;
+                    if (quiz == null) {
 
-                    isOnlineStanding = true;
+                        quiz = escapeQuizRepository.findById(quizIdFilter);
+                        if (quiz == null)
+                            return JSON_NOT_VALID_PARAMS;
+                    }
+                    else
+                        isOnlineStanding = true;
 
                 }
 
@@ -518,10 +522,6 @@ public class PackageController {
                     if(userId != null)
                         openQuizFilter.add(nin("students._id", userId));
 
-                    docs.addAll(openQuizRepository.find(
-                            and(openQuizFilter), null, Sorts.ascending("priority")
-                    ));
-
                     ArrayList<Bson> onlineStandingQuizFilter = new ArrayList<>();
 
                     onlineStandingQuizFilter.add(eq("visibility", true));
@@ -538,12 +538,21 @@ public class PackageController {
                             and(onlineStandingQuizFilter), null, Sorts.ascending("priority")
                     ));
 
+                    docs.addAll(escapeQuizRepository.find(
+                            and(onlineStandingQuizFilter), null, Sorts.ascending("priority")
+                    ));
+
+                    docs.addAll(openQuizRepository.find(
+                            and(openQuizFilter), null, Sorts.ascending("priority")
+                    ));
+
                 }
 
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
                 TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
                 OnlineStandingController onlineStandingController = new OnlineStandingController();
+                EscapeQuizController escapeQuizController = new EscapeQuizController();
 
 
                 for (Document doc : docs) {
@@ -598,6 +607,10 @@ public class PackageController {
                     else if(doc.containsKey("mode") && doc.get("mode") != null &&
                             doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                         object = tashrihiQuizController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else if(!doc.containsKey("duration") && !doc.containsKey("minus_mark"))
+                        object = escapeQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
                     else

@@ -348,7 +348,6 @@ public class StudentQuizController {
         else
             filters.add(in("students._id", userId));
 
-
         long curr = System.currentTimeMillis();
 
         if (status != null) {
@@ -373,6 +372,9 @@ public class StudentQuizController {
                     and(filters), ne("mode", "tashrihi")
             ), null));
         }
+
+        if (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            quizzes.addAll(escapeQuizRepository.find(and(filters), null));
 
         if (!isSchool &&
                 (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
@@ -402,6 +404,7 @@ public class StudentQuizController {
         long zero = 0;
         quizzes.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
 
+        QuizAbstract escapeQuizController = new EscapeQuizController();
         QuizAbstract onlineStandingController = new OnlineStandingController();
         QuizAbstract regularQuizController = new RegularQuizController();
         QuizAbstract tashrihiQuizController = new TashrihiQuizController();
@@ -415,11 +418,13 @@ public class StudentQuizController {
                     quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
 
             boolean isOnlineStandingQuiz = quiz.containsKey("per_team");
+            boolean isEscapeQuiz = !quiz.containsKey("duration") && !quiz.containsKey("minus_mark");
 
             QuizAbstract quizAbstract = isIRYSCQuiz ?
                     quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                             tashrihiQuizController :
-                            regularQuizController : isOnlineStandingQuiz ? onlineStandingController : openQuizAbstract;
+                            regularQuizController : isOnlineStandingQuiz ? onlineStandingController :
+                    isEscapeQuiz ? escapeQuizController : openQuizAbstract;
 
             if (isSchool) {
                 data.put(quizAbstract.convertDocToJSON(
@@ -461,12 +466,12 @@ public class StudentQuizController {
                         studentDoc.containsKey("start_at") &&
                         studentDoc.get("start_at") != null
                 ) {
-                    int neededTime = isOnlineStandingQuiz ?
+                    int neededTime = isOnlineStandingQuiz || isEscapeQuiz ?
                             ((int) (quiz.getLong("end") - quiz.getLong("start"))) / 1000 :
                             quizAbstract.calcLen(quiz);
 
                     int reminder;
-                    if(isOnlineStandingQuiz) {
+                    if(isOnlineStandingQuiz || isEscapeQuiz) {
                         reminder = ((int) (quiz.getLong("end") - curr)) / 1000;
                     }
                     else {
@@ -1076,6 +1081,12 @@ public class StudentQuizController {
                 ), null
         );
 
+        ArrayList<Document> escapeQuizzes = escapeQuizRepository.find(
+                and(
+                        in("_id", quizIds),
+                        nin("students._id", userId)
+                ), null
+        );
 
         ArrayList<Document> openQuizzes = openQuizRepository.find(
                 and(
@@ -1085,7 +1096,10 @@ public class StudentQuizController {
         );
 
 
-        if (quizzes.size() + openQuizzes.size() != quizIds.size())
+        if (quizzes.size() + openQuizzes.size() + escapeQuizzes.size() != quizIds.size())
+            return JSON_NOT_VALID_PARAMS;
+
+        if (studentIds != null && escapeQuizzes.size() > 0)
             return JSON_NOT_VALID_PARAMS;
 
         if (studentIds != null && openQuizzes.size() > 0)
@@ -1095,6 +1109,7 @@ public class StudentQuizController {
             return JSON_NOT_VALID_PARAMS;
 
         if (studentIds != null) {
+
             Document school = schoolRepository.findOne(eq("user_id", userId), JUST_ID);
             if (school == null)
                 return JSON_NOT_ACCESS;
@@ -1118,12 +1133,12 @@ public class StudentQuizController {
             }
 
             return doBuy(userId, phone, mail, name, money,
-                    quizPackage, off, quizzes, null, studentOIds
+                    quizPackage, off, quizzes, null, null, studentOIds
             );
         }
 
         return doBuy(userId, phone, mail, name, money,
-                quizPackage, off, quizzes, openQuizzes, null
+                quizPackage, off, quizzes, openQuizzes, escapeQuizzes, null
         );
     }
 
@@ -1496,6 +1511,7 @@ public class StudentQuizController {
                                 Document off,
                                 ArrayList<Document> quizzes,
                                 ArrayList<Document> openQuizzes,
+                                ArrayList<Document> escapeQuizzes,
                                 ArrayList<ObjectId> studentIds
     ) {
 
@@ -1503,11 +1519,16 @@ public class StudentQuizController {
         int totalPrice = 0;
 
         if (studentIds == null) {
+
             for (Document quiz : quizzes)
                 totalPrice += quiz.getInteger("price");
 
             for (Document quiz : openQuizzes)
                 totalPrice += quiz.getInteger("price");
+
+            for (Document quiz : escapeQuizzes)
+                totalPrice += quiz.getInteger("price");
+
         } else
             for (Document quiz : quizzes)
                 totalPrice += quiz.getInteger("price") * studentIds.size();
@@ -1555,8 +1576,13 @@ public class StudentQuizController {
         for (Document quiz : openQuizzes)
             openQuizIds.add(quiz.getObjectId("_id"));
 
+        ArrayList<ObjectId> escapeQuizIds = new ArrayList<>();
+        for (Document quiz : escapeQuizzes)
+            escapeQuizIds.add(quiz.getObjectId("_id"));
+
         ArrayList<ObjectId> allQuizzesIds = quizIds;
         allQuizzesIds.addAll(openQuizIds);
+        allQuizzesIds.addAll(escapeQuizIds);
 
         if (shouldPay - money <= 100) {
 
@@ -1608,6 +1634,9 @@ public class StudentQuizController {
 
                     new OpenQuiz()
                             .registry(studentId, phone, mail, openQuizIds, 0, doc.getObjectId("_id"), stdName);
+
+                    new EscapeQuizController()
+                            .registry(studentId, phone, mail, escapeQuizIds, 0, doc.getObjectId("_id"), stdName);
                 }
 
                 if (finalOff != null) {

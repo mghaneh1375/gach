@@ -3,6 +3,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.*;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -44,6 +45,17 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @RequestMapping(path = "/api/quiz/public/")
 @Validated
 public class StudentQuizAPIRoutes extends Router {
+
+    private Common selectDB(String mode) {
+        return mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                openQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                        onlineStandQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ?
+                                escapeQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                        contentQuizRepository : iryscQuizRepository;
+    }
 
     @GetMapping(value = "get/{mode}")
     @ResponseBody
@@ -128,6 +140,11 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id"), !isAdmin
             );
 
+        if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            return EscapeQuizController.reviewQuiz(
+                    quizId, user.getObjectId("_id"), !isAdmin
+            );
+
         return StudentQuizController.reviewQuiz(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
@@ -153,6 +170,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         )
             return JSON_NOT_VALID_PARAMS;
@@ -161,16 +179,11 @@ public class StudentQuizAPIRoutes extends Router {
         if (jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
             return JSON_NOT_VALID_PARAMS;
 
-        return StudentQuizController.rate(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
-                                onlineStandQuizRepository : openQuizRepository,
+        return StudentQuizController.rate(selectDB(mode),
                 quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
         );
 
     }
-
 
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody
@@ -191,6 +204,11 @@ public class StudentQuizAPIRoutes extends Router {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
             return OnlineStandingController.launch(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            return EscapeQuizController.launch(
                     quizId, getUser(request).getObjectId("_id")
             );
 
@@ -422,6 +440,7 @@ public class StudentQuizAPIRoutes extends Router {
                       )
                       @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+
         Document user = getUser(request);
 
         JSONObject jsonObject = Utility.convertPersian(
@@ -542,6 +561,26 @@ public class StudentQuizAPIRoutes extends Router {
                         jsonObject.getString("code") : null
         );
     }
+
+    @PutMapping(value = "/storeEscapeQuizAnswer/{quizId}/{questionId}")
+    @ResponseBody
+    public String storeAnswers(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId,
+                               @PathVariable @ObjectIdConstraint ObjectId questionId,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"answer"},
+                                       paramsType = {Object.class}
+                               ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        return EscapeQuizController.storeAnswer(
+                quizId, questionId,
+                user.getObjectId("_id"), new JSONObject(jsonStr).get("answer")
+        );
+    }
+
 
     @PutMapping(value = "/storeAnswers/{mode}/{quizId}")
     @ResponseBody
