@@ -971,7 +971,7 @@ public class QuizAPIRoutes extends Router {
     @PutMapping(value = "/updateQuestionMark/{mode}/{quizId}/{questionId}/{mark}")
     @ResponseBody
     public String updateQuestionMark(HttpServletRequest request,
-                                     @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                     @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
                                      @PathVariable @ObjectIdConstraint ObjectId questionId,
                                      @PathVariable Number mark,
@@ -982,8 +982,8 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.updateQuestionMark(iryscQuizRepository, null, quizId, questionId, mark, canUpload);
+        if (isAdmin && isIRYSCQuiz(mode))
+            return QuizController.updateQuestionMark(selectDB(mode), null, quizId, questionId, mark, canUpload);
 
         return QuizController.updateQuestionMark(schoolQuizRepository, user.getObjectId("_id"), quizId, questionId, mark, canUpload);
     }

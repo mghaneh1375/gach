@@ -268,10 +268,10 @@ public class AdminReportController {
 
             long curr = System.currentTimeMillis();
 
-            if (user != null && db instanceof OpenQuizRepository) {
+            if (db instanceof OpenQuizRepository) {
 
                 Document userDocInQuiz = searchInDocumentsKeyVal(
-                        students, "_id", user
+                        students, "_id", studentId
                 );
 
                 if (userDocInQuiz == null)

@@ -2283,17 +2283,41 @@ public class QuizController {
         filters.add(eq("report_status", "ready"));
 
         ArrayList<Document> docs = iryscQuizRepository.find(and(filters), QUIZ_DIGEST, Sorts.descending("created_at"));
+        docs.addAll(escapeQuizRepository.find(and(
+                eq("visibility", true),
+                lt("end", curr),
+                exists("ranking")
+        ), null));
+
+        docs.addAll(onlineStandQuizRepository.find(and(
+                eq("visibility", true),
+                lt("end", curr)
+        ), null));
+
+        long zero = 0;
+        docs.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document doc : docs) {
+        RegularQuizController regularQuizController = new RegularQuizController();
+        TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+        EscapeQuizController escapeQuizController = new EscapeQuizController();
+        OnlineStandingController onlineStandingController = new OnlineStandingController();
 
-            QuizAbstract quizAbstract;
+        QuizAbstract quizAbstract;
 
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
-                quizAbstract = new RegularQuizController();
+        for (int i = docs.size() - 1; i >= 0; i--) {
+
+            Document doc = docs.get(i);
+
+            if(doc.containsKey("max_teams"))
+                quizAbstract = onlineStandingController;
+            else if(!doc.containsKey("launch_mode") && !doc.containsKey("minus_mark"))
+                quizAbstract = escapeQuizController;
+            else if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                quizAbstract = regularQuizController;
             else
-                quizAbstract = new TashrihiQuizController();
+                quizAbstract = tashrihiQuizController;
 
             JSONObject tmp = quizAbstract.convertDocToJSON(doc, true, false, false, false);
             tmp.remove("price");

@@ -223,10 +223,7 @@ public class StudentQuizAPIRoutes extends Router {
 
     @GetMapping(value = "getOnlineQuizRankingTable/{quizId}")
     @ResponseBody
-    public String getOnlineQuizRankingTable(HttpServletRequest request,
-                                            @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException {
-        getUserWithOutCheckCompleteness(request);
+    public String getOnlineQuizRankingTable(@PathVariable @ObjectIdConstraint ObjectId quizId) {
         return OnlineStandingController.getOnlineQuizRankingTable(quizId);
     }
 
@@ -418,15 +415,7 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        return AdminReportController.getStudentAnswerSheet(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
-                                        schoolQuizRepository,
-                null,
-                quizId, user.getObjectId("_id")
-        );
+        return AdminReportController.getStudentAnswerSheet(selectDB(mode), null, quizId, user.getObjectId("_id"));
     }
 
     @PostMapping(path = "buy")

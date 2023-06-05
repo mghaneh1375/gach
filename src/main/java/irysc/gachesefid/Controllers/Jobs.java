@@ -32,14 +32,59 @@ public class Jobs implements Runnable {
         timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
         timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
-//        timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
-        timer.schedule(new SendMails(), 0, 300000);
-        timer.schedule(new SendSMS(), 0, 300000);
-        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
+
+        timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
+
+//        timer.schedule(new SendMails(), 0, 300000);
+//        timer.schedule(new SendSMS(), 0, 300000);
+//        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
     //todo remove redundant transactions
     //todo remove redundant school questions
+
+    class RemoveExpiredNotifs extends TimerTask {
+
+        public void run() {
+
+            long lastMonth = System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30;
+            List<Document> users = userRepository.find(and(
+                    exists("events.0"),
+                    lt("events.0.created_at", lastMonth)
+            ), null);
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+
+            for(Document user : users) {
+
+                List<Document> notifs = user.getList("events", Document.class);
+                List<Document> newList = new ArrayList<>();
+
+                for(Document notif : notifs) {
+
+                    if(notif.getLong("created_at") < lastMonth)
+                        continue;
+
+                    newList.add(notif);
+                }
+
+                if(newList.size() < notifs.size()) {
+
+                    user.put("events", newList);
+                    writes.add(new UpdateOneModel<>(
+                            eq("_id", user.getObjectId("_id")),
+                            new BasicDBObject("$set",
+                                    new BasicDBObject("events", newList)
+                            )
+                    ));
+
+                }
+            }
+
+            if(writes.size() > 0)
+                userRepository.bulkWrite(writes);
+        }
+    }
 
     private static class QuizReminder extends TimerTask {
 

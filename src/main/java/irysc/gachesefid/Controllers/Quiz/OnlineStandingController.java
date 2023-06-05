@@ -399,20 +399,11 @@ public class OnlineStandingController extends QuizAbstract {
         long end = doc.getLong("end") + allowedDelay;
         long curr = System.currentTimeMillis();
 
-        if (doc.containsKey("start") &&
-                (
-                        doc.getLong("start") > curr ||
-                                end < curr
-                )
-        )
+        if (doc.getLong("start") > curr || end < curr)
             throw new InvalidFieldsException("در زمان ارزیابی قرار نداریم.");
-
 
         long neededTime = (doc.getLong("end") - doc.getLong("start")) / 1000;
         int reminder = (int) ((doc.getLong("end") - curr) / 1000);
-
-        if (reminder + allowedDelay / 1000 <= 0)
-            throw new InvalidFieldsException("زمان این آزمون به پایان رسیده است");
 
         QuizInfo a = new QuizInfo(doc, reminder, stdDoc, neededTime);
         if (stdDoc.getOrDefault("start_at", null) == null)
@@ -594,7 +585,12 @@ public class OnlineStandingController extends QuizAbstract {
 
             if(student.containsKey("answers")) {
 
-                for(Document ans : student.getList("answers", Document.class)) {
+                for(Document ans : (List<Document>) student.get("answers")) {
+
+                    if(ans == null) {
+                        answers.put(new JSONObject());
+                        continue;
+                    }
 
                     if(isAdmin) {
                         if (ans.get("ans") != null)
@@ -710,9 +706,6 @@ public class OnlineStandingController extends QuizAbstract {
     public static String saveStudentAnswers(Document doc, Object stdAns,
                                             Document student, ObjectId questionId, Object studentId) {
 
-        if (stdAns.toString().isEmpty())
-            return generateErr("لطفا پاسخ خود را وارد نمایید");
-
         Document questions = doc.get("questions", Document.class);
         List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
 
@@ -730,7 +723,9 @@ public class OnlineStandingController extends QuizAbstract {
 
         List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
         if(stdAnswers.size() > idx && stdAnswers.get(idx) != null)
-            return generateErr("تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد");
+            return generateSuccessMsg("msg","تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد",
+                    new PairValue("ans", stdAnswers.get(idx).get("ans"))
+            );
 
         List<Number> marks = questions.getList("marks", Number.class);
         Object questionAnswer = null;
@@ -805,11 +800,13 @@ public class OnlineStandingController extends QuizAbstract {
                                      ObjectId studentId, Object answer) {
 
         try {
+            if (answer.toString().isEmpty())
+                return generateErr("لطفا پاسخ خود را وارد نمایید");
 
             QuizInfo a = checkStoreAnswer(studentId, quizId, true);
             String result = saveStudentAnswers(a.quiz, answer, a.student, questionId, studentId);
 
-            if (result.contains("nok"))
+            if (result.contains("nok") || result.contains("تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد"))
                 return result;
 
             return generateSuccessMsg("reminder", a.reminder);
