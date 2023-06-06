@@ -755,6 +755,7 @@ public class QuestionController extends Utilities {
                 }
 
                 String questionFilename = row.getCell(1).getStringCellValue();
+
                 if (!FileUtils.checkExist(questionFilename, EscapeQuizQuestionRepository.FOLDER)) {
                     excepts.put(rowIdx);
                     errs.put(batchRowErr(rowIdx, "فایل سوال موجود نیست."));
@@ -794,7 +795,7 @@ public class QuestionController extends Utilities {
                     continue;
                 }
 
-                questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionFilename, null);
+                questionFilename = FileUtils.renameFile(EscapeQuizQuestionRepository.FOLDER, questionFilename, null);
 
                 if (questionFilename == null) {
                     errs.put(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
@@ -803,7 +804,7 @@ public class QuestionController extends Utilities {
                 }
 
                 if (answerFilename != null) {
-                    answerFilename = FileUtils.renameFile(QuestionRepository.FOLDER, answerFilename, null);
+                    answerFilename = FileUtils.renameFile(EscapeQuizQuestionRepository.FOLDER, answerFilename, null);
 
                     if (answerFilename == null) {
                         errs.put(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
