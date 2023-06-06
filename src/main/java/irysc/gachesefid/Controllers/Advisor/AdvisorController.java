@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Advisor;
 
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Models.Access;
@@ -16,14 +17,137 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Controllers.Advisor.Utility.convertLifeScheduleToJSON;
-import static irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest;
+import static irysc.gachesefid.Controllers.Advisor.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
 
+    public static String requestMeeting(ObjectId advisorId,
+                                        String NID,
+                                        String name,
+                                        ObjectId studentId) {
+
+        Document std = userRepository.findById(studentId);
+        if (std == null)
+            return JSON_NOT_VALID_ID;
+
+        int advisorSkyRoomId = createUser(NID, name);
+
+        if (advisorSkyRoomId == -1)
+            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
+
+        String studentName = std.getString("first_name") + " " + std.getString("last_name");
+
+        int studentSkyRoomId = createUser(std.getString("NID"), studentName);
+
+        if (studentSkyRoomId == -1)
+            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
+
+        Document config = getConfig();
+        int maxMeetingPerAdvisorInMonth = (int) config.getOrDefault("max_meeting_per_advisor", 2);
+
+        long curr = System.currentTimeMillis();
+        long monthAgo = curr - 30 * ONE_DAY_MIL_SEC;
+
+        int advisorMeetingsCount = advisorMeetingRepository.count(
+                and(
+                        eq("advisor_id", advisorId),
+                        gt("created_at", monthAgo)
+                )
+        );
+
+        if (advisorMeetingsCount >= maxMeetingPerAdvisorInMonth)
+            return generateErr("شما در هر ماه می توانید حداکثر " + maxMeetingPerAdvisorInMonth + " جلسه ملاقات بسازید");
+
+        int roomId = irysc.gachesefid.Controllers.Advisor.Utility.createMeeting("جلسه مشاوره " + name + " - " + studentName);
+        if (roomId == -1)
+            return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");
+
+        String roomUrl = irysc.gachesefid.Controllers.Advisor.Utility.roomUrl(roomId);
+
+        Document document = new Document("advisor_id", advisorId)
+                .append("student_id", studentId)
+                .append("created_at", curr)
+                .append("room_id", roomId)
+                .append("advisor_sky_id", advisorSkyRoomId)
+                .append("student_sky_id", studentSkyRoomId);
+
+        if(roomUrl != null)
+            document.append("url", roomUrl);
+
+        advisorMeetingRepository.insertOne(document);
+        addUserToClass(studentSkyRoomId, advisorSkyRoomId, roomId);
+
+        return generateSuccessMsg("url", roomUrl);
+    }
+
+    public static String getMyCurrentRoom(ObjectId studentId) {
+
+        long curr = System.currentTimeMillis();
+        long yesterday = curr - ONE_DAY_MIL_SEC;
+
+        List<Document> docs = advisorMeetingRepository.find(and(
+                eq("student_id", studentId),
+                gt("created_at", yesterday),
+                lt("created_at", curr),
+                exists("url")
+        ), new BasicDBObject("url", 1).append("advisor_id", 1).append("created_at", 1));
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            Document advisor = userRepository.findById(doc.getObjectId("advisor_id"));
+
+            if(advisor == null)
+                continue;
+
+            jsonArray.put(
+                    new JSONObject()
+                            .put("advisor", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                            .put("url", doc.getString("url"))
+                            .put("createdAt", getSolarDate(doc.getLong("created_at")))
+            );
+
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String getMyCurrentRoomForAdvisor(ObjectId advisorId) {
+
+        long curr = System.currentTimeMillis();
+        long yesterday = curr - ONE_DAY_MIL_SEC;
+
+        List<Document> docs = advisorMeetingRepository.find(and(
+                eq("advisor_id", advisorId),
+                gt("created_at", yesterday),
+                lt("created_at", curr),
+                exists("url")
+        ), new BasicDBObject("url", 1).append("student_id", 1).append("created_at", 1));
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document doc : docs) {
+
+            Document student = userRepository.findById(doc.getObjectId("student_id"));
+
+            if(student == null)
+                continue;
+
+            jsonArray.put(
+                    new JSONObject()
+                            .put("student", student.getString("first_name") + " " + student.getString("last_name"))
+                            .put("url", doc.getString("url"))
+                            .put("createdAt", getSolarDate(doc.getLong("created_at")))
+            );
+
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 
     public static String removeStudents(Document advisor, JSONArray jsonArray) {
 
@@ -69,16 +193,16 @@ public class AdvisorController {
 
     public static String cancel(Document user) {
 
-        if(!user.containsKey("advisor_id"))
+        if (!user.containsKey("advisor_id"))
             return JSON_NOT_ACCESS;
 
         Document advisor = userRepository.findById(user.getObjectId("advisor_id"));
-        if(advisor != null) {
+        if (advisor != null) {
 
             List<Document> students = advisor.getList("students", Document.class);
             int idx = searchInDocumentsKeyValIdx(students, "_id", user.getObjectId("_id"));
 
-            if(idx > -1) {
+            if (idx > -1) {
 
                 students.remove(idx);
                 userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
@@ -125,10 +249,10 @@ public class AdvisorController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document request : requests) {
+        for (Document request : requests) {
 
             Document advisor = userRepository.findById(request.getObjectId(key));
-            if(advisor == null)
+            if (advisor == null)
                 continue;
 
             jsonArray.put(new JSONObject()
@@ -251,8 +375,7 @@ public class AdvisorController {
         if (answer.equalsIgnoreCase(YesOrNo.NO.getName())) {
             req.put("answer", "reject");
             req.put("answer_at", System.currentTimeMillis());
-        }
-        else {
+        } else {
 
             Document student = userRepository.findById(req.getObjectId("user_id"));
             if (student == null)
@@ -412,7 +535,7 @@ public class AdvisorController {
         Document schedule = lifeScheduleRepository.findBySecKey(userId);
         System.out.println(schedule);
 
-        if(schedule == null) {
+        if (schedule == null) {
             schedule = new Document("days", new ArrayList<>() {{
                 add(new Document("day", 0).append("items", new ArrayList<>()));
                 add(new Document("day", 1).append("items", new ArrayList<>()));

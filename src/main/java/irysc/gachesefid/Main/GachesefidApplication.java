@@ -57,6 +57,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ActivationRepository activationRepository;
     public static AdminNotifRepository adminNotifRepository;
     public static AdviseExamTagRepository adviseExamTagRepository;
+    public static AdvisorMeetingRepository advisorMeetingRepository;
     public static AdviseTagRepository adviseTagRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
     public static AlertsRepository alertsRepository;
@@ -125,6 +126,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             activationRepository = new ActivationRepository();
             adminNotifRepository = new AdminNotifRepository();
             adviseExamTagRepository = new AdviseExamTagRepository();
+            advisorMeetingRepository = new AdvisorMeetingRepository();
             adviseTagRepository = new AdviseTagRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
             alertsRepository = new AlertsRepository();

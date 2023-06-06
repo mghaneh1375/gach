@@ -86,6 +86,29 @@ public class Jobs implements Runnable {
         }
     }
 
+    private static class RemoveExpiredMeetings extends TimerTask {
+
+        @Override
+        public void run() {
+
+            long yesterday = System.currentTimeMillis() - ONE_DAY_MIL_SEC;
+
+            List<Document> docs = advisorMeetingRepository.find(
+                    lt("created_at", yesterday),
+                    new BasicDBObject("room_id", 1)
+                            .append("student_sky_id", 1)
+                            .append("advisor_sky_id", 1)
+            );
+
+            for(Document doc : docs) {
+
+                irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
+
+            }
+
+        }
+    }
+
     private static class QuizReminder extends TimerTask {
 
         @Override

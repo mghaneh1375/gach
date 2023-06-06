@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
@@ -25,6 +26,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -72,65 +74,8 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
-
-//            List<Document> docs = contentRepository.find(null, null);
-//            for(Document doc : docs) {
-//
-//                List<Document> users = doc.getList("users", Document.class);
-//                List<Document> newList = new ArrayList<>();
-//
-//                for(int i = 0; i < users.size(); i++) {
-//
-//                    ObjectId search = users.get(i).getObjectId("_id");
-//                    if(Utility.searchInDocumentsKeyValIdx(newList, "_id", search) != -1)
-//                        continue;
-//
-//                    boolean findDup = false;
-//
-//                    for(int j = i + 1; j < users.size(); j++) {
-//
-//                        if(search.equals(users.get(j).getObjectId("_id"))) {
-//                            newList.add(mergeDuplicateRegistry(users.get(i), users.get(j)));
-//                            findDup = true;
-//                            break;
-//                        }
-//
-//                    }
-//
-//                    if(!findDup)
-//                        newList.add(users.get(i));
-//                }
-//
-//                doc.put("users", newList);
-//                contentRepository.replaceOne(doc.getObjectId("_id"), doc);
-//            }
-
-//            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "امیر حسین نظری اصل"));
-
-//            List<Document> users = userRepository.find(null, null);
-//            for(Document user : users) {
-//
-//                if(!user.containsKey("money"))
-//                    continue;
-//
-//                Object money = user.get("money");
-//                if(money instanceof Double)
-//                    continue;
-//
-//                Number n = (Number) money;
-//                user.put("money", n.doubleValue());
-//                userRepository.replaceOne(user.getObjectId("_id"), user);
-//            }
-
-//            09026021609
-//            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
-
-//            String s = "<p>test2</p>";
-//            String plainText= Jsoup.parse(s).text();
-//
-//            if(1 == 1)
-//                return plainText;
-
+            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
+            System.out.println(userId);
             return "pk";
         }
 

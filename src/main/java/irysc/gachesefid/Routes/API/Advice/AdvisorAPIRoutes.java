@@ -9,6 +9,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,12 +19,34 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+import java.util.List;
+
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 
 @Controller
 @RequestMapping(path = "/api/advisor/manage/")
 @Validated
 public class AdvisorAPIRoutes extends Router {
 
+    @PostMapping(value = "requestMeeting/{studentId}")
+    @ResponseBody
+    public String requestMeeting(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId studentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document advisor =  getAdvisorUser(request);
+        List<ObjectId> students = advisor.getList("students", ObjectId.class);
+
+        if(!students.contains(studentId))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.requestMeeting(
+                advisor.getObjectId("_id"),
+                advisor.getString("NID"),
+                advisor.getString("first_name") + " " + advisor.getString("last_name"),
+                studentId
+        );
+    }
 
     @PostMapping(value = "toggleStdAcceptance")
     @ResponseBody
