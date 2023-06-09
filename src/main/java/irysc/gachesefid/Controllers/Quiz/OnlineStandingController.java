@@ -77,9 +77,10 @@ public class OnlineStandingController extends QuizAbstract {
 
     }
 
-    public static JSONObject convertOnlineStandingStudentToJSON(Document student, Document user) {
+    public static JSONObject convertOnlineStandingStudentToJSON(Document student, Document user, boolean isAdmin) {
 
         JSONObject jsonObject = convertStudentDocToJSON(student, user);
+
         jsonObject.put("point", student.getOrDefault("point", 0))
                 .put("teamName", student.getString("team_name"))
                 .put("teamCount", student.getList("team", ObjectId.class).size() + 1)
@@ -131,7 +132,7 @@ public class OnlineStandingController extends QuizAbstract {
                     continue;
 
 
-                jsonArray.put(convertOnlineStandingStudentToJSON(student, user));
+                jsonArray.put(convertOnlineStandingStudentToJSON(student, user, true));
             }
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
@@ -187,7 +188,7 @@ public class OnlineStandingController extends QuizAbstract {
             return JSON_NOT_UNKNOWN;
 
         return irysc.gachesefid.Utility.Utility.returnAddResponse(null, new JSONArray().put(
-                convertOnlineStandingStudentToJSON(added.get(0), mainMember)
+                convertOnlineStandingStudentToJSON(added.get(0), mainMember, true)
         ));
     }
 
@@ -550,6 +551,10 @@ public class OnlineStandingController extends QuizAbstract {
         )
             return JSON_NOT_ACCESS;
 
+        JSONObject output = new OnlineStandingController().convertDocToJSON(
+                quiz, true, false,true, true
+        );
+
         List<Document> students = quiz.getList("students", Document.class);
         Document questions = quiz.get("questions", Document.class);
         List<Number> marks = questions.getList("marks", Number.class);
@@ -560,28 +565,20 @@ public class OnlineStandingController extends QuizAbstract {
 
         List<JSONObject> teams = new ArrayList<>();
         long start = quiz.getLong("start");
-        double duration = (quiz.getLong("end") - quiz.getLong("start")) * 1.0;
+        double duration = (quiz.getLong("end") - start) * 1.0;
+        JSONArray teamJSONArr = output.getJSONArray("teams");
 
-        for (Document student : students) {
+        for (int i = 0; i < teamJSONArr.length(); i++) {
 
-            Document user = userRepository.findById(student.getObjectId("_id"));
+            JSONObject jsonObjectTeam = teamJSONArr.getJSONObject(i);
 
-            JSONObject jsonObject = new JSONObject()
-                    .put("id", student.getObjectId("_id").toString())
-                    .put("teamName", student.getString("team_name"))
-                    .put("stdName", user.getString("first_name") + " " + user.getString("last_name"))
-                    .put("point", student.getOrDefault("point", 0));
-
-            if(isAdmin) {
-
-                jsonObject
-                        .put("startAt", irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")))
-                        .put("finishAt", irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")));
-
-            }
+            Document student = searchInDocumentsKeyVal(
+                    students, "team_name", jsonObjectTeam.getString("teamName")
+            );
 
             JSONArray answers = new JSONArray();
             JSONArray allAnswers = new JSONArray();
+            int solved = 0;
 
             if(student.containsKey("answers")) {
 
@@ -602,6 +599,7 @@ public class OnlineStandingController extends QuizAbstract {
                     if(ans.get("ans") != null && ans.containsKey("mark") &&
                             ((Number)ans.get("mark")).doubleValue() > 0) {
 
+                        solved++;
                         double m = ((Number)ans.get("mark")).doubleValue();
                         double p = (m / totalMark) * ((quiz.getLong("end") - ans.getLong("answer_at")) / duration) * 1000;
 
@@ -615,7 +613,6 @@ public class OnlineStandingController extends QuizAbstract {
                         answers.put(new JSONObject());
                     }
                 }
-
             }
             else {
                 for (Number mark : marks) {
@@ -627,46 +624,21 @@ public class OnlineStandingController extends QuizAbstract {
                 }
             }
 
-            JSONArray members = new JSONArray();
-
-            if(student.containsKey("team")) {
-
-                for(ObjectId objectId : student.getList("team", ObjectId.class)) {
-
-                    Document u = userRepository.findById(objectId);
-                    if(u == null)
-                        continue;
-
-                    if(isAdmin) {
-                        JSONObject jsonObject1 = new JSONObject();
-                        irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject1, u);
-                        members.put(jsonObject1.getJSONObject("student"));
-                    }
-                    else {
-                        members.put(new JSONObject()
-                                .put("name", u.getString("first_name") + " " + u.getString("last_name"))
-                        );
-                    }
-                }
-
-            }
-
-            jsonObject
+            jsonObjectTeam
                     .put("answers", answers)
                     .put("marks", marks)
-                    .put("members", members)
-            ;
+                    .put("solved", solved);
 
             if(isAdmin)
-                jsonObject.put("allAnswers", allAnswers);
+                jsonObjectTeam.put("allAnswers", allAnswers);
 
-            teams.add(jsonObject);
+            teams.add(jsonObjectTeam);
         }
 
         teams.sort(Comparator.comparing(jsonObject -> jsonObject.getInt("point"), Comparator.reverseOrder()));
+        output.put("teams", teams);
 
-        return generateSuccessMsg("data", teams
-        );
+        return generateSuccessMsg("data", output);
     }
 
     private static double doCorrect(double qMark, String type, Object studentAnswer,
@@ -1008,7 +980,7 @@ public class OnlineStandingController extends QuizAbstract {
             JSONArray teams = new JSONArray();
             for (Document std : quiz.getList("students", Document.class)) {
                 Document user = userRepository.findById(std.getObjectId("_id"));
-                teams.put(convertOnlineStandingStudentToJSON(std, user));
+                teams.put(convertOnlineStandingStudentToJSON(std, user, isAdmin));
             }
 
             jsonObject.put("teams", teams);
