@@ -122,6 +122,7 @@ public class Utilities {
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("no", doc.getInteger("no"))
+                    .put("isPublic", doc.getOrDefault("is_public", true))
                     .put("level", doc.getString("level"))
                     .put("levelFa", doc.getString("level").equals("hard") ? "دشوار" :
                             doc.getString("level").equals("mid") ? "متوسط" : "آسان");
@@ -324,6 +325,11 @@ public class Utilities {
     ) throws InvalidFieldsException {
 
         ArrayList<Bson> filters = new ArrayList<>();
+
+        filters.add(or(
+                exists("is_public", false),
+                eq("is_public", true)
+        ));
 
         if (level != null) {
 

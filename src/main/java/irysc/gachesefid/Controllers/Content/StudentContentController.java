@@ -32,6 +32,38 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class StudentContentController {
 
+    public static String changeTeacherName(JSONObject jsonObject) {
+
+        String oldName = jsonObject.getString("oldName");
+        String newName = jsonObject.getString("newName");
+
+        List<Document> docs = contentRepository.find(
+                regex("teacher", Pattern.compile(Pattern.quote(oldName))),
+                new BasicDBObject("teacher", 1)
+        );
+
+        for(Document doc : docs) {
+
+            List<String> newList = new ArrayList<>();
+            String[] splited = doc.getString("teacher").split("__");
+
+            for(String itr : splited) {
+
+                if(itr.equals(oldName))
+                    newList.add(newName);
+                else
+                    newList.add(itr);
+
+            }
+
+            Document d = contentRepository.findById(doc.getObjectId("_id"));
+            d.put("teacher", String.join("__", newList));
+            contentRepository.replaceOne(doc.getObjectId("_id"), d);
+        }
+
+        return JSON_OK;
+    }
+
     public static String distinctTags() {
         return generateSuccessMsg("data", contentRepository.distinctTags("tags"));
     }
@@ -56,26 +88,41 @@ public class StudentContentController {
     }
 
     public static String distinctTeachers() {
-        return generateSuccessMsg("data", contentRepository.distinctTags("teacher"));
+        return generateSuccessMsg("data", findDistinctTeachers());
     }
 
     public static String teacherPackages(String teacher) {
 
-        List<Document> docs = contentRepository.find(eq("teacher", teacher), CONTENT_DIGEST, Sorts.ascending("priority"));
+        List<Document> docs = contentRepository.find(
+                regex("teacher", Pattern.compile(Pattern.quote(teacher))),
+                CONTENT_DIGEST,
+                Sorts.ascending("priority")
+        );
+
         JSONArray data = new JSONArray();
 
         for (Document doc : docs)
             data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false));
 
-        return generateSuccessMsg("data", data);
+        Document doc = contentRepository.findOne(and(
+                regex("teacher", Pattern.compile("^" + teacher + "(__|$)")),
+                eq("visibility", true),
+                exists("teacher_bio")
+        ), new BasicDBObject("teacher_bio", 1));
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("packages", data).put("bio", doc == null ? "" : doc.getString("teacher_bio"))
+        );
     }
 
     public static String getTeacherBio(String teacher) {
 
         Document doc = contentRepository.findOne(and(
-                eq("teacher", teacher),
-                eq("visibility", true)
+                regex("teacher", Pattern.compile("^" + teacher + "(__|$)")),
+                eq("visibility", true),
+                exists("teacher_bio")
         ), new BasicDBObject("teacher_bio", 1));
+
         if(doc == null)
             return generateSuccessMsg("data", "");
 
@@ -124,7 +171,7 @@ public class StudentContentController {
             filters.add(lte("duration", maxDurationFilter));
 
         if(teacher != null)
-            filters.add(eq("teacher", teacher));
+            filters.add(regex("teacher", Pattern.compile(Pattern.quote(teacher))));
 
         if(isAdmin) {
             if(visibility != null)
@@ -173,7 +220,7 @@ public class StudentContentController {
                     new PairValue("minDuration", minDuration),
                     new PairValue("maxDuration", maxDuration),
                     new PairValue("tags", contentRepository.distinctTags("tags")),
-                    new PairValue("teachers", contentRepository.distinctTags("teacher"))
+                    new PairValue("teachers", findDistinctTeachers())
             );
         }
 
@@ -181,6 +228,24 @@ public class StudentContentController {
             data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, isAdmin));
 
         return generateSuccessMsg("data", data);
+    }
+
+    private static List<String> findDistinctTeachers() {
+
+        JSONArray jsonArray = contentRepository.distinctTags("teacher");
+        List<String> distincts = new ArrayList<>();
+
+        for(int i = 0; i < jsonArray.length(); i++) {
+
+            String[] splited = jsonArray.getString(i).split("__");
+            for(String itr : splited) {
+                if(!distincts.contains(itr))
+                    distincts.add(itr);
+            }
+
+        }
+
+        return distincts;
     }
 
 

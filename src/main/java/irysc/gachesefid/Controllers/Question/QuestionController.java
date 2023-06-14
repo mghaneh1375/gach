@@ -92,10 +92,15 @@ public class QuestionController extends Utilities {
             newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet()) {
+
             if (str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
                 continue;
+
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
         }
+
+        if(!newDoc.containsKey("is_public"))
+            newDoc.append("is_public", true);
 
         Document subject = subjectRepository.findById(subjectId);
         if (subject != null) {
@@ -678,6 +683,12 @@ public class QuestionController extends Utilities {
                     }
                 }
 
+                cell = row.getCell(21);
+                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
+                    jsonObject.put("is_public", cell.getBooleanCellValue());
+                else
+                    jsonObject.put("is_public", true);
+
                 jsonObject.put("question_file", questionFilename);
                 jsonObject.put("answer_file", answerFilename);
                 jsonObject.put("visibility", true);
@@ -945,14 +956,22 @@ public class QuestionController extends Utilities {
                                           String organizationCode,
                                           ObjectId subjectId,
                                           ObjectId lessonId,
-                                          ObjectId gradeId) {
+                                          ObjectId gradeId,
+                                          boolean isAdmin
+    ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
         ArrayList<Document> docs;
 
         if (organizationCode != null) {
 
-            Document question = questionRepository.findOne(eq("organization_id", organizationCode.replaceAll("\\s+", "")),
+            Document question = questionRepository.findOne(
+                    isAdmin ?
+                            eq("organization_id", organizationCode.replaceAll("\\s+", "")) :
+                            and(
+                                    eq("is_public", true),
+                                    eq("organization_id", organizationCode.replaceAll("\\s+", ""))
+                            ),
                     new BasicDBObject("subject_id", true)
             );
 
@@ -1012,13 +1031,30 @@ public class QuestionController extends Utilities {
 
             if (isQuestionNeeded != null && isQuestionNeeded) {
 
-                ArrayList<Document> questions = questionRepository.find(
-                        organizationCode == null ? eq("subject_id", doc.getObjectId("_id")) :
-                                and(
-                                        eq("subject_id", doc.getObjectId("_id")),
-                                        eq("organization_id", organizationCode)
-                                ), null
-                );
+                ArrayList<Document> questions;
+
+                if(isAdmin)
+                    questions = questionRepository.find(
+                            organizationCode == null ?
+                                    eq("subject_id", doc.getObjectId("_id")) :
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("organization_id", organizationCode)
+                                    ), null
+                    );
+                else
+                    questions = questionRepository.find(
+                            organizationCode == null ?
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("is_public", true)
+                                    ) :
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("organization_id", organizationCode),
+                                            eq("is_public", true)
+                                    ), null
+                    );
 
                 jsonObject.put("questions", convertList(
                         questions, false, true,

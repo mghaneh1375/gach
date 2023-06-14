@@ -10,6 +10,7 @@ import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Test.Question.QuestionTestController;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -61,9 +62,13 @@ public class QuestionAPIRoutes extends Router {
                                    @RequestParam(required = false) ObjectId gradeId,
                                    @RequestParam(required = false) String organizationCode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getPrivilegeUser(request);
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
         return QuestionController.subjectQuestions(
-                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode, subjectId, lessonId, gradeId
+                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode,
+                subjectId, lessonId, gradeId, isAdmin
         );
     }
 
@@ -183,13 +188,14 @@ public class QuestionAPIRoutes extends Router {
                                 optionals = {
                                         "sentencesCount", "telorance",
                                         "choicesCount", "neededLine",
-                                        "visibility", "year", "tags"
+                                        "visibility", "year", "tags",
+                                        "isPublic"
                                 },
                                 optionalsType = {
                                         Positive.class, Number.class,
                                         Positive.class, Positive.class,
                                         Boolean.class, Positive.class,
-                                        JSONArray.class
+                                        JSONArray.class, Boolean.class
                                 }
                         ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
@@ -248,13 +254,14 @@ public class QuestionAPIRoutes extends Router {
                                        "sentencesCount", "telorance",
                                        "choicesCount", "neededLine",
                                        "visibility", "authorId",
-                                       "year", "tags"
+                                       "year", "tags", "isPublic"
                                },
                                optionalsType = {
                                        Positive.class, Number.class,
                                        Positive.class, Positive.class,
                                        Boolean.class, ObjectId.class,
-                                       Positive.class, JSONArray.class
+                                       Positive.class, JSONArray.class,
+                                       Boolean.class
                                }
                        ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {

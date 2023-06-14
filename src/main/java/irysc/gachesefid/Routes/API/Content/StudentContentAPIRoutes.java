@@ -174,4 +174,20 @@ public class StudentContentAPIRoutes extends Router {
     public String chapters(@PathVariable @ObjectIdConstraint ObjectId id) {
         return StudentContentController.chapters(id);
     }
+
+    @PostMapping(value = "changeTeacherName")
+    @ResponseBody
+    public String changeTeacherName(HttpServletRequest request,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {
+                                                    "oldName", "newName"
+                                            },
+                                            paramsType = {
+                                                    String.class, String.class
+                                            }
+                                    ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return StudentContentController.changeTeacherName(new JSONObject(jsonStr));
+    }
 }
