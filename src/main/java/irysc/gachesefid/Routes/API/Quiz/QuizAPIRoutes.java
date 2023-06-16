@@ -817,22 +817,9 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
-        String output;
 
-        if (isAdmin &&
-                (
-                        mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
-                                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ||
-                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
-                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
-                )
-        )
-            return QuizController.removeQuestions(
-                    mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                            mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                                    mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
-                                            iryscQuizRepository, quizId, jsonArray
-            );
+        if (isAdmin && isIRYSCQuiz(mode))
+            return QuizController.removeQuestions(selectDB(mode), quizId, jsonArray);
 
         return QuizController.removeQuestions(
                 schoolQuizRepository, quizId, jsonArray
