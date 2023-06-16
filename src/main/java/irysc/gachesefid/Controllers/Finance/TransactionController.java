@@ -151,6 +151,11 @@ public class TransactionController {
                             quiz = onlineStandQuizRepository.findById((ObjectId) products);
                             if(quiz != null)
                                 section.append(" - ").append(quiz.getString("title"));
+                            else {
+                                quiz = escapeQuizRepository.findById((ObjectId) products);
+                                if(quiz != null)
+                                    section.append(" - ").append(quiz.getString("title"));
+                            }
                         }
                     }
                 }

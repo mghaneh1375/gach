@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
-import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -23,7 +22,6 @@ import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;

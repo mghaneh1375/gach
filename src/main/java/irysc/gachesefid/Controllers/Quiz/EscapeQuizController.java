@@ -153,6 +153,10 @@ public class EscapeQuizController extends QuizAbstract {
         }
 
         boolean isCorrect = questionAnswer.toString().equals(stdAns.toString());
+
+        if(isCorrect && stdAnswers.get(idx) != null && stdAnswers.get(idx).containsKey("ans"))
+            return true;
+
         Document d = stdAnswers.get(idx) == null ? new Document("tries", 0) : stdAnswers.get(idx);
 
         int maxTry = doc.getInteger("max_try");
