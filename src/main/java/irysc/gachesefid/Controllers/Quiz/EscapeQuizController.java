@@ -13,7 +13,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import static irysc.gachesefid.Controllers.Config.GiftController.*;
@@ -528,7 +527,7 @@ public class EscapeQuizController extends QuizAbstract {
             return generateErr("لطفا ابتدا با اهدای جوایز جدول رتبه بندی را بسازید");
 
         if (!isAdmin && !quiz.containsKey("ranking"))
-            return JSON_NOT_ACCESS;
+            return generateErr("نتایج هنوز آماده نیست و باید منتظر اعلام نتایج باشید");
 
         JSONArray jsonArray = new JSONArray();
         List<Document> students = quiz.getList("students", Document.class);

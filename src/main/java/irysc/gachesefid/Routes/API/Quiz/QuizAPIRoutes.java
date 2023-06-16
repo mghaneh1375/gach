@@ -854,17 +854,8 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.addBatchQuestionsToQuiz(iryscQuizRepository, null, quizId, file);
-
-        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
-            return QuizController.addBatchQuestionsToQuiz(onlineStandQuizRepository, null, quizId, file);
-
-        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
-            return QuizController.addBatchQuestionsToQuiz(openQuizRepository, null, quizId, file);
-
-        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
-            return QuizController.addBatchQuestionsToQuiz(contentQuizRepository, null, quizId, file);
+        if (isAdmin && isIRYSCQuiz(mode))
+            return QuizController.addBatchQuestionsToQuiz(selectDB(mode), null, quizId, file);
 
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
