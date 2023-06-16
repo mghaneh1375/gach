@@ -1657,6 +1657,9 @@ public class QuizController {
                 }
             }
 
+            if(db instanceof EscapeQuizRepository)
+                return doAddQuestionsToEscapeQuiz(quiz, jsonArray, excepts);
+
             return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3,
                     quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                             true : null
