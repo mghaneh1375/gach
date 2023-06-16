@@ -2,7 +2,7 @@ package irysc.gachesefid.Controllers.Quiz;
 
 import com.google.common.base.CaseFormat;
 import irysc.gachesefid.Controllers.Question.Utilities;
-import irysc.gachesefid.DB.EscapeQuizRepository;
+import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
@@ -701,6 +701,70 @@ public class EscapeQuizController extends QuizAbstract {
         escapeQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
 
         return JSON_OK;
+    }
+
+    public static String removeQuestions(ObjectId quizId, JSONArray jsonArray) {
+
+        Document quiz = escapeQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        JSONArray removeIds = new JSONArray();
+        JSONArray excepts = new JSONArray();
+
+        Document questions = quiz.get("questions", Document.class);
+        List<ObjectId> questionIds = questions.getList("_ids", ObjectId.class);
+        List<ObjectId> removed = new ArrayList<>();
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            String id = jsonArray.getString(i);
+            if (!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId qId = new ObjectId(id);
+            if (!questionIds.contains(qId)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            removeIds.put(qId);
+            removed.add(qId);
+        }
+
+        if (removeIds.length() == 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Object> answers = questions.getList("answers", Object.class);
+
+        List<ObjectId> newQuestionsIds = new ArrayList<>();
+        List<Object> newAnswers = new ArrayList<>();
+
+        int idx = 0;
+
+        for (ObjectId qId : questionIds) {
+
+            if (removed.contains(qId)) {
+                idx++;
+                continue;
+            }
+
+            newQuestionsIds.add(qId);
+            newAnswers.add(answers.get(idx));
+            idx++;
+        }
+
+        questions.put("answers", newAnswers);
+        questions.put("_ids", newQuestionsIds);
+
+        quiz.put("questions", questions);
+        escapeQuizRepository.replaceOne(quizId, quiz);
+
+        return irysc.gachesefid.Utility.Utility.returnRemoveResponse(
+                excepts, removeIds
+        );
     }
 
     @Override

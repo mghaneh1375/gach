@@ -818,8 +818,12 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
-        if (isAdmin && isIRYSCQuiz(mode))
+        if (isAdmin && isIRYSCQuiz(mode)) {
+            if(mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+                return EscapeQuizController.removeQuestions(quizId, jsonArray);
+            
             return QuizController.removeQuestions(selectDB(mode), quizId, jsonArray);
+        }
 
         return QuizController.removeQuestions(
                 schoolQuizRepository, quizId, jsonArray
