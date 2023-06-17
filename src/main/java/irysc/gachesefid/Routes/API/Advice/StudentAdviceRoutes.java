@@ -12,6 +12,7 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -22,7 +23,7 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+
 
 @Controller
 @RequestMapping(path = "/api/advisor/public/")
@@ -92,6 +93,63 @@ public class StudentAdviceRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
         return AdvisorController.myLifeStyle(getStudentUser(request).getObjectId("_id"));
     }
+
+    @PutMapping(value = "setMyExamInLifeStyle")
+    @ResponseBody
+    public String setMyExamInLifeStyle(HttpServletRequest request,
+                                       @RequestBody @StrongJSONConstraint(
+                                               params = {
+                                                       "exams"
+                                               },
+                                               paramsType = {
+                                                       JSONArray.class
+                                               }
+                                       ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
+                new JSONObject(jsonStr).getJSONArray("exams")
+        );
+    }
+
+    @PutMapping(value = "addItemToMyLifeStyle")
+    @ResponseBody
+    public String addItemToMyLifeStyle(HttpServletRequest request,
+                                       @RequestBody @StrongJSONConstraint(
+                                               params = {
+                                                       "tag", "duration",
+                                                       "day"
+                                               },
+                                               paramsType = {
+                                                       ObjectId.class, Positive.class,
+                                                       String.class
+                                               },
+                                               optionals = {
+                                                       "startAt"
+                                               },
+                                               optionalsType = {
+                                                       String.class
+                                               }
+                                       ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.addItemToMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+    }
+
+
+    @DeleteMapping(value = "removeItemFromMyLifeStyle")
+    @ResponseBody
+    public String removeItemFromMyLifeStyle(HttpServletRequest request,
+                                            @RequestBody @StrongJSONConstraint(
+                                                    params = {
+                                                            "tag", "day"
+                                                    },
+                                                    paramsType = {
+                                                            String.class, String.class
+                                                    }
+                                            ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        return AdvisorController.removeItemFromMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+    }
+
 
     @PutMapping(value = "rate")
     @ResponseBody

@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -34,10 +35,10 @@ public class AdvisorAPIRoutes extends Router {
                                  @PathVariable @ObjectIdConstraint ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document advisor =  getAdvisorUser(request);
+        Document advisor = getAdvisorUser(request);
         List<ObjectId> students = advisor.getList("students", ObjectId.class);
 
-        if(!students.contains(studentId))
+        if (!students.contains(studentId))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.requestMeeting(
@@ -46,6 +47,61 @@ public class AdvisorAPIRoutes extends Router {
                 advisor.getString("first_name") + " " + advisor.getString("last_name"),
                 studentId
         );
+    }
+
+    @PostMapping(value = "createNewOffer")
+    @ResponseBody
+    public String createNewOffer(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {
+                                                 "price", "title", "videoCalls",
+                                                 "visibility",
+                                         },
+                                         paramsType = {
+                                                 Positive.class, String.class, Positive.class,
+                                                 Boolean.class
+                                         },
+                                         optionals = {
+                                                 "description", "maxKarbarg", "maxExam",
+                                                 "maxChat"
+                                         },
+                                         optionalsType = {
+                                                 String.class, Positive.class, Positive.class,
+                                                 Positive.class
+                                         }
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.createNewOffer(getAdvisorUser(request).getObjectId("_id"),
+                new JSONObject(jsonStr)
+        );
+    }
+
+
+    @PutMapping(value = "updateOffer/{id}")
+    @ResponseBody
+    public String updateOffer(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId id,
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {
+                                              "price", "title", "videoCalls",
+                                              "visibility",
+                                      },
+                                      paramsType = {
+                                              Positive.class, String.class, Positive.class,
+                                              Boolean.class
+                                      },
+                                      optionals = {
+                                              "description", "maxKarbarg", "maxExam",
+                                              "maxChat"
+                                      },
+                                      optionalsType = {
+                                              String.class, Positive.class, Positive.class,
+                                              Positive.class
+                                      }
+                              ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdvisorUser(request);
+        return AdvisorController.updateOffer(id, new JSONObject(jsonStr));
     }
 
     @PostMapping(value = "toggleStdAcceptance")

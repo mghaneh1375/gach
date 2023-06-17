@@ -283,9 +283,22 @@ public class Utility {
 
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("label", schedule.getString("label"))
-                    .put("day", getWeekDay(day.getInteger("day")))
-                    .put("items", day.getList("items", Document.class));
+                    .put("day", getWeekDay(day.getInteger("day")));
 
+            JSONArray jsonArray1 = new JSONArray();
+            for(Document item : day.getList("items", Document.class)) {
+                JSONObject jsonObject1 = new JSONObject()
+                        .put("tag", item.getString("tag"))
+                        .put("id", item.getObjectId("_id").toString())
+                        .put("duration", item.get("duration"));
+
+                if(item.containsKey("start_at"))
+                    jsonObject1.put("startAt", item.get("start_id"));
+
+                jsonArray1.put(jsonObject1);
+            }
+
+            jsonObject.put("items", jsonArray1);
             jsonArray.put(jsonObject);
         }
 

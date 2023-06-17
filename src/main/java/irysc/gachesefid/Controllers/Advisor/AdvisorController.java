@@ -24,6 +24,104 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
 
+    public static String createNewOffer(ObjectId advisorId, JSONObject data) {
+
+        if(data.getString("title").length() < 3)
+            return generateErr("عنوان باید بیش از ۲ کاراکتر باشد");
+
+        Document config = getConfig();
+
+        if(config.getInteger("min_advice_price") > data.getInt("price"))
+            return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
+
+        if(config.getInteger("max_video_call_per_month") > data.getInt("videoCalls"))
+            return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
+
+        Document newDoc = new Document("advisor_id", advisorId)
+                .append("price", data.getInt("price"))
+                .append("title", data.getString("title"))
+                .append("video_calls", data.getInt("videoCalls"))
+                .append("visibility", data.getBoolean("visibility"))
+                .append("created_at", System.currentTimeMillis());
+
+        if(data.has("description"))
+            newDoc.append("description", data.getString("description"));
+
+        if(data.has("maxKarbarg"))
+            newDoc.append("max_karbarg", data.getInt("maxKarbarg"));
+
+        if(data.has("maxExam"))
+            newDoc.append("max_exam", data.getInt("maxExam"));
+
+        if(data.has("maxChat"))
+            newDoc.append("max_chat", data.getInt("maxChat"));
+
+        return advisorFinanceOfferRepository.insertOneWithReturn(newDoc);
+    }
+
+    public static String updateOffer(ObjectId id, JSONObject data) {
+
+        if(data.getString("title").length() < 3)
+            return generateErr("عنوان باید بیش از ۲ کاراکتر باشد");
+
+        Document doc = advisorFinanceOfferRepository.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        Document config = getConfig();
+
+        if(config.getInteger("min_advice_price") > data.getInt("price"))
+            return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
+
+        if(config.getInteger("max_video_call_per_month") > data.getInt("videoCalls"))
+            return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
+
+        doc.put("title", data.getString("title"));
+        doc.put("price", data.getInt("price"));
+        doc.put("video_calls", data.getInt("videoCalls"));
+        doc.put("visibility", data.getBoolean("visibility"));
+
+        if(data.has("description"))
+            doc.put("description", data.getString("description"));
+        else
+            doc.remove("description");
+
+        if(data.has("maxKarbarg"))
+            doc.put("max_karbarg", data.getInt("maxKarbarg"));
+        else
+            doc.remove("max_karbarg");
+
+        if(data.has("maxExam"))
+            doc.put("max_exam", data.getInt("maxExam"));
+        else
+            doc.remove("max_exam");
+
+        if(data.has("maxChat"))
+            doc.put("max_chat", data.getInt("maxChat"));
+        else
+            doc.remove("max_chat");
+
+        advisorFinanceOfferRepository.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+    }
+
+    public static String getOffers(ObjectId advisorId) {
+
+        List<Document> docs = advisorFinanceOfferRepository.find(
+                or(
+                        eq("visibility", true),
+                        eq("advisor_id", advisorId)
+                ), null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        for(Document doc : docs) {
+//            jsonArray.put();
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String requestMeeting(ObjectId advisorId,
                                         String NID,
                                         String name,
@@ -533,7 +631,6 @@ public class AdvisorController {
     public static String myLifeStyle(ObjectId userId) {
 
         Document schedule = lifeScheduleRepository.findBySecKey(userId);
-        System.out.println(schedule);
 
         if (schedule == null) {
             schedule = new Document("days", new ArrayList<>() {{
@@ -544,11 +641,197 @@ public class AdvisorController {
                 add(new Document("day", 4).append("items", new ArrayList<>()));
                 add(new Document("day", 5).append("items", new ArrayList<>()));
                 add(new Document("day", 6).append("items", new ArrayList<>()));
-            }}).append("user_id", userId);
+            }}).append("user_id", userId).append("created_at", System.currentTimeMillis());
 
             lifeScheduleRepository.insertOne(schedule);
         }
 
-        return generateSuccessMsg("data", convertLifeScheduleToJSON(schedule));
+        return generateSuccessMsg("data", new JSONObject()
+                .put("days", convertLifeScheduleToJSON(schedule))
+                .put("exams", schedule.getList("exams", String.class))
+        );
+    }
+
+    public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {
+
+        String day = data.getString("day");
+        if(
+                !day.equals("شنبه") &&
+                        !day.equals("یک شنبه") &&
+                        !day.equals("دوشنبه") &&
+                        !day.equals("سه شنبه") &&
+                        !day.equals("چهار شنبه") &&
+                        !day.equals("پنج شنبه") &&
+                        !day.equals("جمعه")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        ObjectId tagId = new ObjectId(data.getString("tag"));
+        Document tag = lifeStyleTagRepository.findById(tagId);
+        if(tag == null || tag.containsKey("deleted_at"))
+            return JSON_NOT_VALID_ID;
+
+        Document schedule = lifeScheduleRepository.findBySecKey(userId);
+
+        if (schedule == null)
+            return JSON_NOT_ACCESS;
+
+        int dayIndex;
+
+        switch (day) {
+            case "شنبه":
+            default:
+                dayIndex = 0;
+                break;
+            case "یک شنبه":
+                dayIndex = 1;
+                break;
+            case "دوشنبه":
+                dayIndex = 2;
+                break;
+            case "سه شنبه":
+                dayIndex = 3;
+                break;
+            case "چهار شنبه":
+                dayIndex = 4;
+                break;
+            case "پنج شنبه":
+                dayIndex = 5;
+                break;
+            case "جمعه":
+                dayIndex = 6;
+                break;
+        }
+
+        List<Document> days = schedule.getList("days", Document.class);
+        Document doc = Utility.searchInDocumentsKeyVal(
+                days, "day", dayIndex
+        );
+
+        if(doc != null) {
+
+            List<Document> items = doc.getList("items", Document.class);
+
+            if(Utility.searchInDocumentsKeyValIdx(
+                    items, "tag", tag.getString("label")
+            ) != -1)
+                return generateErr("تگ وارد شده در روز موردنظر موجود است");
+
+            ObjectId newId = new ObjectId();
+            Document newDoc = new Document("_id", newId)
+                    .append("tag", tag.getString("label"))
+                    .append("duration", data.getInt("duration"));
+
+            if(data.has("startAt"))
+                newDoc.put("start_at", data.getString("start_at"));
+
+            items.add(newDoc);
+            lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+
+            return generateSuccessMsg("id", newId.toString());
+
+        }
+
+
+        return JSON_NOT_UNKNOWN;
+    }
+
+    public static String removeItemFromMyLifeStyle(ObjectId userId, JSONObject data) {
+
+        String day = data.getString("day");
+        if(
+                !day.equals("شنبه") &&
+                        !day.equals("یک شنبه") &&
+                        !day.equals("دوشنبه") &&
+                        !day.equals("سه شنبه") &&
+                        !day.equals("چهار شنبه") &&
+                        !day.equals("پنج شنبه") &&
+                        !day.equals("جمعه")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        Document schedule = lifeScheduleRepository.findBySecKey(userId);
+
+        if (schedule == null)
+            return JSON_NOT_ACCESS;
+
+        int dayIndex;
+
+        switch (day) {
+            case "شنبه":
+            default:
+                dayIndex = 0;
+                break;
+            case "یک شنبه":
+                dayIndex = 1;
+                break;
+            case "دوشنبه":
+                dayIndex = 2;
+                break;
+            case "سه شنبه":
+                dayIndex = 3;
+                break;
+            case "چهار شنبه":
+                dayIndex = 4;
+                break;
+            case "پنج شنبه":
+                dayIndex = 5;
+                break;
+            case "جمعه":
+                dayIndex = 6;
+                break;
+        }
+
+        List<Document> days = schedule.getList("days", Document.class);
+        Document doc = Utility.searchInDocumentsKeyVal(
+                days, "day", dayIndex
+        );
+
+        if(doc != null) {
+
+            List<Document> items = doc.getList("items", Document.class);
+            int idx = Utility.searchInDocumentsKeyValIdx(
+                    items, "tag", data.getString("tag")
+            );
+
+            if(idx < 0)
+                return JSON_NOT_VALID_PARAMS;
+
+            items.remove(idx);
+            lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+
+            return JSON_OK;
+
+        }
+
+
+        return JSON_NOT_UNKNOWN;
+    }
+
+    public static String setMyExamInLifeStyle(ObjectId userId, JSONArray exams) {
+
+        Document schedule = lifeScheduleRepository.findBySecKey(userId);
+
+        if (schedule == null)
+            return JSON_NOT_ACCESS;
+
+        List<String> examTags = new ArrayList<>();
+
+        for(int i = 0; i < exams.length(); i++) {
+
+            if(!ObjectId.isValid(exams.getString(i)))
+                return JSON_NOT_VALID_PARAMS;
+
+            Document examTag = adviseExamTagRepository.findById(new ObjectId(exams.getString(i)));
+            if(examTag == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            examTags.add(examTag.getString("label"));
+        }
+
+        schedule.put("exams", examTags);
+        lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+
+        return JSON_OK;
     }
 }
