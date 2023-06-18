@@ -3,9 +3,11 @@ package irysc.gachesefid.Routes.API.Advice;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -102,6 +104,16 @@ public class AdvisorAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdvisorUser(request);
         return AdvisorController.updateOffer(id, new JSONObject(jsonStr));
+    }
+
+    @GetMapping(value = "getOffers/{advisorId}")
+    @ResponseBody
+    public String getOffers(HttpServletRequest request,
+                            @PathVariable @ObjectIdConstraint ObjectId advisorId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        Document user = getUser(request);
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+        return AdvisorController.getOffers(isAdvisor ? user.getObjectId("_id") : null, advisorId);
     }
 
     @PostMapping(value = "toggleStdAcceptance")

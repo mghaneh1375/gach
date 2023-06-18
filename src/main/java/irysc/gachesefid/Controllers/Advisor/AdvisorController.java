@@ -105,18 +105,39 @@ public class AdvisorController {
         return JSON_OK;
     }
 
-    public static String getOffers(ObjectId advisorId) {
+    public static String getOffers(ObjectId accessorId, ObjectId advisorId) {
 
         List<Document> docs = advisorFinanceOfferRepository.find(
                 or(
-                        eq("visibility", true),
-                        eq("advisor_id", advisorId)
+                        and(
+                                eq("visibility", true),
+                                eq("advisor_id", advisorId)
+                        ),
+                        eq("advisor_id", accessorId)
                 ), null
         );
 
         JSONArray jsonArray = new JSONArray();
+
         for(Document doc : docs) {
-//            jsonArray.put();
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("price", doc.getInteger("price"))
+                    .put("title", doc.getString("title"))
+                    .put("description", doc.getOrDefault("description", ""))
+                    .put("videoCalls", doc.getInteger("video_calls"))
+                    .put("maxKarbarg", doc.getOrDefault("max_karbarg", -1))
+                    .put("maxExam", doc.getOrDefault("max_exam", -1))
+                    .put("maxChat", doc.getOrDefault("max_chat", -1));
+
+            if(accessorId != null && accessorId.equals(doc.getObjectId("advisor_id"))) {
+                jsonObject
+                        .put("createdAt", getSolarDate(doc.getLong("created_at")))
+                        .put("visibility", doc.getBoolean("visibility"));
+            }
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);
