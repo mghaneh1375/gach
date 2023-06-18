@@ -35,9 +35,9 @@ public class Jobs implements Runnable {
 
         timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
 
-//        timer.schedule(new SendMails(), 0, 300000);
-//        timer.schedule(new SendSMS(), 0, 300000);
-//        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
+        timer.schedule(new SendMails(), 0, 300000);
+        timer.schedule(new SendSMS(), 0, 300000);
+        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
     }
 
     //todo remove redundant transactions
@@ -518,8 +518,10 @@ public class Jobs implements Runnable {
                 ObjectId notifId = sms.getObjectId("notif_id");
 
                 if(sms.getString("msg").contains("newNotif")) {
+
                     String name = sms.getString("msg").split("__")[1];
                     sendSMSWithTemplate(sms.getString("phone"), 815, new PairValue("name", name));
+
                     sent++;
 
                     if(sent >= 30) {
