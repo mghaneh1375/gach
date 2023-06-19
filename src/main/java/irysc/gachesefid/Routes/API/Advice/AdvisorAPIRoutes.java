@@ -106,10 +106,10 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.updateOffer(id, new JSONObject(jsonStr));
     }
 
-    @GetMapping(value = "getOffers/{advisorId}")
+    @GetMapping(value = {"getOffers/{advisorId}", "getOffers"})
     @ResponseBody
     public String getOffers(HttpServletRequest request,
-                            @PathVariable @ObjectIdConstraint ObjectId advisorId
+                            @PathVariable(required = false) ObjectId advisorId
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
