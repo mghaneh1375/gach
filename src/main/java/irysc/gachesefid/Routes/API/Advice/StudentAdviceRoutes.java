@@ -1,10 +1,7 @@
 package irysc.gachesefid.Routes.API.Advice;
 
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -30,6 +27,32 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class StudentAdviceRoutes extends Router {
 
+    @PostMapping(value = "payAdvisorPrice/{advisorId}")
+    @ResponseBody
+    public String payAdvisorPrice(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId advisorId,
+                                  @RequestBody(required = false) @StrongJSONConstraint(
+                                          params = {},
+                                          paramsType = {},
+                                          optionals = {
+                                                  "off"
+                                          },
+                                          optionalsType = {
+                                                  String.class
+                                          }
+                                  ) String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        Document user = getUser(request);
+        return AdvisorController.payAdvisorPrice(
+                user.getObjectId("_id"),
+                ((Number)user.get("money")).doubleValue(),
+                advisorId,
+                jsonStr == null || jsonStr.length() == 0 ?
+                        new JSONObject() :
+                        new JSONObject(jsonStr)
+        );
+    }
+
     @GetMapping(value = "getAllAdvisors")
     @ResponseBody
     public String getAllAdvisors() {
@@ -53,7 +76,11 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String hasOpenRequest(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.hasOpenRequest(getStudentUser(request).getObjectId("_id"));
+        Document user = getStudentUser(request);
+        return AdvisorController.hasOpenRequest(
+                user.getObjectId("_id"),
+                (Number) user.get("money")
+        );
     }
 
     @DeleteMapping(value = "cancelRequest/{reqId}")
@@ -75,7 +102,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String request(HttpServletRequest request,
                           @PathVariable @ObjectIdConstraint ObjectId advisorId,
-                          @PathVariable @ObjectIdConstraint ObjectId planId
+                          @PathVariable String planId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
         return AdvisorController.request(getStudentUser(request), advisorId, planId);
     }
@@ -88,11 +115,13 @@ public class StudentAdviceRoutes extends Router {
     }
 
 
-    @GetMapping(value = "myLifeStyle")
+    @GetMapping(value = {"myLifeStyle", "myLifeStyle/{studentId}"})
     @ResponseBody
-    public String myLifeStyle(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.myLifeStyle(getStudentUser(request).getObjectId("_id"));
+    public String myLifeStyle(HttpServletRequest request,
+                              @PathVariable(required = false) String studentId
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+        Document result = getUserWithAdvisorAccess(request, true, studentId);
+        return AdvisorController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
     }
 
     @PutMapping(value = "setMyExamInLifeStyle")

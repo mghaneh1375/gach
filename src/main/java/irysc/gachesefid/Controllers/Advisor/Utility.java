@@ -286,7 +286,7 @@ public class Utility {
             case 1:
                 return "یک شنبه";
             case 2:
-                return "دو شنبه";
+                return "دوشنبه";
             case 3:
                 return "سه شنبه";
             case 4:

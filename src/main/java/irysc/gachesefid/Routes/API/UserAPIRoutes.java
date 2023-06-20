@@ -719,7 +719,7 @@ public class UserAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        if(!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
+        if(!Authorization.hasWeakAccessToThisStudent(userId, user.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
         return UserController.getEducationalHistory(userId);
