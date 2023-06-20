@@ -25,6 +25,7 @@ import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 
 @Controller
 @RequestMapping(path = "/api/advisor/manage/")
@@ -74,10 +75,26 @@ public class AdvisorAPIRoutes extends Router {
                                  ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return AdvisorController.createNewOffer(getAdvisorUser(request).getObjectId("_id"),
-                new JSONObject(jsonStr)
+                convertPersian(new JSONObject(jsonStr))
         );
     }
 
+    @DeleteMapping(value = "removeOffers")
+    @ResponseBody
+    public String removeOffers(HttpServletRequest request,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {
+                                                 "items"
+                                         },
+                                         paramsType = {
+                                                 JSONArray.class
+                                         }
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.removeOffers(getAdvisorUser(request).getObjectId("_id"),
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
+    }
 
     @PutMapping(value = "updateOffer/{id}")
     @ResponseBody
@@ -103,7 +120,7 @@ public class AdvisorAPIRoutes extends Router {
                               ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdvisorUser(request);
-        return AdvisorController.updateOffer(id, new JSONObject(jsonStr));
+        return AdvisorController.updateOffer(id, convertPersian(new JSONObject(jsonStr)));
     }
 
     @GetMapping(value = {"getOffers/{advisorId}", "getOffers"})

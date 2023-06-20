@@ -24,6 +24,44 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
 
+    public static String removeOffers(ObjectId advisorId, JSONArray items) {
+
+        List<Document> docs = advisorFinanceOfferRepository.find(eq("advisor_id", advisorId), JUST_ID);
+        List<ObjectId> ids = new ArrayList<>();
+
+        for(Document doc : docs)
+            ids.add(doc.getObjectId("_id"));
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        for(int i = 0; i < items.length(); i++) {
+
+            try {
+                String id = items.getString(i);
+                if(!ObjectId.isValid(id)) {
+                    excepts.put(id);
+                    continue;
+                }
+
+                ObjectId oId = new ObjectId(id);
+                if(!ids.contains(oId)) {
+                    excepts.put(id);
+                    continue;
+                }
+
+                advisorFinanceOfferRepository.deleteOne(oId);
+                doneIds.put(id);
+            }
+            catch (Exception x) {
+                excepts.put(i + 1);
+            }
+
+        }
+
+        return returnRemoveResponse(excepts, doneIds);
+    }
+
     public static String createNewOffer(ObjectId advisorId, JSONObject data) {
 
         if(data.getString("title").length() < 3)
@@ -34,7 +72,7 @@ public class AdvisorController {
         if(config.getInteger("min_advice_price") > data.getInt("price"))
             return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
 
-        if(config.getInteger("max_video_call_per_month") > data.getInt("videoCalls"))
+        if(config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
         Document newDoc = new Document("advisor_id", advisorId)
@@ -56,7 +94,9 @@ public class AdvisorController {
         if(data.has("maxChat"))
             newDoc.append("max_chat", data.getInt("maxChat"));
 
-        return advisorFinanceOfferRepository.insertOneWithReturn(newDoc);
+        advisorFinanceOfferRepository.insertOne(newDoc);
+
+        return generateSuccessMsg("data", convertFinanceOfferToJSONObject(newDoc, true));
     }
 
     public static String updateOffer(ObjectId id, JSONObject data) {
@@ -73,7 +113,7 @@ public class AdvisorController {
         if(config.getInteger("min_advice_price") > data.getInt("price"))
             return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
 
-        if(config.getInteger("max_video_call_per_month") > data.getInt("videoCalls"))
+        if(config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
         doc.put("title", data.getString("title"));
@@ -102,8 +142,10 @@ public class AdvisorController {
             doc.remove("max_chat");
 
         advisorFinanceOfferRepository.replaceOne(doc.getObjectId("_id"), doc);
-        return JSON_OK;
+
+        return generateSuccessMsg("data", convertFinanceOfferToJSONObject(doc, true));
     }
+
 
     public static String getOffers(ObjectId accessorId, ObjectId advisorId) {
 
@@ -114,30 +156,28 @@ public class AdvisorController {
                                 eq("advisor_id", advisorId)
                         ),
                         eq("advisor_id", accessorId)
-                ), null
+                ), null, Sorts.descending("created_at")
         );
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document doc : docs) {
-
-            JSONObject jsonObject = new JSONObject()
-                    .put("id", doc.getObjectId("_id").toString())
-                    .put("price", doc.getInteger("price"))
-                    .put("title", doc.getString("title"))
-                    .put("description", doc.getOrDefault("description", ""))
-                    .put("videoCalls", doc.getInteger("video_calls"))
-                    .put("maxKarbarg", doc.getOrDefault("max_karbarg", -1))
-                    .put("maxExam", doc.getOrDefault("max_exam", -1))
-                    .put("maxChat", doc.getOrDefault("max_chat", -1));
-
-            if(accessorId != null && accessorId.equals(doc.getObjectId("advisor_id"))) {
-                jsonObject
-                        .put("createdAt", getSolarDate(doc.getLong("created_at")))
-                        .put("visibility", doc.getBoolean("visibility"));
+        if(docs.size() > 0) {
+            for (Document doc : docs) {
+                jsonArray.put(convertFinanceOfferToJSONObject(
+                        doc, accessorId != null && accessorId.equals(doc.getObjectId("advisor_id")))
+                );
             }
+        }
+        else if(accessorId == null){
 
-            jsonArray.put(jsonObject);
+            Document config = getConfig();
+
+            jsonArray.put(convertFinanceOfferToJSONObject(
+                    new Document("price", config.getInteger("min_advice_price"))
+                            .append("video_calls", config.getInteger("max_video_call_per_month"))
+                            .append("title", "پیش فرض"), false
+                    )
+            );
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -408,15 +448,15 @@ public class AdvisorController {
         return returnRequests("user_id", requests);
     }
 
-    public static String request(Document user, ObjectId advisorId) {
+    public static String request(Document user, ObjectId advisorId, ObjectId planId) {
 
-        if (advisorRequestsRepository.count(
-                and(
-                        eq("user_id", user.getObjectId("_id")),
-                        eq("answer", "pending")
-                )) > 0
-        )
-            return generateErr("شما تنها یک درخواست پاسخ داده نشده می توانید داشته باشید");
+//        if (advisorRequestsRepository.count(
+//                and(
+//                        eq("user_id", user.getObjectId("_id")),
+//                        eq("answer", "pending")
+//                )) > 0
+//        )
+//            return generateErr("شما تنها یک درخواست پاسخ داده نشده می توانید داشته باشید");
 
 
         Document advisor = userRepository.findById(advisorId);

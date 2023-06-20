@@ -71,12 +71,13 @@ public class StudentAdviceRoutes extends Router {
         return AdvisorController.cancel(getStudentUser(request));
     }
 
-    @PostMapping(value = "request/{advisorId}")
+    @PostMapping(value = "request/{advisorId}/{planId}")
     @ResponseBody
     public String request(HttpServletRequest request,
-                          @PathVariable @ObjectIdConstraint ObjectId advisorId
+                          @PathVariable @ObjectIdConstraint ObjectId advisorId,
+                          @PathVariable @ObjectIdConstraint ObjectId planId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.request(getStudentUser(request), advisorId);
+        return AdvisorController.request(getStudentUser(request), advisorId, planId);
     }
 
     @GetMapping(value = "myRequests")

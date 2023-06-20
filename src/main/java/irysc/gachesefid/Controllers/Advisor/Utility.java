@@ -15,6 +15,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static irysc.gachesefid.Utility.Utility.getSolarDate;
+
 public class Utility {
 
     private final static String SKY_ROOM_URL = "https://www.skyroom.online/skyroom/api/apikey-571737-51-0239041a552162f3ab913bf12a507863";
@@ -249,6 +251,28 @@ public class Utility {
 
         }
 
+
+        return jsonObject;
+    }
+
+    static JSONObject convertFinanceOfferToJSONObject(Document doc, boolean fullAccess) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("id", doc.containsKey("_id") ? doc.getObjectId("_id").toString() : "-1")
+                .put("price", doc.getInteger("price"))
+                .put("title", doc.getString("title"))
+                .put("description", doc.getOrDefault("description", ""))
+                .put("videoCalls", doc.getInteger("video_calls"))
+                .put("maxKarbarg", doc.getOrDefault("max_karbarg", -1))
+                .put("maxExam", doc.getOrDefault("max_exam", -1))
+                .put("maxChat", doc.getOrDefault("max_chat", -1));
+
+        if(fullAccess) {
+            jsonObject
+                    .put("createdAt", getSolarDate(doc.getLong("created_at")))
+                    .put("visibility", doc.getBoolean("visibility"))
+                    .put("studentsCount", doc.getOrDefault("students", 0));
+        }
 
         return jsonObject;
     }
