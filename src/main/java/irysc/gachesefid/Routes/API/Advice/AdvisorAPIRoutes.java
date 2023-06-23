@@ -52,6 +52,19 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getStudentDigest/{studentId}")
+    @ResponseBody
+    public String getStudentDigest(HttpServletRequest request,
+                                   @PathVariable @ObjectIdConstraint ObjectId studentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document advisor = getAdvisorUser(request);
+        if(!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.getStudentDigest(advisor.getObjectId("_id"), studentId);
+    }
+
     @PostMapping(value = "createNewOffer")
     @ResponseBody
     public String createNewOffer(HttpServletRequest request,

@@ -37,6 +37,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +47,7 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
+import java.time.LocalDate;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -74,8 +77,8 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
-            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
-            System.out.println(userId);
+//            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
+//            System.out.println(userId);
             return "pk";
         }
 
