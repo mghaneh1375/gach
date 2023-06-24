@@ -175,7 +175,7 @@ public class Jobs implements Runnable {
             }
 
             synchronized (blackListTokens) {
-                blackListTokens.removeIf(itr -> itr.getValue() < System.currentTimeMillis());
+                blackListTokens.removeIf(itr -> (long) itr.getValue() < System.currentTimeMillis());
             }
 
             activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));

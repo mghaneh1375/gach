@@ -49,6 +49,8 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
 
+    public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
+
     public final static boolean LOCAL = true;
     public final static boolean DEV_MODE = true;
 

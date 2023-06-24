@@ -159,7 +159,7 @@ public class UserService {
     public Document whoAmI(HttpServletRequest req) {
         try {
 
-            Document u = userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+            Document u = userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req), false));
 
             if(u == null || u.containsKey("remove_at"))
                 return null;
