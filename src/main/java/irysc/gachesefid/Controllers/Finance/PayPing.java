@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -118,6 +119,7 @@ public class PayPing {
 
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
+
         if(user != null) {
             if(transaction.getString("section").equalsIgnoreCase("charge")) {
 
@@ -142,6 +144,20 @@ public class PayPing {
 
             if(transaction.containsKey("products")) {
 
+                if(transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
+                ) {
+
+                    Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
+
+                    if(request != null && studentId.equals(request.getObjectId("user_id"))) {
+                        request.put("paid", transaction.getInteger("amount"));
+                        request.put("paid_at", System.currentTimeMillis());
+                        advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
+
+                        AdvisorController.setAdvisor(user, userRepository.findById(request.getObjectId("advisor_id")));
+                    }
+                }
 
                 if(transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.SCHOOL_QUIZ.getName())
