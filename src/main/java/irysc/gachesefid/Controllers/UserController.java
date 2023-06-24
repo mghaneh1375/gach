@@ -1499,6 +1499,69 @@ public class UserController {
         return data;
     }
 
+    public static void fillJSONWithEducationalHistory(Document student, JSONObject output, boolean isRankNeeded) {
+
+        if(student.containsKey("school") && student.get("school") != null)
+            output.put("school", student.get("school", Document.class).getString("name"));
+        else
+            output.put("school", "");
+
+        if(student.containsKey("city")) {
+            Document city = (Document) student.get("city");
+            if(city != null && city.containsKey("name"))
+                output.put("city", city.getString("name"));
+            else
+                output.put("city", "");
+        }
+        else
+            output.put("city", "");
+
+        if(student.containsKey("grade")) {
+            Document grade = (Document) student.get("grade");
+            if(grade != null && grade.containsKey("name"))
+                output.put("grade", grade.getString("name"));
+        }
+        else
+            output.put("grade", "");
+
+        if(student.containsKey("branches")) {
+            List<Document> branches = student.getList("branches", Document.class);
+            if(branches.size() > 0) {
+
+                StringBuilder sb = new StringBuilder();
+
+                for (Document branch : branches) {
+                    sb.append(branch.getString("name")).append(" - ");
+                }
+
+                output.put("branches", sb.substring(0, sb.toString().length() - 3));
+            }
+            else output.put("branches", "");
+        }
+        else
+            output.put("branches", "");
+
+        if(isRankNeeded) {
+            if (student.containsKey("rank"))
+                output.put("rank", student.get("rank"));
+            else {
+                Document rank = tarazRepository.findOne(eq("user_id", student.getObjectId("_id")), JUST_RANK);
+                output.put("rank", rank == null ? -1 : rank.get("rank"));
+            }
+        }
+
+        if(student.containsKey("advisor_id")) {
+            Document advisor = userRepository.findById(student.getObjectId("advisor_id"));
+            if(advisor != null)
+                output.put("advisor", irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
+                        null, advisor
+                ));
+        }
+
+        output.put("name", student.getString("first_name") + " " + student.getString("last_name"))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + student.getString("pic"));
+
+    }
 
 
     public static String getEducationalHistory(ObjectId userId) {
@@ -1576,64 +1639,7 @@ public class UserController {
         }
 
         output.put("customQuizzes", customQuizzesJSON);
-
-        if(student.containsKey("school") && student.get("school") != null)
-            output.put("school", student.get("school", Document.class).getString("name"));
-        else
-            output.put("school", "");
-
-        if(student.containsKey("city")) {
-            Document city = (Document) student.get("city");
-            if(city != null && city.containsKey("name"))
-                output.put("city", city.getString("name"));
-            else
-                output.put("city", "");
-        }
-        else
-            output.put("city", "");
-
-        if(student.containsKey("grade")) {
-            Document grade = (Document) student.get("grade");
-            if(grade != null && grade.containsKey("name"))
-                output.put("grade", grade.getString("name"));
-        }
-        else
-            output.put("grade", "");
-
-        if(student.containsKey("branches")) {
-            List<Document> branches = student.getList("branches", Document.class);
-            if(branches.size() > 0) {
-
-                StringBuilder sb = new StringBuilder();
-
-                for (Document branch : branches) {
-                    sb.append(branch.getString("name")).append(" - ");
-                }
-
-                output.put("branches", sb.substring(0, sb.toString().length() - 3));
-            }
-            else output.put("branches", "");
-        }
-        else
-            output.put("branches", "");
-
-        if(student.containsKey("rank"))
-            output.put("rank", student.get("rank"));
-        else {
-            Document rank = tarazRepository.findOne(eq("user_id", student.getObjectId("_id")), JUST_RANK);
-            output.put("rank", rank == null ? -1 : rank.get("rank"));
-        }
-
-        if(student.containsKey("advisor_id")) {
-            Document advisor = userRepository.findById(student.getObjectId("advisor_id"));
-            if(advisor != null)
-                output.put("advisor", irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
-                        null, advisor
-                ));
-        }
-
-        output.put("name", student.getString("first_name") + " " + student.getString("last_name"))
-                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + student.getString("pic"));
+        fillJSONWithEducationalHistory(student, output, true);
 
         return generateSuccessMsg("data", output);
     }

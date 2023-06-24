@@ -23,11 +23,102 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
+import static irysc.gachesefid.Controllers.UserController.fillJSONWithEducationalHistory;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
+
+    public static String getStudentDigest(ObjectId advisorId, ObjectId studentId) {
+
+        Document student = userRepository.findById(studentId);
+        JSONObject output = new JSONObject();
+
+        long firstDayOfMonth = getFirstDayOfMonth();
+        long firstDayOfLastMonth = getFirstDayOfLastMonth();
+
+        int schedulesInCurrMonth = scheduleRepository.count(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId),
+                        gte("created_at", firstDayOfMonth)
+                )
+        );
+
+        int schedulesInLastMonth = scheduleRepository.count(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId),
+                        gte("created_at", firstDayOfMonth),
+                        lte("created_at", firstDayOfLastMonth)
+                )
+        );
+
+        int quizzesInMonth = schoolQuizRepository.count(
+                and(
+                        eq("created_by", advisorId),
+                        eq("students._id", studentId),
+                        gte("created_at", firstDayOfMonth)
+                )
+        );
+
+        int quizzesInLastMonth = schoolQuizRepository.count(
+                and(
+                        eq("created_by", advisorId),
+                        eq("students._id", studentId),
+                        gte("created_at", firstDayOfMonth),
+                        lte("created_at", firstDayOfLastMonth)
+                )
+        );
+
+        int advisorMeetingsInMonth = advisorMeetingRepository.count(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId),
+                        gte("created_at", firstDayOfMonth)
+                )
+        );
+
+        int advisorMeetingsInLastMonth = advisorMeetingRepository.count(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId),
+                        gte("created_at", firstDayOfMonth),
+                        lte("created_at", firstDayOfLastMonth)
+                )
+        );
+
+        List<Document> requests = advisorRequestsRepository.find(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId),
+                        eq("answer", "accept"),
+                        exists("paid")
+                ), null, Sorts.descending("created_at")
+        );
+
+        Document request = requests.size() == 0 ? null : requests.get(0);
+
+        fillJSONWithEducationalHistory(student, output, false);
+        output.put("schedulesInCurrMonth", schedulesInCurrMonth);
+        output.put("schedulesInLastMonth", schedulesInLastMonth);
+        output.put("quizzesInMonth", quizzesInMonth);
+        output.put("quizzesInLastMonth", quizzesInLastMonth);
+        output.put("advisorMeetingsInMonth", advisorMeetingsInMonth);
+        output.put("advisorMeetingsInLastMonth", advisorMeetingsInLastMonth);
+
+        if(request != null) {
+            output.put("maxKarbarg", request.getOrDefault("max_karbarg", "نامحدود"))
+                    .put("maxVideoCalls", request.getInteger("video_calls"))
+                    .put("planTitle", request.getString("title"))
+                    .put("maxChats", request.getOrDefault("max_chat", "نامحدود"))
+                    .put("maxExam", request.getOrDefault("max_exam", "نامحدود"));
+        }
+
+
+        return generateSuccessMsg("data", output);
+    }
 
     public static String removeOffers(ObjectId advisorId, JSONArray items) {
 
@@ -165,13 +256,29 @@ public class AdvisorController {
 
         JSONArray jsonArray = new JSONArray();
 
+        boolean fullAccess = accessorId != null &&
+                (docs.size() == 0 || accessorId.equals(docs.get(0).getObjectId("advisor_id")));
+
         if (docs.size() > 0) {
+
             for (Document doc : docs) {
                 jsonArray.put(convertFinanceOfferToJSONObject(
-                        doc, accessorId != null && accessorId.equals(doc.getObjectId("advisor_id")))
+                        doc, fullAccess)
                 );
             }
-        } else if (accessorId == null) {
+
+            if(fullAccess) {
+                Document config = getConfig();
+
+                return generateSuccessMsg("data", new JSONObject()
+                        .put("data", jsonArray)
+                        .put("maxVideoCalls", config.getInteger("max_video_call_per_month"))
+                        .put("minPrice", config.getInteger("min_advice_price"))
+                );
+            }
+        }
+
+        if (docs.size() == 0 && accessorId == null) {
 
             Document config = getConfig();
 
@@ -471,63 +578,55 @@ public class AdvisorController {
                 userRepository.replaceOne(userId, user);
             }
 
-            Document finalOff = off;
-            double finalOffAmount = offAmount;
+            Document transaction = new Document("user_id", userId)
+                    .append("amount", 0)
+                    .append("account_money", shouldPay)
+                    .append("created_at", curr)
+                    .append("status", "success")
+                    .append("section", OffCodeSections.COUNSELING.getName())
+                    .append("products", advisorId);
 
-            int finalShouldPay = shouldPay;
-            new Thread(() -> {
+            if (off != null) {
+                transaction.append("off_code", off.getObjectId("_id"));
+                transaction.append("off_amount", (int) offAmount);
+            }
 
-                Document transaction = new Document("user_id", userId)
-                        .append("amount", 0)
-                        .append("account_money", finalShouldPay)
-                        .append("created_at", curr)
-                        .append("status", "success")
-                        .append("section", OffCodeSections.COUNSELING.getName())
-                        .append("products", doc.getObjectId("_id"));
+            transactionRepository.insertOne(transaction);
 
-                if (finalOff != null) {
-                    transaction.append("off_code", finalOff.getObjectId("_id"));
-                    transaction.append("off_amount", (int) finalOffAmount);
+            Document advisorRequest = advisorRequestsRepository.findById(doc.getObjectId("_id"));
+            advisorRequest.put("paid", shouldPay);
+            advisorRequest.put("paid_at", curr);
+            advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
+
+            Document student = userRepository.findById(userId);
+            Document advisor = userRepository.findById(advisorId);
+
+            setAdvisor(student, advisor);
+
+            if (off != null) {
+
+                BasicDBObject update;
+
+                if (off.containsKey("is_public") &&
+                        off.getBoolean("is_public")
+                ) {
+                    List<ObjectId> students = off.getList("students", ObjectId.class);
+                    students.add(userId);
+                    update = new BasicDBObject("students", students);
+                } else {
+
+                    update = new BasicDBObject("used", true)
+                            .append("used_at", curr)
+                            .append("used_section", OffCodeSections.GACH_EXAM.getName())
+                            .append("used_for", userId);
                 }
 
-                transactionRepository.insertOne(transaction);
+                offcodeRepository.updateOne(
+                        off.getObjectId("_id"),
+                        new BasicDBObject("$set", update)
+                );
+            }
 
-                Document advisorRequest = advisorRequestsRepository.findById(doc.getObjectId("_id"));
-                advisorRequest.put("paid", finalShouldPay);
-                advisorRequest.put("paid_at", curr);
-                advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
-
-                Document student = userRepository.findById(userId);
-                Document advisor = userRepository.findById(advisorId);
-
-                setAdvisor(student, advisor);
-
-                if (finalOff != null) {
-
-                    BasicDBObject update;
-
-                    if (finalOff.containsKey("is_public") &&
-                            finalOff.getBoolean("is_public")
-                    ) {
-                        List<ObjectId> students = finalOff.getList("students", ObjectId.class);
-                        students.add(userId);
-                        update = new BasicDBObject("students", students);
-                    } else {
-
-                        update = new BasicDBObject("used", true)
-                                .append("used_at", curr)
-                                .append("used_section", OffCodeSections.GACH_EXAM.getName())
-                                .append("used_for", userId);
-                    }
-
-                    offcodeRepository.updateOne(
-                            finalOff.getObjectId("_id"),
-                            new BasicDBObject("$set", update)
-                    );
-                }
-
-
-            }).start();
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "action", "success",
@@ -739,6 +838,7 @@ public class AdvisorController {
                 .put("answer", "pending");
 
         return generateSuccessMsg("data", jsonObject);
+
     }
 
     private static boolean cancelAdvisor(Document student, Document advisor,
@@ -781,6 +881,7 @@ public class AdvisorController {
         userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
 
     }
+
 
     public static String answerToRequest(Document advisor, ObjectId reqId, String answer) {
 

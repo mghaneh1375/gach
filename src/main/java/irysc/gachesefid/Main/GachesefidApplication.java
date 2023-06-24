@@ -90,6 +90,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static QuestionTagRepository questionTagRepository;
     public static RequestRepository requestRepository;
     public static SchoolQuestionRepository schoolQuestionRepository;
+    public static ScheduleRepository scheduleRepository;
     public static SchoolQuizRepository schoolQuizRepository;
     public static SchoolRepository schoolRepository;
     public static SeoRepository seoRepository;
@@ -168,6 +169,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             smsQueueRepository = new SMSQueueRepository();
             stateRepository = new StateRepository();
             subjectRepository = new SubjectRepository();
+            scheduleRepository = new ScheduleRepository();
             tarazRepository = new TarazRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();

@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.Config.GiftController;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.Utility;
@@ -11,7 +10,6 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.security.core.parameters.P;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -121,6 +119,33 @@ public class TransactionController {
 
     }
 
+    private static void fetchAbstractQuizName(ObjectId quizId, StringBuilder section) {
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz != null)
+            section.append(" - ").append(quiz.getString("title"));
+        else {
+            quiz = openQuizRepository.findById(quizId);
+            if (quiz != null)
+                section.append(" - ").append(quiz.getString("title"));
+            else {
+                quiz = schoolQuizRepository.findById(quizId);
+                if (quiz != null)
+                    section.append(" - ").append(quiz.getString("title"));
+                else {
+                    quiz = onlineStandQuizRepository.findById(quizId);
+                    if(quiz != null)
+                        section.append(" - ").append(quiz.getString("title"));
+                    else {
+                        quiz = escapeQuizRepository.findById(quizId);
+                        if(quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    }
+                }
+            }
+        }
+    }
+
     public static void fetchQuizInvoice(StringBuilder section,
                                         Document transaction) {
         boolean checkAllItems = true;
@@ -136,40 +161,10 @@ public class TransactionController {
         if (checkAllItems) {
             Object products = transaction.get("products");
             if (products instanceof ObjectId) {
-                Document quiz = iryscQuizRepository.findById((ObjectId) products);
-                if (quiz != null)
-                    section.append(" - ").append(quiz.getString("title"));
-                else {
-                    quiz = openQuizRepository.findById((ObjectId) products);
-                    if (quiz != null)
-                        section.append(" - ").append(quiz.getString("title"));
-                    else {
-                        quiz = schoolQuizRepository.findById((ObjectId) products);
-                        if (quiz != null)
-                            section.append(" - ").append(quiz.getString("title"));
-                        else {
-                            quiz = onlineStandQuizRepository.findById((ObjectId) products);
-                            if(quiz != null)
-                                section.append(" - ").append(quiz.getString("title"));
-                            else {
-                                quiz = escapeQuizRepository.findById((ObjectId) products);
-                                if(quiz != null)
-                                    section.append(" - ").append(quiz.getString("title"));
-                            }
-                        }
-                    }
-                }
+                fetchAbstractQuizName((ObjectId) products, section);
             } else if (products instanceof List) {
                 for (ObjectId quizId : (List<ObjectId>) products) {
-
-                    Document quiz = iryscQuizRepository.findById(quizId);
-                    if (quiz != null)
-                        section.append(" - ").append(quiz.getString("title"));
-                    else {
-                        quiz = openQuizRepository.findById(quizId);
-                        if (quiz != null)
-                            section.append(" - ").append(quiz.getString("title"));
-                    }
+                    fetchAbstractQuizName(quizId, section);
                 }
             }
         }

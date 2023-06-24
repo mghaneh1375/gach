@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
@@ -130,7 +131,7 @@ public class OffCodeController {
             }
         }
 
-        return addAll(jsonArray, type, amount, expireAt, section, excepts);
+        return addAll(jsonArray, type, amount, expireAt, section, excepts, null);
     }
 
     public static String store(JSONObject jsonObject) {
@@ -174,7 +175,7 @@ public class OffCodeController {
             return JSON_NOT_VALID_PARAMS;
 
         JSONArray jsonArray = jsonObject.getJSONArray("items");
-        return addAll(jsonArray, type, amount, expireAt, section, new JSONArray());
+        return addAll(jsonArray, type, amount, expireAt, section, new JSONArray(), code);
     }
 
     public static String offs(ObjectId userId,
@@ -322,7 +323,7 @@ public class OffCodeController {
                                String section
     ) {
 
-        Document off = offcodeRepository.findOne(and(
+        List<Document> offs = offcodeRepository.find(and(
                 exists("code"),
                 eq("code", code),
                 or(
@@ -337,10 +338,21 @@ public class OffCodeController {
                 )
         ), null);
 
-        if(off == null)
+        if(offs.size() == 0)
             return generateErr("کد تخفیف موردنظر اشتباه است.");
 
-        if(off.containsKey("used") && off.getBoolean("used"))
+        Document off = null;
+
+        for(Document itr : offs) {
+
+            if(itr.containsKey("used") && itr.getBoolean("used"))
+                continue;
+
+            off = itr;
+            break;
+        }
+
+        if(off == null)
             return generateErr("شما قبلا از این کد استفاده کرده اید.");
 
         if(off.getLong("expire_at") < System.currentTimeMillis())

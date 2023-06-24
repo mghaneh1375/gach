@@ -28,6 +28,7 @@ import javax.mail.internet.MimeMultipart;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -172,6 +173,63 @@ public class Utility {
                 sc.month) + delimeter + String.format(loc, "%02d", sc.date);
     }
 
+    public static long getFirstDayOfMonth() {
+
+        String dd = getToday("/");
+        int d = Integer.parseInt(dd.split("/")[2]);
+
+        LocalDate todaydate = LocalDate.now();
+
+        if(d == 1)
+            return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+
+        for(int i = 1; i <= 31; i++) {
+            dd = getPast("/", i);
+            d = Integer.parseInt(dd.split("/")[2]);
+
+            if(d == 1) {
+                todaydate = todaydate.minusDays(i);
+                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+            }
+        }
+
+        return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+    }
+
+    public static long getFirstDayOfLastMonth() {
+
+        String dd = getToday("/");
+        int m = Integer.parseInt(dd.split("/")[1]), d;
+
+        if(m == 1)
+            m = 12;
+        else
+            m--;
+
+        LocalDate todaydate = LocalDate.now();
+
+        for(int i = 1; i <= 31; i++) {
+
+            dd = getPast("/", i);
+            d = Integer.parseInt(dd.split("/")[2]);
+            int mm = Integer.parseInt(dd.split("/")[1]);
+
+            if(d == 1 && mm == m) {
+                todaydate = todaydate.minusDays(i);
+                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+            }
+        }
+
+        return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+    }
+
+    public static String getPersianDate(String delimeter, long ts) {
+        Locale loc = new Locale("en_US");
+        SolarCalendar sc = new SolarCalendar(ts);
+        return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
+                sc.month) + delimeter + String.format(loc, "%02d", sc.date);
+    }
+
     public static int getToday() {
         Locale loc = new Locale("en_US");
         SolarCalendar sc = new SolarCalendar();
@@ -184,6 +242,13 @@ public class Utility {
         SolarCalendar sc = new SolarCalendar((1000 * 60 * 60 * 24));
         return Integer.parseInt(String.valueOf(sc.year) + String.format(loc, "%02d",
                 sc.month) + String.format(loc, "%02d", sc.date));
+    }
+
+    public static String getPast(String delimeter, int days) {
+        Locale loc = new Locale("en_US");
+        SolarCalendar sc = new SolarCalendar(-ONE_DAY_MIL_SEC * days);
+        return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
+                sc.month) + delimeter + String.format(loc, "%02d", sc.date);
     }
 
     public static int getPast(int days) {
@@ -1050,18 +1115,6 @@ public class Utility {
         String[] splited = dateTime[0].split("-");
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
     }
-
-    public static String getSolarJustDate(long time) {
-
-        if(time < 1610494635)
-            return "";
-
-        Date d = new Date(time);
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        String[] splited = simpleDateFormat.format(d).split("-");
-        return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/");
-    }
-
 
     public static String getMonthSolarDate(long time) {
 
