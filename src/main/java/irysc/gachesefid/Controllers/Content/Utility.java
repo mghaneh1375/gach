@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Content;
 
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.OffCodeTypes;
 import org.bson.Document;
@@ -117,6 +118,29 @@ public class Utility {
                 .put("duration", doc.getInteger("duration"))
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
+
+        List<Document> students = doc.getList("users", Document.class);
+        JSONArray lastBuyers = new JSONArray();
+        int counter = 0;
+
+        for(int i = students.size() - 1; i >= 0; i--) {
+
+            if(counter > 3)
+                break;
+
+            Document user = userRepository.findById(students.get(i).getObjectId("_id"));
+            if(user == null)
+                continue;
+
+            lastBuyers.put(new JSONObject()
+                    .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                    .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+            );
+
+            counter++;
+        }
+
+        jsonObject.put("lastBuyers", lastBuyers);
 
         if(includeFAQ) {
             Document config = contentConfigRepository.findBySecKey("first");
