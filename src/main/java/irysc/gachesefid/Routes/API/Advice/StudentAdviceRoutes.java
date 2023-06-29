@@ -45,7 +45,7 @@ public class StudentAdviceRoutes extends Router {
         Document user = getUser(request);
         return AdvisorController.payAdvisorPrice(
                 user.getObjectId("_id"),
-                ((Number)user.get("money")).doubleValue(),
+                ((Number) user.get("money")).doubleValue(),
                 advisorId,
                 jsonStr == null || jsonStr.length() == 0 ?
                         new JSONObject() :
@@ -138,6 +138,34 @@ public class StudentAdviceRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
         return AdvisorController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("exams")
+        );
+    }
+
+    @PutMapping(value = "addItemToSchedule/{userId}")
+    @ResponseBody
+    public String addItemToSchedule(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId userId,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {
+                                                    "tag", "duration",
+                                                    "day", "subjectId",
+                                            },
+                                            paramsType = {
+                                                    ObjectId.class, Positive.class,
+                                                    String.class, ObjectId.class
+                                            },
+                                            optionals = {
+                                                    "startAt", "description"
+                                            },
+                                            optionalsType = {
+                                                    String.class, String.class
+                                            }
+                                    ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        return AdvisorController.addItemToSchedule(
+                getAdvisorUser(request).getObjectId("_id"),
+                userId,
+                new JSONObject(jsonStr)
         );
     }
 

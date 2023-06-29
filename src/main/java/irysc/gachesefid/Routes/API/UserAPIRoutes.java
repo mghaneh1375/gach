@@ -18,6 +18,7 @@ import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.SolarCalendar;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -40,14 +41,17 @@ import javax.validation.constraints.NotBlank;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalField;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static com.mongodb.client.model.Updates.setOnInsert;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 import java.time.LocalDate;
+import java.util.Locale;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -77,8 +81,15 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
+            System.out.println(getFirstDayOfCurrWeek());
+            System.out.println(getFirstDayOfFutureWeek(1));
+            System.out.println(getFirstDayOfFutureWeek(2));
+            System.out.println(getFirstDayOfFutureWeek(3));
+            System.out.println(getFirstDayOfFutureWeek(4));
+
 //            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
 //            System.out.println(userId);
+
             return "pk";
         }
 

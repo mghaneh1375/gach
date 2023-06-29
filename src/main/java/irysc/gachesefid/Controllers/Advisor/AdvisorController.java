@@ -4,11 +4,13 @@ package irysc.gachesefid.Controllers.Advisor;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.YesOrNo;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -1078,9 +1080,8 @@ public class AdvisorController {
         );
     }
 
-    public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {
+    private static int validateDay(String day) throws InvalidFieldsException {
 
-        String day = data.getString("day");
         if (
                 !day.equals("شنبه") &&
                         !day.equals("یک شنبه") &&
@@ -1090,7 +1091,21 @@ public class AdvisorController {
                         !day.equals("پنج شنبه") &&
                         !day.equals("جمعه")
         )
-            return JSON_NOT_VALID_PARAMS;
+            throw new InvalidFieldsException("not valid params");
+
+        return getDayIndex(day);
+    }
+
+    public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {
+
+        String day = data.getString("day");
+
+        int dayIndex;
+        try {
+            dayIndex = validateDay(day);
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
 
         ObjectId tagId = new ObjectId(data.getString("tag"));
         Document tag = lifeStyleTagRepository.findById(tagId);
@@ -1101,33 +1116,6 @@ public class AdvisorController {
 
         if (schedule == null)
             return JSON_NOT_ACCESS;
-
-        int dayIndex;
-
-        switch (day) {
-            case "شنبه":
-            default:
-                dayIndex = 0;
-                break;
-            case "یک شنبه":
-                dayIndex = 1;
-                break;
-            case "دوشنبه":
-                dayIndex = 2;
-                break;
-            case "سه شنبه":
-                dayIndex = 3;
-                break;
-            case "چهار شنبه":
-                dayIndex = 4;
-                break;
-            case "پنج شنبه":
-                dayIndex = 5;
-                break;
-            case "جمعه":
-                dayIndex = 6;
-                break;
-        }
 
         List<Document> days = schedule.getList("days", Document.class);
         Document doc = Utility.searchInDocumentsKeyVal(
@@ -1160,6 +1148,124 @@ public class AdvisorController {
 
 
         return JSON_NOT_UNKNOWN;
+    }
+
+    public static String addItemToSchedule(ObjectId advisorId,
+                                           ObjectId userId,
+                                           JSONObject data) {
+
+        String day = data.getString("day");
+        int dayIndex;
+
+        try {
+            dayIndex = validateDay(day);
+        } catch (InvalidFieldsException e) {
+            return e.getMessage();
+        }
+
+        int duration = data.getInt("duration");
+        if(duration < 15 || duration > 240)
+            return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
+
+        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+            return JSON_NOT_ACCESS;
+
+        ObjectId tagId = new ObjectId(data.getString("tag"));
+        Document tag = adviseTagRepository.findById(tagId);
+        if (tag == null || tag.containsKey("deleted_at"))
+            return JSON_NOT_VALID_ID;
+
+        ObjectId subjectId = new ObjectId(data.getString("subjectId"));
+        Document subject = subjectRepository.findById(subjectId);
+        if(subject == null)
+            return JSON_NOT_VALID;
+
+        ObjectId oId;
+        Document schedule;
+
+        if(data.has("id")) {
+
+            if(!ObjectId.isValid(data.getString("id")))
+                return JSON_NOT_VALID_PARAMS;
+
+            oId = new ObjectId(data.getString("id"));
+            schedule = scheduleRepository.findById(oId);
+
+            if(schedule == null ||
+                    !schedule.getObjectId("user_id").equals(userId)
+            )
+                return JSON_NOT_VALID_PARAMS;
+        }
+        else {
+
+            if(!data.has("scheduleFor"))
+                return JSON_NOT_VALID_PARAMS;
+
+            int scheduleFor = data.getInt("scheduleFor");
+
+            if(scheduleFor < 0 || scheduleFor > 4)
+                return JSON_NOT_VALID_PARAMS;
+
+            String weekStartAt;
+
+            if(scheduleFor == 0)
+                weekStartAt = getFirstDayOfCurrWeek();
+            else
+                weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
+
+            if(scheduleRepository.exist(
+                    and(
+                            eq("user_id", userId),
+                            eq("week_start_at", weekStartAt)
+                    )
+            ))
+                return JSON_NOT_VALID_PARAMS;
+
+            schedule = new Document("user_id", userId)
+                .append("week_start_at", weekStartAt)
+                .append("days", new ArrayList<>());
+        }
+
+        if (schedule == null)
+            return JSON_NOT_ACCESS;
+
+        List<Document> days = schedule.getList("days", Document.class);
+        Document doc = Utility.searchInDocumentsKeyVal(
+                days, "day", dayIndex
+        );
+
+        List<Document> items = doc == null ? new ArrayList<>() :
+                doc.getList("items", Document.class);
+
+        ObjectId newId = new ObjectId();
+        Document newDoc = new Document("_id", newId)
+                .append("tag", tag.getString("label"))
+                .append("advisor_id", advisorId)
+                .append("created_at", System.currentTimeMillis())
+                .append("subject", subject.getString("name"))
+                .append("duration", data.getInt("duration"));
+
+        if (data.has("startAt"))
+            newDoc.put("start_at", data.getString("start_at"));
+
+        if(data.has("description"))
+            newDoc.put("description", data.getString("description"));
+
+        items.add(newDoc);
+
+        if(doc == null)
+            days.add(new Document("day", dayIndex)
+                    .append("items", items)
+            );
+
+        schedule.put("days", days);
+
+        if(data.has("id"))
+            scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+        else
+            scheduleRepository.insertOne(schedule);
+
+        return generateSuccessMsg("id", newId.toString());
     }
 
     public static String removeItemFromMyLifeStyle(ObjectId userId, JSONObject data) {

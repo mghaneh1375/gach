@@ -1447,4 +1447,53 @@ public class Utility {
 
         return tmp;
     }
+
+    public static int getDayIndex(String day) {
+
+        switch (day) {
+            case "شنبه":
+            default:
+                return 0;
+            case "یک شنبه":
+                return 1;
+            case "دوشنبه":
+                return 2;
+            case "سه شنبه":
+                return 3;
+            case "چهار شنبه":
+                return 4;
+            case "پنج شنبه":
+                return 5;
+            case "جمعه":
+                return 6;
+        }
+    }
+
+    public static String getFirstDayOfCurrWeek() {
+
+        SolarCalendar sc = new SolarCalendar();
+        Locale loc = new Locale("en_US");
+
+        long nextWeek = -ONE_DAY_MIL_SEC * getDayIndex(sc.strWeekDay);
+        String delimeter = "/";
+
+        sc = new SolarCalendar(nextWeek);
+
+        return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
+                sc.month) + delimeter + String.format(loc, "%02d", sc.date);
+
+    }
+
+    public static String getFirstDayOfFutureWeek(int weeks) {
+        SolarCalendar sc = new SolarCalendar();
+        Locale loc = new Locale("en_US");
+
+        long nextWeek = ONE_DAY_MIL_SEC * ((weeks - 1) * 7 + 7 - getDayIndex(sc.strWeekDay));
+        String delimeter = "/";
+
+        sc = new SolarCalendar(nextWeek);
+
+        return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
+                sc.month) + delimeter + String.format(loc, "%02d", sc.date);
+    }
 }
