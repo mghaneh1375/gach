@@ -26,7 +26,7 @@ public class AdminAdvisorAPIRoutes extends Router {
     @ResponseBody
     public String getAllTags(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdvisorUser(request);
         return AdvisorController.getAllTags(adviseTagRepository);
     }
 

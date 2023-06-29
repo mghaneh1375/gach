@@ -66,8 +66,8 @@ public class AdminContentController {
         for (int j = students.size() - 1; j >= 0; j--) {
 
             Document student = students.get(j);
-
             Document user = userRepository.findById(student.getObjectId("_id"));
+
             if (user == null)
                 continue;
 

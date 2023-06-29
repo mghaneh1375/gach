@@ -59,7 +59,7 @@ public class AdvisorAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document advisor = getAdvisorUser(request);
-        if(!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
+        if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.getStudentDigest(advisor.getObjectId("_id"), studentId);
@@ -95,14 +95,14 @@ public class AdvisorAPIRoutes extends Router {
     @DeleteMapping(value = "removeOffers")
     @ResponseBody
     public String removeOffers(HttpServletRequest request,
-                                 @RequestBody @StrongJSONConstraint(
-                                         params = {
-                                                 "items"
-                                         },
-                                         paramsType = {
-                                                 JSONArray.class
-                                         }
-                                 ) @NotBlank String jsonStr
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {
+                                               "items"
+                                       },
+                                       paramsType = {
+                                               JSONArray.class
+                                       }
+                               ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return AdvisorController.removeOffers(getAdvisorUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("items")
@@ -180,6 +180,75 @@ public class AdvisorAPIRoutes extends Router {
     public String myRequests(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return AdvisorController.myStudentRequests(getAdvisorUser(request).getObjectId("_id"));
+    }
+
+
+    @PutMapping(value = "addItemToSchedule/{userId}")
+    @ResponseBody
+    public String addItemToSchedule(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId userId,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {
+                                                    "tag", "duration",
+                                                    "day", "subjectId",
+                                            },
+                                            paramsType = {
+                                                    ObjectId.class, Positive.class,
+                                                    String.class, ObjectId.class
+                                            },
+                                            optionals = {
+                                                    "startAt", "description"
+                                            },
+                                            optionalsType = {
+                                                    String.class, String.class
+                                            }
+                                    ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        return AdvisorController.addItemToSchedule(
+                getAdvisorUser(request).getObjectId("_id"),
+                userId,
+                new JSONObject(jsonStr)
+        );
+    }
+
+    @DeleteMapping(value = "removeItemFromSchedule/{userId}/{id}")
+    @ResponseBody
+    public String removeItemFromSchedule(HttpServletRequest request,
+                                         @PathVariable @ObjectIdConstraint ObjectId userId,
+                                         @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.removeItemFromSchedule(
+                getAdvisorUser(request).getObjectId("_id"),
+                userId, id
+        );
+    }
+
+    @PutMapping(value = "updateItem/{userId}/{id}")
+    @ResponseBody
+    public String updateItem(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId userId,
+                             @PathVariable @ObjectIdConstraint ObjectId id,
+                             @RequestBody @StrongJSONConstraint(
+                                     params = {
+                                             "tag", "duration",
+                                             "subjectId",
+                                     },
+                                     paramsType = {
+                                             ObjectId.class, Positive.class,
+                                             ObjectId.class
+                                     },
+                                     optionals = {
+                                             "startAt", "description"
+                                     },
+                                     optionalsType = {
+                                             String.class, String.class
+                                     }
+                             ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.updateItem(
+                getAdvisorUser(request).getObjectId("_id"),
+                userId, id, convertPersian(new JSONObject(jsonStr))
+        );
     }
 
 }

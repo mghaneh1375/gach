@@ -120,6 +120,9 @@ public class Utility {
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
         List<Document> students = doc.getList("users", Document.class);
+
+        jsonObject.put("buyers", students.size());
+
         JSONArray lastBuyers = new JSONArray();
         int counter = 0;
 

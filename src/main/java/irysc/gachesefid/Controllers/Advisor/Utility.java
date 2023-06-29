@@ -6,6 +6,7 @@ import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -13,8 +14,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.Utility.getDayIndex;
 import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
 public class Utility {
@@ -277,6 +281,53 @@ public class Utility {
         return jsonObject;
     }
 
+    static JSONObject convertScheduleToJSONObject(Document doc, boolean digest) {
+
+        JSONObject jsonObject = new JSONObject();
+
+        if(digest) {
+
+            List<Document> days = doc.getList("days", Document.class);
+            int schedulesSum = 0;
+            int doneSum = 0;
+            HashMap<ObjectId, String> advisors = new HashMap<>();
+
+            for (Document day : days) {
+
+                if(!day.containsKey("items"))
+                    continue;
+
+                for(Document item : day.getList("items", Document.class)) {
+
+                    schedulesSum += item.getInteger("duration");
+                    doneSum += (int)item.getOrDefault("done_duration", 0);
+
+                    if(advisors.containsKey(item.getObjectId("advisor_id")))
+                        continue;
+
+                    Document advisor = userRepository.findById(item.getObjectId("advisor_id"));
+                    if(advisor == null)
+                        continue;
+
+                    advisors.put(item.getObjectId("advisor_id"),
+                            advisor.getString("first_name") + " " + advisor.getString("last_name")
+                    );
+                }
+            }
+
+            JSONArray advisorsJSON = new JSONArray();
+            for(ObjectId oId : advisors.keySet()) {
+                advisorsJSON.put(advisors.get(oId));
+            }
+
+            jsonObject.put("weekStartAt", doc.getString("week_start_at"))
+                    .put("schedulesSum", schedulesSum).put("doneSum", doneSum)
+                    .put("advisors", advisorsJSON);
+        }
+
+        return jsonObject;
+    }
+
     private static String getWeekDay(int dayIdx) {
 
         switch (dayIdx) {
@@ -327,6 +378,22 @@ public class Utility {
         }
 
         return jsonArray;
+    }
+
+    static int validateDay(String day) throws InvalidFieldsException {
+
+        if (
+                !day.equals("شنبه") &&
+                        !day.equals("یک شنبه") &&
+                        !day.equals("دوشنبه") &&
+                        !day.equals("سه شنبه") &&
+                        !day.equals("چهار شنبه") &&
+                        !day.equals("پنج شنبه") &&
+                        !day.equals("جمعه")
+        )
+            throw new InvalidFieldsException("not valid params");
+
+        return getDayIndex(day);
     }
 
 }

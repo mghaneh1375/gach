@@ -13,6 +13,7 @@ import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -110,7 +111,7 @@ public class AdvisorController {
         output.put("advisorMeetingsInMonth", advisorMeetingsInMonth);
         output.put("advisorMeetingsInLastMonth", advisorMeetingsInLastMonth);
 
-        if(request != null) {
+        if (request != null) {
             output.put("maxKarbarg", request.getOrDefault("max_karbarg", "نامحدود"))
                     .put("maxVideoCalls", request.getInteger("video_calls"))
                     .put("planTitle", request.getString("title"))
@@ -269,7 +270,7 @@ public class AdvisorController {
                 );
             }
 
-            if(fullAccess) {
+            if (fullAccess) {
                 Document config = getConfig();
 
                 return generateSuccessMsg("data", new JSONObject()
@@ -487,179 +488,6 @@ public class AdvisorController {
         return JSON_OK;
     }
 
-    public static String cancelRequest(ObjectId userId, ObjectId reqId) {
-
-        System.out.println(and(
-                eq("_id", reqId),
-                eq("user_id", userId),
-                or(
-                        eq("answer", "pending"),
-                        and(
-                                eq("answer", "accept"),
-                                exists("paid", false)
-                        )
-                )
-        ));
-
-        Document doc = advisorRequestsRepository.findOneAndDelete(
-                and(
-                        eq("_id", reqId),
-                        eq("user_id", userId),
-                        or(
-                                eq("answer", "pending"),
-                                and(
-                                        eq("answer", "accept"),
-                                        exists("paid", false)
-                                )
-                        )
-                )
-        );
-
-        if (doc == null)
-            return generateErr("شما مجاز به حذف این درخواست نیستید");
-
-        return JSON_OK;
-    }
-
-    public static String payAdvisorPrice(ObjectId userId, double userMoney,
-                                         ObjectId advisorId, JSONObject jsonObject) {
-
-        Document doc = advisorRequestsRepository.findOne(and(
-                eq("answer", "accept"),
-                eq("advisor_id", advisorId),
-                eq("user_id", userId),
-                exists("paid", false),
-                exists("price", true)
-        ), new BasicDBObject("price", 1));
-
-        if (doc == null)
-            return JSON_NOT_ACCESS;
-
-        int shouldPay = doc.getInteger("price");
-
-        Document off = null;
-        long curr = System.currentTimeMillis();
-
-        if (jsonObject != null && jsonObject.has("off")) {
-
-            off = validateOffCode(
-                    jsonObject.getString("off"), userId, curr,
-                    OffCodeSections.COUNSELING.getName()
-            );
-
-            if (off == null)
-                return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
-
-        }
-
-        if (jsonObject == null || !jsonObject.has("off")) {
-            off = findAccountOff(
-                    userId, curr, OffCodeSections.COUNSELING.getName()
-            );
-        }
-
-        double offAmount = 0;
-
-        if (off != null) {
-            offAmount +=
-                    off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
-                            shouldPay * off.getInteger("amount") / 100.0 :
-                            off.getInteger("amount")
-            ;
-            shouldPay -= offAmount;
-        }
-
-        if (shouldPay - userMoney <= 100) {
-
-            double newUserMoney = userMoney;
-
-            if (shouldPay > 100) {
-                newUserMoney -= Math.min(shouldPay, userMoney);
-                Document user = userRepository.findById(userId);
-                user.put("money", newUserMoney);
-                userRepository.replaceOne(userId, user);
-            }
-
-            Document transaction = new Document("user_id", userId)
-                    .append("amount", 0)
-                    .append("account_money", shouldPay)
-                    .append("created_at", curr)
-                    .append("status", "success")
-                    .append("section", OffCodeSections.COUNSELING.getName())
-                    .append("products", advisorId);
-
-            if (off != null) {
-                transaction.append("off_code", off.getObjectId("_id"));
-                transaction.append("off_amount", (int) offAmount);
-            }
-
-            transactionRepository.insertOne(transaction);
-
-            Document advisorRequest = advisorRequestsRepository.findById(doc.getObjectId("_id"));
-            advisorRequest.put("paid", shouldPay);
-            advisorRequest.put("paid_at", curr);
-            advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
-
-            Document student = userRepository.findById(userId);
-            Document advisor = userRepository.findById(advisorId);
-
-            setAdvisor(student, advisor);
-
-            if (off != null) {
-
-                BasicDBObject update;
-
-                if (off.containsKey("is_public") &&
-                        off.getBoolean("is_public")
-                ) {
-                    List<ObjectId> students = off.getList("students", ObjectId.class);
-                    students.add(userId);
-                    update = new BasicDBObject("students", students);
-                } else {
-
-                    update = new BasicDBObject("used", true)
-                            .append("used_at", curr)
-                            .append("used_section", OffCodeSections.GACH_EXAM.getName())
-                            .append("used_for", userId);
-                }
-
-                offcodeRepository.updateOne(
-                        off.getObjectId("_id"),
-                        new BasicDBObject("$set", update)
-                );
-            }
-
-
-            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
-                    "action", "success",
-                    new PairValue("refId", newUserMoney)
-            );
-        }
-
-        long orderId = Math.abs(new Random().nextLong());
-        while (transactionRepository.exist(
-                eq("order_id", orderId)
-        )) {
-            orderId = Math.abs(new Random().nextLong());
-        }
-
-        Document transaction =
-                new Document("user_id", userId)
-                        .append("account_money", userMoney)
-                        .append("amount", (int) (shouldPay - userMoney))
-                        .append("created_at", curr)
-                        .append("status", "init")
-                        .append("order_id", orderId)
-                        .append("products", doc.getObjectId("_id"))
-                        .append("section", OffCodeSections.COUNSELING.getName());
-
-        if (off != null) {
-            transaction.append("off_code", off.getObjectId("_id"));
-            transaction.append("off_amount", (int) offAmount);
-        }
-
-        return goToPayment((int) (shouldPay - userMoney), doc);
-    }
 
     public static String hasOpenRequest(ObjectId userId, Number userMoney) {
 
@@ -941,54 +769,6 @@ public class AdvisorController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getMyAdvisor(ObjectId userId, ObjectId advisorId) {
-
-        Document advisor = userRepository.findById(advisorId);
-
-        if (advisor == null)
-            return JSON_NOT_UNKNOWN;
-
-        return generateSuccessMsg("data", convertToJSONDigest(userId, advisor));
-    }
-
-    public static String rate(ObjectId userId, ObjectId advisorId, int rate) {
-
-        Document advisor = userRepository.findById(advisorId);
-        if (advisor == null || !advisor.containsKey("students"))
-            return JSON_NOT_UNKNOWN;
-
-        List<Document> students = advisor.getList("students", Document.class);
-
-        Document stdDoc = searchInDocumentsKeyVal(
-                students, "_id", userId
-        );
-
-        if (stdDoc == null)
-            return JSON_NOT_UNKNOWN;
-
-        int oldRate = (int) stdDoc.getOrDefault("rate", 0);
-        stdDoc.put("rate", rate);
-        stdDoc.put("rate_at", System.currentTimeMillis());
-
-        double oldTotalRate = (double) advisor.getOrDefault("rate", (double) 0);
-        int rateCount = (int) advisor.getOrDefault("rate_count", 0);
-
-        oldTotalRate *= rateCount;
-
-        if (oldRate == 0)
-            rateCount++;
-
-        oldTotalRate -= oldRate;
-        oldTotalRate += rate;
-
-        double newRate = Math.round(oldTotalRate / rateCount * 100.0) / 100.0;
-        advisor.put("rate", newRate);
-        advisor.put("rate_count", rateCount);
-
-        userRepository.replaceOne(advisorId, advisor);
-        return generateSuccessMsg("rate", newRate);
-
-    }
 
     public static String createTag(Common db, JSONObject jsonObject) {
 
@@ -1056,100 +836,6 @@ public class AdvisorController {
         return Utility.generateSuccessMsg("data", jsonArray);
     }
 
-    public static String myLifeStyle(ObjectId userId) {
-
-        Document schedule = lifeScheduleRepository.findBySecKey(userId);
-
-        if (schedule == null) {
-            schedule = new Document("days", new ArrayList<>() {{
-                add(new Document("day", 0).append("items", new ArrayList<>()));
-                add(new Document("day", 1).append("items", new ArrayList<>()));
-                add(new Document("day", 2).append("items", new ArrayList<>()));
-                add(new Document("day", 3).append("items", new ArrayList<>()));
-                add(new Document("day", 4).append("items", new ArrayList<>()));
-                add(new Document("day", 5).append("items", new ArrayList<>()));
-                add(new Document("day", 6).append("items", new ArrayList<>()));
-            }}).append("user_id", userId).append("created_at", System.currentTimeMillis());
-
-            lifeScheduleRepository.insertOne(schedule);
-        }
-
-        return generateSuccessMsg("data", new JSONObject()
-                .put("days", convertLifeScheduleToJSON(schedule))
-                .put("exams", schedule.getList("exams", String.class))
-        );
-    }
-
-    private static int validateDay(String day) throws InvalidFieldsException {
-
-        if (
-                !day.equals("شنبه") &&
-                        !day.equals("یک شنبه") &&
-                        !day.equals("دوشنبه") &&
-                        !day.equals("سه شنبه") &&
-                        !day.equals("چهار شنبه") &&
-                        !day.equals("پنج شنبه") &&
-                        !day.equals("جمعه")
-        )
-            throw new InvalidFieldsException("not valid params");
-
-        return getDayIndex(day);
-    }
-
-    public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {
-
-        String day = data.getString("day");
-
-        int dayIndex;
-        try {
-            dayIndex = validateDay(day);
-        } catch (InvalidFieldsException e) {
-            return generateErr(e.getMessage());
-        }
-
-        ObjectId tagId = new ObjectId(data.getString("tag"));
-        Document tag = lifeStyleTagRepository.findById(tagId);
-        if (tag == null || tag.containsKey("deleted_at"))
-            return JSON_NOT_VALID_ID;
-
-        Document schedule = lifeScheduleRepository.findBySecKey(userId);
-
-        if (schedule == null)
-            return JSON_NOT_ACCESS;
-
-        List<Document> days = schedule.getList("days", Document.class);
-        Document doc = Utility.searchInDocumentsKeyVal(
-                days, "day", dayIndex
-        );
-
-        if (doc != null) {
-
-            List<Document> items = doc.getList("items", Document.class);
-
-            if (Utility.searchInDocumentsKeyValIdx(
-                    items, "tag", tag.getString("label")
-            ) != -1)
-                return generateErr("تگ وارد شده در روز موردنظر موجود است");
-
-            ObjectId newId = new ObjectId();
-            Document newDoc = new Document("_id", newId)
-                    .append("tag", tag.getString("label"))
-                    .append("duration", data.getInt("duration"));
-
-            if (data.has("startAt"))
-                newDoc.put("start_at", data.getString("start_at"));
-
-            items.add(newDoc);
-            lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
-
-            return generateSuccessMsg("id", newId.toString());
-
-        }
-
-
-        return JSON_NOT_UNKNOWN;
-    }
-
     public static String addItemToSchedule(ObjectId advisorId,
                                            ObjectId userId,
                                            JSONObject data) {
@@ -1164,10 +850,10 @@ public class AdvisorController {
         }
 
         int duration = data.getInt("duration");
-        if(duration < 15 || duration > 240)
+        if (duration < 15 || duration > 240)
             return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
 
-        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+        if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
         ObjectId tagId = new ObjectId(data.getString("tag"));
@@ -1177,43 +863,43 @@ public class AdvisorController {
 
         ObjectId subjectId = new ObjectId(data.getString("subjectId"));
         Document subject = subjectRepository.findById(subjectId);
-        if(subject == null)
+        if (subject == null)
             return JSON_NOT_VALID;
 
         ObjectId oId;
         Document schedule;
 
-        if(data.has("id")) {
+        if (data.has("id")) {
 
-            if(!ObjectId.isValid(data.getString("id")))
+            if (!ObjectId.isValid(data.getString("id")))
                 return JSON_NOT_VALID_PARAMS;
 
             oId = new ObjectId(data.getString("id"));
             schedule = scheduleRepository.findById(oId);
 
-            if(schedule == null ||
+            if (schedule == null ||
                     !schedule.getObjectId("user_id").equals(userId)
             )
                 return JSON_NOT_VALID_PARAMS;
-        }
-        else {
 
-            if(!data.has("scheduleFor"))
+        } else {
+
+            if (!data.has("scheduleFor"))
                 return JSON_NOT_VALID_PARAMS;
 
             int scheduleFor = data.getInt("scheduleFor");
 
-            if(scheduleFor < 0 || scheduleFor > 4)
+            if (scheduleFor < 0 || scheduleFor > 4)
                 return JSON_NOT_VALID_PARAMS;
 
             String weekStartAt;
 
-            if(scheduleFor == 0)
+            if (scheduleFor == 0)
                 weekStartAt = getFirstDayOfCurrWeek();
             else
                 weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
 
-            if(scheduleRepository.exist(
+            if (scheduleRepository.exist(
                     and(
                             eq("user_id", userId),
                             eq("week_start_at", weekStartAt)
@@ -1222,8 +908,8 @@ public class AdvisorController {
                 return JSON_NOT_VALID_PARAMS;
 
             schedule = new Document("user_id", userId)
-                .append("week_start_at", weekStartAt)
-                .append("days", new ArrayList<>());
+                    .append("week_start_at", weekStartAt)
+                    .append("days", new ArrayList<>());
         }
 
         if (schedule == null)
@@ -1248,19 +934,19 @@ public class AdvisorController {
         if (data.has("startAt"))
             newDoc.put("start_at", data.getString("start_at"));
 
-        if(data.has("description"))
+        if (data.has("description"))
             newDoc.put("description", data.getString("description"));
 
         items.add(newDoc);
 
-        if(doc == null)
+        if (doc == null)
             days.add(new Document("day", dayIndex)
                     .append("items", items)
             );
 
         schedule.put("days", days);
 
-        if(data.has("id"))
+        if (data.has("id"))
             scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
         else
             scheduleRepository.insertOne(schedule);
@@ -1268,102 +954,143 @@ public class AdvisorController {
         return generateSuccessMsg("id", newId.toString());
     }
 
-    public static String removeItemFromMyLifeStyle(ObjectId userId, JSONObject data) {
+    private static PairValue checkUpdatable(ObjectId advisorId, ObjectId userId,
+                                            ObjectId id, boolean delete) throws InvalidFieldsException {
 
-        String day = data.getString("day");
-        if (
-                !day.equals("شنبه") &&
-                        !day.equals("یک شنبه") &&
-                        !day.equals("دوشنبه") &&
-                        !day.equals("سه شنبه") &&
-                        !day.equals("چهار شنبه") &&
-                        !day.equals("پنج شنبه") &&
-                        !day.equals("جمعه")
-        )
-            return JSON_NOT_VALID_PARAMS;
-
-        Document schedule = lifeScheduleRepository.findBySecKey(userId);
-
-        if (schedule == null)
-            return JSON_NOT_ACCESS;
-
-        int dayIndex;
-
-        switch (day) {
-            case "شنبه":
-            default:
-                dayIndex = 0;
-                break;
-            case "یک شنبه":
-                dayIndex = 1;
-                break;
-            case "دوشنبه":
-                dayIndex = 2;
-                break;
-            case "سه شنبه":
-                dayIndex = 3;
-                break;
-            case "چهار شنبه":
-                dayIndex = 4;
-                break;
-            case "پنج شنبه":
-                dayIndex = 5;
-                break;
-            case "جمعه":
-                dayIndex = 6;
-                break;
-        }
-
-        List<Document> days = schedule.getList("days", Document.class);
-        Document doc = Utility.searchInDocumentsKeyVal(
-                days, "day", dayIndex
+        Document doc = scheduleRepository.findOne(
+                eq("user_id", userId),
+                eq("days.items._id", id)
         );
 
-        if (doc != null) {
+        if (doc == null)
+            throw new InvalidFieldsException("not access");
 
-            List<Document> items = doc.getList("items", Document.class);
-            int idx = Utility.searchInDocumentsKeyValIdx(
-                    items, "tag", data.getString("tag")
+        String firstDayOfWeek = getFirstDayOfCurrWeek();
+        if (!doc.getString("week_start_at").equals(firstDayOfWeek)) {
+
+            int d = Utility.convertStringToDate(doc.getString("week_start_at"));
+            int today = Utility.getToday();
+
+            if (today > d)
+                throw new InvalidFieldsException("زمان ویرایش/حذف به اتمام رسیده است");
+        }
+
+        List<Document> days = doc.getList("days", Document.class);
+        for (Document day : days) {
+
+            if (!day.containsKey("items"))
+                continue;
+
+            List<Document> items = day.getList("items", Document.class);
+            int idx = searchInDocumentsKeyValIdx(
+                    items, "_id", id
             );
 
-            if (idx < 0)
-                return JSON_NOT_VALID_PARAMS;
+            if (idx == -1)
+                continue;
 
-            items.remove(idx);
-            lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+            if (!items.get(idx).getObjectId("advisor_id").equals(advisorId))
+                throw new InvalidFieldsException("not access");
+
+            if(delete)
+                items.remove(idx);
+
+            return new PairValue(doc, delete ? null : items.get(idx));
+        }
+
+        throw new InvalidFieldsException("unknown err");
+    }
+
+    public static String removeItemFromSchedule(ObjectId advisorId,
+                                                ObjectId userId,
+                                                ObjectId id) {
+        try {
+
+            PairValue p = checkUpdatable(advisorId, userId, id, true);
+            Document doc = (Document) p.getKey();
+
+            scheduleRepository.replaceOne(
+                    doc.getObjectId("_id"), doc
+            );
 
             return JSON_OK;
 
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
         }
-
-
-        return JSON_NOT_UNKNOWN;
     }
 
-    public static String setMyExamInLifeStyle(ObjectId userId, JSONArray exams) {
+    public static String updateItem(ObjectId advisorId,
+                                    ObjectId userId,
+                                    ObjectId id,
+                                    JSONObject data) {
 
-        Document schedule = lifeScheduleRepository.findBySecKey(userId);
+        int duration = data.getInt("duration");
+        if (duration < 15 || duration > 240)
+            return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
 
-        if (schedule == null)
-            return JSON_NOT_ACCESS;
+        ObjectId tagId = new ObjectId(data.getString("tag"));
+        Document tag = adviseTagRepository.findById(tagId);
+        if (tag == null || tag.containsKey("deleted_at"))
+            return JSON_NOT_VALID_ID;
 
-        List<String> examTags = new ArrayList<>();
+        ObjectId subjectId = new ObjectId(data.getString("subjectId"));
+        Document subject = subjectRepository.findById(subjectId);
+        if (subject == null)
+            return JSON_NOT_VALID;
 
-        for (int i = 0; i < exams.length(); i++) {
+        try {
 
-            if (!ObjectId.isValid(exams.getString(i)))
-                return JSON_NOT_VALID_PARAMS;
+            PairValue p = checkUpdatable(advisorId, userId, id, false);
 
-            Document examTag = adviseExamTagRepository.findById(new ObjectId(exams.getString(i)));
-            if (examTag == null)
-                return JSON_NOT_VALID_PARAMS;
+            Document doc = (Document) p.getKey();
+            Document item = (Document) p.getValue();
 
-            examTags.add(examTag.getString("label"));
+            item.put("tag", tag.getString("label"));
+            item.put("subject", subject.getString("name"));
+            item.put("duration", data.getInt("duration"));
+
+            if (data.has("startAt"))
+                item.put("start_at", data.getString("start_at"));
+
+            if (data.has("description"))
+                item.put("description", data.getString("description"));
+
+            scheduleRepository.replaceOne(doc.getObjectId("_id"), doc);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
         }
 
-        schedule.put("exams", examTags);
-        lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
-
         return JSON_OK;
+    }
+
+    public static String getMySchedules(ObjectId advisorId,
+                                        ObjectId studentId,
+                                        Boolean notReturnPassed) {
+
+        int today = getToday();
+
+        List<Document> schedules = scheduleRepository.find(
+                and(
+                        eq("advisor_id", advisorId),
+                        eq("user_id", studentId)
+                ), null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document schedule : schedules) {
+
+            if(notReturnPassed != null && notReturnPassed) {
+                int d = convertStringToDate(schedule.getString("week_start_at"));
+                if(d < today)
+                    continue;
+            }
+
+            jsonArray.put(convertScheduleToJSONObject(schedule, true));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 }

@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Advice;
 
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
+import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
@@ -43,7 +44,7 @@ public class StudentAdviceRoutes extends Router {
                                   ) String jsonStr
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
-        return AdvisorController.payAdvisorPrice(
+        return StudentAdviceController.payAdvisorPrice(
                 user.getObjectId("_id"),
                 ((Number) user.get("money")).doubleValue(),
                 advisorId,
@@ -69,7 +70,7 @@ public class StudentAdviceRoutes extends Router {
         if (!user.containsKey("advisor_id"))
             return Utility.generateSuccessMsg("data", new JSONObject());
 
-        return AdvisorController.getMyAdvisor(user.getObjectId("_id"), user.getObjectId("advisor_id"));
+        return StudentAdviceController.getMyAdvisor(user.getObjectId("_id"), user.getObjectId("advisor_id"));
     }
 
     @GetMapping(value = "hasOpenRequest")
@@ -88,7 +89,7 @@ public class StudentAdviceRoutes extends Router {
     public String cancelRequest(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId reqId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.cancelRequest(getStudentUser(request).getObjectId("_id"), reqId);
+        return StudentAdviceController.cancelRequest(getStudentUser(request).getObjectId("_id"), reqId);
     }
 
     @DeleteMapping(value = "cancel")
@@ -121,7 +122,7 @@ public class StudentAdviceRoutes extends Router {
                               @PathVariable(required = false) String studentId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
         Document result = getUserWithAdvisorAccess(request, true, studentId);
-        return AdvisorController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
+        return StudentAdviceController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
     }
 
     @PutMapping(value = "setMyExamInLifeStyle")
@@ -136,36 +137,8 @@ public class StudentAdviceRoutes extends Router {
                                                }
                                        ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
+        return StudentAdviceController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("exams")
-        );
-    }
-
-    @PutMapping(value = "addItemToSchedule/{userId}")
-    @ResponseBody
-    public String addItemToSchedule(HttpServletRequest request,
-                                    @PathVariable @ObjectIdConstraint ObjectId userId,
-                                    @RequestBody @StrongJSONConstraint(
-                                            params = {
-                                                    "tag", "duration",
-                                                    "day", "subjectId",
-                                            },
-                                            paramsType = {
-                                                    ObjectId.class, Positive.class,
-                                                    String.class, ObjectId.class
-                                            },
-                                            optionals = {
-                                                    "startAt", "description"
-                                            },
-                                            optionalsType = {
-                                                    String.class, String.class
-                                            }
-                                    ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        return AdvisorController.addItemToSchedule(
-                getAdvisorUser(request).getObjectId("_id"),
-                userId,
-                new JSONObject(jsonStr)
         );
     }
 
@@ -189,7 +162,7 @@ public class StudentAdviceRoutes extends Router {
                                                }
                                        ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.addItemToMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+        return StudentAdviceController.addItemToMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
     }
 
 
@@ -205,7 +178,7 @@ public class StudentAdviceRoutes extends Router {
                                                     }
                                             ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.removeItemFromMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+        return StudentAdviceController.removeItemFromMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
     }
 
 
@@ -227,7 +200,7 @@ public class StudentAdviceRoutes extends Router {
         if (rate < 1 || rate > 5)
             return JSON_NOT_VALID_PARAMS;
 
-        return AdvisorController.rate(
+        return StudentAdviceController.rate(
                 user.getObjectId("_id"), user.getObjectId("advisor_id"),
                 rate
         );
