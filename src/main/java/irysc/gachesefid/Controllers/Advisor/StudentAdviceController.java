@@ -117,18 +117,6 @@ public class StudentAdviceController {
 
     public static String cancelRequest(ObjectId userId, ObjectId reqId) {
 
-        System.out.println(and(
-                eq("_id", reqId),
-                eq("user_id", userId),
-                or(
-                        eq("answer", "pending"),
-                        and(
-                                eq("answer", "accept"),
-                                exists("paid", false)
-                        )
-                )
-        ));
-
         Document doc = advisorRequestsRepository.findOneAndDelete(
                 and(
                         eq("_id", reqId),
@@ -345,49 +333,17 @@ public class StudentAdviceController {
 
     public static String removeItemFromMyLifeStyle(ObjectId userId, JSONObject data) {
 
-        String day = data.getString("day");
-        if (
-                !day.equals("شنبه") &&
-                        !day.equals("یک شنبه") &&
-                        !day.equals("دوشنبه") &&
-                        !day.equals("سه شنبه") &&
-                        !day.equals("چهار شنبه") &&
-                        !day.equals("پنج شنبه") &&
-                        !day.equals("جمعه")
-        )
+        int dayIndex;
+        try {
+            dayIndex = validateDay(data.getString("day"));
+        } catch (InvalidFieldsException e) {
             return JSON_NOT_VALID_PARAMS;
+        }
 
         Document schedule = lifeScheduleRepository.findBySecKey(userId);
 
         if (schedule == null)
             return JSON_NOT_ACCESS;
-
-        int dayIndex;
-
-        switch (day) {
-            case "شنبه":
-            default:
-                dayIndex = 0;
-                break;
-            case "یک شنبه":
-                dayIndex = 1;
-                break;
-            case "دوشنبه":
-                dayIndex = 2;
-                break;
-            case "سه شنبه":
-                dayIndex = 3;
-                break;
-            case "چهار شنبه":
-                dayIndex = 4;
-                break;
-            case "پنج شنبه":
-                dayIndex = 5;
-                break;
-            case "جمعه":
-                dayIndex = 6;
-                break;
-        }
 
         List<Document> days = schedule.getList("days", Document.class);
         Document doc = Utility.searchInDocumentsKeyVal(

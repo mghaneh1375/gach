@@ -1082,9 +1082,14 @@ public class AdvisorController {
 
         for(Document schedule : schedules) {
 
-            if(notReturnPassed != null && notReturnPassed) {
+            if(notReturnPassed != null) {
+
                 int d = convertStringToDate(schedule.getString("week_start_at"));
-                if(d < today)
+
+                if(notReturnPassed && d < today && today - d > 7)
+                    continue;
+
+                if(!notReturnPassed && d > today)
                     continue;
             }
 
