@@ -121,7 +121,8 @@ public class Utility {
 
         List<Document> students = doc.getList("users", Document.class);
 
-        jsonObject.put("buyers", students.size());
+        if(students.size() > 10)
+            jsonObject.put("buyers", students.size());
 
         JSONArray lastBuyers = new JSONArray();
         int counter = 0;
