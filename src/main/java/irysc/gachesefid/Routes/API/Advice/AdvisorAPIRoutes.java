@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Advice;
 
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
+import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -25,6 +26,7 @@ import javax.validation.constraints.NotBlank;
 import java.util.List;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
 @Controller
@@ -197,10 +199,12 @@ public class AdvisorAPIRoutes extends Router {
                                                     String.class, ObjectId.class
                                             },
                                             optionals = {
-                                                    "startAt", "description"
+                                                    "startAt", "description",
+                                                    "scheduleFor", "id"
                                             },
                                             optionalsType = {
-                                                    String.class, String.class
+                                                    String.class, String.class,
+                                                    Integer.class, ObjectId.class
                                             }
                                     ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
@@ -220,6 +224,17 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.removeItemFromSchedule(
                 getAdvisorUser(request).getObjectId("_id"),
                 userId, id
+        );
+    }
+
+    @DeleteMapping(value = "removeSchedule/{id}")
+    @ResponseBody
+    public String removeSchedule(HttpServletRequest request,
+                                         @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.removeSchedule(
+                getAdvisorUser(request).getObjectId("_id"),
+                id
         );
     }
 
@@ -248,6 +263,57 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.updateItem(
                 getAdvisorUser(request).getObjectId("_id"),
                 userId, id, convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
+
+    @GetMapping(value = "getStudentSchedules/{userId}")
+    @ResponseBody
+    public String getStudentSchedules(HttpServletRequest request,
+                                      @PathVariable @ObjectIdConstraint ObjectId userId,
+                                      @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+
+        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.getStudentSchedules(
+                advisorId, userId, notReturnPassed
+        );
+    }
+
+    @GetMapping(value = {"getStudentSchedule/{userId}/{scheduleFor}", "getStudentSchedule/{id}"})
+    @ResponseBody
+    public String getStudentSchedules(HttpServletRequest request,
+                                      @PathVariable(required = false) String userId,
+                                      @PathVariable(required = false) Integer scheduleFor,
+                                      @PathVariable(required = false) String id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        if(
+                ((userId == null) != (scheduleFor == null)) ||
+                ((userId == null) == (id == null))
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        if(userId != null && !ObjectId.isValid(userId))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(id != null && !ObjectId.isValid(id))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(scheduleFor != null && (scheduleFor < 0 || scheduleFor > 4))
+            return JSON_NOT_VALID_PARAMS;
+
+        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+        if(userId != null && !Authorization.hasAccessToThisStudent(new ObjectId(userId), advisorId))
+            return JSON_NOT_ACCESS;
+
+        return StudentAdviceController.mySchedule(
+                advisorId, userId != null ? new ObjectId(userId) : null,
+                scheduleFor, id != null ? new ObjectId(id) : null
         );
     }
 

@@ -281,49 +281,53 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertScheduleToJSONObject(Document doc, boolean digest) {
+    static JSONObject convertSchedulesToJSONObject(Document doc, ObjectId advisorId) {
 
         JSONObject jsonObject = new JSONObject();
 
-        if(digest) {
+        List<Document> days = doc.getList("days", Document.class);
+        int schedulesSum = 0;
+        int doneSum = 0;
+        HashMap<ObjectId, String> advisors = new HashMap<>();
 
-            List<Document> days = doc.getList("days", Document.class);
-            int schedulesSum = 0;
-            int doneSum = 0;
-            HashMap<ObjectId, String> advisors = new HashMap<>();
+        for (Document day : days) {
 
-            for (Document day : days) {
+            if(!day.containsKey("items"))
+                continue;
 
-                if(!day.containsKey("items"))
+            for(Document item : day.getList("items", Document.class)) {
+
+                schedulesSum += item.getInteger("duration");
+                doneSum += (int)item.getOrDefault("done_duration", 0);
+
+                if(advisors.containsKey(item.getObjectId("advisor_id")))
                     continue;
 
-                for(Document item : day.getList("items", Document.class)) {
+                Document advisor = userRepository.findById(item.getObjectId("advisor_id"));
+                if(advisor == null)
+                    continue;
 
-                    schedulesSum += item.getInteger("duration");
-                    doneSum += (int)item.getOrDefault("done_duration", 0);
-
-                    if(advisors.containsKey(item.getObjectId("advisor_id")))
-                        continue;
-
-                    Document advisor = userRepository.findById(item.getObjectId("advisor_id"));
-                    if(advisor == null)
-                        continue;
-
-                    advisors.put(item.getObjectId("advisor_id"),
-                            advisor.getString("first_name") + " " + advisor.getString("last_name")
-                    );
-                }
+                advisors.put(item.getObjectId("advisor_id"),
+                        advisor.getString("first_name") + " " + advisor.getString("last_name")
+                );
             }
-
-            JSONArray advisorsJSON = new JSONArray();
-            for(ObjectId oId : advisors.keySet()) {
-                advisorsJSON.put(advisors.get(oId));
-            }
-
-            jsonObject.put("weekStartAt", doc.getString("week_start_at"))
-                    .put("schedulesSum", schedulesSum).put("doneSum", doneSum)
-                    .put("advisors", advisorsJSON);
         }
+
+        JSONArray advisorsJSON = new JSONArray();
+        boolean canDeleteSchedule = false;
+
+        for(ObjectId oId : advisors.keySet()) {
+            advisorsJSON.put(advisors.get(oId));
+
+            if(advisors.keySet().size() == 1 && oId.equals(advisorId))
+                canDeleteSchedule = true;
+        }
+
+
+        jsonObject.put("weekStartAt", doc.getString("week_start_at"))
+                .put("schedulesSum", schedulesSum).put("doneSum", doneSum)
+                .put("canDelete", canDeleteSchedule).put("advisors", advisorsJSON)
+                .put("id", doc.getObjectId("_id").toString());
 
         return jsonObject;
     }
@@ -371,6 +375,47 @@ public class Utility {
                     jsonObject1.put("startAt", item.get("start_id"));
 
                 jsonArray1.put(jsonObject1);
+            }
+
+            jsonObject.put("items", jsonArray1);
+            jsonArray.put(jsonObject);
+        }
+
+        return jsonArray;
+    }
+
+    static JSONArray convertScheduleToJSON(Document schedule, ObjectId advisorId) {
+
+        JSONArray jsonArray = new JSONArray();
+        List<Document> days =  schedule.getList("days", Document.class);
+
+        for (int i = 0; i < 7; i++) {
+
+            Document day = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    days, "day", i
+            );
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("day", getWeekDay(i));
+
+            JSONArray jsonArray1 = new JSONArray();
+
+            if(day != null) {
+
+                for (Document item : day.getList("items", Document.class)) {
+                    JSONObject jsonObject1 = new JSONObject()
+                            .put("tag", item.getString("tag"))
+                            .put("id", item.getObjectId("_id").toString())
+                            .put("duration", item.get("duration"));
+
+                    if (item.containsKey("start_at"))
+                        jsonObject1.put("startAt", item.get("start_id"));
+
+                    jsonObject.put("owner", advisorId != null && advisorId.equals(item.getObjectId("advisor_id")));
+
+                    jsonArray1.put(jsonObject1);
+                }
+
             }
 
             jsonObject.put("items", jsonArray1);

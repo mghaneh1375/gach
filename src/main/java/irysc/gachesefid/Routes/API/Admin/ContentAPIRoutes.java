@@ -307,7 +307,7 @@ public class ContentAPIRoutes extends Router {
     @ResponseBody
     public String getSubjectsKeyVals(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getAdvisorUser(request);
         return ContentController.getSubjectsKeyVals();
     }
 

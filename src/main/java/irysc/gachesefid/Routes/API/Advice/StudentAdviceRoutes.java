@@ -112,7 +112,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String myRequests(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.myRequests(getStudentUser(request).getObjectId("_id"));
+        return StudentAdviceController.myRequests(getStudentUser(request).getObjectId("_id"));
     }
 
 

@@ -1455,12 +1455,15 @@ public class Utility {
             default:
                 return 0;
             case "یک شنبه":
+            case "يکشنبه":
                 return 1;
             case "دوشنبه":
+            case "دو شنبه":
                 return 2;
             case "سه شنبه":
                 return 3;
             case "چهار شنبه":
+            case "چهارشنبه":
                 return 4;
             case "پنج شنبه":
                 return 5;

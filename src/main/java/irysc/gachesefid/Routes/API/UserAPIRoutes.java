@@ -81,16 +81,17 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
-            System.out.println(getFirstDayOfCurrWeek());
-            System.out.println(getFirstDayOfFutureWeek(1));
-            System.out.println(getFirstDayOfFutureWeek(2));
-            System.out.println(getFirstDayOfFutureWeek(3));
-            System.out.println(getFirstDayOfFutureWeek(4));
+            return getFirstDayOfCurrWeek();
+//            System.out.println();
+//            System.out.println(getFirstDayOfFutureWeek(1));
+//            System.out.println(getFirstDayOfFutureWeek(2));
+//            System.out.println(getFirstDayOfFutureWeek(3));
+//            System.out.println(getFirstDayOfFutureWeek(4));
 
 //            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
 //            System.out.println(userId);
 
-            return "pk";
+//            return "pk";
         }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");

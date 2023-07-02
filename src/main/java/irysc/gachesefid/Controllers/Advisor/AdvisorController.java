@@ -7,25 +7,20 @@ import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
-import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.UserController.fillJSONWithEducationalHistory;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -529,7 +524,7 @@ public class AdvisorController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    private static String returnRequests(String key, List<Document> requests) {
+    public static String returnRequests(String key, List<Document> requests) {
 
         JSONArray jsonArray = new JSONArray();
 
@@ -570,15 +565,6 @@ public class AdvisorController {
         }
 
         return generateSuccessMsg("data", jsonArray);
-    }
-
-    public static String myRequests(ObjectId userId) {
-
-        List<Document> requests = advisorRequestsRepository.find(
-                eq("user_id", userId), null, Sorts.descending("created_at")
-        );
-
-        return returnRequests("advisor_id", requests);
     }
 
 
@@ -697,19 +683,27 @@ public class AdvisorController {
 
     public static void setAdvisor(Document student, Document advisor) {
 
-        cancelAdvisor(student, advisor, false);
+//        cancelAdvisor(student, advisor, false);
 
         student.put("advisor_id", advisor.getObjectId("_id"));
+        userRepository.replaceOne(student.getObjectId("_id"), student);
+
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
-        students.add(new Document("_id", student.getObjectId("_id"))
-                .append("created_at", System.currentTimeMillis())
-        );
+
+        int idx = Utility.searchInDocumentsKeyValIdx(students, "_id", student.getObjectId("_id"));
+
+        if (idx == -1) {
+            students.add(new Document("_id", student.getObjectId("_id"))
+                    .append("created_at", System.currentTimeMillis())
+            );
+        }
+        //todo : extend advisor
+//        else {
+//            students.get(idx).put("created_at", );
+//        }
 
         advisor.put("students", students);
-
-        userRepository.replaceOne(student.getObjectId("_id"), student);
         userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
-
     }
 
 
@@ -948,24 +942,34 @@ public class AdvisorController {
 
         if (data.has("id"))
             scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
-        else
-            scheduleRepository.insertOne(schedule);
+        else {
+            ObjectId scheduleId = scheduleRepository.insertOneWithReturnId(schedule);
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("scheduleId", scheduleId.toString())
+                    .put("id", newId.toString())
+            );
+        }
 
-        return generateSuccessMsg("id", newId.toString());
+        return generateSuccessMsg("data", new JSONObject()
+                .put("id", newId.toString())
+        );
     }
 
     private static PairValue checkUpdatable(ObjectId advisorId, ObjectId userId,
                                             ObjectId id, boolean delete) throws InvalidFieldsException {
 
         Document doc = scheduleRepository.findOne(
-                eq("user_id", userId),
-                eq("days.items._id", id)
+                and(
+                        eq("user_id", userId),
+                        eq("days.items._id", id)
+                ), null
         );
 
         if (doc == null)
             throw new InvalidFieldsException("not access");
 
         String firstDayOfWeek = getFirstDayOfCurrWeek();
+
         if (!doc.getString("week_start_at").equals(firstDayOfWeek)) {
 
             int d = Utility.convertStringToDate(doc.getString("week_start_at"));
@@ -992,7 +996,7 @@ public class AdvisorController {
             if (!items.get(idx).getObjectId("advisor_id").equals(advisorId))
                 throw new InvalidFieldsException("not access");
 
-            if(delete)
+            if (delete)
                 items.remove(idx);
 
             return new PairValue(doc, delete ? null : items.get(idx));
@@ -1065,37 +1069,60 @@ public class AdvisorController {
         return JSON_OK;
     }
 
-    public static String getMySchedules(ObjectId advisorId,
-                                        ObjectId studentId,
-                                        Boolean notReturnPassed) {
+    public static String getStudentSchedules(ObjectId advisorId,
+                                             ObjectId studentId,
+                                             Boolean notReturnPassed) {
 
         int today = getToday();
 
         List<Document> schedules = scheduleRepository.find(
                 and(
-                        eq("advisor_id", advisorId),
                         eq("user_id", studentId)
                 ), null
         );
 
         JSONArray jsonArray = new JSONArray();
 
-        for(Document schedule : schedules) {
+        for (Document schedule : schedules) {
 
-            if(notReturnPassed != null) {
+            if (notReturnPassed != null) {
 
                 int d = convertStringToDate(schedule.getString("week_start_at"));
 
-                if(notReturnPassed && d < today && today - d > 7)
+                if (notReturnPassed && d < today && today - d > 7)
                     continue;
 
-                if(!notReturnPassed && d > today)
+                if (!notReturnPassed && d > today)
                     continue;
             }
 
-            jsonArray.put(convertScheduleToJSONObject(schedule, true));
+            jsonArray.put(convertSchedulesToJSONObject(schedule, advisorId));
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String removeSchedule(ObjectId advisorId, ObjectId id) {
+
+        Document schedule = scheduleRepository.findById(id);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> days = schedule.getList("days", Document.class);
+
+        for (Document day : days) {
+
+            if(!day.containsKey("items"))
+                continue;
+
+            for(Document item : day.getList("items", Document.class)) {
+                if(!item.getObjectId("advisor_id").equals(advisorId))
+                    return generateErr("شما تنها مشاور این کاربرگ نیستید و امکان حذف این کاربرگ برای شما وجود ندارد");
+            }
+        }
+
+        scheduleRepository.deleteOne(schedule.getObjectId("_id"));
+
+        return JSON_OK;
     }
 }

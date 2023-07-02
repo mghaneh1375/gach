@@ -1,10 +1,12 @@
 package irysc.gachesefid.Controllers.Advisor;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Controllers.Advisor.AdvisorController.returnRequests;
 import static irysc.gachesefid.Controllers.Advisor.AdvisorController.setAdvisor;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
@@ -419,6 +422,63 @@ public class StudentAdviceController {
         return generateSuccessMsg("data", new JSONObject()
                 .put("days", convertLifeScheduleToJSON(schedule))
                 .put("exams", schedule.getList("exams", String.class))
+        );
+    }
+
+    public static String myRequests(ObjectId userId) {
+
+        List<Document> requests = advisorRequestsRepository.find(
+                eq("user_id", userId), null, Sorts.descending("created_at")
+        );
+
+        return returnRequests("advisor_id", requests);
+    }
+
+    public static String mySchedule(ObjectId advisorId, ObjectId userId,
+                                    Integer scheduleFor, ObjectId id) {
+
+        Document schedule;
+
+        if(id != null) {
+
+            schedule = scheduleRepository.findById(id);
+            if(schedule == null)
+                return JSON_NOT_VALID_ID;
+
+            userId = schedule.getObjectId("user_id");
+            if(advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
+                return JSON_NOT_ACCESS;
+        }
+        else {
+
+            String weekStartAt;
+
+            if (scheduleFor == 0)
+                weekStartAt = getFirstDayOfCurrWeek();
+            else
+                weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
+
+            schedule = scheduleRepository.findOne(and(
+                    eq("advisor_id", advisorId),
+                    eq("user_id", userId),
+                    eq("week_start_at", weekStartAt)
+            ), null);
+        }
+
+        if (schedule == null) {
+            schedule = new Document("days", new ArrayList<>() {{
+                add(new Document("day", 0).append("items", new ArrayList<>()));
+                add(new Document("day", 1).append("items", new ArrayList<>()));
+                add(new Document("day", 2).append("items", new ArrayList<>()));
+                add(new Document("day", 3).append("items", new ArrayList<>()));
+                add(new Document("day", 4).append("items", new ArrayList<>()));
+                add(new Document("day", 5).append("items", new ArrayList<>()));
+                add(new Document("day", 6).append("items", new ArrayList<>()));
+            }}).append("user_id", userId).append("created_at", System.currentTimeMillis());
+        }
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("days", convertScheduleToJSON(schedule, advisorId))
         );
     }
 }
