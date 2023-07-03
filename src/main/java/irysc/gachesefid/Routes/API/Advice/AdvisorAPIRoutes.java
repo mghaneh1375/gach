@@ -211,7 +211,7 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.addItemToSchedule(
                 getAdvisorUser(request).getObjectId("_id"),
                 userId,
-                new JSONObject(jsonStr)
+                convertPersian(new JSONObject(jsonStr))
         );
     }
 

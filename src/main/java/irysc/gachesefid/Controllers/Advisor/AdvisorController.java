@@ -926,7 +926,7 @@ public class AdvisorController {
                 .append("duration", data.getInt("duration"));
 
         if (data.has("startAt"))
-            newDoc.put("start_at", data.getString("start_at"));
+            newDoc.put("start_at", data.getString("startAt"));
 
         if (data.has("description"))
             newDoc.put("description", data.getString("description"));

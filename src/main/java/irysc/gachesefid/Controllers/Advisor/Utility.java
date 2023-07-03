@@ -7,6 +7,7 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -388,6 +389,7 @@ public class Utility {
 
         JSONArray jsonArray = new JSONArray();
         List<Document> days =  schedule.getList("days", Document.class);
+        HashMap<ObjectId, PairValue> avatars = new HashMap<>();
 
         for (int i = 0; i < 7; i++) {
 
@@ -406,10 +408,14 @@ public class Utility {
                     JSONObject jsonObject1 = new JSONObject()
                             .put("tag", item.getString("tag"))
                             .put("id", item.getObjectId("_id").toString())
-                            .put("duration", item.get("duration"));
+                            .put("duration", item.get("duration"))
+                            .put("subject", item.getString("subject"));
 
                     if (item.containsKey("start_at"))
-                        jsonObject1.put("startAt", item.get("start_id"));
+                        jsonObject1.put("startAt", item.get("start_at"));
+
+                    if (item.containsKey("description"))
+                        jsonObject1.put("description", item.get("description"));
 
                     jsonObject.put("owner", advisorId != null && advisorId.equals(item.getObjectId("advisor_id")));
 
