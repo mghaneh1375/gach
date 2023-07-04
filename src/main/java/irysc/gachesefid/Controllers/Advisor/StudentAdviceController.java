@@ -459,10 +459,10 @@ public class StudentAdviceController {
                 weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
 
             schedule = scheduleRepository.findOne(and(
-                    eq("advisor_id", advisorId),
                     eq("user_id", userId),
                     eq("week_start_at", weekStartAt)
             ), null);
+
         }
 
         if (schedule == null) {

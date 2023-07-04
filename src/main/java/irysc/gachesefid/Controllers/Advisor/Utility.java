@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 import static irysc.gachesefid.Utility.Utility.getDayIndex;
 import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
@@ -243,7 +244,7 @@ public class Utility {
                 .put("rate", advisor.getOrDefault("rate", 0))
                 .put("bio", advisor.getString("bio"))
                 .put("id", advisor.getObjectId("_id").toString())
-                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"));
+                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"));
 
         if (stdId != null) {
 
@@ -405,11 +406,30 @@ public class Utility {
             if(day != null) {
 
                 for (Document item : day.getList("items", Document.class)) {
+
+                    PairValue p = null;
+                    ObjectId aId = item.getObjectId("advisor_id");
+
+                    if(avatars.containsKey(aId))
+                        p = avatars.get(aId);
+
+                    else {
+                        Document advisor = userRepository.findById(aId);
+                        if(advisor != null) {
+                            p = new PairValue(
+                                    advisor.getString("first_name") + " " + advisor.getString("last_name"),
+                                    STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic")
+                            );
+
+                            avatars.put(aId, p);
+                        }
+                    }
+
                     JSONObject jsonObject1 = new JSONObject()
                             .put("tag", item.getString("tag"))
                             .put("id", item.getObjectId("_id").toString())
                             .put("duration", item.get("duration"))
-                            .put("subject", item.getString("subject"));
+                            .put("lesson", item.getString("lesson"));
 
                     if (item.containsKey("start_at"))
                         jsonObject1.put("startAt", item.get("start_at"));
@@ -417,9 +437,22 @@ public class Utility {
                     if (item.containsKey("description"))
                         jsonObject1.put("description", item.get("description"));
 
+                    if (item.containsKey("additional_label")) {
+                        jsonObject1.put("additionalLabel", item.getString("additional_label"))
+                                .put("additional", item.getInteger("additional"));
+                    }
+
+                    if(p != null) {
+                        jsonObject1.put("advisor", new JSONObject()
+                                .put("name", p.getKey().toString())
+                                .put("pic", p.getValue().toString())
+                        );
+                    }
+
                     jsonObject.put("owner", advisorId != null && advisorId.equals(item.getObjectId("advisor_id")));
 
                     jsonArray1.put(jsonObject1);
+
                 }
 
             }

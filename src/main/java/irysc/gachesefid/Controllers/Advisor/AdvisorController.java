@@ -774,9 +774,12 @@ public class AdvisorController {
         ))
             return generateErr("این تگ در سیستم موجود است");
 
-        return db.insertOneWithReturn(
-                new Document("label", jsonObject.getString("label"))
-        );
+        Document newDoc = new Document("label", jsonObject.getString("label"));
+
+        if(jsonObject.has("numberLabel"))
+            newDoc.append("number_label", jsonObject.getString("numberLabel"));
+
+        return db.insertOneWithReturn(newDoc);
     }
 
     public static String removeTags(Common db, JSONArray jsonArray) {
@@ -821,11 +824,17 @@ public class AdvisorController {
         );
         JSONArray jsonArray = new JSONArray();
 
-        for (Document tag : tags)
-            jsonArray.put(new JSONObject()
+        for (Document tag : tags) {
+
+            JSONObject jsonObject = new JSONObject()
                     .put("id", tag.getObjectId("_id").toString())
-                    .put("label", tag.getString("label"))
-            );
+                    .put("label", tag.getString("label"));
+
+            if(tag.containsKey("number_label"))
+                jsonObject.put("numberLabel", tag.getString("number_label"));
+
+            jsonArray.put(jsonObject);
+        }
 
         return Utility.generateSuccessMsg("data", jsonArray);
     }
@@ -855,10 +864,18 @@ public class AdvisorController {
         if (tag == null || tag.containsKey("deleted_at"))
             return JSON_NOT_VALID_ID;
 
-        ObjectId subjectId = new ObjectId(data.getString("subjectId"));
-        Document subject = subjectRepository.findById(subjectId);
-        if (subject == null)
+        if(tag.containsKey("number_label") && !data.has("additional"))
+            return generateErr("لطفا " + tag.getString("number_label") + " را وارد نمایید");
+
+        ObjectId lessonId = new ObjectId(data.getString("lessonId"));
+        Document grade = gradeRepository.findOne(eq("lessons._id", lessonId), null);
+        if (grade == null)
             return JSON_NOT_VALID;
+
+        Document lesson = searchInDocumentsKeyVal(
+                grade.getList("lessons", Document.class),
+                "_id", lessonId
+        );
 
         ObjectId oId;
         Document schedule;
@@ -922,7 +939,7 @@ public class AdvisorController {
                 .append("tag", tag.getString("label"))
                 .append("advisor_id", advisorId)
                 .append("created_at", System.currentTimeMillis())
-                .append("subject", subject.getString("name"))
+                .append("lesson", lesson.getString("name"))
                 .append("duration", data.getInt("duration"));
 
         if (data.has("startAt"))
@@ -930,6 +947,11 @@ public class AdvisorController {
 
         if (data.has("description"))
             newDoc.put("description", data.getString("description"));
+
+        if(tag.containsKey("number_label")) {
+            newDoc.put("additional", data.getInt("additional"));
+            newDoc.put("additional_label", tag.getString("number_label"));
+        }
 
         items.add(newDoc);
 
@@ -1024,50 +1046,50 @@ public class AdvisorController {
         }
     }
 
-    public static String updateItem(ObjectId advisorId,
-                                    ObjectId userId,
-                                    ObjectId id,
-                                    JSONObject data) {
-
-        int duration = data.getInt("duration");
-        if (duration < 15 || duration > 240)
-            return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
-
-        ObjectId tagId = new ObjectId(data.getString("tag"));
-        Document tag = adviseTagRepository.findById(tagId);
-        if (tag == null || tag.containsKey("deleted_at"))
-            return JSON_NOT_VALID_ID;
-
-        ObjectId subjectId = new ObjectId(data.getString("subjectId"));
-        Document subject = subjectRepository.findById(subjectId);
-        if (subject == null)
-            return JSON_NOT_VALID;
-
-        try {
-
-            PairValue p = checkUpdatable(advisorId, userId, id, false);
-
-            Document doc = (Document) p.getKey();
-            Document item = (Document) p.getValue();
-
-            item.put("tag", tag.getString("label"));
-            item.put("subject", subject.getString("name"));
-            item.put("duration", data.getInt("duration"));
-
-            if (data.has("startAt"))
-                item.put("start_at", data.getString("start_at"));
-
-            if (data.has("description"))
-                item.put("description", data.getString("description"));
-
-            scheduleRepository.replaceOne(doc.getObjectId("_id"), doc);
-
-        } catch (InvalidFieldsException e) {
-            return generateErr(e.getMessage());
-        }
-
-        return JSON_OK;
-    }
+//    public static String updateItem(ObjectId advisorId,
+//                                    ObjectId userId,
+//                                    ObjectId id,
+//                                    JSONObject data) {
+//
+//        int duration = data.getInt("duration");
+//        if (duration < 15 || duration > 240)
+//            return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
+//
+//        ObjectId tagId = new ObjectId(data.getString("tag"));
+//        Document tag = adviseTagRepository.findById(tagId);
+//        if (tag == null || tag.containsKey("deleted_at"))
+//            return JSON_NOT_VALID_ID;
+//
+//        ObjectId subjectId = new ObjectId(data.getString("subjectId"));
+//        Document subject = subjectRepository.findById(subjectId);
+//        if (subject == null)
+//            return JSON_NOT_VALID;
+//
+//        try {
+//
+//            PairValue p = checkUpdatable(advisorId, userId, id, false);
+//
+//            Document doc = (Document) p.getKey();
+//            Document item = (Document) p.getValue();
+//
+//            item.put("tag", tag.getString("label"));
+//            item.put("subject", subject.getString("name"));
+//            item.put("duration", data.getInt("duration"));
+//
+//            if (data.has("startAt"))
+//                item.put("start_at", data.getString("start_at"));
+//
+//            if (data.has("description"))
+//                item.put("description", data.getString("description"));
+//
+//            scheduleRepository.replaceOne(doc.getObjectId("_id"), doc);
+//
+//        } catch (InvalidFieldsException e) {
+//            return generateErr(e.getMessage());
+//        }
+//
+//        return JSON_OK;
+//    }
 
     public static String getStudentSchedules(ObjectId advisorId,
                                              ObjectId studentId,
@@ -1089,10 +1111,10 @@ public class AdvisorController {
 
                 int d = convertStringToDate(schedule.getString("week_start_at"));
 
-                if (notReturnPassed && d < today && today - d > 7)
+                if (notReturnPassed && today - d > 7)
                     continue;
 
-                if (!notReturnPassed && d > today)
+                if (!notReturnPassed && today - d < 7)
                     continue;
             }
 

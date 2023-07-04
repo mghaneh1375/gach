@@ -192,7 +192,7 @@ public class AdvisorAPIRoutes extends Router {
                                     @RequestBody @StrongJSONConstraint(
                                             params = {
                                                     "tag", "duration",
-                                                    "day", "subjectId",
+                                                    "day", "lessonId",
                                             },
                                             paramsType = {
                                                     ObjectId.class, Positive.class,
@@ -200,11 +200,13 @@ public class AdvisorAPIRoutes extends Router {
                                             },
                                             optionals = {
                                                     "startAt", "description",
-                                                    "scheduleFor", "id"
+                                                    "scheduleFor", "id",
+                                                    "additional"
                                             },
                                             optionalsType = {
                                                     String.class, String.class,
-                                                    Integer.class, ObjectId.class
+                                                    Integer.class, ObjectId.class,
+                                                    Positive.class
                                             }
                                     ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
@@ -238,33 +240,33 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "updateItem/{userId}/{id}")
-    @ResponseBody
-    public String updateItem(HttpServletRequest request,
-                             @PathVariable @ObjectIdConstraint ObjectId userId,
-                             @PathVariable @ObjectIdConstraint ObjectId id,
-                             @RequestBody @StrongJSONConstraint(
-                                     params = {
-                                             "tag", "duration",
-                                             "subjectId",
-                                     },
-                                     paramsType = {
-                                             ObjectId.class, Positive.class,
-                                             ObjectId.class
-                                     },
-                                     optionals = {
-                                             "startAt", "description"
-                                     },
-                                     optionalsType = {
-                                             String.class, String.class
-                                     }
-                             ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return AdvisorController.updateItem(
-                getAdvisorUser(request).getObjectId("_id"),
-                userId, id, convertPersian(new JSONObject(jsonStr))
-        );
-    }
+//    @PutMapping(value = "updateItem/{userId}/{id}")
+//    @ResponseBody
+//    public String updateItem(HttpServletRequest request,
+//                             @PathVariable @ObjectIdConstraint ObjectId userId,
+//                             @PathVariable @ObjectIdConstraint ObjectId id,
+//                             @RequestBody @StrongJSONConstraint(
+//                                     params = {
+//                                             "tag", "duration",
+//                                             "subjectId",
+//                                     },
+//                                     paramsType = {
+//                                             ObjectId.class, Positive.class,
+//                                             ObjectId.class
+//                                     },
+//                                     optionals = {
+//                                             "startAt", "description"
+//                                     },
+//                                     optionalsType = {
+//                                             String.class, String.class
+//                                     }
+//                             ) @NotBlank String jsonStr
+//    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+//        return AdvisorController.updateItem(
+//                getAdvisorUser(request).getObjectId("_id"),
+//                userId, id, convertPersian(new JSONObject(jsonStr))
+//        );
+//    }
 
 
     @GetMapping(value = "getStudentSchedules/{userId}")

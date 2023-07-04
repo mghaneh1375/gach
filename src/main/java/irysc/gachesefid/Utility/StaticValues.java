@@ -7,10 +7,10 @@ import org.json.JSONObject;
 
 public class StaticValues {
 
-    public final static String STATICS_SERVER = "https://statics.irysc.com/";
+//    public final static String STATICS_SERVER = "https://statics.irysc.com/";
     public final static String VIDEO_STATICS_SERVER = "https://v.irysc.com/";
 
-//    public final static String STATICS_SERVER = "http://localstaticgach.com/";
+    public final static String STATICS_SERVER = "http://localstaticgach.com/";
 
 
     public final static String mailUserName = "noreply@irysc.com";

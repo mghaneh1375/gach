@@ -87,9 +87,9 @@ public class AdminAdvisorAPIRoutes extends Router {
     public String createTag(HttpServletRequest request,
                             @RequestBody @StrongJSONConstraint(
                                     params = {"label"},
-                                    paramsType = {
-                                            String.class
-                                    }
+                                    paramsType = {String.class},
+                                    optionals = {"numberLabel"},
+                                    optionalsType = {String.class}
                             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
