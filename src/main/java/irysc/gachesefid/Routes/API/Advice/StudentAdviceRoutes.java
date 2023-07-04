@@ -4,6 +4,7 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -205,4 +206,16 @@ public class StudentAdviceRoutes extends Router {
                 rate
         );
     }
+
+
+    @GetMapping(value = "getMySchedules")
+    @ResponseBody
+    public String getMySchedules(HttpServletRequest request,
+                                      @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return AdvisorController.getStudentSchedules(
+                null, getUser(request).getObjectId("_id"), notReturnPassed
+        );
+    }
+
 }

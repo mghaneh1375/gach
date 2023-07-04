@@ -445,7 +445,11 @@ public class StudentAdviceController {
             if(schedule == null)
                 return JSON_NOT_VALID_ID;
 
-            userId = schedule.getObjectId("user_id");
+            if(userId == null)
+                userId = schedule.getObjectId("user_id");
+            else if(!schedule.getObjectId("user_id").equals(userId))
+                return JSON_NOT_ACCESS;
+
             if(advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
                 return JSON_NOT_ACCESS;
         }

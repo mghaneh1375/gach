@@ -232,7 +232,7 @@ public class AdvisorAPIRoutes extends Router {
     @DeleteMapping(value = "removeSchedule/{id}")
     @ResponseBody
     public String removeSchedule(HttpServletRequest request,
-                                         @PathVariable @ObjectIdConstraint ObjectId id
+                                 @PathVariable @ObjectIdConstraint ObjectId id
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return AdvisorController.removeSchedule(
                 getAdvisorUser(request).getObjectId("_id"),
@@ -278,7 +278,7 @@ public class AdvisorAPIRoutes extends Router {
 
         ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
 
-        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+        if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.getStudentSchedules(
@@ -292,26 +292,35 @@ public class AdvisorAPIRoutes extends Router {
                                       @PathVariable(required = false) String userId,
                                       @PathVariable(required = false) Integer scheduleFor,
                                       @PathVariable(required = false) String id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
-        if(
+        if (
                 ((userId == null) != (scheduleFor == null)) ||
-                ((userId == null) == (id == null))
+                        ((userId == null) == (id == null))
         )
             return JSON_NOT_VALID_PARAMS;
 
-        if(userId != null && !ObjectId.isValid(userId))
+        if (userId != null && !ObjectId.isValid(userId))
             return JSON_NOT_VALID_PARAMS;
 
-        if(id != null && !ObjectId.isValid(id))
+        if (id != null && !ObjectId.isValid(id))
             return JSON_NOT_VALID_PARAMS;
 
-        if(scheduleFor != null && (scheduleFor < 0 || scheduleFor > 4))
+        if (scheduleFor != null && (scheduleFor < 0 || scheduleFor > 4))
             return JSON_NOT_VALID_PARAMS;
 
-        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
-        if(userId != null && !Authorization.hasAccessToThisStudent(new ObjectId(userId), advisorId))
-            return JSON_NOT_ACCESS;
+        Document user = getUser(request);
+
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+        ObjectId advisorId = null;
+
+        if (isAdvisor) {
+            advisorId = user.getObjectId("_id");
+            if (userId != null && !Authorization.hasAccessToThisStudent(new ObjectId(userId), advisorId))
+                return JSON_NOT_ACCESS;
+        }
+        else
+            userId = user.getObjectId("_id").toString();
 
         return StudentAdviceController.mySchedule(
                 advisorId, userId != null ? new ObjectId(userId) : null,

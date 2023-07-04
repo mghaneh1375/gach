@@ -321,7 +321,7 @@ public class Utility {
         for(ObjectId oId : advisors.keySet()) {
             advisorsJSON.put(advisors.get(oId));
 
-            if(advisors.keySet().size() == 1 && oId.equals(advisorId))
+            if(advisorId != null && advisors.keySet().size() == 1 && oId.equals(advisorId))
                 canDeleteSchedule = true;
         }
 
