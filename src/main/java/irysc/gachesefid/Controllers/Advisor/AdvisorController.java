@@ -919,7 +919,7 @@ public class AdvisorController {
             )
                 return JSON_NOT_VALID_PARAMS;
 
-            if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
+            if(advisorId != null && schedule.containsKey("advisors") && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
                 schedule.getList("advisors", ObjectId.class).add(advisorId);
             }
 
@@ -1176,7 +1176,7 @@ public class AdvisorController {
                     LessonStat lessonStat = lessonStats.get(lesson);
 
                     lessonStat.total += item.getInteger("duration");
-                    lessonStat.done += item.getInteger("done_duration");
+                    lessonStat.done += (int)item.getOrDefault("done_duration", 0);
 
                     if(lessonStat.tagStats.containsKey(tag)) {
                         TagStat tagStat = lessonStat.tagStats.get(tag);
