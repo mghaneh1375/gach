@@ -4,7 +4,6 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -28,6 +27,13 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @RequestMapping(path = "/api/advisor/public/")
 @Validated
 public class StudentAdviceRoutes extends Router {
+
+    @GetMapping(value = "/getMyAdvisors")
+    @ResponseBody
+    public String getMyAdvisors(HttpServletRequest request
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+        return StudentAdviceController.getMyAdvisors(getUser(request));
+    }
 
     @PostMapping(value = "payAdvisorPrice/{advisorId}")
     @ResponseBody

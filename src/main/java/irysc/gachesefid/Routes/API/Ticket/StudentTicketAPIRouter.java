@@ -8,7 +8,6 @@ import irysc.gachesefid.Models.TicketPriority;
 import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -47,7 +46,7 @@ public class StudentTicketAPIRouter extends Router {
                 null, status,
                 null, null, user.getObjectId("_id"), null,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
-                null, null, section, priority
+                null, null, section, priority, true
         );
     }
 
@@ -62,11 +61,13 @@ public class StudentTicketAPIRouter extends Router {
                                  paramsType = {String.class, String.class},
                                  optionals = {
                                          "section", "priority",
-                                         "userId", "refId", "additional"
+                                         "userId", "refId", "additional",
+                                         "advisorId"
                                  },
                                  optionalsType = {
                                          TicketSection.class, TicketPriority.class,
-                                         ObjectId.class, ObjectId.class, String.class
+                                         ObjectId.class, ObjectId.class, String.class,
+                                         ObjectId.class
                                  }
                          ) String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {

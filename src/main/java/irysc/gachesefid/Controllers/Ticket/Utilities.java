@@ -151,7 +151,10 @@ public class Utilities {
             constraints.add(lte("answer_date", answerDateEndLimit));
 
         if (studentIdFilter != null)
-            constraints.add(eq("user_id", studentIdFilter));
+            constraints.add(or(
+                    eq("user_id", studentIdFilter),
+                    eq("advisor_id", studentIdFilter)
+            ));
 
         if (searchInArchive == null || !searchInArchive) {
             constraints.add(or(

@@ -5,14 +5,12 @@ import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.TicketRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
-import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.NewAlert;
 import irysc.gachesefid.Models.TicketPriority;
 import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -33,7 +31,6 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Ticket.Utilities.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.FileUtils.uploadDocOrMultimediaFile;
-import static irysc.gachesefid.Utility.FileUtils.uploadImageOrPdfFile;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -88,7 +85,7 @@ public class TicketController {
                                      Long sendDate, Long answerDate,
                                      Long sendDateEndLimit, Long answerDateEndLimit,
                                      Boolean isForTeacher, Boolean startByAdmin,
-                                     String section, String priority) {
+                                     String section, String priority, boolean returnAdvisors) {
 
         ArrayList<Bson> constraints = new ArrayList<>();
 
@@ -112,6 +109,9 @@ public class TicketController {
 
         if(refIdFilter != null)
             constraints.add(eq("ref_id", refIdFilter));
+
+        if(!returnAdvisors)
+            constraints.add(ne("section", "advisor"));
 
         AggregateIterable<Document> docs =
                 ticketRepository.findWithJoinUser("user_id", "student",
@@ -349,6 +349,26 @@ public class TicketController {
         )
             return JSON_NOT_VALID_PARAMS;
 
+        if(jsonObject.has("section")) {
+            if (
+                    jsonObject.has("advisorId") !=
+                            jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
+            )
+                return JSON_NOT_VALID_PARAMS;
+
+            if (
+                    jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName()) &&
+                            jsonObject.has("refId")
+            )
+                return JSON_NOT_VALID_PARAMS;
+
+            if (
+                    jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName()) &&
+                            jsonObject.has("userId")
+            )
+                return JSON_NOT_VALID_PARAMS;
+        }
+
         if (jsonObject.has("priority") &&
                 !EnumValidatorImp.isValid(jsonObject.getString("priority"), TicketPriority.class)
         )
@@ -363,6 +383,18 @@ public class TicketController {
             return JSON_NOT_VALID_PARAMS;
 
         ObjectId ticketId;
+
+        if(jsonObject.has("advisorId")) {
+
+            ObjectId advisorId = new ObjectId(jsonObject.getString("advisorId"));
+            Document advisor = userRepository.findById(advisorId);
+
+            if(advisor == null)
+                return JSON_NOT_VALID_PARAMS;
+
+            if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+                return JSON_NOT_ACCESS;
+        }
 
         if (jsonObject.has("userId")) {
 
@@ -438,6 +470,9 @@ public class TicketController {
 
         if(jsonObject.has("refId"))
             doc.put("ref_id", new ObjectId(jsonObject.getString("refId")));
+
+        if(jsonObject.has("advisor_id"))
+            doc.put("advisor_id", new ObjectId(jsonObject.getString("advisorId")));
 
         if(jsonObject.has("additional"))
             doc.put("additional", jsonObject.getString("additional"));

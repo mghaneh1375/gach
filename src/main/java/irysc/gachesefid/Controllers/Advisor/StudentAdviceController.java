@@ -69,6 +69,20 @@ public class StudentAdviceController {
         return JSON_NOT_VALID_ID;
     }
 
+    public static String getMyAdvisors(Document user) {
+
+        JSONArray jsonArray = new JSONArray();
+
+        Document advisor = userRepository.findById(user.getObjectId("advisor_id"));
+
+        jsonArray.put(new JSONObject()
+                .put("id", advisor.getObjectId("_id").toString())
+                .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+        );
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String getMyAdvisor(ObjectId userId, ObjectId advisorId) {
 
         Document advisor = userRepository.findById(advisorId);
