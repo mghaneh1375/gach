@@ -199,8 +199,7 @@ public class UserRepository extends Common {
         );
         if (cursor.iterator().hasNext()) {
             Document doc = cursor.iterator().next();
-            addToCache(table, doc, username, USER_LIMIT_CACHE_SIZE, USER_EXPIRATION_SEC);
-            return doc;
+            return findById(doc.getObjectId("_id"));
         }
 
         return null;

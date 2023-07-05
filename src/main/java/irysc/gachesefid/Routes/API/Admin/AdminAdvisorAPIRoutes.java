@@ -5,7 +5,9 @@ import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
@@ -94,6 +96,21 @@ public class AdminAdvisorAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return AdvisorController.createTag(adviseTagRepository, new JSONObject(jsonStr));
+    }
+
+    @PostMapping(value = "editTag/{id}")
+    @ResponseBody
+    public String editTag(HttpServletRequest request,
+                          @PathVariable @ObjectIdConstraint ObjectId id,
+                          @RequestBody @StrongJSONConstraint(
+                                  params = {"label"},
+                                  paramsType = {String.class},
+                                  optionals = {"numberLabel"},
+                                  optionalsType = {String.class}
+                          ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return AdvisorController.editTag(adviseTagRepository, id, new JSONObject(jsonStr));
     }
 
     @PostMapping(value = "createExamTag")

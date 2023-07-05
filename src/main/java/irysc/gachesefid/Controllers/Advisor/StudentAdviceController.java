@@ -192,11 +192,11 @@ public class StudentAdviceController {
 
             double newUserMoney = userMoney;
 
+            Document student = userRepository.findById(userId);
+
             if (shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, userMoney);
-                Document user = userRepository.findById(userId);
-                user.put("money", newUserMoney);
-                userRepository.replaceOne(userId, user);
+                student.put("money", newUserMoney);
             }
 
             Document transaction = new Document("user_id", userId)
@@ -219,7 +219,6 @@ public class StudentAdviceController {
             advisorRequest.put("paid_at", curr);
             advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
 
-            Document student = userRepository.findById(userId);
             Document advisor = userRepository.findById(advisorId);
 
             setAdvisor(student, advisor);

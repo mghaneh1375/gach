@@ -4,6 +4,7 @@ package irysc.gachesefid.Controllers.Advisor;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
@@ -16,6 +17,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
@@ -33,23 +35,23 @@ public class AdvisorController {
         Document student = userRepository.findById(studentId);
         JSONObject output = new JSONObject();
 
-        long firstDayOfMonth = getFirstDayOfMonth();
-        long firstDayOfLastMonth = getFirstDayOfLastMonth();
+        int firstDayOfMonth = getFirstDayOfMonth();
+        int firstDayOfLastMonth = getFirstDayOfLastMonth();
 
         int schedulesInCurrMonth = scheduleRepository.count(
                 and(
-                        eq("advisor_id", advisorId),
+                        in("advisors", advisorId),
                         eq("user_id", studentId),
-                        gte("created_at", firstDayOfMonth)
+                        gte("week_start_at_int", firstDayOfMonth)
                 )
         );
 
         int schedulesInLastMonth = scheduleRepository.count(
                 and(
-                        eq("advisor_id", advisorId),
+                        in("advisors", advisorId),
                         eq("user_id", studentId),
-                        gte("created_at", firstDayOfMonth),
-                        lte("created_at", firstDayOfLastMonth)
+                        gte("week_start_at_int", firstDayOfMonth),
+                        lte("week_start_at_int", firstDayOfLastMonth)
                 )
         );
 
@@ -686,7 +688,7 @@ public class AdvisorController {
 //        cancelAdvisor(student, advisor, false);
 
         student.put("advisor_id", advisor.getObjectId("_id"));
-        userRepository.replaceOne(student.getObjectId("_id"), student);
+        userRepository.replaceOneWithoutClearCache(student.getObjectId("_id"), student);
 
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
 
@@ -703,7 +705,7 @@ public class AdvisorController {
 //        }
 
         advisor.put("students", students);
-        userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
+        userRepository.replaceOneWithoutClearCache(advisor.getObjectId("_id"), advisor);
     }
 
 
@@ -763,7 +765,6 @@ public class AdvisorController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-
     public static String createTag(Common db, JSONObject jsonObject) {
 
         if (db.exist(
@@ -780,6 +781,32 @@ public class AdvisorController {
             newDoc.append("number_label", jsonObject.getString("numberLabel"));
 
         return db.insertOneWithReturn(newDoc);
+    }
+
+    public static String editTag(Common db, ObjectId id, JSONObject jsonObject) {
+
+        Document doc = db.findById(id);
+        if(doc == null)
+            return JSON_NOT_VALID_ID;
+
+        if (!doc.getString("label").equals(jsonObject.getString("label")) &&
+                db.exist(
+                and(
+                        exists("deleted_at", false),
+                        eq("label", jsonObject.getString("label"))
+                )
+        ))
+            return generateErr("این تگ در سیستم موجود است");
+
+        doc.put("label", jsonObject.getString("label"));
+
+        if(jsonObject.has("numberLabel"))
+            doc.put("number_label", jsonObject.getString("numberLabel"));
+        else
+            doc.remove("number_label");
+
+        db.replaceOne(id, doc);
+        return JSON_OK;
     }
 
     public static String removeTags(Common db, JSONArray jsonArray) {
@@ -877,7 +904,6 @@ public class AdvisorController {
                 "_id", lessonId
         );
 
-        ObjectId oId;
         Document schedule;
 
         if (data.has("id")) {
@@ -885,13 +911,18 @@ public class AdvisorController {
             if (!ObjectId.isValid(data.getString("id")))
                 return JSON_NOT_VALID_PARAMS;
 
-            oId = new ObjectId(data.getString("id"));
+            ObjectId oId = new ObjectId(data.getString("id"));
             schedule = scheduleRepository.findById(oId);
 
             if (schedule == null ||
                     !schedule.getObjectId("user_id").equals(userId)
             )
                 return JSON_NOT_VALID_PARAMS;
+
+            if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
+                schedule.getList("advisors", ObjectId.class).add(advisorId);
+            }
+
 
         } else {
 
@@ -910,17 +941,26 @@ public class AdvisorController {
             else
                 weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
 
-            if (scheduleRepository.exist(
+            schedule = scheduleRepository.findOne(
                     and(
                             eq("user_id", userId),
                             eq("week_start_at", weekStartAt)
-                    )
-            ))
-                return JSON_NOT_VALID_PARAMS;
+                    ), null
+            );
 
-            schedule = new Document("user_id", userId)
-                    .append("week_start_at", weekStartAt)
-                    .append("days", new ArrayList<>());
+            if(schedule == null) {
+                schedule = new Document("user_id", userId)
+                        .append("week_start_at", weekStartAt)
+                        .append("week_start_at_int", Utility.convertStringToDate(weekStartAt))
+                        .append("days", new ArrayList<>())
+                        .append("advisors", new ArrayList<>(){{add(advisorId);}});
+            }
+            else {
+                schedule = scheduleRepository.findById(schedule.getObjectId("_id"));
+                if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
+                    schedule.getList("advisors", ObjectId.class).add(advisorId);
+                }
+            }
         }
 
         if (schedule == null)
@@ -1046,6 +1086,154 @@ public class AdvisorController {
         }
     }
 
+    static class TagStat {
+
+        int total;
+        int done;
+        int additionalTotal;
+        int additionalDone;
+        String additionalLabel;
+
+        public TagStat(int total, int done, int additionalTotal, int additionalDone,
+                       String additionalLabel) {
+            this.total = total;
+            this.done = done;
+            this.additionalTotal = additionalTotal;
+            this.additionalDone = additionalDone;
+            this.additionalLabel = additionalLabel;
+        }
+
+        public JSONObject toJSON() {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("total", total)
+                    .put("done", done);
+
+            if(!additionalLabel.isEmpty()) {
+                jsonObject.put("additionalLabel", additionalLabel)
+                        .put("additionalTotal", additionalTotal)
+                        .put("additionalDone", additionalDone);
+            }
+
+            return jsonObject;
+        }
+
+    }
+
+    static class LessonStat {
+
+        int total;
+        int done;
+        HashMap<String, TagStat> tagStats;
+
+        public LessonStat(int total, int done) {
+            this.total = total;
+            this.done = done;
+            tagStats = new HashMap<>();
+        }
+
+        public JSONObject toJSON() {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("total", total)
+                    .put("done", done);
+
+            JSONArray jsonArray = new JSONArray();
+            for(String key : tagStats.keySet())
+                jsonArray.put(new JSONObject()
+                        .put("tag", key)
+                        .put("stats", tagStats.get(key).toJSON())
+                );
+
+            jsonObject.put("tags", jsonArray);
+
+            return jsonObject;
+        }
+    }
+
+    public static String lessonsInSchedule(ObjectId advisorId, ObjectId scheduleId) {
+
+        Document schedule = scheduleRepository.findById(scheduleId);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!Authorization.hasAccessToThisStudent(schedule.getObjectId("user_id"), advisorId))
+            return JSON_NOT_ACCESS;
+
+        HashMap<String, LessonStat> lessonStats = new HashMap<>();
+
+        for(Document day : schedule.getList("days", Document.class)) {
+
+            for(Document item : day.getList("items", Document.class)) {
+
+                if(!item.containsKey("lesson")) continue;
+
+                String lesson = item.getString("lesson");
+                String tag = item.getString("tag");
+
+                if(lessonStats.containsKey(lesson)) {
+
+                    LessonStat lessonStat = lessonStats.get(lesson);
+
+                    lessonStat.total += item.getInteger("duration");
+                    lessonStat.done += item.getInteger("done_duration");
+
+                    if(lessonStat.tagStats.containsKey(tag)) {
+                        TagStat tagStat = lessonStat.tagStats.get(tag);
+                        tagStat.total += item.getInteger("duration");
+                        tagStat.done += (int) item.getOrDefault("done_duration", 0);
+                        if(item.containsKey("additional")) {
+                            tagStat.additionalTotal += item.getInteger("additional");
+                            tagStat.additionalDone += item.getInteger("done_additional");
+                        }
+                    }
+                    else {
+                        lessonStat.tagStats.put(tag, new TagStat(
+                                item.getInteger("duration"),
+                                (int) item.getOrDefault("done_duration", 0),
+                                (int) item.getOrDefault("additional", 0),
+                                (int) item.getOrDefault("done_additional", 0),
+                                (String) item.getOrDefault("additional_label", "")
+                        ));
+                    }
+
+                }
+                else {
+
+                    LessonStat lessonStat = new LessonStat(
+                            item.getInteger("duration"),
+                            (int)item.getOrDefault("done_duration", 0)
+                    );
+
+                    TagStat tagStat = new TagStat(
+                            item.getInteger("duration"),
+                            (int)item.getOrDefault("done_duration", 0),
+                            (int)item.getOrDefault("additional", 0),
+                            (int)item.getOrDefault("done_additional", 0),
+                            (String) item.getOrDefault("additional_label", "")
+                    );
+
+                    lessonStat.tagStats.put(tag, tagStat);
+                    lessonStats.put(lesson, lessonStat);
+                }
+
+            }
+
+        }
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(String key : lessonStats.keySet()) {
+
+            jsonArray.put(new JSONObject()
+                    .put("lesson", key)
+                    .put("stats", lessonStats.get(key).toJSON())
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
 //    public static String updateItem(ObjectId advisorId,
 //                                    ObjectId userId,
 //                                    ObjectId id,
@@ -1121,7 +1309,20 @@ public class AdvisorController {
             jsonArray.put(convertSchedulesToJSONObject(schedule, advisorId));
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        JSONObject jsonObject = new JSONObject()
+                .put("items", jsonArray);
+
+        if(advisorId != null) {
+            Document user = userRepository.findById(studentId);
+            if(user != null)
+                jsonObject.put("student",
+                        new JSONObject()
+                                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                );
+        }
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
     public static String removeSchedule(ObjectId advisorId, ObjectId id) {

@@ -138,7 +138,7 @@ public class PayPing {
                 user.put("money", (double)0);
             }
 
-            userRepository.replaceOne(
+            userRepository.replaceOneWithoutClearCache(
                     user.getObjectId("_id"), user
             );
 

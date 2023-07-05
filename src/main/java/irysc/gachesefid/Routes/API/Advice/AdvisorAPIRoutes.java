@@ -286,6 +286,20 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "lessonsInSchedule/{id}")
+    @ResponseBody
+    public String lessonsInSchedule(HttpServletRequest request,
+                                      @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+
+        return AdvisorController.lessonsInSchedule(
+                advisorId, id
+        );
+    }
+
+
     @GetMapping(value = {"getStudentSchedule/{userId}/{scheduleFor}", "getStudentSchedule/{id}"})
     @ResponseBody
     public String getStudentSchedules(HttpServletRequest request,

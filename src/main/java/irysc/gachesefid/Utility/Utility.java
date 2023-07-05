@@ -173,30 +173,27 @@ public class Utility {
                 sc.month) + delimeter + String.format(loc, "%02d", sc.date);
     }
 
-    public static long getFirstDayOfMonth() {
+    public static int getFirstDayOfMonth() {
 
         String dd = getToday("/");
         int d = Integer.parseInt(dd.split("/")[2]);
 
-        LocalDate todaydate = LocalDate.now();
-
         if(d == 1)
-            return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+            return d;
 
         for(int i = 1; i <= 31; i++) {
             dd = getPast("/", i);
             d = Integer.parseInt(dd.split("/")[2]);
 
             if(d == 1) {
-                todaydate = todaydate.minusDays(i);
-                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+                return convertStringToDate(dd);
             }
         }
 
-        return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+        return -1;
     }
 
-    public static long getFirstDayOfLastMonth() {
+    public static int getFirstDayOfLastMonth() {
 
         String dd = getToday("/");
         int m = Integer.parseInt(dd.split("/")[1]), d;
@@ -206,21 +203,23 @@ public class Utility {
         else
             m--;
 
-        LocalDate todaydate = LocalDate.now();
+//        LocalDate todaydate = LocalDate.now();
 
-        for(int i = 1; i <= 31; i++) {
+        for(int i = 0; i <= 62; i++) {
 
             dd = getPast("/", i);
+
             d = Integer.parseInt(dd.split("/")[2]);
             int mm = Integer.parseInt(dd.split("/")[1]);
 
             if(d == 1 && mm == m) {
-                todaydate = todaydate.minusDays(i);
-                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+//                todaydate = todaydate.minusDays(i);
+//                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+                return convertStringToDate(dd);
             }
         }
 
-        return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
+        return -1;
     }
 
     public static String getPersianDate(String delimeter, long ts) {
