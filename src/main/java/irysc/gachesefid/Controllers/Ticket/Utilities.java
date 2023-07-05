@@ -55,8 +55,7 @@ public class Utilities {
                     chatJSONObj.put("responder", new JSONObject()
                             .put("id", responder.getObjectId("_id").toString())
                             .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + responder.getString("pic"))
-//                            .put("name", responder.getString("name_fa"))
-//                            .put("last_name", responder.getString("last_name_fa"))
+                            .put("name", responder.getString("first_name") + " " + responder.getString("last_name"))
                     );
                 }
 

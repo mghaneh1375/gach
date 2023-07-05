@@ -2,13 +2,13 @@ package irysc.gachesefid.Routes.API.Quiz;
 
 
 import irysc.gachesefid.Controllers.Content.StudentContentController;
-import irysc.gachesefid.Controllers.Quiz.AdminReportController;
-import irysc.gachesefid.Controllers.Quiz.QuizController;
-import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.Controllers.Quiz.*;
+import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
@@ -38,12 +38,24 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
 @Validated
 public class StudentQuizAPIRoutes extends Router {
+
+    private Common selectDB(String mode) {
+        return mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                openQuizRepository :
+                mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                        onlineStandQuizRepository :
+                        mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ?
+                                escapeQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
+                                        contentQuizRepository : iryscQuizRepository;
+    }
 
     @GetMapping(value = "get/{mode}")
     @ResponseBody
@@ -56,9 +68,13 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) || mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
+                mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
+                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.getRegistrable(
-                    mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
+                    mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ? escapeQuizRepository :
+                            schoolQuizRepository,
                     isAdmin, tag, finishedIsNeeded
             );
 
@@ -89,8 +105,10 @@ public class StudentQuizAPIRoutes extends Router {
         return StudentQuizController.getMyRecp(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                                openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                                onlineStandQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                        openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
     }
@@ -114,14 +132,26 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.reviewQuiz(
+                    quizId, user.getObjectId("_id"), !isAdmin
+            );
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            return EscapeQuizController.reviewQuiz(
+                    quizId, user.getObjectId("_id"), !isAdmin
+            );
 
         return StudentQuizController.reviewQuiz(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
-                                openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ?
+                                onlineStandQuizRepository :
+                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
+                                        openQuizRepository : schoolQuizRepository,
                 quizId, isAdmin ? null : user.getObjectId("_id"), isStudent
         );
 
@@ -139,6 +169,8 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUser(request);
 
         if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())
         )
             return JSON_NOT_VALID_PARAMS;
@@ -147,14 +179,11 @@ public class StudentQuizAPIRoutes extends Router {
         if (jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
             return JSON_NOT_VALID_PARAMS;
 
-        return StudentQuizController.rate(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository : openQuizRepository,
+        return StudentQuizController.rate(selectDB(mode),
                 quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
         );
 
     }
-
 
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody
@@ -173,6 +202,16 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, getUser(request).getObjectId("_id")
             );
 
+        if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return OnlineStandingController.launch(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
+        if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            return EscapeQuizController.launch(
+                    quizId, getUser(request).getObjectId("_id")
+            );
+
         return StudentQuizController.launch(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository :
@@ -180,6 +219,12 @@ public class StudentQuizAPIRoutes extends Router {
                                 openQuizRepository : schoolQuizRepository,
                 quizId, getUser(request).getObjectId("_id")
         );
+    }
+
+    @GetMapping(value = "getOnlineQuizRankingTable/{quizId}")
+    @ResponseBody
+    public String getOnlineQuizRankingTable(@PathVariable @ObjectIdConstraint ObjectId quizId) {
+        return OnlineStandingController.getOnlineQuizRankingTable(quizId);
     }
 
 
@@ -249,13 +294,103 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "mySchoolQuizzes")
     @ResponseBody
     public String mySchoolQuizzes(HttpServletRequest request,
+                                  @RequestParam(value = "forAdvisor") boolean forAdvisor,
                                   @RequestParam(required = false) String status
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.mySchoolQuizzes(
-                user, status
+                user, status, forAdvisor
         );
     }
+
+    @GetMapping(value = "myHWs")
+    @ResponseBody
+    public String myHWs(HttpServletRequest request,
+                        @RequestParam(value = "forAdvisor") boolean forAdvisor,
+                        @RequestParam(required = false) String status
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.myHWs(
+                user.getObjectId("_id"), status, forAdvisor
+        );
+    }
+
+    @GetMapping(value = "myHW/{id}")
+    @ResponseBody
+    public String myHW(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.myHW(
+                user.getObjectId("_id"), id
+        );
+    }
+
+    @PostMapping(value = "/uploadHW/{hwId}")
+    @ResponseBody
+    public String uploadHW(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId hwId,
+                           @RequestBody MultipartFile file
+    ) throws UnAuthException, NotActivateAccountException {
+
+        if (file == null)
+            return JSON_NOT_ACCESS;
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        return SchoolQuizController.setAnswer(
+                hwId, user.getObjectId("_id"),
+                file
+        );
+    }
+
+    @GetMapping(value = "/downloadHW/{hwId}")
+    @ResponseBody
+    public ResponseEntity<InputStreamResource> downloadHw(HttpServletRequest request,
+                                                          @PathVariable @ObjectIdConstraint ObjectId hwId
+    ) throws UnAuthException, NotActivateAccountException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        PairValue p = SchoolQuizController.downloadHw(
+                hwId, user.getObjectId("_id")
+        );
+
+        if (p == null)
+            return null;
+
+        File f = (File) p.getKey();
+
+        try {
+            InputStreamResource file = new InputStreamResource(
+                    new ByteArrayInputStream(FileUtils.readFileToByteArray(f))
+            );
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + p.getValue().toString())
+                    .contentType(MediaType.parseMediaType("application/octet-stream"))
+                    .body(file);
+
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+
+        return null;
+
+    }
+
+
+    @PostMapping(value = "buyAdvisorQuiz/{quizId}")
+    @ResponseBody
+    public String buyAdvisorQuiz(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException {
+        Document user = getUserWithOutCheckCompleteness(request);
+        return StudentQuizController.buyAdvisorQuiz(
+                user.getObjectId("_id"), quizId, ((Number) user.get("money")).doubleValue()
+        );
+    }
+
 
     @GetMapping(value = "myCustomQuizzes")
     @ResponseBody
@@ -280,15 +415,7 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        return AdminReportController.getStudentAnswerSheet(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
-                        iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                                mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ? contentQuizRepository :
-                                        schoolQuizRepository,
-                null,
-                quizId, user.getObjectId("_id")
-        );
+        return AdminReportController.getStudentAnswerSheet(selectDB(mode), null, quizId, user.getObjectId("_id"));
     }
 
     @PostMapping(path = "buy")
@@ -302,6 +429,7 @@ public class StudentQuizAPIRoutes extends Router {
                       )
                       @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+
         Document user = getUser(request);
 
         JSONObject jsonObject = Utility.convertPersian(
@@ -313,6 +441,73 @@ public class StudentQuizAPIRoutes extends Router {
                 jsonObject.has("packageId") ?
                         new ObjectId(jsonObject.getString("packageId")) : null,
                 jsonObject.getJSONArray("ids"), null,
+                ((Number) user.get("money")).doubleValue(),
+                user.getString("phone"),
+                user.getString("mail"),
+                user.getString("first_name") + " " + user.getString("last_name"),
+                jsonObject.has("code") ?
+                        jsonObject.getString("code") : null
+        );
+    }
+
+
+    @DeleteMapping(value = "/leftTeam/{quizId}")
+    @ResponseBody
+    public String leftTeam(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException, NotActivateAccountException {
+        return OnlineStandingController.leftTeam(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                quizId
+        );
+    }
+
+    @PostMapping(path = "/updateOnlineQuizProfile/{id}")
+    @ResponseBody
+    public String updateOnlineQuizProfile(HttpServletRequest request,
+                                          @PathVariable @ObjectIdConstraint ObjectId id,
+                                          @RequestBody @StrongJSONConstraint(
+                                                  params = {"teamName"},
+                                                  paramsType = {String.class},
+                                                  optionals = {"members"},
+                                                  optionalsType = {JSONArray.class}
+                                          ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException {
+
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+
+        return StudentQuizController.updateOnlineQuizProfile(
+                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                id, jsonObject.getString("teamName"),
+                jsonObject.has("members") ? jsonObject.getJSONArray("members") :
+                        new JSONArray()
+        );
+    }
+
+    @PostMapping(path = "buyOnlineQuiz/{id}")
+    @ResponseBody
+    public String buyOnlineQuiz(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"teamName"},
+                                        paramsType = {String.class},
+                                        optionals = {"code", "members"},
+                                        optionalsType = {String.class, JSONArray.class}
+                                )
+                                @NotBlank String jsonStr
+    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+
+        Document user = getUser(request);
+
+        JSONObject jsonObject = Utility.convertPersian(
+                new JSONObject(jsonStr)
+        );
+
+        return StudentQuizController.buyOnlineQuiz(
+                user.getObjectId("_id"),
+                id,
+                jsonObject.getString("teamName"),
+                jsonObject.has("members") ? jsonObject.getJSONArray("members") : new JSONArray(),
                 ((Number) user.get("money")).doubleValue(),
                 user.getString("phone"),
                 user.getString("mail"),
@@ -356,6 +551,26 @@ public class StudentQuizAPIRoutes extends Router {
         );
     }
 
+    @PutMapping(value = "/storeEscapeQuizAnswer/{quizId}/{questionId}")
+    @ResponseBody
+    public String storeAnswers(HttpServletRequest request,
+                               @PathVariable @ObjectIdConstraint ObjectId quizId,
+                               @PathVariable @ObjectIdConstraint ObjectId questionId,
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"answer"},
+                                       paramsType = {Object.class}
+                               ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        return EscapeQuizController.storeAnswer(
+                quizId, questionId,
+                user.getObjectId("_id"), new JSONObject(jsonStr).get("answer")
+        );
+    }
+
+
     @PutMapping(value = "/storeAnswers/{mode}/{quizId}")
     @ResponseBody
     public String storeAnswers(HttpServletRequest request,
@@ -388,6 +603,27 @@ public class StudentQuizAPIRoutes extends Router {
                                 openQuizRepository : schoolQuizRepository,
                 quizId,
                 user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("answers")
+        );
+    }
+
+
+    @PutMapping(value = "/storeOnlineQuizAnswer/{quizId}/{questionId}")
+    @ResponseBody
+    public String storeOnlineQuizAnswer(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                        @PathVariable @ObjectIdConstraint ObjectId questionId,
+                                        @RequestBody @StrongJSONConstraint(
+                                                params = {"answer"},
+                                                paramsType = {Object.class}
+                                        ) @NotBlank String jsonStr
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        return OnlineStandingController.storeAnswer(
+                quizId, questionId,
+                user.getObjectId("_id"),
+                new JSONObject(jsonStr).get("answer")
         );
     }
 

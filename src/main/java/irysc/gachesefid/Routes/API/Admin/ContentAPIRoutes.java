@@ -267,6 +267,13 @@ public class ContentAPIRoutes extends Router {
         return ContentController.getLessons();
     }
 
+    @GetMapping(value = "/getLessonsDigest")
+    @ResponseBody
+    public String getLessonsDigest() {
+        return ContentController.getLessonsDigest();
+    }
+
+
     @GetMapping(value = "/gradeLessons")
     @ResponseBody
     public String gradeLessons() {
@@ -307,7 +314,7 @@ public class ContentAPIRoutes extends Router {
     @ResponseBody
     public String getSubjectsKeyVals(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getAdvisorUser(request);
         return ContentController.getSubjectsKeyVals();
     }
 

@@ -43,7 +43,8 @@ public class Utility {
     static String addAll(JSONArray jsonArray,
                          String type, int amount,
                          long expireAt, String section,
-                         JSONArray excepts) {
+                         JSONArray excepts,
+                         String code) {
 
         JSONArray added = new JSONArray();
         long curr = System.currentTimeMillis();
@@ -72,6 +73,9 @@ public class Utility {
                     .append("user_id", user.getObjectId("_id"))
                     .append("used", false)
                     .append("created_at", curr);
+
+            if(code != null)
+                newDoc.append("code", code);
 
             offcodeRepository.insertOne(newDoc);
             added.put(convertDocToJSON(Document.parse(newDoc.toJson()).append("user", user)));

@@ -224,22 +224,61 @@ public class PackageController {
                               ObjectId quizIdFilter
     ) {
 
+        boolean isOnlineStanding = false;
+
         if(quizIdFilter != null) {
 
             Document quiz = iryscQuizRepository.findById(quizIdFilter);
             if(quiz == null) {
 
                 quiz = openQuizRepository.findById(quizIdFilter);
-                if(quiz == null)
-                    return JSON_NOT_VALID_PARAMS;
+                if(quiz == null) {
+
+                    quiz = onlineStandQuizRepository.findById(quizIdFilter);
+                    if (quiz == null) {
+
+                        quiz = escapeQuizRepository.findById(quizIdFilter);
+                        if (quiz == null)
+                            return JSON_NOT_VALID_PARAMS;
+                    }
+                    else
+                        isOnlineStanding = true;
+
+                }
+
             }
 
-            if(searchInDocumentsKeyValIdx(
+            if(isOnlineStanding) {
+
+                boolean registered = false;
+
+                for(Document student : quiz.getList("students", Document.class)) {
+
+                    if(student.getObjectId("_id").equals(userId))
+                        registered = true;
+                    else if(student.getList("team", ObjectId.class).contains(userId))
+                        registered = true;
+
+                    if(registered)
+                        break;
+
+                }
+
+                if(registered)
+                    return generateSuccessMsg("data",
+                            new OnlineStandingController().convertDocToJSON(quiz, true, false,
+                                    true, true
+                            )
+                    );
+            }
+
+            else if(searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class), "_id", userId
-            ) != -1)
+            ) != -1) {
                 return generateSuccessMsg("data", new JSONObject()
                         .put("registered", true)
                 );
+            }
         }
 
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
@@ -472,7 +511,10 @@ public class PackageController {
                 );
 
                 if (!isSchool) {
+
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();
+
+                    openQuizFilter.add(eq("visibility", true));
 
                     if(quizIdFilter != null)
                         openQuizFilter.add(eq("_id", quizIdFilter));
@@ -480,14 +522,37 @@ public class PackageController {
                     if(userId != null)
                         openQuizFilter.add(nin("students._id", userId));
 
-                    docs.addAll(openQuizRepository.find(
-                            openQuizFilter.size() == 0 ?  null : and(openQuizFilter), null, Sorts.ascending("priority")
+                    ArrayList<Bson> onlineStandingQuizFilter = new ArrayList<>();
+
+                    onlineStandingQuizFilter.add(eq("visibility", true));
+                    onlineStandingQuizFilter.add(lte("start_registry", curr));
+                    onlineStandingQuizFilter.add(gte("end_registry", curr));
+
+                    if(userId != null)
+                        onlineStandingQuizFilter.add(nin("students._id", userId));
+
+                    if(quizIdFilter != null)
+                        onlineStandingQuizFilter.add(eq("_id", quizIdFilter));
+
+                    docs.addAll(onlineStandQuizRepository.find(
+                            and(onlineStandingQuizFilter), null, Sorts.ascending("priority")
                     ));
+
+                    docs.addAll(escapeQuizRepository.find(
+                            and(onlineStandingQuizFilter), null, Sorts.ascending("priority")
+                    ));
+
+                    docs.addAll(openQuizRepository.find(
+                            and(openQuizFilter), null, Sorts.ascending("priority")
+                    ));
+
                 }
 
                 RegularQuizController quizController = new RegularQuizController();
                 OpenQuiz openQuiz = new OpenQuiz();
                 TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+                OnlineStandingController onlineStandingController = new OnlineStandingController();
+                EscapeQuizController escapeQuizController = new EscapeQuizController();
 
 
                 for (Document doc : docs) {
@@ -531,14 +596,21 @@ public class PackageController {
                         }
                     }
                     JSONObject object;
-
-                    if (doc.containsKey("launch_mode"))
+                    if(doc.containsKey("max_teams"))
+                        object = onlineStandingController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else if (doc.containsKey("launch_mode"))
                         object = quizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
                     else if(doc.containsKey("mode") && doc.get("mode") != null &&
                             doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                         object = tashrihiQuizController.convertDocToJSON(
+                                doc, true, false, false, true
+                        ).put("type", "quiz");
+                    else if(!doc.containsKey("duration") && !doc.containsKey("minus_mark"))
+                        object = escapeQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
                     else

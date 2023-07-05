@@ -4,17 +4,14 @@ import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Jobs;
-import irysc.gachesefid.Controllers.Quiz.RegularQuizController;
+import irysc.gachesefid.DB.EscapeQuizQuestionRepository;
 import irysc.gachesefid.DB.QuestionRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.apache.poi.ss.usermodel.Cell;
@@ -32,7 +29,6 @@ import java.util.regex.Pattern;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.Excel.getCellValue;
 import static irysc.gachesefid.Utility.FileUtils.uploadImageFile;
@@ -96,10 +92,15 @@ public class QuestionController extends Utilities {
             newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet()) {
+
             if (str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
                 continue;
+
             newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
         }
+
+        if(!newDoc.containsKey("is_public"))
+            newDoc.append("is_public", true);
 
         Document subject = subjectRepository.findById(subjectId);
         if (subject != null) {
@@ -151,6 +152,66 @@ public class QuestionController extends Utilities {
         }
 
         return questionRepository.insertOneWithReturn(newDoc);
+    }
+
+    public static String addEscapeQuizQuestion(
+            MultipartFile questionFile,
+            MultipartFile answerFile,
+            JSONObject jsonObject) {
+
+        if (escapeQuizQuestionRepository.exist(
+                eq("organization_id", jsonObject.getString("organizationId"))
+        ))
+            return generateErr("کد سازمانی سوال در سامانه موجود است.");
+
+        if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
+            return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+        String fileType = uploadImageFile(questionFile);
+
+        if (fileType == null)
+            return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+
+        if (answerFile != null) {
+            if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            fileType = uploadImageFile(answerFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        String questionFileName = FileUtils.uploadFile(questionFile, EscapeQuizQuestionRepository.FOLDER);
+        if (questionFileName == null)
+            return JSON_NOT_VALID_FILE;
+
+        String answerFileName = null;
+        if (answerFile != null) {
+            answerFileName = FileUtils.uploadFile(answerFile, EscapeQuizQuestionRepository.FOLDER);
+
+            if (answerFileName == null) {
+                FileUtils.removeFile(questionFileName, QuestionRepository.FOLDER);
+                return JSON_NOT_VALID_FILE;
+            }
+
+        }
+
+        Document newDoc = new Document("question_file", questionFileName);
+
+        if (answerFileName != null)
+            newDoc.append("answer_file", answerFileName);
+
+        for (String str : jsonObject.keySet()) {
+
+            if (str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
+                continue;
+
+            newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
+
+        }
+
+        return escapeQuizQuestionRepository.insertOneWithReturn(newDoc);
     }
 
     public static JSONObject convertDocToJSON(Document doc) {
@@ -298,6 +359,87 @@ public class QuestionController extends Utilities {
 
     }
 
+    public static String updateEscapeQuizQuestion(ObjectId questionId,
+                                                  MultipartFile questionFile,
+                                                  MultipartFile answerFile,
+                                                  JSONObject jsonObject) {
+
+        Document question = escapeQuizQuestionRepository.findById(questionId);
+        if (question == null)
+            return JSON_NOT_VALID_ID;
+
+        if (jsonObject.has("organizationId") &&
+                jsonObject.getString("organizationId").equalsIgnoreCase(
+                        question.getString("organization_id")
+                )
+        )
+            jsonObject.remove("organizationId");
+
+        if (jsonObject.has("organizationId")) {
+            if (escapeQuizQuestionRepository.exist(
+                    eq("organization_id", jsonObject.getString("organizationId"))
+            ))
+                return generateErr("کد سازمانی سوال در سامانه موجود است.");
+        }
+
+        if (questionFile != null) {
+
+            if (questionFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            String fileType = uploadImageFile(questionFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        if (answerFile != null) {
+
+            if (answerFile.getSize() > MAX_QUESTION_FILE_SIZE)
+                return generateErr("حداکثر حجم مجاز، " + MAX_QUESTION_FILE_SIZE + " مگ است.");
+
+            String fileType = uploadImageFile(answerFile);
+
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        String questionFileName = null;
+        if (questionFile != null) {
+            questionFileName = FileUtils.uploadFile(questionFile, EscapeQuizQuestionRepository.FOLDER);
+            if (questionFileName == null)
+                return JSON_NOT_VALID_FILE;
+        }
+
+        String answerFileName = null;
+        if (answerFile != null) {
+
+            answerFileName = FileUtils.uploadFile(answerFile, EscapeQuizQuestionRepository.FOLDER);
+
+            if (answerFileName == null) {
+                FileUtils.removeFile(questionFileName, EscapeQuizQuestionRepository.FOLDER);
+                return JSON_NOT_VALID_FILE;
+            }
+
+        }
+
+        if (questionFileName != null) {
+            FileUtils.removeFile(question.getString("question_file"), EscapeQuizQuestionRepository.FOLDER);
+            question.put("question_file", questionFileName);
+        }
+
+        if (answerFileName != null) {
+            FileUtils.removeFile(question.getString("answer_file"), EscapeQuizQuestionRepository.FOLDER);
+            question.put("answer_file", answerFileName);
+        }
+
+        for (String str : jsonObject.keySet())
+            question.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
+
+        escapeQuizQuestionRepository.replaceOne(questionId, question);
+        return JSON_OK;
+    }
+
     public static String deleteQuestion(JSONArray jsonArray) {
 
         JSONArray excepts = new JSONArray();
@@ -382,7 +524,7 @@ public class QuestionController extends Utilities {
 
             try {
 
-                if(row.getCell(1) == null)
+                if (row.getCell(1) == null)
                     break;
 
                 if (row.getLastCellNum() < 9) {
@@ -541,6 +683,12 @@ public class QuestionController extends Utilities {
                     }
                 }
 
+                cell = row.getCell(21);
+                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
+                    jsonObject.put("is_public", cell.getBooleanCellValue());
+                else
+                    jsonObject.put("is_public", true);
+
                 jsonObject.put("question_file", questionFilename);
                 jsonObject.put("answer_file", answerFilename);
                 jsonObject.put("visibility", true);
@@ -564,6 +712,135 @@ public class QuestionController extends Utilities {
 
         if (addAtLeastOne)
             new Thread(() -> new Jobs.CalcSubjectQuestions().run()).start();
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی سوالات به درستی به سامانه اضافه شدند"
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
+                new PairValue("errs", errs)
+        );
+    }
+
+
+    public static String addBatchEscapeQuizQuestions(MultipartFile file) {
+
+        String filename = FileUtils.uploadTempFile(file);
+        ArrayList<Row> rows = Excel.read(filename);
+        FileUtils.removeTempFile(filename);
+
+        if (rows == null)
+            return generateErr("File is not valid");
+
+        rows.remove(0);
+
+        // excel format:
+        // 1- row no 2- question file name 3- subject id
+        // 4- author id 5- kindQuestion[test, short_answer, multi_sentence, tashrihi]
+        // 6- needed time 7- answer 8- organizationId
+        // 9- level[easy, mid, hard] 10- answer file name : optional
+        // 11- sentencesCount : optional 12- telorance : optional
+        // 13- choicesCount : optional 14- neededLines : optional
+
+        JSONArray excepts = new JSONArray();
+        int rowIdx = 0;
+
+        JSONArray errs = new JSONArray();
+
+        for (Row row : rows) {
+
+            rowIdx++;
+
+            try {
+
+                if (row.getCell(1) == null)
+                    break;
+
+                if (row.getLastCellNum() < 4) {
+                    excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "تعداد ستون ها نامعتیر است."));
+                    continue;
+                }
+
+                String questionFilename = row.getCell(1).getStringCellValue();
+
+                if (!FileUtils.checkExist(questionFilename, EscapeQuizQuestionRepository.FOLDER)) {
+                    excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "فایل سوال موجود نیست."));
+                    continue;
+                }
+
+                String answerFilename = null;
+                Cell cell = row.getCell(4);
+
+                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
+                    answerFilename = cell.getStringCellValue();
+                    if (!FileUtils.checkExist(answerFilename, EscapeQuizQuestionRepository.FOLDER)) {
+                        excepts.put(rowIdx);
+                        errs.put(batchRowErr(rowIdx, "فایل پاسخ سوال موجود نیست."));
+                        continue;
+                    }
+                }
+
+                JSONObject jsonObject = new JSONObject();
+
+                cell = row.getCell(2);
+                if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                    if (Math.floor(cell.getNumericCellValue()) == cell.getNumericCellValue())
+                        jsonObject.put("answer", (int) cell.getNumericCellValue());
+                    else
+                        jsonObject.put("answer", cell.getNumericCellValue());
+                } else
+                    jsonObject.put("answer", cell.getStringCellValue());
+
+                jsonObject.put("organizationId", row.getCell(3).getStringCellValue());
+
+                if (escapeQuizRepository.exist(
+                        eq("organization_id", jsonObject.getString("organizationId"))
+                )) {
+                    excepts.put(rowIdx);
+                    errs.put(batchRowErr(rowIdx, "کد سازمانی سوال موجود نیست"));
+                    continue;
+                }
+
+                questionFilename = FileUtils.renameFile(EscapeQuizQuestionRepository.FOLDER, questionFilename, null);
+
+                if (questionFilename == null) {
+                    errs.put(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
+                    excepts.put(rowIdx);
+                    continue;
+                }
+
+                if (answerFilename != null) {
+                    answerFilename = FileUtils.renameFile(EscapeQuizQuestionRepository.FOLDER, answerFilename, null);
+
+                    if (answerFilename == null) {
+                        errs.put(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
+                        excepts.put(rowIdx);
+                        continue;
+                    }
+                }
+
+                jsonObject.put("question_file", questionFilename);
+                jsonObject.put("answer_file", answerFilename);
+                jsonObject.put("createdAt", System.currentTimeMillis());
+
+                Document newDoc = new Document();
+
+                for (String str : jsonObject.keySet())
+                    newDoc.append(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, str), jsonObject.get(str));
+
+                escapeQuizQuestionRepository.insertOne(newDoc);
+
+            } catch (Exception ignore) {
+                printException(ignore);
+                excepts.put(rowIdx);
+                errs.put(batchRowErr(rowIdx, ignore.getMessage()));
+            }
+        }
 
         if (excepts.length() == 0)
             return generateSuccessMsg(
@@ -662,36 +939,55 @@ public class QuestionController extends Utilities {
         );
     }
 
+    public static String getEscapeQuizQuestions(String organizationCode) {
+
+        ArrayList<Document> questions = escapeQuizQuestionRepository.find(
+                organizationCode == null || organizationCode.isEmpty() ? null : eq("organization_id", organizationCode),
+                null
+        );
+
+        return generateSuccessMsg("data", convertEscapeQuestionsList(
+                questions, true, true, true
+        ));
+    }
+
     public static String subjectQuestions(Boolean isQuestionNeeded,
                                           Integer criticalThresh,
                                           String organizationCode,
                                           ObjectId subjectId,
                                           ObjectId lessonId,
-                                          ObjectId gradeId) {
+                                          ObjectId gradeId,
+                                          boolean isAdmin
+    ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
         ArrayList<Document> docs;
 
-        if(organizationCode != null) {
+        if (organizationCode != null) {
 
-            Document question = questionRepository.findOne(eq("organization_id", organizationCode.replaceAll("\\s+", "")),
+            Document question = questionRepository.findOne(
+                    isAdmin ?
+                            eq("organization_id", organizationCode.replaceAll("\\s+", "")) :
+                            and(
+                                    eq("is_public", true),
+                                    eq("organization_id", organizationCode.replaceAll("\\s+", ""))
+                            ),
                     new BasicDBObject("subject_id", true)
             );
 
-            if(question == null)
+            if (question == null)
                 return generateSuccessMsg("data", new JSONArray());
 
             Document doc = subjectRepository.findById(
                     question.getObjectId("subject_id")
             );
 
-            if(doc == null)
+            if (doc == null)
                 return generateSuccessMsg("data", new JSONArray());
 
             docs = new ArrayList<>();
             docs.add(doc);
-        }
-        else {
+        } else {
 
             if (subjectId != null)
                 filters.add(eq("_id", subjectId));
@@ -735,13 +1031,30 @@ public class QuestionController extends Utilities {
 
             if (isQuestionNeeded != null && isQuestionNeeded) {
 
-                ArrayList<Document> questions = questionRepository.find(
-                        organizationCode == null ? eq("subject_id", doc.getObjectId("_id")) :
-                        and(
-                                eq("subject_id", doc.getObjectId("_id")),
-                                eq("organization_id", organizationCode)
-                        ), null
-                );
+                ArrayList<Document> questions;
+
+                if(isAdmin)
+                    questions = questionRepository.find(
+                            organizationCode == null ?
+                                    eq("subject_id", doc.getObjectId("_id")) :
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("organization_id", organizationCode)
+                                    ), null
+                    );
+                else
+                    questions = questionRepository.find(
+                            organizationCode == null ?
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("is_public", true)
+                                    ) :
+                                    and(
+                                            eq("subject_id", doc.getObjectId("_id")),
+                                            eq("organization_id", organizationCode),
+                                            eq("is_public", true)
+                                    ), null
+                    );
 
                 jsonObject.put("questions", convertList(
                         questions, false, true,
@@ -787,8 +1100,8 @@ public class QuestionController extends Utilities {
 
         ArrayList<Document> subjects = subjectRepository.find(
                 config.containsKey("min_question_for_custom_quiz") ?
-                    gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
-                    gt("q_no", 0)
+                        gt("q_no", config.getInteger("min_question_for_custom_quiz")) :
+                        gt("q_no", 0)
                 ,
                 new BasicDBObject("_id", 1)
                         .append("q_no", 1)
@@ -831,8 +1144,7 @@ public class QuestionController extends Utilities {
                 lessons.get(lessonId).put("q_no_easy", lessons.get(lessonId).getInteger("q_no_easy") + qNoEasy);
                 lessons.get(lessonId).put("q_no_mid", lessons.get(lessonId).getInteger("q_no_mid") + qNoMid);
                 lessons.get(lessonId).put("q_no_hard", lessons.get(lessonId).getInteger("q_no_hard") + qNoHard);
-            }
-            else {
+            } else {
                 lessons.put(lessonId,
                         new Document("name", lesson)
                                 .append("q_no_easy", qNoEasy)
@@ -850,8 +1162,7 @@ public class QuestionController extends Utilities {
                         .put("q_no_mid", grades.get(gradeId).getInteger("q_no_mid") + qNoMid);
                 grades.get(gradeId)
                         .put("q_no_hard", grades.get(gradeId).getInteger("q_no_hard") + qNoHard);
-            }
-            else {
+            } else {
                 grades.put(gradeId,
                         new Document("name",
                                 subject.get("grade", Document.class).getString("name")

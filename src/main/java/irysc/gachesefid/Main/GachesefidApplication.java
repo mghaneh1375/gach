@@ -47,6 +47,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
+
     );
     public static Connection con = null;
     public static Map<String, Integer> commonVals = new HashMap<>();
@@ -55,6 +56,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static AccessRequestRepository accessRequestRepository;
     public static ActivationRepository activationRepository;
     public static AdminNotifRepository adminNotifRepository;
+    public static AdviseExamTagRepository adviseExamTagRepository;
+    public static AdvisorFinanceOfferRepository advisorFinanceOfferRepository;
+    public static AdvisorMeetingRepository advisorMeetingRepository;
     public static AdviseTagRepository adviseTagRepository;
     public static AdvisorRequestsRepository advisorRequestsRepository;
     public static AlertsRepository alertsRepository;
@@ -69,10 +73,15 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
     public static ContentQuizRepository contentQuizRepository;
+    public static EscapeQuizQuestionRepository escapeQuizQuestionRepository;
+    public static EscapeQuizRepository escapeQuizRepository;
     public static GiftRepository giftRepository;
     public static GradeRepository gradeRepository;
+    public static HWRepository hwRepository;
+    public static LifeScheduleRepository lifeScheduleRepository;
     public static LifeStyleTagRepository lifeStyleTagRepository;
     public static OffcodeRepository offcodeRepository;
+    public static OnlineStandQuizRepository onlineStandQuizRepository;
     public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
@@ -81,6 +90,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static QuestionTagRepository questionTagRepository;
     public static RequestRepository requestRepository;
     public static SchoolQuestionRepository schoolQuestionRepository;
+    public static ScheduleRepository scheduleRepository;
     public static SchoolQuizRepository schoolQuizRepository;
     public static SchoolRepository schoolRepository;
     public static SeoRepository seoRepository;
@@ -116,7 +126,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
             accessRequestRepository = new AccessRequestRepository();
             activationRepository = new ActivationRepository();
+            advisorFinanceOfferRepository = new AdvisorFinanceOfferRepository();
             adminNotifRepository = new AdminNotifRepository();
+            adviseExamTagRepository = new AdviseExamTagRepository();
+            advisorMeetingRepository = new AdvisorMeetingRepository();
             adviseTagRepository = new AdviseTagRepository();
             advisorRequestsRepository = new AdvisorRequestsRepository();
             alertsRepository = new AlertsRepository();
@@ -131,12 +144,17 @@ public class GachesefidApplication implements WebMvcConfigurer {
             contentConfigRepository = new ContentConfigRepository();
             contentRepository = new ContentRepository();
             contentQuizRepository = new ContentQuizRepository();
+            escapeQuizRepository = new EscapeQuizRepository();
+            escapeQuizQuestionRepository = new EscapeQuizQuestionRepository();
             giftRepository = new GiftRepository();
             gradeRepository = new GradeRepository();
+            hwRepository = new HWRepository();
+            lifeScheduleRepository = new LifeScheduleRepository();
             lifeStyleTagRepository = new LifeStyleTagRepository();
             mailRepository = new MailRepository();
             mailQueueRepository = new MailQueueRepository();
             offcodeRepository = new OffcodeRepository();
+            onlineStandQuizRepository = new OnlineStandQuizRepository();
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
@@ -151,6 +169,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             smsQueueRepository = new SMSQueueRepository();
             stateRepository = new StateRepository();
             subjectRepository = new SubjectRepository();
+            scheduleRepository = new ScheduleRepository();
             tarazRepository = new TarazRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();

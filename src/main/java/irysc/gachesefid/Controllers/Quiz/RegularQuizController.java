@@ -4,15 +4,13 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
-import irysc.gachesefid.DB.Common;
-import irysc.gachesefid.DB.IRYSCQuizRepository;
-import irysc.gachesefid.DB.OpenQuizRepository;
-import irysc.gachesefid.DB.SchoolQuizRepository;
+import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
+import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -53,13 +51,14 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
-            "kind", "payByStudent"
+            "kind", "payByStudent", "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
     private final static String[] schoolForbiddenFields = {
             "paperTheme", "isRegistrable", "isUploadable",
             "kind", "startRegistry", "endRegistry", "price",
-            "priority", "showResultsAfterCorrectionNotLoginUsers"
+            "priority", "showResultsAfterCorrectionNotLoginUsers",
+            "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject,
@@ -71,22 +70,22 @@ public class RegularQuizController extends QuizAbstract {
 
                 Utility.checkFields(schoolMandatoryFields, schoolForbiddenFields, jsonObject);
 
-                if(!isAdvisor && jsonObject.has("payByStudent"))
+                if (!isAdvisor && jsonObject.has("payByStudent"))
                     jsonObject.remove("payByStudent");
 
-                if(isAdvisor && !jsonObject.has("payByStudent"))
+                if (isAdvisor && !jsonObject.has("payByStudent"))
                     return JSON_NOT_VALID_PARAMS;
 
-                if(isAdvisor)
+                if (isAdvisor)
                     jsonObject.put("launchMode", "online");
 
-                if(jsonObject.getLong("start") < System.currentTimeMillis())
+                if (jsonObject.getLong("start") < System.currentTimeMillis())
                     return generateErr("زمان شروع آزمون باید از امروز بزرگتر باشد");
 
-                if(jsonObject.getLong("end") < jsonObject.getLong("start"))
+                if (jsonObject.getLong("end") < jsonObject.getLong("start"))
                     return generateErr("زمان پایان آزمون باید بزرگ تر از زمان آغاز آن باشد");
 
-                if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 3)
+                if (jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 3)
                     return generateErr("زمان پایان آزمون حداکثر می تواند سه روز بعد از زمان آغاز آن باشد");
 
 
@@ -130,6 +129,130 @@ public class RegularQuizController extends QuizAbstract {
         iryscQuizRepository.cleanRemove(quiz);
 
         return JSON_OK;
+    }
+
+    JSONObject convertHWDocToJSON(Document quiz, boolean isDigest, ObjectId userId) {
+
+        JSONObject jsonObject = new JSONObject();
+        Document studentDoc = null;
+
+        if(userId != null) {
+
+            studentDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    quiz.getList("students", Document.class), "_id", userId
+            );
+
+            if(studentDoc == null)
+                return jsonObject;
+
+        }
+
+        jsonObject
+                .put("title", quiz.getString("title"))
+                .put("start", quiz.getLong("start"))
+                .put("end", quiz.getLong("end"))
+                .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
+                .put("id", quiz.getObjectId("_id").toString());
+
+        long curr = System.currentTimeMillis();
+
+        if (userId != null) {
+
+            long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
+
+            if (end < curr) {
+
+                boolean canSeeResult = quiz.getBoolean("show_results_after_correction") &&
+                        quiz.containsKey("report_status") &&
+                        quiz.getString("report_status").equalsIgnoreCase("ready");
+
+                if (canSeeResult)
+                    jsonObject.put("status", "finished");
+                else
+                    jsonObject.put("status", "waitForResult");
+
+            } else if (quiz.getLong("start") <= curr && end > curr) {
+                jsonObject.put("status", "inProgress");
+            } else
+                jsonObject.put("status", "notStart");
+
+            if(!jsonObject.getString("status").equalsIgnoreCase("notStart")) {
+
+                if(studentDoc.containsKey("upload_at")) {
+
+                    long uploadAt = studentDoc.getLong("upload_at");
+
+                    if(uploadAt > quiz.getLong("end"))
+                        jsonObject.put("delay", uploadAt - quiz.getLong("end"));
+
+                    jsonObject.put("uploadAt", getSolarDate(uploadAt));
+                }
+            }
+
+        }
+
+        long end = quiz.containsKey("delay_end") ? quiz.getLong("delay_end") : quiz.getLong("end");
+
+        if (userId == null) {
+
+            long nextWeek = end + ONE_DAY_MIL_SEC * 7;
+
+            jsonObject
+                    .put("status", quiz.getString("status"))
+                    .put("visibility", quiz.getOrDefault("visibility", true))
+                    .put("studentsCount", quiz.getInteger("registered"))
+                    .put("isStart", quiz.getLong("start") < curr)
+                    .put("isEnd", quiz.getLong("end") < curr)
+                    .put("isStop", nextWeek < curr)
+                    .put("attachesCount", quiz.containsKey("attaches") ?
+                            quiz.getList("attaches", String.class).size() : 0
+                    );
+        }
+
+        if (!isDigest) {
+
+            jsonObject
+                    .put("showResultsAfterCorrection", quiz.getBoolean("show_results_after_correction"))
+                    .put("desc", quiz.getOrDefault("desc", ""));
+
+            JSONArray attaches = new JSONArray();
+            for (String attach : quiz.getList("attaches", String.class))
+                attaches.put(STATICS_SERVER + HWRepository.FOLDER + "/" + attach);
+
+            jsonObject.put("attaches", attaches)
+                    .put("answerType", quiz.getString("answer_type"))
+                    .put("maxUploadSize", quiz.getInteger("max_upload_size"));
+
+            if(quiz.containsKey("delay_end")) {
+                    jsonObject.put("delayEnd", quiz.getLong("delay_end"));
+                    jsonObject.put("delayPenalty", quiz.getInteger("delay_penalty"));
+            }
+
+            if(userId == null || curr > end)
+                jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
+
+            if(userId != null) {
+
+                if(curr > end && quiz.getBoolean("show_results_after_correction")) {
+
+                    if (studentDoc.containsKey("mark"))
+                        jsonObject.put("mark", studentDoc.get("mark"));
+
+                    if (studentDoc.containsKey("mark_desc"))
+                        jsonObject.put("markDesc", studentDoc.get("mark_desc"));
+                }
+
+                if(studentDoc.containsKey("filename"))
+                    jsonObject.put("filename", studentDoc.getString("filename").split("__")[1]);
+
+                jsonObject.put("reminder", Math.max(0, quiz.getLong("end") - curr) / 1000)
+                        .put("canUpload", curr < end)
+                        .put("validExt", FileUtils.getAppropriateExt(quiz.getString("answer_type")));
+            }
+
+        }
+
+        return jsonObject;
     }
 
 
@@ -274,10 +397,16 @@ public class RegularQuizController extends QuizAbstract {
             } else
                 jsonObject.put("status", "notStart");
 
-        } else
+        } else {
+
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
+
+            if (quiz.containsKey("capacity"))
+                jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
+
+        }
 
         if (isAdmin) {
             jsonObject
@@ -288,8 +417,6 @@ public class RegularQuizController extends QuizAbstract {
                     .put("capacity", quiz.getInteger("capacity"));
         }
 
-        if (quiz.containsKey("capacity"))
-            jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
 
         if (!isDigest || isDescNeeded)
             jsonObject
@@ -399,7 +526,29 @@ public class RegularQuizController extends QuizAbstract {
             students.add(stdDoc);
             quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
 
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
+
+        return true;
+    }
+
+    boolean hwRegistry(ObjectId studentId, Document hw) {
+        try {
+
+            List<Document> students = hw.getList("students", Document.class);
+
+            if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                    students, "_id", studentId
+            ) != -1)
+                return false;
+
+            Document stdDoc = new Document("_id", studentId);
+            students.add(stdDoc);
+
+            hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
+
+        } catch (Exception ignore) {
+        }
 
         return true;
     }
@@ -505,8 +654,8 @@ public class RegularQuizController extends QuizAbstract {
 
             this.quiz = quiz;
             Document questions = quiz.get("questions", Document.class);
-            this.useFromDatabase = (boolean)quiz.getOrDefault("database", true);
-            this.hasMinusMark = (boolean)quiz.getOrDefault("minus_mark", true);
+            this.useFromDatabase = (boolean) quiz.getOrDefault("database", true);
+            this.hasMinusMark = (boolean) quiz.getOrDefault("minus_mark", true);
 
 //            marks = questions.getList("marks", Double.class);
 

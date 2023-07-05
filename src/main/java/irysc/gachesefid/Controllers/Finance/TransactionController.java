@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers.Finance;
 
 import com.mongodb.client.AggregateIterable;
 import irysc.gachesefid.Controllers.Config.GiftController;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.Utility;
@@ -11,7 +10,6 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.security.core.parameters.P;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -107,6 +105,47 @@ public class TransactionController {
 
     }
 
+    public static void fetchSchoolHWInvoice(StringBuilder section,
+                                              Document transaction) {
+
+        Object products = transaction.get("products");
+
+        Document quiz = hwRepository.findById((ObjectId) products);
+        if (quiz != null) {
+            section.append(" - ").append(quiz.getString("title")).append(" ( تعداد دانش آموزان: ");
+            section.append(quiz.getList("students", Document.class).size());
+            section.append(" )");
+        }
+
+    }
+
+    private static void fetchAbstractQuizName(ObjectId quizId, StringBuilder section) {
+
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz != null)
+            section.append(" - ").append(quiz.getString("title"));
+        else {
+            quiz = openQuizRepository.findById(quizId);
+            if (quiz != null)
+                section.append(" - ").append(quiz.getString("title"));
+            else {
+                quiz = schoolQuizRepository.findById(quizId);
+                if (quiz != null)
+                    section.append(" - ").append(quiz.getString("title"));
+                else {
+                    quiz = onlineStandQuizRepository.findById(quizId);
+                    if(quiz != null)
+                        section.append(" - ").append(quiz.getString("title"));
+                    else {
+                        quiz = escapeQuizRepository.findById(quizId);
+                        if(quiz != null)
+                            section.append(" - ").append(quiz.getString("title"));
+                    }
+                }
+            }
+        }
+    }
+
     public static void fetchQuizInvoice(StringBuilder section,
                                         Document transaction) {
         boolean checkAllItems = true;
@@ -122,30 +161,10 @@ public class TransactionController {
         if (checkAllItems) {
             Object products = transaction.get("products");
             if (products instanceof ObjectId) {
-                Document quiz = iryscQuizRepository.findById((ObjectId) products);
-                if (quiz != null)
-                    section.append(" - ").append(quiz.getString("title"));
-                else {
-                    quiz = openQuizRepository.findById((ObjectId) products);
-                    if (quiz != null)
-                        section.append(" - ").append(quiz.getString("title"));
-                    else {
-                        quiz = schoolQuizRepository.findById((ObjectId) products);
-                        if (quiz != null)
-                            section.append(" - ").append(quiz.getString("title"));
-                    }
-                }
+                fetchAbstractQuizName((ObjectId) products, section);
             } else if (products instanceof List) {
                 for (ObjectId quizId : (List<ObjectId>) products) {
-
-                    Document quiz = iryscQuizRepository.findById(quizId);
-                    if (quiz != null)
-                        section.append(" - ").append(quiz.getString("title"));
-                    else {
-                        quiz = openQuizRepository.findById(quizId);
-                        if (quiz != null)
-                            section.append(" - ").append(quiz.getString("title"));
-                    }
+                    fetchAbstractQuizName(quizId, section);
                 }
             }
         }
@@ -166,6 +185,11 @@ public class TransactionController {
                 OffCodeSections.SCHOOL_QUIZ.getName()
         ))
             fetchSchoolQuizInvoice(section, transaction);
+
+        else if (transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.SCHOOL_HW.getName()
+        ))
+            fetchSchoolHWInvoice(section, transaction);
 
         else if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.BANK_EXAM.getName()

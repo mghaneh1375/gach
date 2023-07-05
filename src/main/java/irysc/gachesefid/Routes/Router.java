@@ -320,4 +320,41 @@ public class Router {
 
         return new Document("user", user).append("isAdmin", isSchool);
     }
+
+
+    protected Document getUserWithAdvisorAccess(HttpServletRequest request,
+                                               boolean weakAccess,
+                                               String userId
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
+
+        Document user = getUserWithOutCheckCompleteness(request);
+
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+
+
+        if (userId != null && !isAdmin && !isAdvisor)
+            throw new InvalidFieldsException("no access");
+
+        if (userId != null && !ObjectId.isValid(userId))
+            throw new InvalidFieldsException("invalid objectId");
+
+        if (userId != null) {
+
+            ObjectId oId = new ObjectId(userId);
+
+            if(isAdvisor && !isAdmin &&
+                    (weakAccess && !Authorization.hasWeakAccessToThisStudent(oId, user.getObjectId("_id"))) ||
+                    (!weakAccess && !Authorization.hasAccessToThisStudent(oId, user.getObjectId("_id")))
+            )
+                throw new InvalidFieldsException("Access denied");
+
+            user = userRepository.findById(oId);
+        }
+
+        if (user == null)
+            throw new InvalidFieldsException("invalid userId");
+
+        return new Document("user", user).append("isAdmin", isAdvisor);
+    }
 }

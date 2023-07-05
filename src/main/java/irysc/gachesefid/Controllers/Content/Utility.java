@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Content;
 
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
+import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.OffCodeTypes;
 import org.bson.Document;
@@ -59,11 +60,11 @@ public class Utility {
                 .put("rate", doc.getOrDefault("rate", 5))
                 .put("tags", doc.get("tags"))
                 .put("id", doc.getObjectId("_id").toString())
-                .put("teacher", doc.getString("teacher"))
+                .put("teacher", doc.getString("teacher").split("__"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("certDuration", doc.getOrDefault("cert_duration", ""))
-                .put("duration", isAdmin ? doc.getInteger("duration") : doc.getInteger("duration") * 60)
+                .put("duration", doc.getInteger("duration"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
         if(!isAdmin && doc.containsKey("img"))
@@ -110,13 +111,40 @@ public class Utility {
                 .put("rate", doc.getOrDefault("rate", 5))
                 .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
-                .put("teacher", doc.getString("teacher"))
+                .put("teacher", doc.getString("teacher").split("__"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
                 .put("certDuration", doc.getOrDefault("duration", ""))
-                .put("duration", isAdmin ? doc.getInteger("duration") : doc.getInteger("duration") * 60)
+                .put("duration", doc.getInteger("duration"))
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
+
+        List<Document> students = doc.getList("users", Document.class);
+
+        if(students.size() > 10)
+            jsonObject.put("buyers", students.size());
+
+        JSONArray lastBuyers = new JSONArray();
+        int counter = 0;
+
+        for(int i = students.size() - 1; i >= 0; i--) {
+
+            if(counter > 3)
+                break;
+
+            Document user = userRepository.findById(students.get(i).getObjectId("_id"));
+            if(user == null)
+                continue;
+
+            lastBuyers.put(new JSONObject()
+                    .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                    .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+            );
+
+            counter++;
+        }
+
+        jsonObject.put("lastBuyers", lastBuyers);
 
         if(includeFAQ) {
             Document config = contentConfigRepository.findBySecKey("first");

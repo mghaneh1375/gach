@@ -6,6 +6,9 @@ import org.bson.types.ObjectId;
 
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
 public class Authorization {
@@ -73,9 +76,15 @@ public class Authorization {
     // todo : complete this section
     public static boolean hasAccessToThisStudent(ObjectId studentId, ObjectId applicatorId) {
 
+        if(studentId.equals(applicatorId))
+            return true;
+
         Document applicator = userRepository.findById(applicatorId);
         if(applicator == null)
             return false;
+
+        if(isAdmin(applicator.getList("accesses", String.class)))
+            return true;
 
         if(isSchool(applicator.getList("accesses", String.class)))
             return applicator.getList("students", ObjectId.class).contains(studentId);
@@ -84,6 +93,36 @@ public class Authorization {
             return Utility.searchInDocumentsKeyValIdx(
                     applicator.getList("students", Document.class), "_id", studentId
             ) > -1;
+
+        return false;
+    }
+
+    public static boolean hasWeakAccessToThisStudent(ObjectId studentId, ObjectId applicatorId) {
+
+        if(studentId.equals(applicatorId))
+            return true;
+
+        Document applicator = userRepository.findById(applicatorId);
+        if(applicator == null)
+            return false;
+
+        if(isAdmin(applicator.getList("accesses", String.class)))
+            return true;
+
+        if(isSchool(applicator.getList("accesses", String.class)))
+            return applicator.getList("students", ObjectId.class).contains(studentId);
+
+        if(isAdvisor(applicator.getList("accesses", String.class))) {
+            return Utility.searchInDocumentsKeyValIdx(
+                    applicator.getList("students", Document.class), "_id", studentId
+            ) > -1 || advisorRequestsRepository.count(
+                    and(
+                            eq("advisor_id", applicatorId),
+                            eq("user_id", studentId),
+                            eq("answer", "pending")
+                    )
+            ) > 0;
+        }
 
         return false;
     }

@@ -16,6 +16,7 @@ import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.certificateRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.getSolarDate;
 
 public class StudentCertification {
 
@@ -43,7 +44,10 @@ public class StudentCertification {
 
             jsonArray.put(new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
-                    .put("createdAt", Utility.getSolarDate(userDoc.getLong("created_at")))
+                    .put("createdAt", userDoc.containsValue("created_at") ?
+                            Utility.getSolarDate(userDoc.getLong("created_at")) :
+                            getSolarDate(System.currentTimeMillis())
+                    )
                     .put("title", doc.getString("title"))
             );
         }

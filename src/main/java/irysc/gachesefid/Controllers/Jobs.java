@@ -32,7 +32,9 @@ public class Jobs implements Runnable {
         timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
         timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
-//        timer.schedule(new RemoveRedundantAttaches(), 0, 86400000);
+
+        timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
+
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
@@ -40,6 +42,72 @@ public class Jobs implements Runnable {
 
     //todo remove redundant transactions
     //todo remove redundant school questions
+
+    class RemoveExpiredNotifs extends TimerTask {
+
+        public void run() {
+
+            long lastMonth = System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30;
+            List<Document> users = userRepository.find(and(
+                    exists("events.0"),
+                    lt("events.0.created_at", lastMonth)
+            ), null);
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+
+            for(Document user : users) {
+
+                List<Document> notifs = user.getList("events", Document.class);
+                List<Document> newList = new ArrayList<>();
+
+                for(Document notif : notifs) {
+
+                    if(notif.getLong("created_at") < lastMonth)
+                        continue;
+
+                    newList.add(notif);
+                }
+
+                if(newList.size() < notifs.size()) {
+
+                    user.put("events", newList);
+                    writes.add(new UpdateOneModel<>(
+                            eq("_id", user.getObjectId("_id")),
+                            new BasicDBObject("$set",
+                                    new BasicDBObject("events", newList)
+                            )
+                    ));
+
+                }
+            }
+
+            if(writes.size() > 0)
+                userRepository.bulkWrite(writes);
+        }
+    }
+
+    private static class RemoveExpiredMeetings extends TimerTask {
+
+        @Override
+        public void run() {
+
+            long yesterday = System.currentTimeMillis() - ONE_DAY_MIL_SEC;
+
+            List<Document> docs = advisorMeetingRepository.find(
+                    lt("created_at", yesterday),
+                    new BasicDBObject("room_id", 1)
+                            .append("student_sky_id", 1)
+                            .append("advisor_sky_id", 1)
+            );
+
+            for(Document doc : docs) {
+
+                irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
+
+            }
+
+        }
+    }
 
     private static class QuizReminder extends TimerTask {
 
@@ -107,7 +175,7 @@ public class Jobs implements Runnable {
             }
 
             synchronized (blackListTokens) {
-                blackListTokens.removeIf(itr -> itr.getValue() < System.currentTimeMillis());
+                blackListTokens.removeIf(itr -> (long) itr.getValue() < System.currentTimeMillis());
             }
 
             activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));
@@ -450,8 +518,10 @@ public class Jobs implements Runnable {
                 ObjectId notifId = sms.getObjectId("notif_id");
 
                 if(sms.getString("msg").contains("newNotif")) {
+
                     String name = sms.getString("msg").split("__")[1];
                     sendSMSWithTemplate(sms.getString("phone"), 815, new PairValue("name", name));
+
                     sent++;
 
                     if(sent >= 30) {

@@ -10,6 +10,7 @@ import irysc.gachesefid.Models.QuestionLevel;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Test.Question.QuestionTestController;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -29,8 +30,7 @@ import java.util.HashMap;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.subjectRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
@@ -40,6 +40,17 @@ import static irysc.gachesefid.Utility.Utility.printException;
 @RequestMapping(path = "/api/admin/question")
 @Validated
 public class QuestionAPIRoutes extends Router {
+
+    @GetMapping(value = "/escapeQuizQuestions")
+    @ResponseBody
+    public String escapeQuizQuestions(HttpServletRequest request,
+                                      @RequestParam(required = false) String organizationCode
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getPrivilegeUser(request);
+        return QuestionController.getEscapeQuizQuestions(
+                organizationCode != null && organizationCode.isEmpty() ? null : organizationCode
+        );
+    }
 
     @GetMapping(value = "/subjectQuestions")
     @ResponseBody
@@ -51,9 +62,13 @@ public class QuestionAPIRoutes extends Router {
                                    @RequestParam(required = false) ObjectId gradeId,
                                    @RequestParam(required = false) String organizationCode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getPrivilegeUser(request);
+
+        Document user = getPrivilegeUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
         return QuestionController.subjectQuestions(
-                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode, subjectId, lessonId, gradeId
+                isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode,
+                subjectId, lessonId, gradeId, isAdmin
         );
     }
 
@@ -108,6 +123,26 @@ public class QuestionAPIRoutes extends Router {
     }
 
 
+    @DeleteMapping(value = "removeEscapeQuizQuestion")
+    @ResponseBody
+    public String removeEscapeQuizQuestion(HttpServletRequest request,
+                                           @RequestBody @StrongJSONConstraint(
+                                                   params = {"items"},
+                                                   paramsType = {JSONArray.class}
+                                           ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUserVoid(request);
+        PairValue p = CommonController.removeAllReturnDocs(
+                escapeQuizQuestionRepository,
+                new JSONObject(jsonStr).getJSONArray("items"),
+                null
+        );
+
+        return (String) p.getKey();
+    }
+
+
     @PostMapping(value = "/test")
     @ResponseBody
     public String test(HttpServletRequest request
@@ -153,13 +188,14 @@ public class QuestionAPIRoutes extends Router {
                                 optionals = {
                                         "sentencesCount", "telorance",
                                         "choicesCount", "neededLine",
-                                        "visibility", "year", "tags"
+                                        "visibility", "year", "tags",
+                                        "isPublic"
                                 },
                                 optionalsType = {
                                         Positive.class, Number.class,
                                         Positive.class, Positive.class,
                                         Boolean.class, Positive.class,
-                                        JSONArray.class
+                                        JSONArray.class, Boolean.class
                                 }
                         ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
@@ -171,41 +207,87 @@ public class QuestionAPIRoutes extends Router {
         return QuestionController.addQuestion(subjectId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PostMapping(value = "storeEscapeQuizQuestion")
+    @ResponseBody
+    public String storeEscapeQuizQuestion(HttpServletRequest request,
+                                          @RequestPart(value = "questionFile") MultipartFile questionFile,
+                                          @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                                          @RequestPart(value = "json") @StrongJSONConstraint(
+                                                  params = {
+                                                          "answer",
+                                                          "organizationId",
+                                                  },
+                                                  paramsType = {
+                                                          Object.class,
+                                                          String.class,
+                                                  }
+                                          ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (questionFile == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.addEscapeQuizQuestion(questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
+    }
+
     @PostMapping(value = "edit/{questionId}")
     @ResponseBody
     public String edit(HttpServletRequest request,
-                        @PathVariable @ObjectIdConstraint ObjectId questionId,
-                        @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
-                        @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
-                        @RequestPart(value = "json") @StrongJSONConstraint(
-                                params = {
-                                        "level",
-                                        "neededTime", "answer",
-                                        "kindQuestion", "subjectId",
-                                        "organizationId",
-                                },
-                                paramsType = {
-                                        QuestionLevel.class,
-                                        Positive.class, Object.class,
-                                        QuestionType.class, ObjectId.class,
-                                        String.class,
-                                },
-                                optionals = {
-                                        "sentencesCount", "telorance",
-                                        "choicesCount", "neededLine",
-                                        "visibility", "authorId",
-                                        "year", "tags"
-                                },
-                                optionalsType = {
-                                        Positive.class, Number.class,
-                                        Positive.class, Positive.class,
-                                        Boolean.class, ObjectId.class,
-                                        Positive.class, JSONArray.class
-                                }
-                        ) @NotBlank String jsonStr)
+                       @PathVariable @ObjectIdConstraint ObjectId questionId,
+                       @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
+                       @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                       @RequestPart(value = "json") @StrongJSONConstraint(
+                               params = {
+                                       "level",
+                                       "neededTime", "answer",
+                                       "kindQuestion", "subjectId",
+                                       "organizationId",
+                               },
+                               paramsType = {
+                                       QuestionLevel.class,
+                                       Positive.class, Object.class,
+                                       QuestionType.class, ObjectId.class,
+                                       String.class,
+                               },
+                               optionals = {
+                                       "sentencesCount", "telorance",
+                                       "choicesCount", "neededLine",
+                                       "visibility", "authorId",
+                                       "year", "tags", "isPublic"
+                               },
+                               optionalsType = {
+                                       Positive.class, Number.class,
+                                       Positive.class, Positive.class,
+                                       Boolean.class, ObjectId.class,
+                                       Positive.class, JSONArray.class,
+                                       Boolean.class
+                               }
+                       ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return QuestionController.updateQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
+    }
+
+    @PostMapping(value = "editEscapeQuizQuestion/{questionId}")
+    @ResponseBody
+    public String editEscapeQuizQuestion(HttpServletRequest request,
+                                         @PathVariable @ObjectIdConstraint ObjectId questionId,
+                                         @RequestPart(value = "questionFile", required = false) MultipartFile questionFile,
+                                         @RequestPart(value = "answerFile", required = false) MultipartFile answerFile,
+                                         @RequestPart(value = "json") @StrongJSONConstraint(
+                                                 params = {
+                                                         "answer",
+                                                         "organizationId",
+                                                 },
+                                                 paramsType = {
+                                                         Object.class,
+                                                         String.class,
+                                                 }
+                                         ) @NotBlank String jsonStr)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.updateEscapeQuizQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
     @PostMapping(value = "/addBatch")
@@ -219,6 +301,19 @@ public class QuestionAPIRoutes extends Router {
 
         getAdminPrivilegeUserVoid(request);
         return QuestionController.addBatch(file);
+    }
+
+    @PostMapping(value = "/addBatchEscapeQuizQuestions")
+    @ResponseBody
+    public String addBatchEscapeQuizQuestions(HttpServletRequest request,
+                                              @RequestBody MultipartFile file)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (file == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        getAdminPrivilegeUserVoid(request);
+        return QuestionController.addBatchEscapeQuizQuestions(file);
     }
 
     @GetMapping

@@ -4,6 +4,7 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
+import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
@@ -267,10 +268,10 @@ public class AdminReportController {
 
             long curr = System.currentTimeMillis();
 
-            if (user != null && db instanceof OpenQuizRepository) {
+            if (db instanceof OpenQuizRepository) {
 
                 Document userDocInQuiz = searchInDocumentsKeyVal(
-                        students, "_id", user
+                        students, "_id", studentId
                 );
 
                 if (userDocInQuiz == null)
@@ -378,9 +379,9 @@ public class AdminReportController {
                             .put("stateRank", stats[6])
                             .put("cityRank", stats[7])
                             .put("schoolRank", stats[8])
-                            .put("avg", df_obj.format(generalStat.getDouble("avg")))
-                            .put("max", df_obj.format(generalStat.getDouble("max")))
-                            .put("min", df_obj.format(generalStat.getDouble("min")));
+                            .put("avg", df_obj.format(generalStat.get("avg")))
+                            .put("max", df_obj.format(generalStat.get("max")))
+                            .put("min", df_obj.format(generalStat.get("min")));
                 }
 
                 lessons.put(jsonObject);
@@ -564,7 +565,7 @@ public class AdminReportController {
             JSONArray answersJsonArray = new JSONArray();
 
             Document questions = doc.get("questions", Document.class);
-            List<Double> marks = questions.getList("marks", Double.class);
+            List<Number> marks = questions.getList("marks", Number.class);
             ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
             fillWithAnswerSheetData(answersJsonArray, null, pairValues, marks);
             jsonObject.put("answers", answersJsonArray);
@@ -645,7 +646,7 @@ public class AdminReportController {
                 ((Binary) doc.getOrDefault("answers", new byte[0])).getData()
         );
 
-        ArrayList<Double> marks = new ArrayList<>();
+        ArrayList<Number> marks = new ArrayList<>();
         for (int i = 0; i < doc.getList("questions", ObjectId.class).size(); i++)
             marks.add(3.0);
 
@@ -686,7 +687,8 @@ public class AdminReportController {
                 return JSON_NOT_ACCESS;
 
             Document questions = doc.get("questions", Document.class);
-            List<Double> marks = questions.getList("marks", Double.class);
+
+            List<Number> marks = questions.getList("marks", Number.class);
             ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
             List<Binary> questionStats = null;
             if (doc.containsKey("question_stat")) {
@@ -714,7 +716,7 @@ public class AdminReportController {
             return generateSuccessMsg("data", answersJsonArray);
 
         } catch (Exception x) {
-            return null;
+            return generateErr(x.getMessage());
         }
     }
 
@@ -1197,6 +1199,22 @@ public class AdminReportController {
                     studentsIdAfterFilter.add(std);
                 }
             }
+
+            if (Authorization.isAdvisor(accesses)) {
+
+                if (!user.containsKey("students"))
+                    return null;
+
+                List<Document> myStudents = user.getList("students", Document.class);
+                for (ObjectId std : students) {
+
+                    if (searchInDocumentsKeyValIdx(myStudents, "_id", std) == -1)
+                        continue;
+
+                    studentsIdAfterFilter.add(std);
+                }
+            }
+
         }
 
         return userRepository.findByIds(
@@ -1214,8 +1232,15 @@ public class AdminReportController {
         List<Document> students = quiz.getList("students", Document.class);
         ArrayList<ObjectId> studentsIdBeforeFilter = new ArrayList<>();
 
-        for (Document student : students)
+        boolean payByStudent = (boolean)quiz.getOrDefault("pay_by_student", false);
+
+        for (Document student : students) {
+
+            if(payByStudent && !student.containsKey("paid"))
+                continue;
+
             studentsIdBeforeFilter.add(student.getObjectId("_id"));
+        }
 
         ArrayList<Document> studentsInfo = filterStudentsWithAccess(
                 studentsIdBeforeFilter,

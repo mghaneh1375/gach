@@ -143,6 +143,7 @@ public class ManageUserController {
                         .put("NID", user.getString("NID"))
                         .put("coin", user.get("coin"))
                         .put("money", user.get("money"))
+                        .put("createdAt", getSolarDate(user.getLong("created_at")))
                         .put("sex", user.containsKey("sex") ?
                                 user.getString("sex").equalsIgnoreCase("male") ? "آقا" : "خانم" :
                                 ""

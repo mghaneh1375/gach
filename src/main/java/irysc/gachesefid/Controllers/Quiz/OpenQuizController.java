@@ -1,7 +1,6 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import irysc.gachesefid.Exception.InvalidFieldsException;
-import irysc.gachesefid.Models.KindQuiz;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
@@ -23,6 +22,7 @@ public class OpenQuizController {
             "end", "launchMode", "showResultsAfterCorrection",
             "topStudentsGiftCoin", "topStudentsGiftMoney",
             "topStudentsCount", "paperTheme", "database",
+            "maxTeams", "perTeam", "maxTry", "shouldComplete"
     };
 
     private final static String[] forbiddenTransferFields = {

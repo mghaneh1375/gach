@@ -45,7 +45,7 @@ public class TashrihiQuizController extends QuizAbstract {
     };
 
     private final static String[] forbiddenFields = {
-            "paperTheme", "database", "minusMark"
+            "paperTheme", "database", "minusMark", "maxTry", "shouldComplete", "maxTeams", "perTeam"
     };
 
     public static String corrector(Common db, ObjectId userId, ObjectId quizId, ObjectId correctorId) {

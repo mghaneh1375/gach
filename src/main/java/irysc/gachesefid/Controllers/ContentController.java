@@ -734,6 +734,29 @@ public class ContentController {
         return generateSuccessMsg("data", lessonsJSON);
     }
 
+
+    public static String getLessonsDigest() {
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+        JSONArray lessonsJSON = new JSONArray();
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            for (Document lesson : lessons) {
+                lessonsJSON.put(new JSONObject()
+                        .put("name", lesson.getString("name") + " در " + doc.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                );
+            }
+
+        }
+
+        return generateSuccessMsg("data", lessonsJSON);
+    }
+
+
     public static String gradeLessons() {
 
         ArrayList<Document> docs = gradeRepository.find(null, null);

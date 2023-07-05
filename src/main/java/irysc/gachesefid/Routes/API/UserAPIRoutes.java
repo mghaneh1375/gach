@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
@@ -15,7 +16,9 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.SolarCalendar;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -24,6 +27,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -34,14 +38,20 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalField;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static com.mongodb.client.model.Updates.setOnInsert;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
+import java.time.LocalDate;
+import java.util.Locale;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -71,66 +81,17 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
+            return getFirstDayOfCurrWeek();
+//            System.out.println();
+//            System.out.println(getFirstDayOfFutureWeek(1));
+//            System.out.println(getFirstDayOfFutureWeek(2));
+//            System.out.println(getFirstDayOfFutureWeek(3));
+//            System.out.println(getFirstDayOfFutureWeek(4));
 
-//            List<Document> docs = contentRepository.find(null, null);
-//            for(Document doc : docs) {
-//
-//                List<Document> users = doc.getList("users", Document.class);
-//                List<Document> newList = new ArrayList<>();
-//
-//                for(int i = 0; i < users.size(); i++) {
-//
-//                    ObjectId search = users.get(i).getObjectId("_id");
-//                    if(Utility.searchInDocumentsKeyValIdx(newList, "_id", search) != -1)
-//                        continue;
-//
-//                    boolean findDup = false;
-//
-//                    for(int j = i + 1; j < users.size(); j++) {
-//
-//                        if(search.equals(users.get(j).getObjectId("_id"))) {
-//                            newList.add(mergeDuplicateRegistry(users.get(i), users.get(j)));
-//                            findDup = true;
-//                            break;
-//                        }
-//
-//                    }
-//
-//                    if(!findDup)
-//                        newList.add(users.get(i));
-//                }
-//
-//                doc.put("users", newList);
-//                contentRepository.replaceOne(doc.getObjectId("_id"), doc);
-//            }
+//            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
+//            System.out.println(userId);
 
-//            sendSMSWithTemplate("09214915905", 815, new PairValue("name", "امیر حسین نظری اصل"));
-
-//            List<Document> users = userRepository.find(null, null);
-//            for(Document user : users) {
-//
-//                if(!user.containsKey("money"))
-//                    continue;
-//
-//                Object money = user.get("money");
-//                if(money instanceof Double)
-//                    continue;
-//
-//                Number n = (Number) money;
-//                user.put("money", n.doubleValue());
-//                userRepository.replaceOne(user.getObjectId("_id"), user);
-//            }
-
-//            09026021609
-//            sendSMSWithoutTemplate("09214915905-09105559653-09224786125-09191613134", "تست پیامک");
-
-//            String s = "<p>test2</p>";
-//            String plainText= Jsoup.parse(s).text();
-//
-//            if(1 == 1)
-//                return plainText;
-
-            return "pk";
+//            return "pk";
         }
 
         JSONArray tags2 = questionRepository.distinctTags("tags");
@@ -356,11 +317,11 @@ public class UserAPIRoutes extends Router {
                                              String.class
                                      },
                                      optionals = {
-                                             "branches", "schoolId", "gradeId",
+                                             "branches", "schoolId", "gradeId", "birthDay"
                                      },
                                      optionalsType = {
                                              JSONArray.class, ObjectId.class,
-                                             ObjectId.class,
+                                             ObjectId.class, Long.class
                                      }
                              ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
@@ -764,6 +725,19 @@ public class UserAPIRoutes extends Router {
     public String myTransactions(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return PayPing.myTransactions(getUser(request).getObjectId("_id"));
+    }
+
+    @GetMapping(value = "/getEducationalHistory/{userId}")
+    @ResponseBody
+    public String getEducationalHistory(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getPrivilegeUser(request);
+        if(!Authorization.hasWeakAccessToThisStudent(userId, user.getObjectId("_id")))
+            return JSON_NOT_ACCESS;
+
+        return UserController.getEducationalHistory(userId);
     }
 
 //    @GetMapping(value = "/myTransaction/{referenceId}")

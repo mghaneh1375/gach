@@ -1,8 +1,8 @@
 package irysc.gachesefid.Models;
 
-public enum GiftType {
+public enum HWAnswerType {
 
-    COIN, MONEY, OFFCODE, FREE;
+    WORD, PDF, AUDIO, VIDEO, IMAGE, POWERPOINT;
 
     public String getName() {
         return name().toLowerCase();

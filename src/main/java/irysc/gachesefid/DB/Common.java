@@ -159,9 +159,8 @@ public abstract class Common extends Repository {
     public synchronized Document findById(ObjectId id) {
 
         Document cached = isInCache(table, id);
-        if (cached != null) {
+        if (cached != null)
             return cached;
-        }
 
         FindIterable<Document> cursor = documentMongoCollection.find(eq("_id", id));
         if (cursor.iterator().hasNext()) {
@@ -249,6 +248,10 @@ public abstract class Common extends Repository {
     public void replaceOne(ObjectId id, Document newDoc) {
         documentMongoCollection.replaceOne(eq("_id", id), newDoc);
         removeFromCache(table, id);
+    }
+
+    public void replaceOneWithoutClearCache(ObjectId id, Document newDoc) {
+        documentMongoCollection.replaceOne(eq("_id", id), newDoc);
     }
 
     abstract void init();

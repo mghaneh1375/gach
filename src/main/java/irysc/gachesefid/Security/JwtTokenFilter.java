@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import irysc.gachesefid.Exception.CustomException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Cache;
 import javafx.util.Pair;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
 
@@ -25,15 +27,9 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         private String token;
         private long issue;
-        private Authentication auth;
 
-        public Authentication getAuth() {
-            return auth;
-        }
-
-        ValidateToken(String token, Authentication auth) {
+        ValidateToken(String token) {
             this.token = token;
-            this.auth = auth;
             this.issue = System.currentTimeMillis();
         }
 
@@ -51,13 +47,13 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     private JwtTokenProvider jwtTokenProvider;
     public static final ArrayList<ValidateToken> validateTokens = new ArrayList<>();
-    public static final ArrayList<Pair<String, Long>> blackListTokens = new ArrayList<>();
+    public static final ArrayList<PairValue> blackListTokens = new ArrayList<>();
 
     public static void removeTokenFromCache(String token) {
 
         for(int i = 0; i < validateTokens.size(); i++) {
             if(validateTokens.get(i).token.equals(token)) {
-                blackListTokens.add(new Pair<>(token, TOKEN_EXPIRATION + validateTokens.get(i).issue));
+                blackListTokens.add(new PairValue(token, TOKEN_EXPIRATION + validateTokens.get(i).issue));
                 validateTokens.remove(i);
                 return;
             }
@@ -74,57 +70,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, FilterChain filterChain) throws ServletException, IOException {
-
-        String token = jwtTokenProvider.resolveToken(httpServletRequest);
-
-        boolean validate = false;
-
-        if(token != null) {
-
-            for(Pair<String, Long> itr : blackListTokens) {
-                if(itr.getKey().equals(token)) {
-                    if(itr.getValue() < System.currentTimeMillis()) {
-                        blackListTokens.remove(itr);
-                        break;
-                    }
-                    SecurityContextHolder.clearContext();
-                    httpServletResponse.sendError(HttpStatus.FORBIDDEN.value(), "Token invalid");
-                    return;
-                }
-            }
-
-            for (ValidateToken v : validateTokens) {
-                if(v.equals(token)) {
-
-                    if(v.isValidateYet()) {
-                        System.out.println("Hitt token is JwtTokenFilter");
-                        validate = true;
-                        SecurityContextHolder.getContext().setAuthentication(v.getAuth());
-                    }
-                    else
-                        validateTokens.remove(v);
-
-                    break;
-                }
-            }
-        }
-
-        if(!validate) {
-
-            try {
-                if (token != null && jwtTokenProvider.validateToken(token)) {
-                    Authentication auth = jwtTokenProvider.getAuthentication(token);
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                    validateTokens.add(new ValidateToken(token, auth));
-                }
-            } catch (CustomException ex) {
-                //this is very important, since it guarantees the user is not authenticated at all
-                SecurityContextHolder.clearContext();
-                httpServletResponse.sendError(ex.getHttpStatus().value(), ex.getMessage());
-                return;
-            }
-        }
-
         filterChain.doFilter(httpServletRequest, httpServletResponse);
     }
 
@@ -134,13 +79,25 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         if(token != null) {
 
-            for (ValidateToken v : validateTokens) {
+            for (PairValue blackListToken : blackListTokens) {
+                if (blackListToken.getKey().equals(token))
+                    return false;
+            }
+
+            for(Iterator<ValidateToken> iterator = validateTokens.iterator(); iterator.hasNext();) {
+
+                ValidateToken v = iterator.next();
+                if(v == null) {
+                    iterator.remove();
+                    continue;
+                }
+
                 if(v.equals(token)) {
 
                     if(v.isValidateYet())
                         return true;
                     else
-                        validateTokens.remove(v);
+                        iterator.remove();
 
                     break;
                 }
@@ -148,10 +105,10 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         }
 
         try {
-            if (token != null && jwtTokenProvider.validateToken(token)) {
-                Authentication auth = jwtTokenProvider.getAuthentication(token);
+            if (token != null && jwtTokenProvider.validateAuthToken(token)) {
+                Authentication auth = jwtTokenProvider.getAuthentication(token, false);
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                validateTokens.add(new ValidateToken(token, auth));
+                validateTokens.add(new ValidateToken(token));
                 return true;
             }
         } catch (CustomException ex) {
@@ -160,5 +117,27 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         }
 
         return false;
+    }
+
+    public String isSocketAuth(HttpServletRequest request) {
+
+        String token = jwtTokenProvider.resolveToken(request);
+
+        if(token != null) {
+
+            try {
+                if (jwtTokenProvider.validateSocketToken(token)) {
+                    Authentication auth = jwtTokenProvider.getAuthentication(token, true);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    return token;
+                }
+            } catch (CustomException ex) {
+                SecurityContextHolder.clearContext();
+                return null;
+            }
+
+        }
+
+        return null;
     }
 }

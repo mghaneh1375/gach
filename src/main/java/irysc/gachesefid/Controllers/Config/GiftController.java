@@ -4,10 +4,7 @@ import com.google.common.base.CaseFormat;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Finance.Off.OffCodeController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.GiftTarget;
-import irysc.gachesefid.Models.GiftType;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
@@ -29,13 +26,16 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class GiftController {
 
-    private static String translateType(String type) {
+    public static String translateType(String type) {
 
         if (type.equalsIgnoreCase(GiftType.COIN.getName()))
             return "ایکس پول    ";
 
         if (type.equalsIgnoreCase(GiftType.MONEY.getName()))
             return "پول";
+
+        if (type.equalsIgnoreCase(GiftType.FREE.getName()))
+            return "آزاد";
 
         return "کد تخفیف";
     }
@@ -45,11 +45,17 @@ public class GiftController {
         if (useFor.equalsIgnoreCase("charge"))
             return "افزایش شارژ حساب";
 
+        if (useFor.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+            return "آزمون پای تخته";
+
         if (useFor.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()))
             return "آزمون های آیریسک";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.SCHOOL_QUIZ.getName()))
             return "آزمون مدرسه ای";
+
+        if (useFor.equalsIgnoreCase(OffCodeSections.SCHOOL_HW.getName()))
+            return "تمرین";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()))
             return "آزمون های شخصی ساز";
@@ -72,7 +78,7 @@ public class GiftController {
         return "همه";
     }
 
-    private static String translateOffCodeType(String offCodeType) {
+    public static String translateOffCodeType(String offCodeType) {
 
         if (offCodeType.equalsIgnoreCase(OffCodeTypes.PERCENT.getName()))
             return "درصد";

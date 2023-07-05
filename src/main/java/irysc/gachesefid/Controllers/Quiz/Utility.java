@@ -40,6 +40,7 @@ public class Utility {
         for (String mandatoryFiled : mandatoryFields) {
 
             if (!keys.contains(mandatoryFiled)) {
+                System.out.println(mandatoryFiled);
                 error = true;
                 break;
             }
@@ -52,6 +53,7 @@ public class Utility {
         for (String forbiddenField : forbiddenFields) {
 
             if (keys.contains(forbiddenField)) {
+                System.out.println("dwq " + forbiddenField);
                 error = true;
                 break;
             }
@@ -77,23 +79,6 @@ public class Utility {
                 throw new InvalidFieldsException("فاصله زمانی بین آغاز و پایان آزمون موردنظر باید حداقل " + duration + " ثانبه باشد.");
 
         }
-
-        if (quiz.containsKey("desc_after_mode") &&
-                quiz.getString("desc_after_mode").equals(DescMode.FILE.getName()) &&
-                quiz.containsKey("desc_after")
-        )
-            throw new InvalidFieldsException("زمانی که فایل توضیحات بعد آزمون را بر روی فایل ست می کنید نباید فیلد descAfter را ست نمایید.");
-
-        if (quiz.containsKey("desc_mode") &&
-                quiz.getString("desc_mode").equals(DescMode.FILE.getName()) &&
-                quiz.containsKey("desc")
-        )
-            throw new InvalidFieldsException("زمانی که فایل توضیحات آزمون را بر روی فایل ست می کنید نباید فیلد desc را ست نمایید.");
-
-//        if(
-//                !quiz.getString("desc_after_mode").equals(DescMode.NONE.getName()) &&
-//                        !quiz.containsKey()
-//        )
 
     }
 
@@ -604,27 +589,70 @@ public class Utility {
                 bytes.add(t);
                 i++;
             }
-//            else if(type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
-//
-//            }
-//            else if(type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
-//                bytes.add(getByteArr(ans));
-//                i++;
-//            }
         }
 
         int neededSize = 0;
         for (byte[] itr : bytes) {
-//            if(itr == null)
-//                continue;
             neededSize += itr.length;
         }
 
         ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
 
         for (byte[] itr : bytes) {
-//            if(itr == null)
-//                continue;
+            buff.put(itr);
+        }
+
+        return buff.array();
+    }
+
+    public static byte[] getStdAnswersByteArr2(ArrayList<PairValue> pairValues) {
+
+        ArrayList<byte[]> bytes = new ArrayList<>();
+
+        int i = 0;
+
+        while (i < pairValues.size()) {
+
+            String type = pairValues.get(i).getKey().toString();
+
+            bytes.add(Utilities.convertTypeToByte(type));
+            Object ans = pairValues.get(i).getValue();
+
+            if (type.equalsIgnoreCase(QuestionType.TEST.getName())) {
+
+                ArrayList<PairValue> answers = new ArrayList<>();
+
+                answers.add((PairValue) ans);
+                int j;
+
+                for (j = i + 1; j < pairValues.size(); j++) {
+
+                    String tmpType = pairValues.get(j).getKey().toString();
+                    if (!tmpType.equalsIgnoreCase(QuestionType.TEST.getName()))
+                        break;
+
+                    answers.add((PairValue) pairValues.get(j).getValue());
+                }
+
+                bytes.add(getByteArr(answers));
+                bytes.add(new byte[]{(byte) 0xff});
+
+                i = j;
+            } else {
+                byte[] t = getByteArr(ans);
+                bytes.add(t);
+                i++;
+            }
+        }
+
+        int neededSize = 0;
+        for (byte[] itr : bytes) {
+            neededSize += itr.length;
+        }
+
+        ByteBuffer buff = ByteBuffer.wrap(new byte[neededSize]);
+
+        for (byte[] itr : bytes) {
             buff.put(itr);
         }
 
@@ -635,7 +663,7 @@ public class Utility {
     static void fillWithAnswerSheetData(JSONArray jsonArray,
                                         List<Binary> questionStat,
                                         List<PairValue> answers,
-                                        List<Double> marks) {
+                                        List<Number> marks) {
 
         for (int i = 0; i < answers.size(); i++) {
 
@@ -667,7 +695,7 @@ public class Utility {
                 jsonObject.put("choicesCount", choicesCount);
 
             if (percent != -1)
-                jsonObject.put("percent", percent);
+                jsonObject.put("percent", Math.round((percent * 100.0) / 100.0));
 
             jsonArray.put(jsonObject);
         }
@@ -743,8 +771,10 @@ public class Utility {
         }
 
         if (db instanceof SchoolQuizRepository) {
+
             if(quiz.getObjectId("created_by").equals(userId))
                 return quiz;
+
             else if(quiz.getString("status").equals("finish") && quiz.getBoolean("visibility") &&
                     searchInDocumentsKeyValIdx(
                             quiz.getList("students", Document.class),
@@ -752,6 +782,18 @@ public class Utility {
                     ) != -1
             )
                 return quiz;
+
+            else if(quiz.getString("status").equals("semi_finish") && quiz.getBoolean("visibility")) {
+
+                Document studentDoc = searchInDocumentsKeyVal(
+                        quiz.getList("students", Document.class),
+                        "_id", userId
+                );
+
+                if(studentDoc != null && studentDoc.containsKey("paid"))
+                    return quiz;
+
+            }
 
             throw new InvalidFieldsException(JSON_NOT_ACCESS);
         }

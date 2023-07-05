@@ -7,9 +7,9 @@ public class SolarCalendar {
     public String strWeekDay = "";
     public String strMonth = "";
 
-    int date;
-    int month;
-    int year;
+    public int date;
+    public int month;
+    public int year;
 
     public SolarCalendar() {
         Date MiladiDate = new Date();

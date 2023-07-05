@@ -201,19 +201,39 @@ public class QuizController {
 
             Document quiz = hasAccess(db, userId, quizId);
 
-            if(!isAdvisor && data.has("payByStudent"))
+            if (!isAdvisor && data.has("payByStudent"))
                 data.remove("payByStudent");
 
-            if(isAdvisor && data.has("launchMode"))
+            if (isAdvisor && data.has("launchMode"))
                 data.remove("launchMode");
+
+            if (data.has("max_teams") && data.getInt("max_teams") < 2)
+                return generateErr("تعداد تیم ها باید حداقل دو باشد");
+
+            if (data.has("per_team") && data.getInt("per_team") < 1)
+                return generateErr("تعداد نفرات هر تیم باید حداقل یک باشد");
 
             //todo : check after finish status in school quiz
 
-            for (String key : data.keySet())
-                quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+            for (String key : data.keySet()) {
 
-            if (!data.has("tags"))
-                quiz.put("tags", new ArrayList<>());
+                if (key.equalsIgnoreCase("tags") || key.equalsIgnoreCase("kind"))
+                    continue;
+
+                quiz.put(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key), data.get(key));
+            }
+
+            ArrayList<String> tagsArr = new ArrayList<>();
+
+            if (data.has("tags")) {
+
+                JSONArray tags = data.getJSONArray("tags");
+
+                for (int i = 0; i < tags.length(); i++)
+                    tagsArr.add(tags.getString(i));
+            }
+
+            quiz.put("tags", tagsArr);
 
             if (quiz.containsKey("price") && quiz.get("price") instanceof String) {
                 try {
@@ -224,12 +244,44 @@ public class QuizController {
             }
 
             db.replaceOne(quizId, quiz);
+            QuizAbstract quizAbstract = null;
+
+            if (db instanceof HWRepository)
+                return generateSuccessMsg("data",
+                        new RegularQuizController().convertHWDocToJSON(quiz, false, null)
+                );
+
+            if (db instanceof IRYSCQuizRepository ||
+                    db instanceof SchoolQuizRepository
+            )
+                quizAbstract = new RegularQuizController();
+
+            else if (db instanceof OpenQuizRepository)
+                quizAbstract = new OpenQuiz();
+
+            else if (db instanceof EscapeQuizRepository)
+                quizAbstract = new EscapeQuizController();
+
+            else if (db instanceof ContentQuizRepository)
+                quizAbstract = new ContentQuizController();
+
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+
+            if (quizAbstract != null)
+                return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+                        "quiz",
+                        quizAbstract.convertDocToJSON(
+                                quiz, false, true,
+                                false, false
+                        )
+                );
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
 
-        return JSON_OK;
+        return JSON_NOT_UNKNOWN;
     }
 
     public static String toggleVisibility(Common db, ObjectId userId, ObjectId quizId) {
@@ -237,7 +289,7 @@ public class QuizController {
         try {
             Document quiz = hasAccess(db, userId, quizId);
 
-            quiz.put("visibility", quiz.getBoolean("visibility"));
+            quiz.put("visibility", !quiz.getBoolean("visibility"));
             db.replaceOne(quizId, quiz);
 
             return JSON_OK;
@@ -396,17 +448,10 @@ public class QuizController {
         try {
 
             Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
-            if(quiz.getString("status").equalsIgnoreCase("finish"))
+            if (quiz.getString("status").equalsIgnoreCase("finish"))
                 return generateErr("این آزمون قبلا نهایی شده است");
 
             PairValue p = isSchoolQuizReadyForPay(quiz);
-
-            if((boolean)quiz.getOrDefault("pay_by_student", false)) {
-                quiz.put("status", "semi_finish");
-                schoolQuizRepository.replaceOne(quizId, quiz);
-
-                return generateSuccessMsg("data", new JSONObject().put("status", "ready"));
-            }
 
             int studentsCount = (int) p.getKey();
             int total;
@@ -418,6 +463,14 @@ public class QuizController {
             } else {
                 int price = (int) p.getValue();
                 total = studentsCount * price;
+            }
+
+            if ((boolean) quiz.getOrDefault("pay_by_student", false)) {
+                quiz.put("status", "semi_finish");
+                quiz.put("price", total);
+                schoolQuizRepository.replaceOne(quizId, quiz);
+
+                return generateSuccessMsg("data", new JSONObject().put("status", "ready"));
             }
 
             long curr = System.currentTimeMillis();
@@ -641,13 +694,15 @@ public class QuizController {
         if (startRegistrySolarEndLimit != null)
             filters.add(lte("start_registry", startRegistrySolarEndLimit));
 
-        docs = db.find(filters.size() == 0 ? null : and(filters), QUIZ_DIGEST_MANAGEMENT,
+        docs = db.find(filters.size() == 0 ? null : and(filters),
+                db instanceof HWRepository ? HW_DIGEST_MANAGEMENT : QUIZ_DIGEST_MANAGEMENT,
                 Sorts.descending("created_at")
         );
 
         QuizAbstract quizAbstract;
 
         JSONArray jsonArray = new JSONArray();
+        RegularQuizController regularQuizController = new RegularQuizController();
 
         for (Document quiz : docs) {
 
@@ -658,12 +713,19 @@ public class QuizController {
                     quizAbstract = new RegularQuizController();
             } else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
-            else if (db instanceof SchoolQuizRepository)
-                quizAbstract = new RegularQuizController();
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+            else if (db instanceof EscapeQuizRepository)
+                quizAbstract = new EscapeQuizController();
+            else if (db instanceof SchoolQuizRepository || db instanceof HWRepository)
+                quizAbstract = regularQuizController;
             else
                 quizAbstract = new OpenQuiz();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
+            if (db instanceof HWRepository)
+                jsonArray.put(regularQuizController.convertHWDocToJSON(quiz, true, null));
+            else
+                jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, true, false, false));
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -678,8 +740,11 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
             QuizAbstract quizAbstract;
 
-            // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
+            if (db instanceof OpenQuizRepository)
+                quizAbstract = new OpenQuiz();
+            else if (db instanceof EscapeQuizRepository)
+                quizAbstract = new EscapeQuizController();
+            else if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();
@@ -709,12 +774,12 @@ public class QuizController {
 //                !student.containsKey("city") ||
 //                        student.get("city") == null
 
-                if(db instanceof SchoolQuizRepository && isAdvisor && !student.containsKey("advisor_id")) {
+                if (db instanceof SchoolQuizRepository && isAdvisor && !student.containsKey("advisor_id")) {
                     excepts.put(i + 1);
                     continue;
                 }
 
-                if(db instanceof SchoolQuizRepository && !isAdvisor &&
+                if (db instanceof SchoolQuizRepository && !isAdvisor &&
                         (
                                 !student.containsKey("school") ||
                                         student.get("school") == null
@@ -733,6 +798,11 @@ public class QuizController {
 
                 if (db instanceof SchoolQuizRepository) {
                     if (((RegularQuizController) quizAbstract).schoolQuizRegistry(
+                            student.getObjectId("_id"), quiz
+                    ))
+                        addedItems.put(student.getObjectId("_id"));
+                } else if (db instanceof HWRepository) {
+                    if (((RegularQuizController) quizAbstract).hwRegistry(
                             student.getObjectId("_id"), quiz
                     ))
                         addedItems.put(student.getObjectId("_id"));
@@ -774,8 +844,11 @@ public class QuizController {
 
             QuizAbstract quizAbstract;
 
-            // todo : complete this section
-            if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
+            if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+            else if (db instanceof EscapeQuizRepository)
+                quizAbstract = new EscapeQuizController();
+            else if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
                 quizAbstract = new RegularQuizController();
             else
                 quizAbstract = new TashrihiQuizController();
@@ -823,7 +896,14 @@ public class QuizController {
             Document quiz = hasPublicAccess(db, user, quizId);
             QuizAbstract quizAbstract = null;
 
-            if (db instanceof IRYSCQuizRepository || db instanceof SchoolQuizRepository)
+            if (db instanceof HWRepository)
+                return generateSuccessMsg("data",
+                        new RegularQuizController().convertHWDocToJSON(quiz, false, null)
+                );
+
+            if (db instanceof IRYSCQuizRepository ||
+                    db instanceof SchoolQuizRepository
+            )
                 quizAbstract = new RegularQuizController();
 
             else if (db instanceof OpenQuizRepository)
@@ -831,6 +911,12 @@ public class QuizController {
 
             else if (db instanceof ContentQuizRepository)
                 quizAbstract = new ContentQuizController();
+
+            else if (db instanceof OnlineStandQuizRepository)
+                quizAbstract = new OnlineStandingController();
+
+            else if (db instanceof EscapeQuizRepository)
+                quizAbstract = new EscapeQuizController();
 
             if (quizAbstract != null) {
                 return generateSuccessMsg("data",
@@ -921,7 +1007,7 @@ public class QuizController {
                             .append("no", i + 1)
                             .append("mark", questionsMark.get(i));
 
-                if(!tmpDoc.containsKey("kind_question"))
+                if (!tmpDoc.containsKey("kind_question"))
                     tmpDoc.append("kind_question", "test");
 
                 if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
@@ -1001,7 +1087,7 @@ public class QuizController {
 
                 Document quiz = hasAccess(db, userId, quizId);
 
-                if(!schoolQuizzes || quiz.getString("status").equals("finish")) {
+                if (!schoolQuizzes || quiz.getString("status").equals("finish")) {
 
                     if (quiz.getList("students", Document.class).size() > 0) {
                         excepts.put("مورد " + (i + 1) + " " + "دانش آموز/دانش آموزانی در این آزمون شرکت کرده اند و امکان حذف آن وجود ندارد.");
@@ -1182,7 +1268,7 @@ public class QuizController {
         return jsonObject;
     }
 
-    private static JSONObject convertStudentDocToJSON(
+    public static JSONObject convertStudentDocToJSON(
             Document student, Document user
     ) {
 
@@ -1233,7 +1319,9 @@ public class QuizController {
             List<String> attaches = quiz.containsKey("attaches") ?
                     quiz.getList("attaches", String.class) : new ArrayList<>();
 
-            if (db instanceof SchoolQuizRepository) {
+            if (db instanceof SchoolQuizRepository ||
+                    db instanceof HWRepository
+            ) {
 
 //                Document config = irysc.gachesefid.Utility.Utility.getConfig();
 
@@ -1249,9 +1337,14 @@ public class QuizController {
                     );
             }
 
+
             String base = db instanceof SchoolQuizRepository ?
                     SchoolQuizRepository.FOLDER :
-                    IRYSCQuizRepository.FOLDER;
+                    db instanceof EscapeQuizRepository ?
+                            EscapeQuizRepository.FOLDER :
+                            db instanceof OnlineStandQuizRepository ?
+                                    OnlineStandQuizRepository.FOLDER :
+                                    IRYSCQuizRepository.FOLDER;
 
             if (db instanceof SchoolQuizRepository &&
                     file.getSize() > MAX_QUIZ_ATTACH_SIZE)
@@ -1377,6 +1470,63 @@ public class QuizController {
         }
     }
 
+    public static String arrangeEscapeQuizQuestions(ObjectId quizId, JSONObject jsonObject) {
+        try {
+            Document doc = hasAccess(escapeQuizRepository, null, quizId);
+
+            long current = System.currentTimeMillis();
+
+            if (doc.containsKey("start") && doc.getLong("start") < current)
+                return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
+
+            if (!doc.containsKey("start") && doc.getList("students", Document.class).size() > 0)
+                return generateErr("زمان آزمون/تمرین مورد نظر فرارسیده است و امکان ویرایش سوالات وجود ندارد.");
+
+            JSONArray questionIds = jsonObject.getJSONArray("questionIds");
+            Document questions = doc.get("questions", Document.class);
+            List<ObjectId> questionOIds = questions.getList("_ids", ObjectId.class);
+
+            if (questionOIds.size() != questionIds.length())
+                return JSON_NOT_VALID_PARAMS;
+
+            ArrayList<ObjectId> newArrange = new ArrayList<>();
+
+            for (int i = 0; i < questionIds.length(); i++) {
+
+                for (int j = i + 1; j < questionIds.length(); j++) {
+                    if (questionIds.getString(j).equals(questionIds.getString(i)))
+                        return JSON_NOT_VALID_PARAMS;
+                }
+
+                if (!ObjectIdValidator.isValid(questionIds.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+
+                int idx = questionOIds.indexOf(new ObjectId(questionIds.getString(i)));
+                if (idx == -1)
+                    return JSON_NOT_VALID_PARAMS;
+
+                newArrange.add(questionOIds.get(idx));
+            }
+
+            questions.put("_ids", newArrange);
+            ArrayList<Object> answers = new ArrayList<>();
+
+            for (ObjectId id : newArrange) {
+                Document q = escapeQuizQuestionRepository.findById(id);
+                answers.add(q.get("answer"));
+            }
+
+            questions.put("answers", answers);
+            doc.put("questions", questions);
+            escapeQuizRepository.replaceOne(quizId, doc);
+
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
     static File doGenerateQuestionPDF(Document doc, String folder,
                                       String schoolName, String pic) {
 
@@ -1384,14 +1534,13 @@ public class QuizController {
         Document questions = doc.get("questions", Document.class);
         List<ObjectId> ids = questions.getList("_ids", ObjectId.class);
 
-        boolean useFromDatabase = (boolean)doc.getOrDefault("database", true);
+        boolean useFromDatabase = (boolean) doc.getOrDefault("database", true);
 
         String prefix = useFromDatabase ?
                 DEV_MODE ? uploadDir_dev + QuestionRepository.FOLDER + "/" :
-                uploadDir + QuestionRepository.FOLDER + "/" :
-                DEV_MODE ? uploadDir_dev + "school_quizzes/questions/":
-                        uploadDir + "school_quizzes/questions/"
-                ;
+                        uploadDir + QuestionRepository.FOLDER + "/" :
+                DEV_MODE ? uploadDir_dev + "school_quizzes/questions/" :
+                        uploadDir + "school_quizzes/questions/";
 
         for (ObjectId qId : ids) {
 
@@ -1508,6 +1657,9 @@ public class QuizController {
                 }
             }
 
+            if(db instanceof EscapeQuizRepository)
+                return doAddQuestionsToEscapeQuiz(quiz, jsonArray, excepts);
+
             return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3,
                     quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()) ?
                             true : null
@@ -1532,6 +1684,9 @@ public class QuizController {
                 return doAddQuestionsToQuiz(db, quiz, jsonArray,
                         new JSONArray(), mark, true
                 );
+
+            if (db instanceof EscapeQuizRepository)
+                return doAddQuestionsToEscapeQuiz(quiz, jsonArray, new JSONArray());
 
             //todo: check edit access
             //todo: check school access to questions
@@ -1600,8 +1755,7 @@ public class QuizController {
                     ) {
                         excepts.put(i + 1);
                         continue;
-                    }
-                    else if(!isTashrihi &&
+                    } else if (!isTashrihi &&
                             question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())) {
                         excepts.put(i + 1);
                         continue;
@@ -1651,8 +1805,7 @@ public class QuizController {
                     !qTmp.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())
             ) {
                 throw new InvalidFieldsException("تنها سوالات تشریحی می توانند به این آزمون افزوده شوند");
-            }
-            else if(!isTashrihi &&
+            } else if (!isTashrihi &&
                     qTmp.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())) {
                 throw new InvalidFieldsException("سوالات تشریحی نمی توانند به این آزمون افزوده شوند");
             }
@@ -1723,16 +1876,115 @@ public class QuizController {
 
     }
 
+    static String doAddQuestionsToEscapeQuiz(Document quiz,
+                                             Object questionsList,
+                                             JSONArray excepts
+    ) throws InvalidFieldsException {
+
+        ArrayList<Document> addedItems = new ArrayList<>();
+
+        Document questions = quiz.get("questions", Document.class);
+        List<ObjectId> ids = questions.containsKey("_ids") ? questions.getList("_ids", ObjectId.class) : new ArrayList<>();
+        List<String> answers;
+
+        if (questions.containsKey("answers"))
+            answers = questions.getList("answers", String.class);
+        else
+            answers = new ArrayList<>();
+
+        if (questionsList instanceof JSONArray) {
+
+            JSONArray jsonArray = (JSONArray) questionsList;
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+
+                try {
+
+                    String organizationId;
+
+                    if (jsonArray.get(i) instanceof JSONObject) {
+                        JSONObject jsonObject = jsonArray.getJSONObject(i);
+                        organizationId = jsonObject.getString("organizationId");
+                    } else
+                        organizationId = jsonArray.getString(i);
+
+                    Document question = escapeQuizQuestionRepository.findBySecKey(organizationId);
+
+                    if (question == null) {
+                        excepts.put(i + 1);
+                        continue;
+                    }
+
+                    answers.add(question.get("answer").toString());
+                    ids.add(question.getObjectId("_id"));
+
+                    addedItems.add(
+                            Document.parse(question.toJson())
+                    );
+
+                } catch (Exception x) {
+                    excepts.put(i + 1);
+                }
+            }
+
+        } else if (questionsList instanceof Document) {
+
+            Document qTmp = (Document) questionsList;
+
+            ObjectId qIdTmp = qTmp.getObjectId("_id");
+
+            if (ids.contains(qIdTmp)) {
+                throw new InvalidFieldsException("duplicate");
+            }
+
+            answers.add(qTmp.get("answer").toString());
+            ids.add(qIdTmp);
+        }
+
+
+        questions.put("answers", answers);
+        questions.put("_ids", ids);
+        quiz.put("questions", questions);
+
+        escapeQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+        if (questionsList instanceof Document)
+            return "ok";
+
+        PairValue p = new PairValue("doneIds", Utilities.convertEscapeQuestionsList(
+                addedItems, true, true, true
+        ));
+
+        if (excepts.length() == 0)
+            return generateSuccessMsg(
+                    "excepts", "تمامی موارد به درستی اضافه گردیدند",
+                    p
+            );
+
+        return generateSuccessMsg(
+                "excepts",
+                "بجز موارد زیر سایرین به درستی اضافه گردیدند." + excepts,
+                p
+        );
+
+    }
+
     public static String addQuestionToQuizzes(String organizationCode, Common db,
                                               ObjectId userId, JSONArray jsonArray,
                                               double mark) {
 
-        Document question = questionRepository.findBySecKey(organizationCode);
+        boolean isEscapeQuiz = db instanceof EscapeQuizRepository;
+
+        Document question = isEscapeQuiz ?
+                escapeQuizQuestionRepository.findBySecKey(organizationCode) :
+                questionRepository.findBySecKey(organizationCode);
+
         if (question == null)
             return JSON_NOT_VALID_ID;
 
         JSONArray excepts = new JSONArray();
         JSONArray addedItems = new JSONArray();
+
         int used = (int) question.getOrDefault("used", 0);
 
         for (int i = 0; i < jsonArray.length(); i++) {
@@ -1747,20 +1999,33 @@ public class QuizController {
             try {
                 Document quiz = hasAccess(db, userId, quizId);
                 // todo heyyy
-                doAddQuestionsToQuiz(db, quiz,
-                        question, null, mark, null
-                );
-                addedItems.put(
-                        QuestionController.convertDocToJSON(question)
-                                .put("mark", mark)
-                );
-                used++;
+
+                if (isEscapeQuiz) {
+
+                    doAddQuestionsToEscapeQuiz(quiz, question, null);
+
+                    addedItems.put(
+                            QuestionController.convertDocToJSON(question)
+                    );
+
+                } else {
+                    doAddQuestionsToQuiz(db, quiz,
+                            question, null, mark, null
+                    );
+
+                    addedItems.put(
+                            QuestionController.convertDocToJSON(question)
+                                    .put("mark", mark)
+                    );
+
+                    used++;
+                }
             } catch (Exception x) {
                 excepts.put(i + 1);
             }
         }
 
-        if (addedItems.length() > 0)
+        if (addedItems.length() > 0 && !(db instanceof EscapeQuizRepository))
             questionRepository.updateOne(
                     question.getObjectId("_id"),
                     set("used", used)
@@ -1803,15 +2068,26 @@ public class QuizController {
         }
     }
 
-    public static String finalizeQuizResult(ObjectId quizId) {
+    public static String finalizeQuizResult(ObjectId quizId, Common db) {
 
         try {
-            Document quiz = hasAccess(iryscQuizRepository, null, quizId);
 
-            if (!quiz.containsKey("report_status") ||
-                    !quiz.getString("report_status").equalsIgnoreCase("ready")
-            )
-                return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
+            Document quiz = hasAccess(db, null, quizId);
+            boolean isEscapeQuiz = db instanceof EscapeQuizRepository;
+
+            if(isEscapeQuiz) {
+                if(quiz.getLong("end") > System.currentTimeMillis())
+                    return generateErr("زمان آزمون هنوز تمام نشده است");
+
+                return EscapeQuizController.giveGifts(quiz);
+            }
+            else {
+                if (!quiz.containsKey("report_status") ||
+                        !quiz.getString("report_status").equalsIgnoreCase("ready")
+                )
+                    return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
+            }
+
 
             List<Binary> questionsStat = quiz.getList("question_stat", Binary.class);
             ArrayList<Document> questions = questionRepository.findByIds(
@@ -1966,22 +2242,36 @@ public class QuizController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document doc : docs) {
+        QuizAbstract quizAbstract;
 
-            QuizAbstract quizAbstract;
+        if (db instanceof EscapeQuizRepository) {
 
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
-                quizAbstract = new RegularQuizController();
-            else
-                quizAbstract = new TashrihiQuizController();
+            quizAbstract = new EscapeQuizController();
 
-            jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            for (Document doc : docs) {
+                jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            }
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("items", jsonArray)
+            );
+        } else {
+            for (Document doc : docs) {
+
+                if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                    quizAbstract = new RegularQuizController();
+                else
+                    quizAbstract = new TashrihiQuizController();
+
+                jsonArray.put(quizAbstract.convertDocToJSON(doc, true, isAdmin, false, true));
+            }
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("items", jsonArray)
+                    .put("tags", db.distinctTags("tags"))
+            );
         }
 
-        return generateSuccessMsg("data", new JSONObject()
-                .put("items", jsonArray)
-                .put("tags", db.distinctTags("tags"))
-        );
     }
 
     public static String getFinishedQuizzes() {
@@ -1996,17 +2286,41 @@ public class QuizController {
         filters.add(eq("report_status", "ready"));
 
         ArrayList<Document> docs = iryscQuizRepository.find(and(filters), QUIZ_DIGEST, Sorts.descending("created_at"));
+        docs.addAll(escapeQuizRepository.find(and(
+                eq("visibility", true),
+                lt("end", curr),
+                exists("ranking")
+        ), null));
+
+        docs.addAll(onlineStandQuizRepository.find(and(
+                eq("visibility", true),
+                lt("end", curr)
+        ), null));
+
+        long zero = 0;
+        docs.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document doc : docs) {
+        RegularQuizController regularQuizController = new RegularQuizController();
+        TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+        EscapeQuizController escapeQuizController = new EscapeQuizController();
+        OnlineStandingController onlineStandingController = new OnlineStandingController();
 
-            QuizAbstract quizAbstract;
+        QuizAbstract quizAbstract;
 
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
-                quizAbstract = new RegularQuizController();
+        for (int i = docs.size() - 1; i >= 0; i--) {
+
+            Document doc = docs.get(i);
+
+            if(doc.containsKey("max_teams"))
+                quizAbstract = onlineStandingController;
+            else if(!doc.containsKey("launch_mode") && !doc.containsKey("minus_mark"))
+                quizAbstract = escapeQuizController;
+            else if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
+                quizAbstract = regularQuizController;
             else
-                quizAbstract = new TashrihiQuizController();
+                quizAbstract = tashrihiQuizController;
 
             JSONObject tmp = quizAbstract.convertDocToJSON(doc, true, false, false, false);
             tmp.remove("price");
@@ -2028,7 +2342,7 @@ public class QuizController {
                     getAnswers(questions.get("answers", Binary.class).getData()) :
                     new ArrayList<>();
 
-            List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
+            List<Number> marks = questions.containsKey("marks") ? questions.getList("marks", Number.class) : new ArrayList<>();
 
             List<Binary> questionStat = null;
 
@@ -2043,8 +2357,7 @@ public class QuizController {
             return generateSuccessMsg("data", jsonArray);
 
         } catch (Exception x) {
-            System.out.println(x.getMessage());
-            return null;
+            return generateErr(x.getMessage());
         }
     }
 
@@ -2300,8 +2613,8 @@ public class QuizController {
         questions.put("marks", newMarks);
         questions.put("_ids", newQuestionsIds);
 
-        if(db instanceof SchoolQuizRepository &&
-                !(boolean)quiz.getOrDefault("database", true)
+        if (db instanceof SchoolQuizRepository &&
+                !(boolean) quiz.getOrDefault("database", true)
         )
             questions.put("answers",
                     Utility.getSchoolAnswersByteArr(newQuestionsIds)
