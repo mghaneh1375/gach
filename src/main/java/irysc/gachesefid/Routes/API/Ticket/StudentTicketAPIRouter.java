@@ -46,7 +46,8 @@ public class StudentTicketAPIRouter extends Router {
                 null, status,
                 null, null, user.getObjectId("_id"), null,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
-                null, null, section, priority, true
+                null, null, section, priority, true,
+                Authorization.isAdvisor(user.getList("accesses", String.class))
         );
     }
 
@@ -90,8 +91,10 @@ public class StudentTicketAPIRouter extends Router {
                             @PathVariable @ObjectIdConstraint ObjectId requestId,
                             @RequestBody @JSONConstraint(params = {"answer"}) String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
         Document user = getUser(request);
-        if(Authorization.isAdmin(user.getList("accesses", String.class)))
+
+        if(Authorization.isAdvisor(user.getList("accesses", String.class)))
             return TicketController.setRequestAnswer(
                     requestId, user.getObjectId("_id"),
                     new JSONObject(jsonStr)

@@ -107,6 +107,9 @@ public class Utilities {
         if(section.equalsIgnoreCase(TicketSection.QUIZ.getName()))
             return "آزمون";
 
+        if(section.equalsIgnoreCase(TicketSection.ADVISOR.getName()))
+            return "مشاوره";
+
         if(section.equalsIgnoreCase(TicketSection.CLASS.getName()))
             return "کلاس";
 
@@ -175,7 +178,7 @@ public class Utilities {
 
     static JSONObject fillJSON(Document request, boolean isStudentNeeded,
                                boolean isFinisherNeeded, boolean isChatNeeded,
-                               boolean isRefNeeded
+                               boolean isRefNeeded, boolean isAdvisorNeeded
     ) throws InvalidFieldsException {
 
         JSONObject result = new JSONObject();
@@ -224,6 +227,16 @@ public class Utilities {
                 if(quiz != null)
                     result.put("ref", prefix + quiz.getString("title"));
             }
+        }
+
+        if(isAdvisorNeeded && request.containsKey("advisor_id")) {
+            Document advisor = userRepository.findById(request.getObjectId("advisor_id"));
+            if(advisor != null)
+                result.put("advisor", new JSONObject()
+                        .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                        .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"))
+                        .put("id", advisor.getObjectId("_id").toString())
+                );
         }
 
         result.put("status", request.getString("status"));

@@ -23,6 +23,7 @@ import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.or;
 import static irysc.gachesefid.Main.GachesefidApplication.ticketRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
@@ -65,7 +66,7 @@ public class AdminTicketAPIRoutes extends Router {
                 finisher, id, studentId, refId,
 //                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
-                isForTeacher, startByAdmin, section, priority, false
+                isForTeacher, startByAdmin, section, priority, false, false
         );
     }
 
@@ -95,7 +96,10 @@ public class AdminTicketAPIRoutes extends Router {
 
         return CommonController.removeAll(ticketRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
-                isAdmin ? null : eq("user_id", user.getObjectId("_id"))
+                isAdmin ? null : or(
+                        eq("user_id", user.getObjectId("_id")),
+                        eq("advisor_id", user.getObjectId("_id"))
+                )
         );
     }
 

@@ -85,7 +85,8 @@ public class TicketController {
                                      Long sendDate, Long answerDate,
                                      Long sendDateEndLimit, Long answerDateEndLimit,
                                      Boolean isForTeacher, Boolean startByAdmin,
-                                     String section, String priority, boolean returnAdvisors) {
+                                     String section, String priority, boolean returnAdvisors,
+                                     boolean isAdvisor) {
 
         ArrayList<Bson> constraints = new ArrayList<>();
 
@@ -122,6 +123,7 @@ public class TicketController {
                                 .append("priority", 1).append("section", 1)
                                 .append("title", 1).append("start_by_admin", 1)
                                 .append("chats", 1).append("ref_id", 1).append("additional", 1)
+                                .append("advisor_id", 1)
                         ),
                         Sorts.descending("send_date"));
 
@@ -154,7 +156,7 @@ public class TicketController {
 
             try {
                 jsonArray.put(fillJSON(request, true,
-                        true, false, false)
+                        true, false, false, !isAdvisor)
                 );
             } catch (Exception ignore) {
                 ignore.printStackTrace();
@@ -247,8 +249,11 @@ public class TicketController {
 
         Bson filter = userId == null ? eq("_id", ticketId) :
                 and(
-                        eq("user_id", userId),
-                        eq("_id", ticketId)
+                        eq("_id", ticketId),
+                        or(
+                                eq("user_id", userId),
+                                eq("advisor_id", userId)
+                        )
                 );
 
         try {
@@ -263,7 +268,8 @@ public class TicketController {
             Document request = docs.iterator().next();
 
             return generateSuccessMsg("data", fillJSON(request, true,
-                    true, true, true)
+                    true, true, true,
+                    !request.getOrDefault("advisor_id", "").toString().equals(userId.toString()))
             );
 
         } catch (Exception x) {
@@ -291,16 +297,19 @@ public class TicketController {
 
         List<Document> chats = doc.getList("chats", Document.class);
         boolean isFirstAdminAns = chats.size() == 1;
+        boolean isStudentAnswering = true;
 
         Document lastChat = chats.get(chats.size() - 1);
 
-        if (lastChat.getBoolean("is_for_user"))
+        if (lastChat.getBoolean("is_for_user")) {
             chats.add(new Document("created_at", System.currentTimeMillis())
                     .append("msg", answer)
                     .append("is_for_user", false)
                     .append("user_id", userId)
                     .append("files", new ArrayList<>())
             );
+            isStudentAnswering = false;
+        }
 
         else if (!lastChat.getObjectId("user_id").equals(userId))
             return JSON_NOT_ACCESS;
@@ -313,12 +322,7 @@ public class TicketController {
         doc.put("status", "answer");
         doc.put("answer_date", curr);
 
-        ticketRepository.updateOne(requestId,
-                new BasicDBObject("$set", new BasicDBObject("chats", chats)
-                        .append("status", "answer")
-                        .append("answer_date", curr)
-                )
-        );
+        ticketRepository.replaceOne(requestId, doc);
 
         if (isFirstAdminAns)
             newThingsCache.put(NewAlert.NEW_TICKETS.getName(),
@@ -328,12 +332,16 @@ public class TicketController {
                     newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) - 1);
 
         try {
+
             Document tmp = Document.parse(doc.toJson());
             Document student = userRepository.findById(
                     doc.getObjectId("user_id")
             );
             tmp.put("student", student);
-            return generateSuccessMsg("ticket", fillJSON(tmp, true, true, true, true));
+
+            return generateSuccessMsg("ticket", fillJSON(
+                    tmp, true, true, true, true, isStudentAnswering
+            ));
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
@@ -349,36 +357,34 @@ public class TicketController {
         )
             return JSON_NOT_VALID_PARAMS;
 
-        if(jsonObject.has("section")) {
-            if (
-                    jsonObject.has("advisorId") !=
-                            jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
-            )
+        boolean isAdvisor = Authorization.isAdvisor(accesses);
+        boolean isAdmin = Authorization.isAdmin(accesses);
+
+        if(jsonObject.has("section") &&
+                jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
+        ) {
+
+            if (!isAdvisor && !jsonObject.has("advisorId"))
                 return JSON_NOT_VALID_PARAMS;
 
-            if (
-                    jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName()) &&
-                            jsonObject.has("refId")
-            )
+            if(isAdvisor && !jsonObject.has("userId"))
                 return JSON_NOT_VALID_PARAMS;
 
-            if (
-                    jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName()) &&
-                            jsonObject.has("userId")
-            )
+            if (jsonObject.has("refId"))
                 return JSON_NOT_VALID_PARAMS;
         }
+        else if(jsonObject.has("advisorId") || (!isAdmin && jsonObject.has("userId")))
+            return JSON_NOT_VALID_PARAMS;
+
 
         if (jsonObject.has("priority") &&
                 !EnumValidatorImp.isValid(jsonObject.getString("priority"), TicketPriority.class)
         )
             return JSON_NOT_VALID_PARAMS;
 
-        boolean isAdmin = Authorization.isAdmin(accesses);
-
         if (
                 (isAdmin && !jsonObject.has("userId")) ||
-                        (!isAdmin && jsonObject.has("userId"))
+                        (!isAdvisor && jsonObject.has("userId"))
         )
             return JSON_NOT_VALID_PARAMS;
 
@@ -403,14 +409,22 @@ public class TicketController {
             if (user == null)
                 return JSON_NOT_VALID_ID;
 
+            if(isAdvisor && !isAdmin && !Authorization.hasAccessToThisStudent(studentId, userId))
+                return JSON_NOT_ACCESS;
+
             JSONObject jsonObject1 = new JSONObject()
                     .put("title", jsonObject.getString("title"))
                     .put("description", "")
                     .put("section", jsonObject.has("section") ? jsonObject.getString("section") : "quiz")
                     .put("priority", jsonObject.has("priority") ? jsonObject.getString("priority") : "avg");
 
+            if(jsonObject.has("section") &&
+                    jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
+            )
+                jsonObject1.put("advisorId", userId.toString());
+
             if(jsonObject.has("refId"))
-                jsonObject1.put("ref_id", jsonObject.get("refId"));
+                jsonObject1.put("refId", jsonObject.get("refId"));
 
             if(jsonObject.has("additional"))
                 jsonObject1.put("additional", jsonObject.get("additional"));
@@ -421,12 +435,13 @@ public class TicketController {
             ));
 
             if (!res.getString("status").equals("ok"))
-                return res.getString("msg");
+                return generateErr(res.getString("msg"));
 
             ticketId = new ObjectId(res.getJSONObject("ticket").getString("id"));
 
             Document ticket = ticketRepository.findById(ticketId);
             ticket.put("start_by_admin", true);
+            ticket.put("send_date", System.currentTimeMillis());
             ticketRepository.replaceOne(ticketId, ticket);
 
             sendRequest(studentId, ticketId);
@@ -443,7 +458,7 @@ public class TicketController {
 
                 return Utility.generateSuccessMsg(
                         "ticket",
-                        fillJSON(tmp, true, true, true, true)
+                        fillJSON(tmp, true, true, true, true, true)
                 );
             } catch (InvalidFieldsException e) {
                 return generateErr(e.getMessage());
@@ -471,7 +486,7 @@ public class TicketController {
         if(jsonObject.has("refId"))
             doc.put("ref_id", new ObjectId(jsonObject.getString("refId")));
 
-        if(jsonObject.has("advisor_id"))
+        if(jsonObject.has("advisorId"))
             doc.put("advisor_id", new ObjectId(jsonObject.getString("advisorId")));
 
         if(jsonObject.has("additional"))
@@ -532,7 +547,9 @@ public class TicketController {
                     request.getObjectId("user_id")
             );
             tmp.put("student", student);
-            return generateSuccessMsg("ticket", fillJSON(tmp, true, true, true, true));
+            return generateSuccessMsg("ticket", fillJSON(
+                    tmp, true, true, true, true, true
+            ));
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
@@ -554,45 +571,39 @@ public class TicketController {
         if (request == null)
             return JSON_NOT_ACCESS;
 
-        new Thread(() -> {
+        request.put("send_date", System.currentTimeMillis());
+        request.put("status", "pending");
 
-            request.put("send_date", System.currentTimeMillis());
-            request.put("status", "pending");
+        ticketRepository.replaceOne(requestId, request);
 
-            ticketRepository.replaceOne(requestId, request);
+        newThingsCache.put(NewAlert.NEW_TICKETS.getName(),
+                newThingsCache.get(NewAlert.NEW_TICKETS.getName()) + 1);
 
-        }).start();
+        try {
 
-        if (request.getString("status").equals("init")) {
+            Document user = userRepository.findById(request.getObjectId("user_id"));
+            Document tmp = Document.parse(request.toJson());
+            tmp.put("student", user);
 
-            newThingsCache.put(NewAlert.NEW_TICKETS.getName(),
-                    newThingsCache.get(NewAlert.NEW_TICKETS.getName()) + 1);
+            return generateSuccessMsg(
+                    "ticket", fillJSON(
+                            tmp, true, true, true, true, true
+            ));
 
-            try {
-
-                Document user = userRepository.findById(request.getObjectId("user_id"));
-                Document tmp = Document.parse(request.toJson());
-                tmp.put("student", user);
-
-                return generateSuccessMsg(
-                        "ticket",
-                        fillJSON(tmp, true, true, true, true)
-                );
-            } catch (InvalidFieldsException e) {
-                return generateErr(e.getMessage());
-            }
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
         }
 
-        newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
-                newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) + 1);
-
-        return JSON_OK;
+//        newThingsCache.put(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName(),
+//                newThingsCache.get(NewAlert.OPEN_TICKETS_WAIT_FOR_ADMIN.getName()) + 1);
+//
+//        return JSON_OK;
     }
 
     public static String addFileToRequest(List<String> accesses, ObjectId userId,
                                           ObjectId requestId, MultipartFile file) {
 
-        boolean isAdmin = Authorization.isAdmin(accesses);
+        boolean isAdmin = Authorization.isAdvisor(accesses);
         Document request = ticketRepository.findById(requestId);
 
         if (request == null)

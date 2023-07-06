@@ -120,6 +120,25 @@ public class AdvisorController {
         return generateSuccessMsg("data", output);
     }
 
+    public static String getStudentsDigest(Document advisor) {
+
+        List<Document> students = advisor.getList("students", Document.class);
+        JSONArray jsonArray = new JSONArray();
+
+        for(Document student : students) {
+
+            Document studentDoc = userRepository.findById(student.getObjectId("_id"));
+
+            jsonArray.put(new JSONObject()
+                    .put("name", studentDoc.getString("first_name") + " " + studentDoc.getString("last_name"))
+                    .put("id", studentDoc.getObjectId("_id").toString())
+            );
+
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
     public static String removeOffers(ObjectId advisorId, JSONArray items) {
 
         List<Document> docs = advisorFinanceOfferRepository.find(eq("advisor_id", advisorId), JUST_ID);

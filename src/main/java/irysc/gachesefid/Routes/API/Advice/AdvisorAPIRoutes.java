@@ -67,6 +67,14 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.getStudentDigest(advisor.getObjectId("_id"), studentId);
     }
 
+    @GetMapping(value = "getStudentsDigest")
+    @ResponseBody
+    public String getStudentsDigest(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document advisor = getAdvisorUser(request);
+        return AdvisorController.getStudentsDigest(advisor);
+    }
+
     @PostMapping(value = "createNewOffer")
     @ResponseBody
     public String createNewOffer(HttpServletRequest request,
@@ -306,7 +314,7 @@ public class AdvisorAPIRoutes extends Router {
                                       @PathVariable(required = false) String userId,
                                       @PathVariable(required = false) Integer scheduleFor,
                                       @PathVariable(required = false) String id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         if (
                 ((userId == null) != (scheduleFor == null)) ||
