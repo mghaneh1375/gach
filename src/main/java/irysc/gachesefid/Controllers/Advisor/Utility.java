@@ -8,7 +8,6 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -441,6 +440,12 @@ public class Utility {
                         jsonObject1.put("additionalLabel", item.getString("additional_label"))
                                 .put("additional", item.getInteger("additional"));
                     }
+
+                    if(item.containsKey("done_duration"))
+                        jsonObject1.put("doneDuration", item.getInteger("done_duration"));
+
+                    if(item.containsKey("done_additional"))
+                        jsonObject1.put("doneAdditional", item.getInteger("done_additional"));
 
                     if(p != null) {
                         jsonObject1.put("advisor", new JSONObject()

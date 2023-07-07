@@ -17,6 +17,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
@@ -1170,14 +1171,7 @@ public class AdvisorController {
         }
     }
 
-    public static String lessonsInSchedule(ObjectId advisorId, ObjectId scheduleId) {
-
-        Document schedule = scheduleRepository.findById(scheduleId);
-        if(schedule == null)
-            return JSON_NOT_VALID_ID;
-
-        if(!Authorization.hasAccessToThisStudent(schedule.getObjectId("user_id"), advisorId))
-            return JSON_NOT_ACCESS;
+    private static HashMap<String, LessonStat> fetchLessonStats(Document schedule) {
 
         HashMap<String, LessonStat> lessonStats = new HashMap<>();
 
@@ -1237,10 +1231,27 @@ public class AdvisorController {
                 }
 
             }
-
         }
 
+        return lessonStats;
+    }
+
+    public static String lessonsInSchedule(ObjectId advisorId, ObjectId scheduleId, boolean isAdvisor) {
+
+        Document schedule = scheduleRepository.findById(scheduleId);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if(isAdvisor &&
+                !Authorization.hasAccessToThisStudent(schedule.getObjectId("user_id"), advisorId))
+            return JSON_NOT_ACCESS;
+
+        if(!isAdvisor && !schedule.getObjectId("user_id").equals(advisorId))
+            return JSON_NOT_ACCESS;
+
+
         JSONArray jsonArray = new JSONArray();
+        HashMap<String, LessonStat> lessonStats = fetchLessonStats(schedule);
 
         for(String key : lessonStats.keySet()) {
 
@@ -1248,6 +1259,108 @@ public class AdvisorController {
                     .put("lesson", key)
                     .put("stats", lessonStats.get(key).toJSON())
             );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static class WeeklyStat {
+
+        HashMap<String, LessonStat> lessonStats;
+        String weekStartAt;
+
+        public WeeklyStat(String weekStartAt, HashMap<String, LessonStat> lessonStatHashMap) {
+            this.weekStartAt = weekStartAt;
+            lessonStats = lessonStatHashMap;
+        }
+    }
+
+    public static String progress(ObjectId userId, ObjectId lessonId) {
+
+        List<Document> schedules = scheduleRepository.find(eq("user_id", userId), null);
+        List<WeeklyStat> weeklyStats = new ArrayList<>();
+
+        for(Document schedule : schedules) {
+            weeklyStats.add(
+                    new WeeklyStat(schedule.getString("week_start_at"),
+                            fetchLessonStats(schedule)
+            ));
+        }
+
+        weeklyStats.sort(Comparator.comparing(o -> o.weekStartAt));
+        HashMap<String, List<Integer>> doneInEachLessonsWeekly = new HashMap<>();
+        HashMap<String, List<Integer>> totalInEachLessonsWeekly = new HashMap<>();
+        HashMap<String, HashMap<String, List<Integer>>> doneTagInEachLessonsWeekly = new HashMap<>();
+
+        for (WeeklyStat weeklyStat : weeklyStats) {
+
+            HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
+
+            for(String lesson : lessonStatHashMap.keySet()) {
+
+                LessonStat lessonStat = lessonStatHashMap.get(lesson);
+
+                List<Integer> list = doneInEachLessonsWeekly.containsKey(lesson) ?
+                        doneInEachLessonsWeekly.get(lesson) : new ArrayList<>();
+
+                List<Integer> totalList = totalInEachLessonsWeekly.containsKey(lesson) ?
+                        totalInEachLessonsWeekly.get(lesson) : new ArrayList<>();
+
+                list.add(lessonStat.done);
+                totalList.add(lessonStat.total);
+                HashMap<String, List<Integer>> tmp;
+
+                if(!doneInEachLessonsWeekly.containsKey(lesson)) {
+                    doneInEachLessonsWeekly.put(lesson, list);
+                    totalInEachLessonsWeekly.put(lesson, totalList);
+                    tmp = new HashMap<>();
+                }
+                else
+                    tmp = doneTagInEachLessonsWeekly.get(lesson);
+
+                for(String tag : lessonStat.tagStats.keySet()) {
+
+                    List<Integer> tagList = tmp.containsKey(tag) ?
+                            tmp.get(tag) : new ArrayList<>();
+
+                    tagList.add(lessonStat.tagStats.get(tag).done);
+
+                    if(!tmp.containsKey(tag))
+                        tmp.put(tag, tagList);
+                }
+
+                if(!doneTagInEachLessonsWeekly.containsKey(lesson))
+                    doneTagInEachLessonsWeekly.put(lesson, tmp);
+
+            }
+
+        }
+
+        JSONArray jsonArray = new JSONArray();
+
+        for(String key : doneInEachLessonsWeekly.keySet()) {
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("lesson", key)
+                    .put("doneStats", doneInEachLessonsWeekly.get(key))
+                    .put("totalStats", totalInEachLessonsWeekly.get(key));
+
+            if(doneTagInEachLessonsWeekly.containsKey(key)) {
+                HashMap<String, List<Integer>> tmp = doneTagInEachLessonsWeekly.get(key);
+                JSONArray jsonArray1 = new JSONArray();
+
+                for(String tag : tmp.keySet()) {
+                    jsonArray1.put(new JSONObject()
+                            .put("tag", tag)
+                            .put("done", tmp.get(tag))
+                    );
+                }
+
+                jsonObject.put("tags", jsonArray1);
+
+            }
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);

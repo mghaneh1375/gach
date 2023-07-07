@@ -297,13 +297,29 @@ public class AdvisorAPIRoutes extends Router {
     @GetMapping(value = "lessonsInSchedule/{id}")
     @ResponseBody
     public String lessonsInSchedule(HttpServletRequest request,
-                                      @PathVariable @ObjectIdConstraint ObjectId id
+                                    @PathVariable @ObjectIdConstraint ObjectId id
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
 
         return AdvisorController.lessonsInSchedule(
-                advisorId, id
+                advisorId, id, true
+        );
+    }
+
+    @GetMapping(value = "progress/{userId}")
+    @ResponseBody
+    public String progress(HttpServletRequest request,
+                           @PathVariable @ObjectIdConstraint ObjectId userId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+
+        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.progress(
+                userId, null
         );
     }
 
@@ -340,8 +356,7 @@ public class AdvisorAPIRoutes extends Router {
             advisorId = user.getObjectId("_id");
             if (userId != null && !Authorization.hasAccessToThisStudent(new ObjectId(userId), advisorId))
                 return JSON_NOT_ACCESS;
-        }
-        else
+        } else
             userId = user.getObjectId("_id").toString();
 
         return StudentAdviceController.mySchedule(

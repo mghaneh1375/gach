@@ -224,4 +224,43 @@ public class StudentAdviceRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getMyLessonsInSchedule/{id}")
+    @ResponseBody
+    public String getMyLessonsInSchedule(HttpServletRequest request,
+                                         @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        ObjectId studentId = getUser(request).getObjectId("_id");
+
+        return AdvisorController.lessonsInSchedule(
+                studentId, id, false
+        );
+    }
+
+    @PostMapping(value = "setDoneTime/{id}/{itemId}")
+    @ResponseBody
+    public String setDoneTime(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId id,
+                              @PathVariable @ObjectIdConstraint ObjectId itemId,
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {
+                                              "fullDone",
+                                      },
+                                      paramsType = {
+                                              Boolean.class
+                                      },
+                                      optionals = {
+                                            "duration", "additional"
+                                      },
+                                      optionalsType = {
+                                              Positive.class, Positive.class
+                                      }
+                              ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentAdviceController.setDoneTime(
+                getUser(request).getObjectId("_id"), id, itemId,
+                Utility.convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
 }

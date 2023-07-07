@@ -31,6 +31,9 @@ public class StudentAdviceController {
 
     public static String setDoneTime(ObjectId userId, ObjectId id, ObjectId itemId, JSONObject jsonObject) {
 
+        if(!jsonObject.getBoolean("fullDone") && !jsonObject.has("duration"))
+            return generateErr("لطفا زمان انجام شده را وارد نمایید");
+
         Document schedule = scheduleRepository.findById(id);
         if(schedule == null || !schedule.getObjectId("user_id").equals(userId))
             return JSON_NOT_ACCESS;
@@ -38,8 +41,8 @@ public class StudentAdviceController {
         int d = Utility.convertStringToDate(schedule.getString("week_start_at"));
         int today = Utility.getToday();
 
-        if(d > today)
-            return generateErr("هنوز زمان ثبت عملکرد نرسیده است");
+//        if(d > today)
+//            return generateErr("هنوز زمان ثبت عملکرد نرسیده است");
 
         List<Document> days = schedule.getList("days", Document.class);
         for(Document day : days) {
@@ -53,17 +56,25 @@ public class StudentAdviceController {
             if(item == null)
                 continue;
 
+            if(item.containsKey("additional") && !jsonObject.has("additional"))
+                return generateErr("لطفا " + item.getString("additional_label") + " را وارد نمایید");
+
             if(jsonObject.getBoolean("fullDone"))
                 item.put("done_duration", item.getInteger("duration"));
-            else if(!jsonObject.has("duration"))
-                return generateErr("لطفا زمان انجام شده را وارد نمایید");
             else if(jsonObject.getInt("duration") > item.getInteger("duration"))
                 return generateErr("زمان انجام شده باید حداکثر " + item.getInteger("duration") + " باشد");
             else
-                item.put("done_duration", item.getInteger("duration"));
+                item.put("done_duration", jsonObject.getInt("duration"));
+
+            if(item.containsKey("additional"))
+                item.put("done_additional", jsonObject.getInt("additional"));
 
             scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
-            return JSON_OK;
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("days", convertScheduleToJSON(schedule, null))
+            );
+
         }
 
         return JSON_NOT_VALID_ID;
