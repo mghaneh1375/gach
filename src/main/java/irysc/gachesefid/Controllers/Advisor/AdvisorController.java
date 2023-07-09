@@ -10,16 +10,14 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -1280,21 +1278,157 @@ public class AdvisorController {
         List<Document> schedules = scheduleRepository.find(eq("user_id", userId), null);
         List<WeeklyStat> weeklyStats = new ArrayList<>();
 
+        List<Integer> dailyTotalSum = new ArrayList<>();
+        List<Integer> dailyDoneSum = new ArrayList<>();
+        List<String> daily = new ArrayList<>();
+
+        schedules.sort(Comparator.comparing(o -> o.getString("week_start_at")));
+
         for(Document schedule : schedules) {
+
+            String weekStartAt = schedule.getString("week_start_at");
+
             weeklyStats.add(
-                    new WeeklyStat(schedule.getString("week_start_at"),
+                    new WeeklyStat(weekStartAt,
                             fetchLessonStats(schedule)
             ));
+
+            String[] splited = weekStartAt.split("\\/");
+
+            JalaliCalendar jalaliCalendar = new JalaliCalendar(
+                    Integer.parseInt(splited[0]), Integer.parseInt(splited[1]), Integer.parseInt(splited[2])
+            );
+
+            int added = 0;
+
+            for(Document day : schedule.getList("days", Document.class)) {
+
+                if(day.getInteger("day").equals(0))
+                    daily.add(weekStartAt);
+                else {
+                    added = day.getInteger("day") - added;
+                    jalaliCalendar.add(Calendar.DAY_OF_MONTH, added);
+                    daily.add(jalaliCalendar.get(Calendar.YEAR) + "/" + jalaliCalendar.get(Calendar.MONTH) + "/" + jalaliCalendar.get(Calendar.DAY_OF_MONTH));
+                }
+
+                int totalSum = 0;
+                int doneSum = 0;
+
+                for(Document item : day.getList("items", Document.class)) {
+
+                    doneSum += (int)item.getOrDefault("done_duration", 0);
+                    totalSum += (int)item.getOrDefault("duration", 0);
+
+                }
+
+                dailyDoneSum.add(doneSum);
+                dailyTotalSum.add(totalSum);
+
+            }
+
         }
 
         weeklyStats.sort(Comparator.comparing(o -> o.weekStartAt));
-        HashMap<String, List<Integer>> doneInEachLessonsWeekly = new HashMap<>();
-        HashMap<String, List<Integer>> totalInEachLessonsWeekly = new HashMap<>();
-        HashMap<String, HashMap<String, List<Integer>>> doneTagInEachLessonsWeekly = new HashMap<>();
+
+        List<String> allLessons = new ArrayList<>();
+        List<String> allTags = new ArrayList<>();
+        HashMap<String, List<String>> allLessonTags = new HashMap<>();
 
         for (WeeklyStat weeklyStat : weeklyStats) {
 
             HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
+
+            for(String key : lessonStatHashMap.keySet()) {
+
+                if(!allLessons.contains(key))
+                    allLessons.add(key);
+
+                List<String> tmp = allLessonTags.containsKey(key) ? allLessonTags.get(key) : new ArrayList<>();
+
+                for(String t : lessonStatHashMap.get(key).tagStats.keySet()) {
+                    if(!tmp.contains(t))
+                        tmp.add(t);
+
+                    if(!allTags.contains(t))
+                        allTags.add(t);
+                }
+
+                if(!allLessonTags.containsKey(key))
+                    allLessonTags.put(key, tmp);
+            }
+
+        }
+
+        for (WeeklyStat weeklyStat : weeklyStats) {
+
+            HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
+
+            for(String key : allLessons) {
+
+                List<String> lessonTags = allLessonTags.get(key);
+
+                if(lessonStatHashMap.containsKey(key)) {
+
+                    LessonStat lessonStat = lessonStatHashMap.get(key);
+                    for(String tag : lessonTags) {
+                        if(!lessonStat.tagStats.containsKey(tag))
+                            lessonStat.tagStats.put(tag, null);
+                    }
+
+                }
+                else {
+
+                    LessonStat lessonStat = new LessonStat(0, 0);
+
+                    for(String tag : lessonTags)
+                        lessonStat.tagStats.put(tag, null);
+
+                    lessonStatHashMap.put(key, lessonStat);
+                }
+            }
+
+
+        }
+
+
+        HashMap<String, List<Integer>> doneInEachLessonsWeekly = new HashMap<>();
+        HashMap<String, List<Integer>> totalInEachLessonsWeekly = new HashMap<>();
+
+        HashMap<String, List<Integer>> doneTagsGeneralStats = new HashMap<>();
+        HashMap<String, List<Integer>> totalTagsGeneralStats = new HashMap<>();
+
+        HashMap<String, List<Integer>> doneAdditionalTagsGeneralStats = new HashMap<>();
+        HashMap<String, List<Integer>> totalAdditionalTagsGeneralStats = new HashMap<>();
+
+        HashMap<String, HashMap<String, List<Integer>>> doneTagInEachLessonsWeekly = new HashMap<>();
+        HashMap<String, HashMap<String, List<Integer>>> totalTagInEachLessonsWeekly = new HashMap<>();
+
+        ArrayList<Integer> sumTotals = new ArrayList<>();
+        ArrayList<Integer> sumDones = new ArrayList<>();
+        ArrayList<String> weeks = new ArrayList<>();
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (WeeklyStat weeklyStat : weeklyStats) {
+
+            HashMap<String, Integer> doneTagsSum = new HashMap<>();
+            HashMap<String, Integer> totalTagsSum = new HashMap<>();
+
+            HashMap<String, Integer> doneAdditionalTagsSum = new HashMap<>();
+            HashMap<String, Integer> totalAdditionalTagsSum = new HashMap<>();
+
+            for(String tag : allTags) {
+                doneTagsSum.put(tag, 0);
+                totalTagsSum.put(tag, 0);
+                doneAdditionalTagsSum.put(tag, 0);
+                totalAdditionalTagsSum.put(tag, 0);
+            }
+
+            weeks.add(weeklyStat.weekStartAt);
+            HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
+
+            int sumTotal = 0;
+            int sumDone = 0;
 
             for(String lesson : lessonStatHashMap.keySet()) {
 
@@ -1306,37 +1440,116 @@ public class AdvisorController {
                 List<Integer> totalList = totalInEachLessonsWeekly.containsKey(lesson) ?
                         totalInEachLessonsWeekly.get(lesson) : new ArrayList<>();
 
-                list.add(lessonStat.done);
-                totalList.add(lessonStat.total);
+                list.add(lessonStat == null ? 0 : lessonStat.done);
+                totalList.add(lessonStat == null ? 0 : lessonStat.total);
+
+                sumTotal += lessonStat == null ? 0 : lessonStat.total;
+                sumDone += lessonStat == null ? 0 : lessonStat.done;
+
                 HashMap<String, List<Integer>> tmp;
+                HashMap<String, List<Integer>> tmpTotal;
 
                 if(!doneInEachLessonsWeekly.containsKey(lesson)) {
+
                     doneInEachLessonsWeekly.put(lesson, list);
                     totalInEachLessonsWeekly.put(lesson, totalList);
-                    tmp = new HashMap<>();
-                }
-                else
-                    tmp = doneTagInEachLessonsWeekly.get(lesson);
 
-                for(String tag : lessonStat.tagStats.keySet()) {
+                    tmp = new HashMap<>();
+                    tmpTotal = new HashMap<>();
+                }
+                else {
+                    tmp = doneTagInEachLessonsWeekly.get(lesson);
+                    tmpTotal = totalTagInEachLessonsWeekly.get(lesson);
+                }
+
+                for (String tag : lessonStat.tagStats.keySet()) {
 
                     List<Integer> tagList = tmp.containsKey(tag) ?
                             tmp.get(tag) : new ArrayList<>();
 
-                    tagList.add(lessonStat.tagStats.get(tag).done);
+                    List<Integer> totalTagList = tmpTotal.containsKey(tag) ?
+                            tmpTotal.get(tag) : new ArrayList<>();
 
-                    if(!tmp.containsKey(tag))
+                    TagStat tagStat = lessonStat.tagStats.get(tag);
+
+                    int tagDone = tagStat == null ? 0 : tagStat.done;
+                    int tagTotal = tagStat == null ? 0 : tagStat.total;
+
+                    tagList.add(tagDone);
+                    totalTagList.add(tagTotal);
+
+                    if(tagTotal > 0) {
+
+                        if (doneTagsSum.containsKey(tag)) {
+
+                            doneTagsSum.put(tag, doneTagsSum.get(tag) + tagDone);
+                            totalTagsSum.put(tag, totalTagsSum.get(tag) + tagTotal);
+
+                            if(tagStat != null && tagStat.additionalTotal > 0) {
+                                doneAdditionalTagsSum.put(tag, doneAdditionalTagsSum.get(tag) + tagStat.additionalDone);
+                                totalAdditionalTagsSum.put(tag, totalAdditionalTagsSum.get(tag) + tagStat.additionalTotal);
+                            }
+
+                        }
+                        else {
+
+                            doneTagsSum.put(tag, tagDone);
+                            totalTagsSum.put(tag, tagTotal);
+
+                            doneAdditionalTagsSum.put(tag, tagStat == null ? 0 : tagStat.additionalDone);
+                            totalAdditionalTagsSum.put(tag, tagStat == null ? 0 : tagStat.additionalTotal);
+
+                        }
+                    }
+
+                    if (!tmp.containsKey(tag)) {
                         tmp.put(tag, tagList);
+                        tmpTotal.put(tag, totalTagList);
+                    }
                 }
 
-                if(!doneTagInEachLessonsWeekly.containsKey(lesson))
+                if(!doneTagInEachLessonsWeekly.containsKey(lesson)) {
                     doneTagInEachLessonsWeekly.put(lesson, tmp);
+                    totalTagInEachLessonsWeekly.put(lesson, tmpTotal);
+                }
 
             }
 
-        }
+            sumTotals.add(sumTotal);
+            sumDones.add(sumDone);
 
-        JSONArray jsonArray = new JSONArray();
+            for(String tag : totalTagsSum.keySet()) {
+
+                List<Integer> doneSum = doneTagsGeneralStats.containsKey(tag) ?
+                        doneTagsGeneralStats.get(tag) : new ArrayList<>();
+
+                List<Integer> totalSum = totalTagsGeneralStats.containsKey(tag) ?
+                        totalTagsGeneralStats.get(tag) : new ArrayList<>();
+
+                doneSum.add(doneTagsSum.get(tag));
+                totalSum.add(totalTagsSum.get(tag));
+
+                if(!doneTagsGeneralStats.containsKey(tag)) {
+                    doneTagsGeneralStats.put(tag, doneSum);
+                    totalTagsGeneralStats.put(tag, totalSum);
+                }
+
+                List<Integer> doneAdditionalSum = doneAdditionalTagsGeneralStats.containsKey(tag) ?
+                        doneAdditionalTagsGeneralStats.get(tag) : new ArrayList<>();
+
+                List<Integer> totalAdditionalSum = totalAdditionalTagsGeneralStats.containsKey(tag) ?
+                        totalAdditionalTagsGeneralStats.get(tag) : new ArrayList<>();
+
+                doneAdditionalSum.add(doneAdditionalTagsSum.get(tag));
+                totalAdditionalSum.add(totalAdditionalTagsSum.get(tag));
+
+                if(!doneAdditionalTagsGeneralStats.containsKey(tag)) {
+                    doneAdditionalTagsGeneralStats.put(tag, doneAdditionalSum);
+                    totalAdditionalTagsGeneralStats.put(tag, totalAdditionalSum);
+                }
+            }
+
+        }
 
         for(String key : doneInEachLessonsWeekly.keySet()) {
 
@@ -1346,13 +1559,17 @@ public class AdvisorController {
                     .put("totalStats", totalInEachLessonsWeekly.get(key));
 
             if(doneTagInEachLessonsWeekly.containsKey(key)) {
+
                 HashMap<String, List<Integer>> tmp = doneTagInEachLessonsWeekly.get(key);
+                HashMap<String, List<Integer>> tmpTotal = totalTagInEachLessonsWeekly.get(key);
+
                 JSONArray jsonArray1 = new JSONArray();
 
                 for(String tag : tmp.keySet()) {
                     jsonArray1.put(new JSONObject()
                             .put("tag", tag)
                             .put("done", tmp.get(tag))
+                            .put("total", tmpTotal.get(tag))
                     );
                 }
 
@@ -1363,7 +1580,57 @@ public class AdvisorController {
             jsonArray.put(jsonObject);
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        JSONArray tagsGeneralStats = new JSONArray();
+
+        for(String tag : doneTagsGeneralStats.keySet()) {
+
+            tagsGeneralStats.put(new JSONObject()
+                    .put("tag", tag)
+                    .put("done", doneTagsGeneralStats.get(tag))
+                    .put("total", totalTagsGeneralStats.get(tag))
+            );
+
+        }
+
+        JSONArray additionalTagsGeneralStats = new JSONArray();
+
+        for(String tag : doneAdditionalTagsGeneralStats.keySet()) {
+
+            boolean findNonZero = false;
+
+            for(Integer i : totalAdditionalTagsGeneralStats.get(tag)) {
+                if(i > 0) {
+                    findNonZero = true;
+                    break;
+                }
+            }
+
+            if(!findNonZero)
+                continue;
+
+            additionalTagsGeneralStats.put(new JSONObject()
+                    .put("tag", tag)
+                    .put("done", doneAdditionalTagsGeneralStats.get(tag))
+                    .put("total", totalAdditionalTagsGeneralStats.get(tag))
+            );
+
+        }
+
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("stats", jsonArray)
+                .put("generalStats", new JSONObject()
+                        .put("doneStats", sumDones)
+                        .put("totalStats", sumTotals))
+                .put("tagsGeneralStats", tagsGeneralStats)
+                .put("additionalTagsGeneralStats", additionalTagsGeneralStats)
+                .put("daily", new JSONObject()
+                        .put("done", dailyDoneSum)
+                        .put("total", dailyTotalSum)
+                        .put("labels", daily)
+                )
+                .put("weeks", weeks)
+        );
     }
 
 //    public static String updateItem(ObjectId advisorId,
