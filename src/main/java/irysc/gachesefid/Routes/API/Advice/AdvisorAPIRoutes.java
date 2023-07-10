@@ -192,6 +192,31 @@ public class AdvisorAPIRoutes extends Router {
         return AdvisorController.myStudentRequests(getAdvisorUser(request).getObjectId("_id"));
     }
 
+    @PostMapping(value = "copy/{scheduleId}")
+    @ResponseBody
+    public String copy(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+                       @RequestBody @StrongJSONConstraint(
+                               params = {
+                                       "scheduleFor", "users"
+                               },
+                               paramsType = {
+                                       Positive.class, JSONArray.class,
+
+                               }
+                       ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
+
+        return AdvisorController.copy(
+                getAdvisorUser(request).getObjectId("_id"),
+                scheduleId, jsonObject.getJSONArray("users"),
+                jsonObject.getInt("scheduleFor")
+        );
+
+    }
+
 
     @PutMapping(value = "addItemToSchedule/{userId}")
     @ResponseBody
@@ -294,6 +319,15 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+
+    @GetMapping(value = "getAdvisorTags")
+    @ResponseBody
+    public String getAdvisorTags(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document advisor = getAdvisorUser(request);
+
+    }
+
     @GetMapping(value = "lessonsInSchedule/{id}")
     @ResponseBody
     public String lessonsInSchedule(HttpServletRequest request,
@@ -315,7 +349,7 @@ public class AdvisorAPIRoutes extends Router {
 
         ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
 
-        if(!Authorization.hasAccessToThisStudent(userId, advisorId))
+        if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.progress(

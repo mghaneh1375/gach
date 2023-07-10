@@ -124,7 +124,7 @@ public class AdvisorController {
         List<Document> students = advisor.getList("students", Document.class);
         JSONArray jsonArray = new JSONArray();
 
-        for(Document student : students) {
+        for (Document student : students) {
 
             Document studentDoc = userRepository.findById(student.getObjectId("_id"));
 
@@ -795,7 +795,7 @@ public class AdvisorController {
 
         Document newDoc = new Document("label", jsonObject.getString("label"));
 
-        if(jsonObject.has("numberLabel"))
+        if (jsonObject.has("numberLabel"))
             newDoc.append("number_label", jsonObject.getString("numberLabel"));
 
         return db.insertOneWithReturn(newDoc);
@@ -804,21 +804,21 @@ public class AdvisorController {
     public static String editTag(Common db, ObjectId id, JSONObject jsonObject) {
 
         Document doc = db.findById(id);
-        if(doc == null)
+        if (doc == null)
             return JSON_NOT_VALID_ID;
 
         if (!doc.getString("label").equals(jsonObject.getString("label")) &&
                 db.exist(
-                and(
-                        exists("deleted_at", false),
-                        eq("label", jsonObject.getString("label"))
-                )
-        ))
+                        and(
+                                exists("deleted_at", false),
+                                eq("label", jsonObject.getString("label"))
+                        )
+                ))
             return generateErr("این تگ در سیستم موجود است");
 
         doc.put("label", jsonObject.getString("label"));
 
-        if(jsonObject.has("numberLabel"))
+        if (jsonObject.has("numberLabel"))
             doc.put("number_label", jsonObject.getString("numberLabel"));
         else
             doc.remove("number_label");
@@ -875,13 +875,146 @@ public class AdvisorController {
                     .put("id", tag.getObjectId("_id").toString())
                     .put("label", tag.getString("label"));
 
-            if(tag.containsKey("number_label"))
+            if (tag.containsKey("number_label"))
                 jsonObject.put("numberLabel", tag.getString("number_label"));
 
             jsonArray.put(jsonObject);
         }
 
         return Utility.generateSuccessMsg("data", jsonArray);
+    }
+
+    private static void createNewScheduleFromExistProgram(ObjectId userId, ObjectId advisorId,
+                                                          String weekStartAt, HashMap<Integer, List<Document>> items) {
+
+        Document schedule = new Document("user_id", userId)
+                .append("week_start_at", weekStartAt)
+                .append("week_start_at_int", Utility.convertStringToDate(weekStartAt))
+                .append("advisors", new ArrayList<>() {{
+                    add(advisorId);
+                }});
+
+        List<Document> days = new ArrayList<>();
+
+        for (Integer day : items.keySet())
+            days.add(new Document("day", day).append("items", items.get(day)));
+
+        schedule.append("days", days);
+        scheduleRepository.insertOne(schedule);
+
+    }
+
+    private static void mergeScheduleFromExistProgram(Document schedule, ObjectId advisorId,
+                                                      HashMap<Integer, List<Document>> items) {
+
+        if (!schedule.getList("advisors", ObjectId.class).contains(advisorId))
+            schedule.getList("advisors", ObjectId.class).add(advisorId);
+
+        List<Document> days = schedule.getList("days", Document.class);
+
+        for(Integer day : items.keySet()) {
+
+            Document dayDoc = searchInDocumentsKeyVal(days, "day", day);
+            if(dayDoc == null)
+                days.add(new Document("day", day).append("items", items.get(day)));
+            else
+                dayDoc.getList("items", Document.class).addAll(items.get(day));
+        }
+
+        schedule.put("days", days);
+        scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+    }
+
+    public static String copy(ObjectId advisorId, ObjectId scheduleId,
+                              JSONArray users, int scheduleFor) {
+
+        if (scheduleFor > 4 || scheduleFor < 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        Document schedule = scheduleRepository.findById(scheduleId);
+        if (schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if (!schedule.getList("advisors", ObjectId.class).contains(advisorId))
+            return JSON_NOT_ACCESS;
+
+        JSONArray excepts = new JSONArray();
+        JSONArray doneIds = new JSONArray();
+
+        List<ObjectId> students = new ArrayList<>();
+
+        for (int i = 0; i < users.length(); i++) {
+
+            String id = users.getString(i);
+            if (!ObjectId.isValid(id)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            ObjectId oId = new ObjectId(users.getString(i));
+
+            if (!Authorization.hasAccessToThisStudent(oId, advisorId)) {
+                excepts.put(i + 1);
+                continue;
+            }
+
+            students.add(oId);
+            doneIds.put(id);
+        }
+
+        if (students.size() == 0)
+            return JSON_NOT_VALID_PARAMS;
+
+        long curr = System.currentTimeMillis();
+        HashMap<Integer, List<Document>> items = new HashMap<>();
+
+        for (Document day : schedule.getList("days", Document.class)) {
+
+            List<Document> tmp = new ArrayList<>();
+
+            for (Document item : day.getList("items", Document.class)) {
+
+                if (!item.getObjectId("advisor_id").equals(advisorId))
+                    continue;
+
+                Document newDoc = Document.parse(item.toJson());
+                newDoc.put("created_at", curr);
+                newDoc.remove("done_duration");
+                newDoc.remove("done_additional");
+
+                tmp.add(newDoc);
+            }
+
+            items.put(day.getInteger("day"), tmp);
+        }
+
+        if (items.size() == 0)
+            return JSON_NOT_ACCESS;
+
+        String weekStartAt;
+
+        if (scheduleFor == 0)
+            weekStartAt = getFirstDayOfCurrWeek();
+        else
+            weekStartAt = getFirstDayOfFutureWeek(scheduleFor);
+
+        for (ObjectId studentId : students) {
+
+            Document sc = scheduleRepository.findOne(
+                    and(
+                            eq("user_id", studentId),
+                            eq("week_start_at", weekStartAt)
+                    ), null
+            );
+
+            if (sc == null)
+                createNewScheduleFromExistProgram(studentId, advisorId, weekStartAt, items);
+            else
+                mergeScheduleFromExistProgram(sc, advisorId, items);
+        }
+
+
+        return returnAddResponse(excepts, doneIds);
     }
 
     public static String addItemToSchedule(ObjectId advisorId,
@@ -909,7 +1042,7 @@ public class AdvisorController {
         if (tag == null || tag.containsKey("deleted_at"))
             return JSON_NOT_VALID_ID;
 
-        if(tag.containsKey("number_label") && !data.has("additional"))
+        if (tag.containsKey("number_label") && !data.has("additional"))
             return generateErr("لطفا " + tag.getString("number_label") + " را وارد نمایید");
 
         ObjectId lessonId = new ObjectId(data.getString("lessonId"));
@@ -937,7 +1070,7 @@ public class AdvisorController {
             )
                 return JSON_NOT_VALID_PARAMS;
 
-            if(advisorId != null && schedule.containsKey("advisors") && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
+            if (advisorId != null && schedule.containsKey("advisors") && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
                 schedule.getList("advisors", ObjectId.class).add(advisorId);
             }
 
@@ -966,16 +1099,17 @@ public class AdvisorController {
                     ), null
             );
 
-            if(schedule == null) {
+            if (schedule == null) {
                 schedule = new Document("user_id", userId)
                         .append("week_start_at", weekStartAt)
                         .append("week_start_at_int", Utility.convertStringToDate(weekStartAt))
                         .append("days", new ArrayList<>())
-                        .append("advisors", new ArrayList<>(){{add(advisorId);}});
-            }
-            else {
+                        .append("advisors", new ArrayList<>() {{
+                            add(advisorId);
+                        }});
+            } else {
                 schedule = scheduleRepository.findById(schedule.getObjectId("_id"));
-                if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
+                if (advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId)) {
                     schedule.getList("advisors", ObjectId.class).add(advisorId);
                 }
             }
@@ -1006,7 +1140,7 @@ public class AdvisorController {
         if (data.has("description"))
             newDoc.put("description", data.getString("description"));
 
-        if(tag.containsKey("number_label")) {
+        if (tag.containsKey("number_label")) {
             newDoc.put("additional", data.getInt("additional"));
             newDoc.put("additional_label", tag.getString("number_label"));
         }
@@ -1127,7 +1261,7 @@ public class AdvisorController {
                     .put("total", total)
                     .put("done", done);
 
-            if(!additionalLabel.isEmpty()) {
+            if (!additionalLabel.isEmpty()) {
                 jsonObject.put("additionalLabel", additionalLabel)
                         .put("additionalTotal", additionalTotal)
                         .put("additionalDone", additionalDone);
@@ -1157,7 +1291,7 @@ public class AdvisorController {
                     .put("done", done);
 
             JSONArray jsonArray = new JSONArray();
-            for(String key : tagStats.keySet())
+            for (String key : tagStats.keySet())
                 jsonArray.put(new JSONObject()
                         .put("tag", key)
                         .put("stats", tagStats.get(key).toJSON())
@@ -1173,32 +1307,31 @@ public class AdvisorController {
 
         HashMap<String, LessonStat> lessonStats = new HashMap<>();
 
-        for(Document day : schedule.getList("days", Document.class)) {
+        for (Document day : schedule.getList("days", Document.class)) {
 
-            for(Document item : day.getList("items", Document.class)) {
+            for (Document item : day.getList("items", Document.class)) {
 
-                if(!item.containsKey("lesson")) continue;
+                if (!item.containsKey("lesson")) continue;
 
                 String lesson = item.getString("lesson");
                 String tag = item.getString("tag");
 
-                if(lessonStats.containsKey(lesson)) {
+                if (lessonStats.containsKey(lesson)) {
 
                     LessonStat lessonStat = lessonStats.get(lesson);
 
                     lessonStat.total += item.getInteger("duration");
-                    lessonStat.done += (int)item.getOrDefault("done_duration", 0);
+                    lessonStat.done += (int) item.getOrDefault("done_duration", 0);
 
-                    if(lessonStat.tagStats.containsKey(tag)) {
+                    if (lessonStat.tagStats.containsKey(tag)) {
                         TagStat tagStat = lessonStat.tagStats.get(tag);
                         tagStat.total += item.getInteger("duration");
                         tagStat.done += (int) item.getOrDefault("done_duration", 0);
-                        if(item.containsKey("additional")) {
+                        if (item.containsKey("additional")) {
                             tagStat.additionalTotal += item.getInteger("additional");
-                            tagStat.additionalDone += item.getInteger("done_additional");
+                            tagStat.additionalDone += (int)item.getOrDefault("done_additional", 0);
                         }
-                    }
-                    else {
+                    } else {
                         lessonStat.tagStats.put(tag, new TagStat(
                                 item.getInteger("duration"),
                                 (int) item.getOrDefault("done_duration", 0),
@@ -1208,19 +1341,18 @@ public class AdvisorController {
                         ));
                     }
 
-                }
-                else {
+                } else {
 
                     LessonStat lessonStat = new LessonStat(
                             item.getInteger("duration"),
-                            (int)item.getOrDefault("done_duration", 0)
+                            (int) item.getOrDefault("done_duration", 0)
                     );
 
                     TagStat tagStat = new TagStat(
                             item.getInteger("duration"),
-                            (int)item.getOrDefault("done_duration", 0),
-                            (int)item.getOrDefault("additional", 0),
-                            (int)item.getOrDefault("done_additional", 0),
+                            (int) item.getOrDefault("done_duration", 0),
+                            (int) item.getOrDefault("additional", 0),
+                            (int) item.getOrDefault("done_additional", 0),
                             (String) item.getOrDefault("additional_label", "")
                     );
 
@@ -1237,21 +1369,21 @@ public class AdvisorController {
     public static String lessonsInSchedule(ObjectId advisorId, ObjectId scheduleId, boolean isAdvisor) {
 
         Document schedule = scheduleRepository.findById(scheduleId);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
-        if(isAdvisor &&
+        if (isAdvisor &&
                 !Authorization.hasAccessToThisStudent(schedule.getObjectId("user_id"), advisorId))
             return JSON_NOT_ACCESS;
 
-        if(!isAdvisor && !schedule.getObjectId("user_id").equals(advisorId))
+        if (!isAdvisor && !schedule.getObjectId("user_id").equals(advisorId))
             return JSON_NOT_ACCESS;
 
 
         JSONArray jsonArray = new JSONArray();
         HashMap<String, LessonStat> lessonStats = fetchLessonStats(schedule);
 
-        for(String key : lessonStats.keySet()) {
+        for (String key : lessonStats.keySet()) {
 
             jsonArray.put(new JSONObject()
                     .put("lesson", key)
@@ -1284,14 +1416,14 @@ public class AdvisorController {
 
         schedules.sort(Comparator.comparing(o -> o.getString("week_start_at")));
 
-        for(Document schedule : schedules) {
+        for (Document schedule : schedules) {
 
             String weekStartAt = schedule.getString("week_start_at");
 
             weeklyStats.add(
                     new WeeklyStat(weekStartAt,
                             fetchLessonStats(schedule)
-            ));
+                    ));
 
             String[] splited = weekStartAt.split("\\/");
 
@@ -1301,9 +1433,9 @@ public class AdvisorController {
 
             int added = 0;
 
-            for(Document day : schedule.getList("days", Document.class)) {
+            for (Document day : schedule.getList("days", Document.class)) {
 
-                if(day.getInteger("day").equals(0))
+                if (day.getInteger("day").equals(0))
                     daily.add(weekStartAt);
                 else {
                     added = day.getInteger("day") - added;
@@ -1314,10 +1446,10 @@ public class AdvisorController {
                 int totalSum = 0;
                 int doneSum = 0;
 
-                for(Document item : day.getList("items", Document.class)) {
+                for (Document item : day.getList("items", Document.class)) {
 
-                    doneSum += (int)item.getOrDefault("done_duration", 0);
-                    totalSum += (int)item.getOrDefault("duration", 0);
+                    doneSum += (int) item.getOrDefault("done_duration", 0);
+                    totalSum += (int) item.getOrDefault("duration", 0);
 
                 }
 
@@ -1338,22 +1470,22 @@ public class AdvisorController {
 
             HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
 
-            for(String key : lessonStatHashMap.keySet()) {
+            for (String key : lessonStatHashMap.keySet()) {
 
-                if(!allLessons.contains(key))
+                if (!allLessons.contains(key))
                     allLessons.add(key);
 
                 List<String> tmp = allLessonTags.containsKey(key) ? allLessonTags.get(key) : new ArrayList<>();
 
-                for(String t : lessonStatHashMap.get(key).tagStats.keySet()) {
-                    if(!tmp.contains(t))
+                for (String t : lessonStatHashMap.get(key).tagStats.keySet()) {
+                    if (!tmp.contains(t))
                         tmp.add(t);
 
-                    if(!allTags.contains(t))
+                    if (!allTags.contains(t))
                         allTags.add(t);
                 }
 
-                if(!allLessonTags.containsKey(key))
+                if (!allLessonTags.containsKey(key))
                     allLessonTags.put(key, tmp);
             }
 
@@ -1363,24 +1495,23 @@ public class AdvisorController {
 
             HashMap<String, LessonStat> lessonStatHashMap = weeklyStat.lessonStats;
 
-            for(String key : allLessons) {
+            for (String key : allLessons) {
 
                 List<String> lessonTags = allLessonTags.get(key);
 
-                if(lessonStatHashMap.containsKey(key)) {
+                if (lessonStatHashMap.containsKey(key)) {
 
                     LessonStat lessonStat = lessonStatHashMap.get(key);
-                    for(String tag : lessonTags) {
-                        if(!lessonStat.tagStats.containsKey(tag))
+                    for (String tag : lessonTags) {
+                        if (!lessonStat.tagStats.containsKey(tag))
                             lessonStat.tagStats.put(tag, null);
                     }
 
-                }
-                else {
+                } else {
 
                     LessonStat lessonStat = new LessonStat(0, 0);
 
-                    for(String tag : lessonTags)
+                    for (String tag : lessonTags)
                         lessonStat.tagStats.put(tag, null);
 
                     lessonStatHashMap.put(key, lessonStat);
@@ -1417,7 +1548,7 @@ public class AdvisorController {
             HashMap<String, Integer> doneAdditionalTagsSum = new HashMap<>();
             HashMap<String, Integer> totalAdditionalTagsSum = new HashMap<>();
 
-            for(String tag : allTags) {
+            for (String tag : allTags) {
                 doneTagsSum.put(tag, 0);
                 totalTagsSum.put(tag, 0);
                 doneAdditionalTagsSum.put(tag, 0);
@@ -1430,7 +1561,7 @@ public class AdvisorController {
             int sumTotal = 0;
             int sumDone = 0;
 
-            for(String lesson : lessonStatHashMap.keySet()) {
+            for (String lesson : lessonStatHashMap.keySet()) {
 
                 LessonStat lessonStat = lessonStatHashMap.get(lesson);
 
@@ -1449,15 +1580,14 @@ public class AdvisorController {
                 HashMap<String, List<Integer>> tmp;
                 HashMap<String, List<Integer>> tmpTotal;
 
-                if(!doneInEachLessonsWeekly.containsKey(lesson)) {
+                if (!doneInEachLessonsWeekly.containsKey(lesson)) {
 
                     doneInEachLessonsWeekly.put(lesson, list);
                     totalInEachLessonsWeekly.put(lesson, totalList);
 
                     tmp = new HashMap<>();
                     tmpTotal = new HashMap<>();
-                }
-                else {
+                } else {
                     tmp = doneTagInEachLessonsWeekly.get(lesson);
                     tmpTotal = totalTagInEachLessonsWeekly.get(lesson);
                 }
@@ -1478,20 +1608,19 @@ public class AdvisorController {
                     tagList.add(tagDone);
                     totalTagList.add(tagTotal);
 
-                    if(tagTotal > 0) {
+                    if (tagTotal > 0) {
 
                         if (doneTagsSum.containsKey(tag)) {
 
                             doneTagsSum.put(tag, doneTagsSum.get(tag) + tagDone);
                             totalTagsSum.put(tag, totalTagsSum.get(tag) + tagTotal);
 
-                            if(tagStat != null && tagStat.additionalTotal > 0) {
+                            if (tagStat != null && tagStat.additionalTotal > 0) {
                                 doneAdditionalTagsSum.put(tag, doneAdditionalTagsSum.get(tag) + tagStat.additionalDone);
                                 totalAdditionalTagsSum.put(tag, totalAdditionalTagsSum.get(tag) + tagStat.additionalTotal);
                             }
 
-                        }
-                        else {
+                        } else {
 
                             doneTagsSum.put(tag, tagDone);
                             totalTagsSum.put(tag, tagTotal);
@@ -1508,7 +1637,7 @@ public class AdvisorController {
                     }
                 }
 
-                if(!doneTagInEachLessonsWeekly.containsKey(lesson)) {
+                if (!doneTagInEachLessonsWeekly.containsKey(lesson)) {
                     doneTagInEachLessonsWeekly.put(lesson, tmp);
                     totalTagInEachLessonsWeekly.put(lesson, tmpTotal);
                 }
@@ -1518,7 +1647,7 @@ public class AdvisorController {
             sumTotals.add(sumTotal);
             sumDones.add(sumDone);
 
-            for(String tag : totalTagsSum.keySet()) {
+            for (String tag : totalTagsSum.keySet()) {
 
                 List<Integer> doneSum = doneTagsGeneralStats.containsKey(tag) ?
                         doneTagsGeneralStats.get(tag) : new ArrayList<>();
@@ -1529,7 +1658,7 @@ public class AdvisorController {
                 doneSum.add(doneTagsSum.get(tag));
                 totalSum.add(totalTagsSum.get(tag));
 
-                if(!doneTagsGeneralStats.containsKey(tag)) {
+                if (!doneTagsGeneralStats.containsKey(tag)) {
                     doneTagsGeneralStats.put(tag, doneSum);
                     totalTagsGeneralStats.put(tag, totalSum);
                 }
@@ -1543,7 +1672,7 @@ public class AdvisorController {
                 doneAdditionalSum.add(doneAdditionalTagsSum.get(tag));
                 totalAdditionalSum.add(totalAdditionalTagsSum.get(tag));
 
-                if(!doneAdditionalTagsGeneralStats.containsKey(tag)) {
+                if (!doneAdditionalTagsGeneralStats.containsKey(tag)) {
                     doneAdditionalTagsGeneralStats.put(tag, doneAdditionalSum);
                     totalAdditionalTagsGeneralStats.put(tag, totalAdditionalSum);
                 }
@@ -1551,21 +1680,21 @@ public class AdvisorController {
 
         }
 
-        for(String key : doneInEachLessonsWeekly.keySet()) {
+        for (String key : doneInEachLessonsWeekly.keySet()) {
 
             JSONObject jsonObject = new JSONObject()
                     .put("lesson", key)
                     .put("doneStats", doneInEachLessonsWeekly.get(key))
                     .put("totalStats", totalInEachLessonsWeekly.get(key));
 
-            if(doneTagInEachLessonsWeekly.containsKey(key)) {
+            if (doneTagInEachLessonsWeekly.containsKey(key)) {
 
                 HashMap<String, List<Integer>> tmp = doneTagInEachLessonsWeekly.get(key);
                 HashMap<String, List<Integer>> tmpTotal = totalTagInEachLessonsWeekly.get(key);
 
                 JSONArray jsonArray1 = new JSONArray();
 
-                for(String tag : tmp.keySet()) {
+                for (String tag : tmp.keySet()) {
                     jsonArray1.put(new JSONObject()
                             .put("tag", tag)
                             .put("done", tmp.get(tag))
@@ -1582,7 +1711,7 @@ public class AdvisorController {
 
         JSONArray tagsGeneralStats = new JSONArray();
 
-        for(String tag : doneTagsGeneralStats.keySet()) {
+        for (String tag : doneTagsGeneralStats.keySet()) {
 
             tagsGeneralStats.put(new JSONObject()
                     .put("tag", tag)
@@ -1594,18 +1723,18 @@ public class AdvisorController {
 
         JSONArray additionalTagsGeneralStats = new JSONArray();
 
-        for(String tag : doneAdditionalTagsGeneralStats.keySet()) {
+        for (String tag : doneAdditionalTagsGeneralStats.keySet()) {
 
             boolean findNonZero = false;
 
-            for(Integer i : totalAdditionalTagsGeneralStats.get(tag)) {
-                if(i > 0) {
+            for (Integer i : totalAdditionalTagsGeneralStats.get(tag)) {
+                if (i > 0) {
                     findNonZero = true;
                     break;
                 }
             }
 
-            if(!findNonZero)
+            if (!findNonZero)
                 continue;
 
             additionalTagsGeneralStats.put(new JSONObject()
@@ -1687,7 +1816,7 @@ public class AdvisorController {
         List<Document> schedules = scheduleRepository.find(
                 and(
                         eq("user_id", studentId)
-                ), null
+                ), null, Sorts.descending("week_start_at_int")
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -1711,9 +1840,9 @@ public class AdvisorController {
         JSONObject jsonObject = new JSONObject()
                 .put("items", jsonArray);
 
-        if(advisorId != null) {
+        if (advisorId != null) {
             Document user = userRepository.findById(studentId);
-            if(user != null)
+            if (user != null)
                 jsonObject.put("student",
                         new JSONObject()
                                 .put("name", user.getString("first_name") + " " + user.getString("last_name"))
@@ -1727,18 +1856,18 @@ public class AdvisorController {
     public static String removeSchedule(ObjectId advisorId, ObjectId id) {
 
         Document schedule = scheduleRepository.findById(id);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> days = schedule.getList("days", Document.class);
 
         for (Document day : days) {
 
-            if(!day.containsKey("items"))
+            if (!day.containsKey("items"))
                 continue;
 
-            for(Document item : day.getList("items", Document.class)) {
-                if(!item.getObjectId("advisor_id").equals(advisorId))
+            for (Document item : day.getList("items", Document.class)) {
+                if (!item.getObjectId("advisor_id").equals(advisorId))
                     return generateErr("شما تنها مشاور این کاربرگ نیستید و امکان حذف این کاربرگ برای شما وجود ندارد");
             }
         }
@@ -1747,4 +1876,5 @@ public class AdvisorController {
 
         return JSON_OK;
     }
+
 }

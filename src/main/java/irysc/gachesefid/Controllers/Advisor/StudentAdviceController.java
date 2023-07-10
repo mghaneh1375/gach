@@ -489,7 +489,7 @@ public class StudentAdviceController {
             schedule = scheduleRepository.findOne(and(
                     eq("user_id", userId),
                     eq("week_start_at", weekStartAt)
-            ), null);
+            ), null, Sorts.descending("week_start_at_int"));
 
         }
 
