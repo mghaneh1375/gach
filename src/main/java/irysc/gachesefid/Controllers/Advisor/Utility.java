@@ -19,8 +19,7 @@ import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
-import static irysc.gachesefid.Utility.Utility.getDayIndex;
-import static irysc.gachesefid.Utility.Utility.getSolarDate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class Utility {
 
@@ -245,6 +244,22 @@ public class Utility {
                 .put("id", advisor.getObjectId("_id").toString())
                 .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"));
 
+        if(advisor.containsKey("tags"))
+            jsonObject.put("tags", advisor.getList("tags", String.class));
+
+        if(advisor.containsKey("form_list")) {
+
+            Document form = searchInDocumentsKeyVal(advisor.getList("form_list", Document.class), "role", "advisor");
+
+            if(form != null) {
+                jsonObject.put("form", new JSONObject()
+                        .put("workLessons", form.getString("work_lessons"))
+                        .put("workSchools", form.getString("work_schools"))
+                );
+            }
+
+        }
+
         if (stdId != null) {
 
             Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
@@ -333,7 +348,7 @@ public class Utility {
         return jsonObject;
     }
 
-    private static String getWeekDay(int dayIdx) {
+    public static String getWeekDay(int dayIdx) {
 
         switch (dayIdx) {
             case 0:

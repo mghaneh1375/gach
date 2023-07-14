@@ -74,9 +74,9 @@ public class StaticValues {
     public final static BasicDBObject ADVISOR_PUBLIC_DIGEST =
             new BasicDBObject("first_name", 1).append("_id", 1)
                     .append("last_name", 1).append("accept_std", 1)
-                    .append("rate", 1)
-                    .append("rate_count", 1)
-                    .append("students", 1)
+                    .append("rate", 1).append("birth_day", 1)
+                    .append("rate_count", 1).append("tags", 1)
+                    .append("students", 1).append("form_list", 1)
                     .append("bio", 1)
                     .append("pic", 1)
             ;
