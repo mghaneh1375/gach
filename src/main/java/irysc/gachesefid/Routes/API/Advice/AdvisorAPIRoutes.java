@@ -25,8 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import java.util.List;
 
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
 @Controller
@@ -325,7 +324,7 @@ public class AdvisorAPIRoutes extends Router {
     public String getAdvisorTags(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document advisor = getAdvisorUser(request);
-
+        return JSON_OK;
     }
 
     @GetMapping(value = "lessonsInSchedule/{id}")
