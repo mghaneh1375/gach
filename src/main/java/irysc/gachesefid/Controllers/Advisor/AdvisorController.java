@@ -11,12 +11,15 @@ import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.JalaliCalendar;
+import irysc.gachesefid.Utility.PDF.PDFUtils;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
@@ -28,6 +31,25 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
+
+    public static File exportPDF(ObjectId id, ObjectId advisorId, ObjectId userId) {
+
+        Document schedule = scheduleRepository.findById(id);
+        if (schedule == null)
+            return null;
+
+        if (advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId))
+            return null;
+
+        if (userId != null && !schedule.getObjectId("user_id").equals(userId))
+            return null;
+
+        return PDFUtils.exportSchedule(
+                schedule,
+                userRepository.findById(new ObjectId("635bff221f3dac4e5d0da698"))
+        );
+
+    }
 
     public static String getStudentDigest(ObjectId advisorId, ObjectId studentId) {
 
@@ -127,6 +149,9 @@ public class AdvisorController {
         for (Document student : students) {
 
             Document studentDoc = userRepository.findById(student.getObjectId("_id"));
+
+            if(studentDoc == null)
+                continue;
 
             jsonArray.put(new JSONObject()
                     .put("name", studentDoc.getString("first_name") + " " + studentDoc.getString("last_name"))
@@ -296,6 +321,17 @@ public class AdvisorController {
             }
         }
 
+        if (docs.size() == 0 && fullAccess) {
+
+            Document config = getConfig();
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("data", jsonArray)
+                    .put("maxVideoCalls", config.getInteger("max_video_call_per_month"))
+                    .put("minPrice", config.getInteger("min_advice_price"))
+            );
+        }
+
         if (docs.size() == 0 && accessorId == null) {
 
             Document config = getConfig();
@@ -370,39 +406,6 @@ public class AdvisorController {
         return generateSuccessMsg("url", roomUrl);
     }
 
-    public static String getMyCurrentRoom(ObjectId studentId) {
-
-        long curr = System.currentTimeMillis();
-        long yesterday = curr - ONE_DAY_MIL_SEC;
-
-        List<Document> docs = advisorMeetingRepository.find(and(
-                eq("student_id", studentId),
-                gt("created_at", yesterday),
-                lt("created_at", curr),
-                exists("url")
-        ), new BasicDBObject("url", 1).append("advisor_id", 1).append("created_at", 1));
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (Document doc : docs) {
-
-            Document advisor = userRepository.findById(doc.getObjectId("advisor_id"));
-
-            if (advisor == null)
-                continue;
-
-            jsonArray.put(
-                    new JSONObject()
-                            .put("advisor", advisor.getString("first_name") + " " + advisor.getString("last_name"))
-                            .put("url", doc.getString("url"))
-                            .put("createdAt", getSolarDate(doc.getLong("created_at")))
-            );
-
-        }
-
-        return generateSuccessMsg("data", jsonArray);
-    }
-
     public static String getMyCurrentRoomForAdvisor(ObjectId advisorId) {
 
         long curr = System.currentTimeMillis();
@@ -434,6 +437,28 @@ public class AdvisorController {
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+
+    public static String getMyCurrentRoomForAdvisor(
+            ObjectId advisorId, ObjectId studentId
+    ) {
+
+        long curr = System.currentTimeMillis();
+        long yesterday = curr - ONE_DAY_MIL_SEC;
+
+        Document doc = advisorMeetingRepository.findOne(and(
+                eq("advisor_id", advisorId),
+                eq("student_id", studentId),
+                gt("created_at", yesterday),
+                lt("created_at", curr),
+                exists("url")
+        ), new BasicDBObject("url", 1).append("student_id", 1).append("created_at", 1));
+
+        if(doc == null)
+            return generateSuccessMsg("url", "");
+
+        return generateSuccessMsg("url", doc.getString("url"));
     }
 
     public static String removeStudents(Document advisor, JSONArray jsonArray) {
@@ -768,17 +793,179 @@ public class AdvisorController {
 
     }
 
-    public static String getAllAdvisors() {
+    public static String getAllAdvisors(Integer minAge,
+                                        Integer maxAge,
+                                        String tag,
+                                        Integer minPrice,
+                                        Integer maxPrice,
+                                        Integer minRate,
+                                        Integer maxRate,
+                                        Boolean returnFilters,
+                                        String sortBy
+    ) {
+
+        if(sortBy != null &&
+                !sortBy.equalsIgnoreCase("age") &&
+                !sortBy.equalsIgnoreCase("rate") &&
+                !sortBy.equalsIgnoreCase("student")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        filters.add(eq("accesses", Access.ADVISOR.getName()));
+
+        if (tag != null) {
+            filters.add(exists("tags"));
+            filters.add(eq("tags", tag));
+        }
+
+        if(minRate != null)
+            filters.add(and(
+                    exists("rate"),
+                    gte("rate", minRate)
+            ));
+
+        if(maxRate != null)
+            filters.add(and(
+                    exists("rate"),
+                    lte("rate", maxRate)
+            ));
+
+        if (minAge != null) {
+            long age = System.currentTimeMillis() - minAge * ONE_DAY_MIL_SEC * 365;
+            filters.add(lte("birth_day", age));
+        }
+
+        if (maxAge != null) {
+            long age = System.currentTimeMillis() - maxAge * ONE_DAY_MIL_SEC * 365;
+            filters.add(gte("birth_day", age));
+        }
 
         List<Document> advisors = userRepository.find(
-                eq("accesses", Access.ADVISOR.getName()),
-                ADVISOR_PUBLIC_DIGEST, Sorts.descending("rate")
+                and(filters),
+                ADVISOR_PUBLIC_DIGEST
         );
+
+        boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
+                tag == null && maxPrice == null && minPrice == null && minRate == null && maxRate == null;
+
+        Document config = getConfig();
+        int defaultPrice = config.getInteger("min_advice_price");
+
+        int minAgeFilter = -1, maxAgeFilter = -1, minPriceFilter = defaultPrice, maxPriceFilter = defaultPrice;
+        long curr = System.currentTimeMillis();
+        long one_year_ms = ONE_DAY_MIL_SEC * 365;
+
+        List<JSONObject> docs = new ArrayList<>();
+
+        for (Document advisor : advisors) {
+
+            List<Document> plans;
+
+            if (minPrice != null || maxPrice != null) {
+
+                plans = advisorFinanceOfferRepository.find(
+                        eq("advisor_id", advisor.getObjectId("_id")),
+                        new BasicDBObject("price", 1)
+                );
+
+                if (plans.size() == 0 && (
+                        (minPrice != null && defaultPrice < minPrice) ||
+                                (maxPrice != null && defaultPrice > maxPrice)
+                ))
+                    continue;
+
+                else if(plans.size() > 0) {
+                    boolean passFilter = false;
+
+                    for (Document plan : plans) {
+
+                        int p = (int) plan.getOrDefault("price", defaultPrice);
+
+                        if (minPrice != null && p < minPrice)
+                            continue;
+
+                        if (maxPrice != null && p > maxPrice)
+                            continue;
+
+                        passFilter = true;
+                        break;
+                    }
+
+                    if (!passFilter)
+                        continue;
+                }
+
+            }
+
+            JSONObject jsonObject = convertToJSONDigest(null, advisor);
+
+            int age = -1;
+            if(advisor.containsKey("birth_day")) {
+                age = (int) ((curr - advisor.getLong("birth_day")) / one_year_ms);
+                jsonObject.put("age", age);
+            }
+
+            docs.add(jsonObject);
+
+            if (isAllFiltersOff) {
+
+                if (age != -1) {
+
+                    if (minAgeFilter == -1 || minAgeFilter > age)
+                        minAgeFilter = age;
+
+                    if (maxAgeFilter == -1 || maxAgeFilter < age)
+                        maxAgeFilter = age;
+
+                }
+
+                plans = advisorFinanceOfferRepository.find(
+                        eq("advisor_id", advisor.getObjectId("_id")),
+                        new BasicDBObject("price", 1)
+                );
+
+                for (Document plan : plans) {
+
+                    int price = (int) plan.getOrDefault("price", defaultPrice);
+
+                    if (minPriceFilter == -1 || minPriceFilter > price)
+                        minPriceFilter = price;
+
+                    if (maxPriceFilter == -1 || maxPriceFilter < price)
+                        maxPriceFilter = price;
+
+                }
+
+            }
+        }
+
+        String sortKey = sortBy == null || sortBy.equalsIgnoreCase("rate") ? "rate" :
+                sortBy.equalsIgnoreCase("age") ? "age" : "stdCount";
+
+        docs.sort((o1, o2) -> {
+            int a = o1.has(sortKey) ? o1.getInt(sortKey) : -1;
+            int b = o2.has(sortKey) ? o2.getInt(sortKey) : -1;
+
+            return b - a;
+        });
 
         JSONArray jsonArray = new JSONArray();
 
-        for (Document advisor : advisors)
-            jsonArray.put(convertToJSONDigest(null, advisor));
+        for(JSONObject jsonObject : docs)
+            jsonArray.put(jsonObject);
+
+        if (isAllFiltersOff)
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("data", jsonArray)
+                    .put("filters", new JSONObject()
+                            .put("minPrice", minPriceFilter)
+                            .put("maxPrice", maxPriceFilter)
+                            .put("minAge", minAgeFilter)
+                            .put("maxAge", maxAgeFilter)
+                    )
+            );
 
         return generateSuccessMsg("data", jsonArray);
     }
@@ -912,10 +1099,10 @@ public class AdvisorController {
 
         List<Document> days = schedule.getList("days", Document.class);
 
-        for(Integer day : items.keySet()) {
+        for (Integer day : items.keySet()) {
 
             Document dayDoc = searchInDocumentsKeyVal(days, "day", day);
-            if(dayDoc == null)
+            if (dayDoc == null)
                 days.add(new Document("day", day).append("items", items.get(day)));
             else
                 dayDoc.getList("items", Document.class).addAll(items.get(day));
@@ -1329,7 +1516,7 @@ public class AdvisorController {
                         tagStat.done += (int) item.getOrDefault("done_duration", 0);
                         if (item.containsKey("additional")) {
                             tagStat.additionalTotal += item.getInteger("additional");
-                            tagStat.additionalDone += (int)item.getOrDefault("done_additional", 0);
+                            tagStat.additionalDone += (int) item.getOrDefault("done_additional", 0);
                         }
                     } else {
                         lessonStat.tagStats.put(tag, new TagStat(
@@ -1405,9 +1592,61 @@ public class AdvisorController {
         }
     }
 
-    public static String progress(ObjectId userId, ObjectId lessonId) {
+    public static String progress(ObjectId userId, ObjectId lessonId, Long start, Long end) {
 
-        List<Document> schedules = scheduleRepository.find(eq("user_id", userId), null);
+        ArrayList<Bson> filters = new ArrayList<>();
+        filters.add(eq("user_id", userId));
+
+        if(start != null) {
+            String[] splited = getSolarDate(start).split("-")[0].replace(" ", "").split("\\/");
+
+            String date = "";
+
+            String y = splited[0];
+            date += y;
+
+            int month = Integer.parseInt(splited[1]);
+
+            if(month < 10)
+                date += "0" + month;
+            else
+                date += month;
+
+            int day = Integer.parseInt(splited[2]);
+            if(day < 10)
+                date += "0" + day;
+            else
+                date += day;
+
+            filters.add(gte("week_start_at_int", Integer.parseInt(date)));
+        }
+
+        if(end != null) {
+
+            String[] splited = getSolarDate(end).split("-")[0].replace(" ", "").split("\\/");
+
+            String date = "";
+
+            String y = splited[0];
+            date += y;
+
+            int month = Integer.parseInt(splited[1]);
+
+            if(month < 10)
+                date += "0" + month;
+            else
+                date += month;
+
+            int day = Integer.parseInt(splited[2]);
+            if(day < 10)
+                date += "0" + day;
+            else
+                date += day;
+
+            filters.add(lte("week_start_at_int", Integer.parseInt(date)));
+        }
+
+        List<Document> schedules = scheduleRepository.find(and(filters), null);
         List<WeeklyStat> weeklyStats = new ArrayList<>();
 
         List<Integer> dailyTotalSum = new ArrayList<>();
@@ -1432,8 +1671,14 @@ public class AdvisorController {
             );
 
             int added = 0;
+            List<Document> days = schedule.getList("days", Document.class);
 
-            for (Document day : schedule.getList("days", Document.class)) {
+            for (int k = days.size() - 1; k >= 0; k--) {
+
+                if(daily.size() >= 14)
+                    break;
+
+                Document day = days.get(k);
 
                 if (day.getInteger("day").equals(0))
                     daily.add(weekStartAt);

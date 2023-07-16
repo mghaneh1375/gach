@@ -114,7 +114,7 @@ public class Utility {
                 .put("teacher", doc.getString("teacher").split("__"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
-                .put("certDuration", doc.getOrDefault("duration", ""))
+                .put("certDuration", doc.getOrDefault("cert_duration", ""))
                 .put("duration", doc.getInteger("duration"))
                 .put("preReq", doc.get("pre_req"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));

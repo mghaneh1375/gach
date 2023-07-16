@@ -34,6 +34,8 @@ public class Jobs implements Runnable {
         timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
 
         timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
+        timer.schedule(new RemoveExpiredMeetings(), 0, ONE_DAY_MIL_SEC * 7);
+
 
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
@@ -96,14 +98,10 @@ public class Jobs implements Runnable {
             List<Document> docs = advisorMeetingRepository.find(
                     lt("created_at", yesterday),
                     new BasicDBObject("room_id", 1)
-                            .append("student_sky_id", 1)
-                            .append("advisor_sky_id", 1)
             );
 
             for(Document doc : docs) {
-
                 irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
-
             }
 
         }

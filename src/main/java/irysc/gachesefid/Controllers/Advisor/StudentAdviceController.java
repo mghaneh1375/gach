@@ -509,4 +509,37 @@ public class StudentAdviceController {
                 .put("days", convertScheduleToJSON(schedule, advisorId))
         );
     }
+
+    public static String getMyCurrentRoom(ObjectId studentId) {
+
+        long curr = System.currentTimeMillis();
+        long yesterday = curr - ONE_DAY_MIL_SEC;
+
+        List<Document> docs = advisorMeetingRepository.find(and(
+                eq("student_id", studentId),
+                gt("created_at", yesterday),
+                lt("created_at", curr),
+                exists("url")
+        ), new BasicDBObject("url", 1).append("advisor_id", 1).append("created_at", 1));
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            Document advisor = userRepository.findById(doc.getObjectId("advisor_id"));
+
+            if (advisor == null)
+                continue;
+
+            jsonArray.put(
+                    new JSONObject()
+                            .put("advisor", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                            .put("url", doc.getString("url"))
+                            .put("createdAt", getSolarDate(doc.getLong("created_at")))
+            );
+
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 }

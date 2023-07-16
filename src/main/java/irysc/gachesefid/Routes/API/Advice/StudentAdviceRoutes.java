@@ -4,14 +4,20 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.apache.commons.io.FileUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +25,13 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 
 @Controller
@@ -63,8 +74,20 @@ public class StudentAdviceRoutes extends Router {
 
     @GetMapping(value = "getAllAdvisors")
     @ResponseBody
-    public String getAllAdvisors() {
-        return AdvisorController.getAllAdvisors();
+    public String getAllAdvisors(
+            @RequestParam(required = false, value = "minAge") Integer minAge,
+            @RequestParam(required = false, value = "maxAge") Integer maxAge,
+            @RequestParam(required = false, value = "tag") String tag,
+            @RequestParam(required = false, value = "minPrice") Integer minPrice,
+            @RequestParam(required = false, value = "maxPrice") Integer maxPrice,
+            @RequestParam(required = false, value = "minRate") Integer minRate,
+            @RequestParam(required = false, value = "maxRate") Integer maxRate,
+            @RequestParam(required = false, value = "returnFilters") Boolean returnFilters,
+            @RequestParam(required = false, value = "sortBy") String sortBy
+    ) {
+        return AdvisorController.getAllAdvisors(minAge, maxAge, tag,
+                minPrice, maxPrice, minRate, maxRate, returnFilters, sortBy
+        );
     }
 
     @GetMapping(value = "getMyAdvisor")
@@ -235,6 +258,56 @@ public class StudentAdviceRoutes extends Router {
         return AdvisorController.lessonsInSchedule(
                 studentId, id, false
         );
+    }
+
+
+    @GetMapping(value = "getMyCurrentRoom")
+    @ResponseBody
+    public String getMyCurrentRoom(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return StudentAdviceController.getMyCurrentRoom(getStudentUser(request).getObjectId("_id"));
+    }
+
+    @GetMapping(value = "getAdvisorTags")
+    @ResponseBody
+    public String getAdvisorTags() {
+        return generateSuccessMsg("data", userRepository.distinctTagsWithFilter(
+                and(
+                        eq("accesses", "advisor"),
+                        exists("tags")
+                ), "tags")
+        );
+    }
+
+    @GetMapping(value = "exportPDF/{id}")
+    @ResponseBody
+    public ResponseEntity<InputStreamResource> exportPDF(HttpServletRequest request,
+                                                         @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        Document user = getUser(request);
+
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+        ObjectId userId = user.getObjectId("_id");
+
+        File f = AdvisorController.exportPDF(id, isAdvisor ? userId : null, isAdvisor ? null : userId);
+        if (f == null)
+            return null;
+
+        try {
+            InputStreamResource file = new InputStreamResource(
+                    new ByteArrayInputStream(FileUtils.readFileToByteArray(f))
+            );
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificate_2.pdf")
+                    .contentType(MediaType.parseMediaType("application/pdf"))
+                    .body(file);
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+
+        return null;
     }
 
     @PostMapping(value = "setDoneTime/{id}/{itemId}")

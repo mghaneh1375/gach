@@ -23,10 +23,13 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
+import java.util.ArrayList;
 import java.util.List;
 
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.Utility.*;
 
 @Controller
 @RequestMapping(path = "/api/advisor/manage/")
@@ -40,9 +43,8 @@ public class AdvisorAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document advisor = getAdvisorUser(request);
-        List<ObjectId> students = advisor.getList("students", ObjectId.class);
 
-        if (!students.contains(studentId))
+        if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.requestMeeting(
@@ -50,6 +52,29 @@ public class AdvisorAPIRoutes extends Router {
                 advisor.getString("NID"),
                 advisor.getString("first_name") + " " + advisor.getString("last_name"),
                 studentId
+        );
+    }
+
+    @GetMapping(value = "getMyCurrentRoomForAdvisor")
+    @ResponseBody
+    public String getMyCurrentRoomForAdvisor(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.getMyCurrentRoomForAdvisor(getAdvisorUser(request).getObjectId("_id"));
+    }
+
+    @GetMapping(value = "getMyCurrentRoomForAdvisorForSpecificStudent/{studentId}")
+    @ResponseBody
+    public String getMyCurrentRoomForAdvisor(HttpServletRequest request,
+                                             @PathVariable @ObjectIdConstraint ObjectId studentId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document advisor = getAdvisorUser(request);
+
+        if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
+            return JSON_NOT_ACCESS;
+
+        return AdvisorController.getMyCurrentRoomForAdvisor(
+                advisor.getObjectId("_id"), studentId
         );
     }
 
@@ -319,11 +344,86 @@ public class AdvisorAPIRoutes extends Router {
     }
 
 
-    @GetMapping(value = "getAdvisorTags")
+    @GetMapping(value = "getAdvisorTags/{id}")
     @ResponseBody
-    public String getAdvisorTags(HttpServletRequest request
+    public String getAdvisorTags(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId id
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document advisor = getAdvisorUser(request);
+
+        getAdminPrivilegeUser(request);
+        Document advisor = userRepository.findById(id);
+
+        if (advisor == null)
+            return JSON_NOT_VALID_ID;
+
+        List<String> tags = (List<String>) advisor.getOrDefault("tags", new ArrayList<Document>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String tag : tags)
+            jsonArray.put(tag);
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+
+    @PutMapping(value = "addAdvisorTag/{id}")
+    @ResponseBody
+    public String addAdvisorTag(HttpServletRequest request,
+                                @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"tags"},
+                                        paramsType = {JSONArray.class}
+                                ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+        Document advisor = userRepository.findById(id);
+
+        if (advisor == null)
+            return JSON_NOT_VALID_ID;
+
+        List<String> tags = new ArrayList<>();
+        JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("tags");
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+
+            String tag = jsonArray.getString(i);
+
+            if (tags.contains(tag))
+                continue;
+
+            tags.add(tag);
+        }
+
+        advisor.put("tags", tags);
+        userRepository.replaceOne(id, advisor);
+        return JSON_OK;
+    }
+
+    @DeleteMapping(value = "removeAdvisorTag/{id}")
+    @ResponseBody
+    public String removeAdvisorTag(HttpServletRequest request,
+                                   @PathVariable @ObjectIdConstraint ObjectId id,
+                                   @RequestBody @StrongJSONConstraint(
+                                           params = {"tag"},
+                                           paramsType = {String.class}
+                                   ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        getAdminPrivilegeUser(request);
+        Document advisor = userRepository.findById(id);
+
+        if (advisor == null)
+            return JSON_NOT_VALID_ID;
+
+        List<String> tags = (List<String>) advisor.getOrDefault("tags", new ArrayList<Document>());
+        String tag = new JSONObject(jsonStr).getString("tag");
+
+        tags.remove(tag);
+        advisor.put("tags", tags);
+
+        userRepository.replaceOne(id, advisor);
+
         return JSON_OK;
     }
 
@@ -343,7 +443,9 @@ public class AdvisorAPIRoutes extends Router {
     @GetMapping(value = "progress/{userId}")
     @ResponseBody
     public String progress(HttpServletRequest request,
-                           @PathVariable @ObjectIdConstraint ObjectId userId
+                           @PathVariable @ObjectIdConstraint ObjectId userId,
+                           @RequestParam(required = false, value = "start") Long start,
+                           @RequestParam(required = false, value = "end") Long end
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
@@ -352,7 +454,7 @@ public class AdvisorAPIRoutes extends Router {
             return JSON_NOT_ACCESS;
 
         return AdvisorController.progress(
-                userId, null
+                userId, null, start, end
         );
     }
 
