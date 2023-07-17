@@ -83,25 +83,20 @@ public class StudentAdviceController {
     public static String getMyAdvisors(Document user) {
 
         JSONArray jsonArray = new JSONArray();
+        List<ObjectId> myAdvisors = (List<ObjectId>) user.getOrDefault("my_advisors", new ArrayList<ObjectId>());
+        ObjectId userId = user.getObjectId("_id");
 
-        Document advisor = userRepository.findById(user.getObjectId("advisor_id"));
+        for (ObjectId advisorId : myAdvisors) {
 
-        jsonArray.put(new JSONObject()
-                .put("id", advisor.getObjectId("_id").toString())
-                .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
-        );
+            Document advisor = userRepository.findById(advisorId);
+
+            if(advisor == null)
+                continue;
+
+            jsonArray.put(convertToJSONDigest(userId, advisor));
+        }
 
         return generateSuccessMsg("data", jsonArray);
-    }
-
-    public static String getMyAdvisor(ObjectId userId, ObjectId advisorId) {
-
-        Document advisor = userRepository.findById(advisorId);
-
-        if (advisor == null)
-            return JSON_NOT_UNKNOWN;
-
-        return generateSuccessMsg("data", convertToJSONDigest(userId, advisor));
     }
 
     public static String rate(ObjectId userId, ObjectId advisorId, int rate) {

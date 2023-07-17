@@ -90,19 +90,6 @@ public class StudentAdviceRoutes extends Router {
         );
     }
 
-    @GetMapping(value = "getMyAdvisor")
-    @ResponseBody
-    public String getMyAdvisor(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-
-        Document user = getStudentUser(request);
-
-        if (!user.containsKey("advisor_id"))
-            return Utility.generateSuccessMsg("data", new JSONObject());
-
-        return StudentAdviceController.getMyAdvisor(user.getObjectId("_id"), user.getObjectId("advisor_id"));
-    }
-
     @GetMapping(value = "hasOpenRequest")
     @ResponseBody
     public String hasOpenRequest(HttpServletRequest request
@@ -122,11 +109,12 @@ public class StudentAdviceRoutes extends Router {
         return StudentAdviceController.cancelRequest(getStudentUser(request).getObjectId("_id"), reqId);
     }
 
-    @DeleteMapping(value = "cancel")
+    @DeleteMapping(value = "cancel/{advisorId}")
     @ResponseBody
-    public String cancel(HttpServletRequest request
+    public String cancel(HttpServletRequest request,
+                         @PathVariable @ObjectIdConstraint ObjectId advisorId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return AdvisorController.cancel(getStudentUser(request));
+        return AdvisorController.cancel(getStudentUser(request), advisorId);
     }
 
     @PostMapping(value = "request/{advisorId}/{planId}")
@@ -212,9 +200,10 @@ public class StudentAdviceRoutes extends Router {
     }
 
 
-    @PutMapping(value = "rate")
+    @PutMapping(value = "rate/{advisorId}")
     @ResponseBody
     public String rate(HttpServletRequest request,
+                       @PathVariable @ObjectIdConstraint ObjectId advisorId,
                        @RequestBody @StrongJSONConstraint(
                                params = {"rate"},
                                paramsType = {Positive.class}
@@ -222,7 +211,7 @@ public class StudentAdviceRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
 
         Document user = getStudentUser(request);
-        if (!user.containsKey("advisor_id"))
+        if (!user.containsKey("my_advisors"))
             return JSON_NOT_ACCESS;
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
@@ -230,8 +219,11 @@ public class StudentAdviceRoutes extends Router {
         if (rate < 1 || rate > 5)
             return JSON_NOT_VALID_PARAMS;
 
+        if(!user.getList("my_advisors", ObjectId.class).contains(advisorId))
+            return JSON_NOT_ACCESS;
+
         return StudentAdviceController.rate(
-                user.getObjectId("_id"), user.getObjectId("advisor_id"),
+                user.getObjectId("_id"), advisorId,
                 rate
         );
     }

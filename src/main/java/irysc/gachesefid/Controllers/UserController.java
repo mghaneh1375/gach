@@ -1550,12 +1550,23 @@ public class UserController {
             }
         }
 
-        if(student.containsKey("advisor_id")) {
-            Document advisor = userRepository.findById(student.getObjectId("advisor_id"));
-            if(advisor != null)
-                output.put("advisor", irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
-                        null, advisor
-                ));
+        if(student.containsKey("my_advisors")) {
+
+            List<ObjectId> myAdvisors = student.getList("my_advisors", ObjectId.class);
+            JSONArray advisorsJSON = new JSONArray();
+
+            for(ObjectId advisorId : myAdvisors) {
+
+                Document advisor = userRepository.findById(advisorId);
+
+                if(advisor != null)
+                    advisorsJSON.put(irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
+                            null, advisor
+                    ));
+            }
+
+            output.put("advisor", advisorsJSON);
+
         }
 
         output.put("name", student.getString("first_name") + " " + student.getString("last_name"))

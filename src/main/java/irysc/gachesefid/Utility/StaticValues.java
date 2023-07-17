@@ -18,6 +18,7 @@ public class StaticValues {
 
     public static final String KEY = "okfbogendesignmohammadghane1375!";
 
+    public static final long ONE_HOUR_MIL_SEC = 60 * 60 * 1000;
     public static final long ONE_DAY_MIL_SEC = 86400000;
     public static final long TWO_DAY_MIL_SEC = 86400000 * 2;
 
@@ -36,9 +37,6 @@ public class StaticValues {
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC_LONG = 1000 * SMS_RESEND_SEC * 3;
 
-    public final static int USER_LIMIT_CACHE_SIZE = 3000;
-    public final static int USER_EXPIRATION_SEC = 60 * 60 * 24 * 7;
-
     public final static int CLASS_LIMIT_CACHE_SIZE = 1000;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
@@ -52,7 +50,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";

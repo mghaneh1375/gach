@@ -6,8 +6,7 @@ import org.bson.types.ObjectId;
 
 import java.util.List;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
@@ -117,7 +116,7 @@ public class Authorization {
                     applicator.getList("students", Document.class), "_id", studentId
             ) > -1 || advisorRequestsRepository.count(
                     and(
-                            eq("advisor_id", applicatorId),
+                            in("my_advisors", applicatorId),
                             eq("user_id", studentId),
                             eq("answer", "pending")
                     )
@@ -127,8 +126,4 @@ public class Authorization {
         return false;
     }
 
-    // todo : complete this section
-    public static boolean hasAccessToThisTeacher(ObjectId teacherId, ObjectId applicatorId) {
-        return true;
-    }
 }

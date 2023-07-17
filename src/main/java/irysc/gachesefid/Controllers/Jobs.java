@@ -93,17 +93,17 @@ public class Jobs implements Runnable {
         @Override
         public void run() {
 
-            long yesterday = System.currentTimeMillis() - ONE_DAY_MIL_SEC;
+            long timeLimit = System.currentTimeMillis() - ONE_HOUR_MIL_SEC * 5;
 
             List<Document> docs = advisorMeetingRepository.find(
-                    lt("created_at", yesterday),
+                    lt("created_at", timeLimit),
                     new BasicDBObject("room_id", 1)
             );
 
-            for(Document doc : docs) {
+            for(Document doc : docs)
                 irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
-            }
 
+            advisorMeetingRepository.deleteMany(lt("created_at", timeLimit));
         }
     }
 

@@ -774,7 +774,7 @@ public class QuizController {
 //                !student.containsKey("city") ||
 //                        student.get("city") == null
 
-                if (db instanceof SchoolQuizRepository && isAdvisor && !student.containsKey("advisor_id")) {
+                if (db instanceof SchoolQuizRepository && isAdvisor && !student.containsKey("my_advisors")) {
                     excepts.put(i + 1);
                     continue;
                 }

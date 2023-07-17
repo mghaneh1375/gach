@@ -503,26 +503,29 @@ public class AdvisorController {
         return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
-    public static String cancel(Document user) {
+    public static String cancel(Document user, ObjectId advisorId) {
 
-        if (!user.containsKey("advisor_id"))
+        if (!user.containsKey("my_advisors"))
             return JSON_NOT_ACCESS;
 
-        Document advisor = userRepository.findById(user.getObjectId("advisor_id"));
+        List<ObjectId> myAdvisors = user.getList("my_advisors", ObjectId.class);
+        if(!myAdvisors.contains(advisorId))
+            return JSON_NOT_VALID_ID;
+
+        Document advisor = userRepository.findById(advisorId);
+
         if (advisor != null) {
 
             List<Document> students = advisor.getList("students", Document.class);
             int idx = searchInDocumentsKeyValIdx(students, "_id", user.getObjectId("_id"));
 
             if (idx > -1) {
-
                 students.remove(idx);
-                userRepository.replaceOne(advisor.getObjectId("_id"), advisor);
-
+                userRepository.replaceOne(advisorId, advisor);
             }
         }
 
-        user.remove("advisor_id");
+        myAdvisors.remove(advisorId);
         userRepository.replaceOne(user.getObjectId("_id"), user);
 
         return JSON_OK;
@@ -641,8 +644,8 @@ public class AdvisorController {
         if (advisor == null)
             return JSON_NOT_VALID_ID;
 
-        if (user.containsKey("advisor_id") &&
-                user.getObjectId("advisor_id").equals(advisorId))
+        if (user.containsKey("my_advisors") &&
+                user.getList("my_advisors", ObjectId.class).contains(advisorId))
             return generateErr("مشاور موردنظر هم اکنون به عنوان مشاور شما می باشد");
 
         if (!(boolean) advisor.getOrDefault("accept_std", true))
@@ -705,11 +708,11 @@ public class AdvisorController {
     private static boolean cancelAdvisor(Document student, Document advisor,
                                          boolean needUpdateStudent) {
 
-        if (student.containsKey("advisor_id") &&
-                student.getObjectId("advisor_id").equals(advisor.getObjectId("_id"))
+        if (student.containsKey("my_advisors") &&
+                student.getList("my_advisors", ObjectId.class).contains(advisor.getObjectId("_id"))
         ) {
 
-            student.remove("advisor_id");
+            student.getList("my_advisors", ObjectId.class).remove(advisor.getObjectId("_id"));
 
             if (needUpdateStudent)
                 userRepository.replaceOne(student.getObjectId("_id"), student);
@@ -730,7 +733,10 @@ public class AdvisorController {
 
 //        cancelAdvisor(student, advisor, false);
 
-        student.put("advisor_id", advisor.getObjectId("_id"));
+        List<ObjectId> myAdvisors = (List<ObjectId>) student.getOrDefault("my_advisors", new ArrayList<>());
+        myAdvisors.add(advisor.getObjectId("_id"));
+
+        student.put("my_advisors", myAdvisors);
         userRepository.replaceOneWithoutClearCache(student.getObjectId("_id"), student);
 
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
