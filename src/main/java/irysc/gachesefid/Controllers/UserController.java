@@ -503,6 +503,11 @@ public class UserController {
 //        jsonObject.put("birthDay", user.containsKey("birth_day") ? getSolarJustDate(user.getLong("birth_day")) : "");
         jsonObject.put("birthDay", user.getOrDefault("birth_day", ""));
 
+        if(user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0)
+            jsonObject.put("hasAdvisor", true);
+        else
+            jsonObject.put("hasAdvisor", false);
+
         if(user.containsKey("block_notif"))
             jsonObject.put("blockNotif", true);
 
@@ -1565,7 +1570,7 @@ public class UserController {
                     ));
             }
 
-            output.put("advisor", advisorsJSON);
+            output.put("advisors", advisorsJSON);
 
         }
 

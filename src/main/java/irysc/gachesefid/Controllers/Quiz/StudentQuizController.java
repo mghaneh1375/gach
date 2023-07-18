@@ -541,6 +541,7 @@ public class StudentQuizController {
         ArrayList<Document> quizzes = schoolQuizRepository.find(and(filters), null);
 
         QuizAbstract quizAbstract = new RegularQuizController();
+        HashMap<ObjectId, String> creators = new HashMap<>();
 
         for (Document quiz : quizzes) {
 
@@ -558,6 +559,19 @@ public class StudentQuizController {
             JSONObject jsonObject = quizAbstract.convertDocToJSON(
                     quiz, true, false, paid, true
             );
+
+            if(creators.containsKey(quiz.getObjectId("created_by")))
+                jsonObject.put("creator", creators.get(quiz.getObjectId("created_by")));
+            else {
+
+                Document creatorDoc = userRepository.findById(quiz.getObjectId("created_by"));
+                if(creatorDoc != null) {
+                    jsonObject.put("creator", creatorDoc.getString("first_name") + " " + creatorDoc.getString("last_name"));
+                    creators.put(quiz.getObjectId("created_by"),
+                            creatorDoc.getString("first_name") + " " + creatorDoc.getString("last_name")
+                    );
+                }
+            }
 
             jsonObject.put("paid", paid);
 

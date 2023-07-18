@@ -116,7 +116,7 @@ public class Authorization {
                     applicator.getList("students", Document.class), "_id", studentId
             ) > -1 || advisorRequestsRepository.count(
                     and(
-                            in("my_advisors", applicatorId),
+                            eq("advisor_id", applicatorId),
                             eq("user_id", studentId),
                             eq("answer", "pending")
                     )

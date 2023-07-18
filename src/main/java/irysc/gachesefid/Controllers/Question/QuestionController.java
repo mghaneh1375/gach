@@ -969,7 +969,10 @@ public class QuestionController extends Utilities {
                     isAdmin ?
                             eq("organization_id", organizationCode.replaceAll("\\s+", "")) :
                             and(
-                                    eq("is_public", true),
+                                    or(
+                                            exists("is_public", false),
+                                            eq("is_public", true)
+                                    ),
                                     eq("organization_id", organizationCode.replaceAll("\\s+", ""))
                             ),
                     new BasicDBObject("subject_id", true)
@@ -1047,12 +1050,18 @@ public class QuestionController extends Utilities {
                             organizationCode == null ?
                                     and(
                                             eq("subject_id", doc.getObjectId("_id")),
-                                            eq("is_public", true)
+                                            or(
+                                                    exists("is_public", false),
+                                                    eq("is_public", true)
+                                            )
                                     ) :
                                     and(
                                             eq("subject_id", doc.getObjectId("_id")),
                                             eq("organization_id", organizationCode),
-                                            eq("is_public", true)
+                                            or(
+                                                    exists("is_public", false),
+                                                    eq("is_public", true)
+                                            )
                                     ), null
                     );
 

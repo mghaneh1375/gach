@@ -46,7 +46,7 @@ public class AdvisorController {
 
         return PDFUtils.exportSchedule(
                 schedule,
-                userRepository.findById(new ObjectId("635bff221f3dac4e5d0da698"))
+                userRepository.findById(schedule.getObjectId("user_id"))
         );
 
     }

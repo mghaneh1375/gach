@@ -63,7 +63,7 @@ public class AdminTicketAPIRoutes extends Router {
 
         return TicketController.getRequests(
                 searchInArchive, status,
-                finisher, id, studentId, refId,
+                finisher, id, studentId, refId, null,
 //                dates.get(0), dates.get(1), dates.get(2), dates.get(3),
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 isForTeacher, startByAdmin, section, priority, false, false

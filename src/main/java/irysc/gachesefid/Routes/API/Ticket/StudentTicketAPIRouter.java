@@ -36,15 +36,20 @@ public class StudentTicketAPIRouter extends Router {
                                 @RequestParam(value = "sendDateSolarEndLimit", required = false) Long sendDateSolarEndLimit,
                                 @RequestParam(value = "answerDateSolarEndLimit", required = false) Long answerDateSolarEndLimit,
                                 @RequestParam(value = "section", required = false) String section,
+                                @RequestParam(value = "advisorId", required = false) ObjectId advisorId,
+                                @RequestParam(value = "studentId", required = false) ObjectId studentId,
                                 @RequestParam(value = "priority", required = false) String priority,
                                 @RequestParam(value = "status", required = false) String status
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
 
         return TicketController.getRequests(
                 null, status,
-                null, null, user.getObjectId("_id"), null,
+                null, null,
+                isAdvisor && studentId != null ? studentId : user.getObjectId("_id"),
+                null, isAdvisor && studentId != null ? user.getObjectId("_id") : advisorId,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 null, null, section, priority, true,
                 Authorization.isAdvisor(user.getList("accesses", String.class))

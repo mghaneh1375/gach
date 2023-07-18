@@ -82,6 +82,7 @@ public class TicketController {
                                      ObjectId idFilter,
                                      ObjectId studentIdFilter,
                                      ObjectId refIdFilter,
+                                     ObjectId advisorId,
                                      Long sendDate, Long answerDate,
                                      Long sendDateEndLimit, Long answerDateEndLimit,
                                      Boolean isForTeacher, Boolean startByAdmin,
@@ -110,6 +111,9 @@ public class TicketController {
 
         if(refIdFilter != null)
             constraints.add(eq("ref_id", refIdFilter));
+
+        if(advisorId != null)
+            constraints.add(eq("advisor_id", advisorId));
 
         if(!returnAdvisors)
             constraints.add(ne("section", "advisor"));

@@ -291,6 +291,8 @@ public class StudentAdviceRoutes extends Router {
                     new ByteArrayInputStream(FileUtils.readFileToByteArray(f))
             );
 
+            f.delete();
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=certificate_2.pdf")
                     .contentType(MediaType.parseMediaType("application/pdf"))
