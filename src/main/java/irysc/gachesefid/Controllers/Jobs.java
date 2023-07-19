@@ -103,7 +103,6 @@ public class Jobs implements Runnable {
             for(Document doc : docs)
                 irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
 
-            advisorMeetingRepository.deleteMany(lt("created_at", timeLimit));
         }
     }
 

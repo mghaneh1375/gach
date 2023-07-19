@@ -54,6 +54,9 @@ public class GiftController {
         if (useFor.equalsIgnoreCase(OffCodeSections.SCHOOL_QUIZ.getName()))
             return "آزمون مدرسه ای";
 
+        if (useFor.equalsIgnoreCase(OffCodeSections.COUNSELING_QUIZ.getName()))
+            return "آزمون مشاوره ای";
+
         if (useFor.equalsIgnoreCase(OffCodeSections.SCHOOL_HW.getName()))
             return "تمرین";
 

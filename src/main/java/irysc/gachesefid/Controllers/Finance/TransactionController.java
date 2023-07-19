@@ -95,7 +95,7 @@ public class TransactionController {
             section.append(quiz.getList("students", Document.class).size()).append(" - تعداد سوالات: ");
             section.append(quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size());
 
-            if((boolean)quiz.getOrDefault("database", true))
+            if ((boolean) quiz.getOrDefault("database", true))
                 section.append(" - استفاده شده از مجموعه سوالات آیریسک ");
             else
                 section.append(" - استفاده شده از مجموعه سوالات مدرسه ");
@@ -106,7 +106,7 @@ public class TransactionController {
     }
 
     public static void fetchSchoolHWInvoice(StringBuilder section,
-                                              Document transaction) {
+                                            Document transaction) {
 
         Object products = transaction.get("products");
 
@@ -134,11 +134,11 @@ public class TransactionController {
                     section.append(" - ").append(quiz.getString("title"));
                 else {
                     quiz = onlineStandQuizRepository.findById(quizId);
-                    if(quiz != null)
+                    if (quiz != null)
                         section.append(" - ").append(quiz.getString("title"));
                     else {
                         quiz = escapeQuizRepository.findById(quizId);
-                        if(quiz != null)
+                        if (quiz != null)
                             section.append(" - ").append(quiz.getString("title"));
                     }
                 }
@@ -183,6 +183,8 @@ public class TransactionController {
 
         else if (transaction.getString("section").equalsIgnoreCase(
                 OffCodeSections.SCHOOL_QUIZ.getName()
+        ) || transaction.getString("section").equalsIgnoreCase(
+                OffCodeSections.COUNSELING_QUIZ.getName()
         ))
             fetchSchoolQuizInvoice(section, transaction);
 

@@ -31,42 +31,42 @@ public class StudentAdviceController {
 
     public static String setDoneTime(ObjectId userId, ObjectId id, ObjectId itemId, JSONObject jsonObject) {
 
-        if(!jsonObject.getBoolean("fullDone") && !jsonObject.has("duration"))
+        if (!jsonObject.getBoolean("fullDone") && !jsonObject.has("duration"))
             return generateErr("لطفا زمان انجام شده را وارد نمایید");
 
         Document schedule = scheduleRepository.findById(id);
-        if(schedule == null || !schedule.getObjectId("user_id").equals(userId))
+        if (schedule == null || !schedule.getObjectId("user_id").equals(userId))
             return JSON_NOT_ACCESS;
 
         int d = Utility.convertStringToDate(schedule.getString("week_start_at"));
         int today = Utility.getToday();
 
-//        if(d > today)
-//            return generateErr("هنوز زمان ثبت عملکرد نرسیده است");
+        if (d > today)
+            return generateErr("هنوز زمان ثبت عملکرد نرسیده است");
 
         List<Document> days = schedule.getList("days", Document.class);
-        for(Document day : days) {
+        for (Document day : days) {
 
-            if(!day.containsKey("items"))
+            if (!day.containsKey("items"))
                 continue;
 
             List<Document> items = day.getList("items", Document.class);
             Document item = Utility.searchInDocumentsKeyVal(items, "_id", itemId);
 
-            if(item == null)
+            if (item == null)
                 continue;
 
-            if(item.containsKey("additional") && !jsonObject.has("additional"))
+            if (item.containsKey("additional") && !jsonObject.has("additional"))
                 return generateErr("لطفا " + item.getString("additional_label") + " را وارد نمایید");
 
-            if(jsonObject.getBoolean("fullDone"))
+            if (jsonObject.getBoolean("fullDone"))
                 item.put("done_duration", item.getInteger("duration"));
-            else if(jsonObject.getInt("duration") > item.getInteger("duration"))
+            else if (jsonObject.getInt("duration") > item.getInteger("duration"))
                 return generateErr("زمان انجام شده باید حداکثر " + item.getInteger("duration") + " باشد");
             else
                 item.put("done_duration", jsonObject.getInt("duration"));
 
-            if(item.containsKey("additional"))
+            if (item.containsKey("additional"))
                 item.put("done_additional", jsonObject.getInt("additional"));
 
             scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
@@ -90,7 +90,7 @@ public class StudentAdviceController {
 
             Document advisor = userRepository.findById(advisorId);
 
-            if(advisor == null)
+            if (advisor == null)
                 continue;
 
             jsonArray.put(convertToJSONDigest(userId, advisor));
@@ -458,21 +458,20 @@ public class StudentAdviceController {
 
         Document schedule;
 
-        if(id != null) {
+        if (id != null) {
 
             schedule = scheduleRepository.findById(id);
-            if(schedule == null)
+            if (schedule == null)
                 return JSON_NOT_VALID_ID;
 
-            if(userId == null)
+            if (userId == null)
                 userId = schedule.getObjectId("user_id");
-            else if(!schedule.getObjectId("user_id").equals(userId))
+            else if (!schedule.getObjectId("user_id").equals(userId))
                 return JSON_NOT_ACCESS;
 
-            if(advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
+            if (advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
                 return JSON_NOT_ACCESS;
-        }
-        else {
+        } else {
 
             String weekStartAt;
 
@@ -500,19 +499,55 @@ public class StudentAdviceController {
             }}).append("user_id", userId).append("created_at", System.currentTimeMillis());
         }
 
-        return generateSuccessMsg("data", new JSONObject()
-                .put("days", convertScheduleToJSON(schedule, advisorId))
-        );
+        JSONObject jsonObject = new JSONObject()
+                .put("days", convertScheduleToJSON(schedule, advisorId));
+
+        if (schedule.containsKey("advisors_desc")) {
+
+            if (advisorId != null) {
+
+                Document advisorDesc = searchInDocumentsKeyVal(
+                        schedule.getList("advisors_desc", Document.class),
+                        "advisor_id", advisorId
+                );
+
+                if (advisorDesc != null)
+                    jsonObject.put("advisorDesc", advisorDesc.getString("description"));
+
+            }
+            else {
+
+                JSONArray descs = new JSONArray();
+
+                for(Document advisorDesc : schedule.getList("advisors_desc", Document.class)) {
+
+                    Document advisor = userRepository.findById(advisorDesc.getObjectId("advisor_id"));
+                    if(advisor == null)
+                        continue;
+
+                    descs.put(
+                            new JSONObject()
+                                    .put("desc", advisorDesc.getString("description"))
+                                    .put("advisor", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                    );
+                }
+
+                jsonObject.put("advisorsDesc", descs);
+            }
+        }
+
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
     public static String getMyCurrentRoom(ObjectId studentId) {
 
         long curr = System.currentTimeMillis();
-        long yesterday = curr - ONE_DAY_MIL_SEC;
+        long limitTime = curr - ONE_HOUR_MIL_SEC * 5;
 
         List<Document> docs = advisorMeetingRepository.find(and(
                 eq("student_id", studentId),
-                gt("created_at", yesterday),
+                gt("created_at", limitTime),
                 lt("created_at", curr),
                 exists("url")
         ), new BasicDBObject("url", 1).append("advisor_id", 1).append("created_at", 1));

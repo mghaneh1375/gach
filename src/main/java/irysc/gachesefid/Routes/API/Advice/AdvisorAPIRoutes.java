@@ -242,6 +242,21 @@ public class AdvisorAPIRoutes extends Router {
     }
 
 
+    @PutMapping(value = "setScheduleDesc/{id}")
+    @ResponseBody
+    public String setScheduleDesc(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId id,
+                                  @RequestBody @StrongJSONConstraint(
+                                          params = {"description"},
+                                          paramsType = {String.class}
+                                  ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.setScheduleDesc(
+                getAdvisorUser(request).getObjectId("_id"), id,
+                new JSONObject(jsonStr).getString("description")
+        );
+    }
+
     @PutMapping(value = "addItemToSchedule/{userId}")
     @ResponseBody
     public String addItemToSchedule(HttpServletRequest request,

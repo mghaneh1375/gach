@@ -409,11 +409,11 @@ public class AdvisorController {
     public static String getMyCurrentRoomForAdvisor(ObjectId advisorId) {
 
         long curr = System.currentTimeMillis();
-        long yesterday = curr - ONE_DAY_MIL_SEC;
+        long timeLimit = curr - ONE_HOUR_MIL_SEC * 5;
 
         List<Document> docs = advisorMeetingRepository.find(and(
                 eq("advisor_id", advisorId),
-                gt("created_at", yesterday),
+                gt("created_at", timeLimit),
                 lt("created_at", curr),
                 exists("url")
         ), new BasicDBObject("url", 1).append("student_id", 1).append("created_at", 1));
@@ -445,12 +445,12 @@ public class AdvisorController {
     ) {
 
         long curr = System.currentTimeMillis();
-        long yesterday = curr - ONE_DAY_MIL_SEC;
+        long limitTime = curr - ONE_HOUR_MIL_SEC * 5;
 
         Document doc = advisorMeetingRepository.findOne(and(
                 eq("advisor_id", advisorId),
                 eq("student_id", studentId),
-                gt("created_at", yesterday),
+                gt("created_at", limitTime),
                 lt("created_at", curr),
                 exists("url")
         ), new BasicDBObject("url", 1).append("student_id", 1).append("created_at", 1));
@@ -564,6 +564,7 @@ public class AdvisorController {
                             !doc.containsKey("paid") && doc.containsKey("price")
             )
                 jsonObject.put("price", doc.getInteger("price"))
+                        .put("userMoney", userMoney.intValue())
                         .put("shouldPay", Math.max(doc.getInteger("price") - userMoney.intValue(), 0));
 
             jsonArray.put(jsonObject);
@@ -1208,6 +1209,33 @@ public class AdvisorController {
 
 
         return returnAddResponse(excepts, doneIds);
+    }
+
+    public static String setScheduleDesc(ObjectId advisorId, ObjectId id, String desc) {
+
+        Document schedule = scheduleRepository.findById(id);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!schedule.getList("advisors", ObjectId.class).contains(advisorId))
+            return JSON_NOT_ACCESS;
+
+        List<Document> advisorsDesc = (List<Document>) schedule.getOrDefault("advisors_desc", new ArrayList<>());
+
+        Document advisorDesc = searchInDocumentsKeyVal(advisorsDesc, "advisor_id", advisorId);
+
+        if(advisorDesc == null)
+            advisorsDesc.add(new Document("advisor_id", advisorId)
+                    .append("description", desc));
+        else
+            advisorDesc.put("description", desc);
+
+        if(!schedule.containsKey("advisors_desc"))
+            schedule.put("advisors_desc", advisorsDesc);
+
+        scheduleRepository.replaceOne(id, schedule);
+
+        return JSON_OK;
     }
 
     public static String addItemToSchedule(ObjectId advisorId,

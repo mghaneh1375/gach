@@ -342,7 +342,6 @@ public class Utility {
                 canDeleteSchedule = true;
         }
 
-
         jsonObject.put("weekStartAt", doc.getString("week_start_at"))
                 .put("schedulesSum", schedulesSum).put("doneSum", doneSum)
                 .put("canDelete", canDeleteSchedule).put("advisors", advisorsJSON)
