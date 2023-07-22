@@ -4,7 +4,6 @@ import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.IRYSCQuizRepository;
 import irysc.gachesefid.DB.OpenQuizRepository;
-import irysc.gachesefid.DB.SchoolQuizRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
@@ -130,7 +129,6 @@ public class AdminReportController {
         Utilities.updateQuestionsStatWithByteArr(
                 questions, t.questionStats
         );
-
     }
 
     public static void buildCustomQuizTaraz(Document doc, ObjectId quizId, ObjectId userId
@@ -221,6 +219,13 @@ public class AdminReportController {
             std.put("last_build", curr);
             try {
                 buildContentQuizTaraz(doc, std);
+
+                doc = contentQuizRepository.findById(quizId);
+
+                std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        doc.getList("students", Document.class), "_id", userId
+                );
+
             } catch (InvalidFieldsException e) {
                 return generateErr(e.getMessage());
             }

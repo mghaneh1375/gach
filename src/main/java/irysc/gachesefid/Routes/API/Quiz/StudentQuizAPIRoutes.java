@@ -122,17 +122,19 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.reviewCustomQuiz(
                     quizId, user.getObjectId("_id")
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
-            return StudentContentController.reviewFinalQuiz(
-                    quizId, user.getObjectId("_id")
-            );
+            return isAdmin ? QuizController.reviewContentQuiz(quizId) :
+                    StudentContentController.reviewFinalQuiz(
+                            quizId, user.getObjectId("_id")
+                    );
 
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))

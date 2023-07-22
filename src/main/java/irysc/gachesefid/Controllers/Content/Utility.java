@@ -14,6 +14,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import static irysc.gachesefid.Controllers.Certification.AdminCertification.*;
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildContentQuizTaraz;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
@@ -100,7 +101,8 @@ public class Utility {
     }
 
     static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy,
-                              boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded) throws InvalidFieldsException {
+                              boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded,
+                              Document user) throws InvalidFieldsException {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
@@ -132,13 +134,13 @@ public class Utility {
             if(counter > 3)
                 break;
 
-            Document user = userRepository.findById(students.get(i).getObjectId("_id"));
-            if(user == null)
+            Document userTmp = userRepository.findById(students.get(i).getObjectId("_id"));
+            if(userTmp == null)
                 continue;
 
             lastBuyers.put(new JSONObject()
-                    .put("name", user.getString("first_name") + " " + user.getString("last_name"))
-                    .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                    .put("name", userTmp.getString("first_name") + " " + userTmp.getString("last_name"))
+                    .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + userTmp.getString("pic"))
             );
 
             counter++;
@@ -195,7 +197,6 @@ public class Utility {
 
             ObjectId quizId = doc.getObjectId("final_exam_id");
             long curr = System.currentTimeMillis();
-            boolean oldCert = (boolean)stdDoc.getOrDefault("check_cert", false);
 
             if(stdDoc.containsKey("start_at") &&
                     !stdDoc.containsKey("check_cert") &&
@@ -203,11 +204,12 @@ public class Utility {
             ) {
 
                 boolean needCheck = true;
+                int diffDay = 0;
 
                 if(doc.containsKey("cert_duration")) {
 
                     long registerAt = stdDoc.getLong("register_at");
-                    int diffDay = (int) Math.floor((curr - registerAt) * 1.0 / ONE_DAY_MIL_SEC);
+                    diffDay = (int) Math.floor((curr - registerAt) * 1.0 / ONE_DAY_MIL_SEC);
 
                     if(diffDay > doc.getInteger("cert_duration")) {
                         stdDoc.put("check_cert", false);
@@ -218,6 +220,8 @@ public class Utility {
                 }
 
                 if(needCheck) {
+
+                    double percent = -1;
 
                     if(doc.containsKey("final_exam_min_mark")) {
 
@@ -239,6 +243,11 @@ public class Utility {
                             stdDocInQuiz.put("last_build", curr);
                             buildContentQuizTaraz(quiz, stdDocInQuiz);
 
+                            quiz = contentQuizRepository.findById(quizId);
+                            stdDocInQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                                    quiz.getList("students", Document.class), "_id", userId
+                            );
+
                             int totalCorrect = 0;
                             int totalInCorrect = 0;
                             int totalWhites = 0;
@@ -250,9 +259,8 @@ public class Utility {
                                 totalInCorrect += (int) stats[2];
                             }
 
-                            double percent;
                             if ((boolean) quiz.getOrDefault("minus_mark", true))
-                                percent = ((totalCorrect * 3.0 - totalInCorrect) * 100.0) / (totalInCorrect + totalWhites + totalCorrect);
+                                percent = ((totalCorrect * 3.0 - totalInCorrect) * 100.0) / (3.0 * (totalInCorrect + totalWhites + totalCorrect));
                             else
                                 percent = totalCorrect * 100.0 / (totalInCorrect + totalWhites + totalCorrect);
 
@@ -264,7 +272,26 @@ public class Utility {
                         stdDoc.put("check_cert", true);
                         contentRepository.replaceOne(doc.getObjectId("_id"), doc);
                     }
+
+                    if((boolean)stdDoc.getOrDefault("check_cert", false)) {
+
+                        JSONObject params = new JSONObject()
+                                .put("std_name", user.getString("first_name") + " " + user.getString("last_name"))
+                                .put("NID", user.getString("NID"))
+                                .put("cert_title", doc.getString("title"))
+                                .put("issue_at", irysc.gachesefid.Utility.Utility.getToday("/"))
+                                .put("diff_day", diffDay + "");
+
+                        if(percent != -1)
+                            params.put("mark", String.format("%.2f", percent / 5));
+
+                        addUserToContentCert(doc.getObjectId("cert_id"), params);
+
+                    }
+
                 }
+
+
             }
 
             jsonObject
@@ -272,21 +299,9 @@ public class Utility {
                     .put("finalExamId", quizId.toString())
             ;
 
-            if((boolean)stdDoc.getOrDefault("check_cert", false)) {
-                if(!oldCert) {
-
-//                    JSONArray params = new JSONArray();
-//                    params.put(user.getString("first_name") + " " + user.getString("last_name"));
-//                    params.put(doc.getString("title"));
-//                    params.put(stdDoc.getLong(""));
-//                    params.put(rank + "");
-
-//                    addUserToCert(null, doc.getObjectId("cert_id"),
-//                            NID, params);
-                }
-
-                jsonObject.put("certStatus", "ready");
-            }
+            if((boolean)stdDoc.getOrDefault("check_cert", false))
+                jsonObject.put("certStatus", "ready")
+                        .put("certId", doc.getObjectId("cert_id").toString());
 
         }
 

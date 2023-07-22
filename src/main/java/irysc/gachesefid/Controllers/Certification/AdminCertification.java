@@ -26,7 +26,7 @@ public class AdminCertification {
         JSONArray all = new JSONArray();
         ArrayList<Document> certifications = certificateRepository.find(null, null);
 
-        for(Document cert : certifications) {
+        for (Document cert : certifications) {
 
             JSONObject jsonObject1 = new JSONObject()
                     .put("id", cert.getObjectId("_id").toString())
@@ -62,14 +62,14 @@ public class AdminCertification {
     public static String checkCert(ObjectId certId) {
 
         Document cert = certificateRepository.findOne(in("users._id", certId), null);
-        if(cert == null)
+        if (cert == null)
             return JSON_NOT_VALID_ID;
 
         Document d = Utility.searchInDocumentsKeyVal(
                 cert.getList("users", Document.class), "_id", certId
         );
 
-        if(d == null)
+        if (d == null)
             return JSON_NOT_VALID_ID;
 
         return generateSuccessMsg("data", new JSONObject()
@@ -105,7 +105,7 @@ public class AdminCertification {
         certificate.put("qr_y", jsonObject.getInt("qrY"));
         certificate.put("qr_size", jsonObject.getInt("qrSize"));
 
-        if(jsonObject.has("visibility"))
+        if (jsonObject.has("visibility"))
             certificate.put("visibility", jsonObject.getBoolean("visibility"));
 
         certificateRepository.replaceOne(certId, certificate);
@@ -132,18 +132,18 @@ public class AdminCertification {
                 throw new InvalidFieldsException("not valid params");
 
             Document doc = new Document("font_size", param.getInt("fontSize"))
-                            .append("is_bold", param.getBoolean("isBold"))
-                            .append("y", param.getInt("y"))
-                            .append("title", param.getString("title"));
+                    .append("is_bold", param.getBoolean("isBold"))
+                    .append("y", param.getInt("y"))
+                    .append("title", param.getString("title"));
 
-            if(param.has("x"))
+            if (param.has("x"))
                 doc.append("x", param.getInt("x"));
 
-            else if(param.has("isCenter")) {
+            else if (param.has("isCenter")) {
 
                 doc.append("is_center", param.getBoolean("isCenter"));
 
-                if(param.has("centerOffset"))
+                if (param.has("centerOffset"))
                     doc.append("center_offset", param.getInt("centerOffset"));
             }
 
@@ -182,6 +182,44 @@ public class AdminCertification {
         return generateSuccessMsg("url", STATICS_SERVER + CertificateRepository.FOLDER + "/" + filename);
     }
 
+    public static void addUserToContentCert(ObjectId certId, JSONObject values) {
+
+        Document cert = certificateRepository.findById(certId);
+
+        if (cert == null)
+            return;
+
+        if (cert.get("img") == null)
+            return;
+
+        List<Document> users = cert.getList("users", Document.class);
+        String NID = values.getString("NID");
+
+        if (Utility.searchInDocumentsKeyValIdx(users, "NID", NID) != -1)
+            return;
+
+        List<Document> params = cert.getList("params", Document.class);
+        if (params.size() > values.length())
+            return;
+
+        JSONArray neededValues = new JSONArray();
+        for(Document param : params) {
+
+            if(!values.has(param.getString("title")))
+                continue;
+
+            neededValues.put(values.get(param.getString("title")));
+        }
+
+        users.add(new Document("NID", NID)
+                .append("_id", new ObjectId())
+                .append("created_at", System.currentTimeMillis())
+                .append("params", neededValues)
+        );
+
+        certificateRepository.replaceOne(cert.getObjectId("_id"), cert);
+    }
+
     public static String addUserToCert(Document cert, ObjectId certId,
                                        String NID, JSONArray values) {
 
@@ -218,7 +256,7 @@ public class AdminCertification {
     }
 
     public static String editUserInCert(ObjectId certId,
-                                       String NID, JSONArray values) {
+                                        String NID, JSONArray values) {
 
         Document cert = certificateRepository.findById(certId);
 
@@ -285,7 +323,7 @@ public class AdminCertification {
 
             String id = students.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -296,7 +334,7 @@ public class AdminCertification {
                 doneIds.put(id);
         }
 
-        if(doneIds.length() > 0)
+        if (doneIds.length() > 0)
             certificateRepository.replaceOne(certId, cert);
 
         return returnRemoveResponse(excepts, doneIds);
@@ -329,16 +367,16 @@ public class AdminCertification {
 
         Document certificate = certificateRepository.findById(certificateId);
 
-        if(certificate == null)
+        if (certificate == null)
             return JSON_NOT_VALID_ID;
 
         JSONObject jsonObject = new JSONObject()
                 .put("createdAt", Utility.getSolarDate(certificate.getLong("created_at")));
 
-        if(certificate.containsKey("users")) {
+        if (certificate.containsKey("users")) {
             List<Document> students = certificate.getList("users", Document.class);
             JSONArray jsonArray = new JSONArray();
-            for(Document student : students) {
+            for (Document student : students) {
                 jsonArray.put(
                         new JSONObject()
                                 .put("id", student.getObjectId("_id").toString())
@@ -348,8 +386,7 @@ public class AdminCertification {
                 );
             }
             jsonObject.put("users", jsonArray);
-        }
-        else
+        } else
             jsonObject.put("users", new ArrayList<>());
 
 //        JSONArray studentsJSON = new JSONArray();
@@ -361,26 +398,25 @@ public class AdminCertification {
             if (key.equals("created_at") || key.equals("users") || key.equals("params"))
                 continue;
 
-            if(key.equals("img"))
+            if (key.equals("img"))
                 jsonObject.put("img", STATICS_SERVER + CertificateRepository.FOLDER + "/" + certificate.getString("img"));
             else
                 jsonObject.put(Utility.camel(key, false), certificate.get(key));
         }
 
 
-        if(certificate.containsKey("params")) {
+        if (certificate.containsKey("params")) {
             List<Document> params = certificate.getList("params", Document.class);
             JSONArray jsonArray = new JSONArray();
-            for(Document param : params) {
+            for (Document param : params) {
                 JSONObject jsonObject1 = new JSONObject();
-                for(String key : param.keySet()) {
+                for (String key : param.keySet()) {
                     jsonObject1.put(Utility.camel(key, false), param.get(key));
                 }
                 jsonArray.put(jsonObject1);
             }
             jsonObject.put("params", jsonArray);
-        }
-        else
+        } else
             jsonObject.put("params", new ArrayList<>());
 
         return generateSuccessMsg("data", jsonObject);
@@ -395,7 +431,7 @@ public class AdminCertification {
         for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -406,7 +442,7 @@ public class AdminCertification {
                     eq("_id", certificateId)
             );
 
-            if(certificate == null) {
+            if (certificate == null) {
                 excepts.put(i + 1);
                 continue;
             }

@@ -46,6 +46,37 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class QuizController {
 
+    public static String reviewContentQuiz(ObjectId quizId) {
+
+        Document quiz = contentQuizRepository.findById(quizId);
+
+        if(quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        int neededTime = ContentQuizController.calcLenStatic(quiz);
+
+        JSONObject quizJSON = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("generalMode", "content")
+                .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                .put("description", quiz.getOrDefault("description", ""))
+                .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                .put("duration", neededTime);
+
+        List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String attach : attaches)
+            jsonArray.put(STATICS_SERVER + ContentQuizRepository.FOLDER + "/" + attach);
+
+        quizJSON.put("attaches", jsonArray);
+
+
+        return StudentQuizController.returnQuiz(quiz, null, true, quizJSON);
+    }
+
     public static String getLog(Common db, ObjectId quizId) {
 
         Document quiz = db.findById(quizId);
@@ -1281,6 +1312,7 @@ public class QuizController {
         } else {
             jsonObject.put("name", user.getString("first_name") + " " + user.getString("last_name"));
             jsonObject.put("NID", user.getString("NID"));
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
         }
 
         if (student.containsKey("register_at"))

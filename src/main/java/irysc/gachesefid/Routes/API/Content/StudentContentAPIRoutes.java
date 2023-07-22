@@ -99,9 +99,7 @@ public class StudentContentAPIRoutes extends Router {
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return StudentContentController.get(isAdmin, user == null ? null : user.getObjectId("_id"),
-                slug
-        );
+        return StudentContentController.get(isAdmin, user, slug);
     }
 
 

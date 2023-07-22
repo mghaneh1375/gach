@@ -672,7 +672,8 @@ public class QuizAPIRoutes extends Router {
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
-                        mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName())
+                        mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
+                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
         ))
             return QuizController.getParticipants(
                     selectDB(mode), null,
@@ -1343,11 +1344,7 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.getQuizAnswerSheet(
-                mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) ? onlineStandQuizRepository :
-                                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                                        mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()) ?
-                                                contentQuizRepository : schoolQuizRepository,
+                selectDB(mode),
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }

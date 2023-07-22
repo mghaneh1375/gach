@@ -305,7 +305,7 @@ public class StudentContentController {
     }
 
 
-    public static String get(boolean isAdmin, ObjectId userId, String slug) {
+    public static String get(boolean isAdmin, Document user, String slug) {
 
         Document content = contentRepository.findBySecKey(slug);
         if(content == null)
@@ -313,16 +313,19 @@ public class StudentContentController {
 
         Document stdDoc = null;
 
+        ObjectId userId = user == null ? null : user.getObjectId("_id");
+
         if(!isAdmin && userId != null)
             stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                     content.getList("users", Document.class), "_id", userId
             );
 
         try {
+
             return generateSuccessMsg("data", Utility.convert(
-                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, true
-                    )
-            );
+                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, true, user
+            ));
+
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }
@@ -702,7 +705,6 @@ public class StudentContentController {
             return null;
         }
     }
-
 
     public static String reviewFinalQuiz(ObjectId contentId, ObjectId userId) {
 
