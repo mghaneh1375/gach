@@ -134,7 +134,9 @@ public class AdvisorController {
                     .put("maxVideoCalls", request.getInteger("video_calls"))
                     .put("planTitle", request.getString("title"))
                     .put("maxChats", request.getOrDefault("max_chat", "نامحدود"))
-                    .put("maxExam", request.getOrDefault("max_exam", "نامحدود"));
+                    .put("maxExam", request.getOrDefault("max_exam", "نامحدود"))
+                    .put("createdAt", getSolarDate(request.getLong("paid_at")))
+                    .put("finishAt", getSolarDate(request.getLong("paid_at") + ONE_DAY_MIL_SEC * 30));
         }
 
 
@@ -150,7 +152,7 @@ public class AdvisorController {
 
             Document studentDoc = userRepository.findById(student.getObjectId("_id"));
 
-            if(studentDoc == null)
+            if (studentDoc == null)
                 continue;
 
             jsonArray.put(new JSONObject()
@@ -455,7 +457,7 @@ public class AdvisorController {
                 exists("url")
         ), new BasicDBObject("url", 1).append("student_id", 1).append("created_at", 1));
 
-        if(doc == null)
+        if (doc == null)
             return generateSuccessMsg("url", "");
 
         return generateSuccessMsg("url", doc.getString("url"));
@@ -509,7 +511,7 @@ public class AdvisorController {
             return JSON_NOT_ACCESS;
 
         List<ObjectId> myAdvisors = user.getList("my_advisors", ObjectId.class);
-        if(!myAdvisors.contains(advisorId))
+        if (!myAdvisors.contains(advisorId))
             return JSON_NOT_VALID_ID;
 
         Document advisor = userRepository.findById(advisorId);
@@ -811,7 +813,7 @@ public class AdvisorController {
                                         String sortBy
     ) {
 
-        if(sortBy != null &&
+        if (sortBy != null &&
                 !sortBy.equalsIgnoreCase("age") &&
                 !sortBy.equalsIgnoreCase("rate") &&
                 !sortBy.equalsIgnoreCase("student")
@@ -827,13 +829,13 @@ public class AdvisorController {
             filters.add(eq("tags", tag));
         }
 
-        if(minRate != null)
+        if (minRate != null)
             filters.add(and(
                     exists("rate"),
                     gte("rate", minRate)
             ));
 
-        if(maxRate != null)
+        if (maxRate != null)
             filters.add(and(
                     exists("rate"),
                     lte("rate", maxRate)
@@ -883,7 +885,7 @@ public class AdvisorController {
                 ))
                     continue;
 
-                else if(plans.size() > 0) {
+                else if (plans.size() > 0) {
                     boolean passFilter = false;
 
                     for (Document plan : plans) {
@@ -909,7 +911,7 @@ public class AdvisorController {
             JSONObject jsonObject = convertToJSONDigest(null, advisor);
 
             int age = -1;
-            if(advisor.containsKey("birth_day")) {
+            if (advisor.containsKey("birth_day")) {
                 age = (int) ((curr - advisor.getLong("birth_day")) / one_year_ms);
                 jsonObject.put("age", age);
             }
@@ -960,7 +962,7 @@ public class AdvisorController {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(JSONObject jsonObject : docs)
+        for (JSONObject jsonObject : docs)
             jsonArray.put(jsonObject);
 
         if (isAllFiltersOff)
@@ -1214,23 +1216,23 @@ public class AdvisorController {
     public static String setScheduleDesc(ObjectId advisorId, ObjectId id, String desc) {
 
         Document schedule = scheduleRepository.findById(id);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
-        if(!schedule.getList("advisors", ObjectId.class).contains(advisorId))
+        if (!schedule.getList("advisors", ObjectId.class).contains(advisorId))
             return JSON_NOT_ACCESS;
 
         List<Document> advisorsDesc = (List<Document>) schedule.getOrDefault("advisors_desc", new ArrayList<>());
 
         Document advisorDesc = searchInDocumentsKeyVal(advisorsDesc, "advisor_id", advisorId);
 
-        if(advisorDesc == null)
+        if (advisorDesc == null)
             advisorsDesc.add(new Document("advisor_id", advisorId)
                     .append("description", desc));
         else
             advisorDesc.put("description", desc);
 
-        if(!schedule.containsKey("advisors_desc"))
+        if (!schedule.containsKey("advisors_desc"))
             schedule.put("advisors_desc", advisorsDesc);
 
         scheduleRepository.replaceOne(id, schedule);
@@ -1631,7 +1633,7 @@ public class AdvisorController {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("user_id", userId));
 
-        if(start != null) {
+        if (start != null) {
             String[] splited = getSolarDate(start).split("-")[0].replace(" ", "").split("\\/");
 
             String date = "";
@@ -1641,13 +1643,13 @@ public class AdvisorController {
 
             int month = Integer.parseInt(splited[1]);
 
-            if(month < 10)
+            if (month < 10)
                 date += "0" + month;
             else
                 date += month;
 
             int day = Integer.parseInt(splited[2]);
-            if(day < 10)
+            if (day < 10)
                 date += "0" + day;
             else
                 date += day;
@@ -1655,7 +1657,7 @@ public class AdvisorController {
             filters.add(gte("week_start_at_int", Integer.parseInt(date)));
         }
 
-        if(end != null) {
+        if (end != null) {
 
             String[] splited = getSolarDate(end).split("-")[0].replace(" ", "").split("\\/");
 
@@ -1666,13 +1668,13 @@ public class AdvisorController {
 
             int month = Integer.parseInt(splited[1]);
 
-            if(month < 10)
+            if (month < 10)
                 date += "0" + month;
             else
                 date += month;
 
             int day = Integer.parseInt(splited[2]);
-            if(day < 10)
+            if (day < 10)
                 date += "0" + day;
             else
                 date += day;
@@ -1709,7 +1711,7 @@ public class AdvisorController {
 
             for (int k = days.size() - 1; k >= 0; k--) {
 
-                if(daily.size() >= 14)
+                if (daily.size() >= 14)
                     break;
 
                 Document day = days.get(k);
@@ -2093,9 +2095,8 @@ public class AdvisorController {
         int today = getToday();
 
         List<Document> schedules = scheduleRepository.find(
-                and(
-                        eq("user_id", studentId)
-                ), null, Sorts.descending("week_start_at_int")
+                eq("user_id", studentId)
+                , null, Sorts.descending("week_start_at_int")
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -2130,6 +2131,25 @@ public class AdvisorController {
         }
 
         return generateSuccessMsg("data", jsonObject);
+    }
+
+
+    public static String getStudentSchedulesDigest(ObjectId studentId) {
+
+        List<Document> schedules = scheduleRepository.find(
+                eq("user_id", studentId)
+                , null, Sorts.descending("week_start_at_int")
+        );
+
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document schedule : schedules)
+            jsonArray.put(new JSONObject()
+                    .put("id", schedule.getObjectId("_id").toString())
+                    .put("item", schedule.getString("week_start_at"))
+            );
+
+        return generateSuccessMsg("data", jsonArray);
     }
 
     public static String removeSchedule(ObjectId advisorId, ObjectId id) {

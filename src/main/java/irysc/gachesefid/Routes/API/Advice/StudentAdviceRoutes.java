@@ -239,6 +239,15 @@ public class StudentAdviceRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getMySchedulesDigest")
+    @ResponseBody
+    public String getMySchedulesDigest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return AdvisorController.getStudentSchedulesDigest(
+                getUser(request).getObjectId("_id")
+        );
+    }
+
     @GetMapping(value = "getMyLessonsInSchedule/{id}")
     @ResponseBody
     public String getMyLessonsInSchedule(HttpServletRequest request,
