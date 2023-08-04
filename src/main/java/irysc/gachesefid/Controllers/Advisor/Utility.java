@@ -384,13 +384,14 @@ public class Utility {
 
             JSONArray jsonArray1 = new JSONArray();
             for(Document item : day.getList("items", Document.class)) {
+
                 JSONObject jsonObject1 = new JSONObject()
                         .put("tag", item.getString("tag"))
                         .put("id", item.getObjectId("_id").toString())
                         .put("duration", item.get("duration"));
 
                 if(item.containsKey("start_at"))
-                    jsonObject1.put("startAt", item.get("start_id"));
+                    jsonObject1.put("startAt", item.get("start_at"));
 
                 jsonArray1.put(jsonObject1);
             }
@@ -468,10 +469,11 @@ public class Utility {
                         jsonObject1.put("advisor", new JSONObject()
                                 .put("name", p.getKey().toString())
                                 .put("pic", p.getValue().toString())
+                                .put("id", aId)
                         );
                     }
 
-                    jsonObject.put("owner", advisorId != null && advisorId.equals(item.getObjectId("advisor_id")));
+                    jsonObject1.put("owner", advisorId != null && advisorId.equals(item.getObjectId("advisor_id")));
 
                     jsonArray1.put(jsonObject1);
 

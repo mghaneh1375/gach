@@ -138,7 +138,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String myLifeStyle(HttpServletRequest request,
                               @PathVariable(required = false) String studentId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         Document result = getUserWithAdvisorAccess(request, true, studentId);
         return StudentAdviceController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
     }

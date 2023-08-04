@@ -340,7 +340,7 @@ public class StudentAdviceController {
                     .append("duration", data.getInt("duration"));
 
             if (data.has("startAt"))
-                newDoc.put("start_at", data.getString("start_at"));
+                newDoc.put("start_at", data.getString("startAt"));
 
             items.add(newDoc);
             lifeScheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
