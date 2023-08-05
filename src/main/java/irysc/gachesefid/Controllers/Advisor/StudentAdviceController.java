@@ -93,7 +93,32 @@ public class StudentAdviceController {
             if (advisor == null)
                 continue;
 
-            jsonArray.put(convertToJSONDigest(userId, advisor));
+            JSONObject jsonObject = convertToJSONDigest(userId, advisor);
+
+            Document request = advisorRequestsRepository.findOne(and(
+                    eq("advisor_id", advisorId),
+                    eq("user_id", userId),
+                    exists("paid_at", true)
+            ), null);
+
+            if(request == null)
+                return JSON_NOT_UNKNOWN;
+
+            JSONObject tmp = new JSONObject();
+
+            tmp
+                    .put("id", "-1")
+                    .put("createdAt", getSolarDate(request.getLong("paid_at")))
+                    .put("finishAt", getSolarDate(request.getLong("paid_at") + ONE_DAY_MIL_SEC * 30))
+                    .put("title", request.getString("title"))
+                    .put("videoCalls", request.getInteger("video_calls"))
+                    .put("maxKarbarg", request.getOrDefault("max_karbarg", -1))
+                    .put("maxExam", request.getOrDefault("max_exam", -1))
+                    .put("maxChat", request.getOrDefault("max_chat", -1));
+
+            jsonObject.put("plan", tmp);
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);

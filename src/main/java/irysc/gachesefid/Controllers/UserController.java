@@ -1059,8 +1059,8 @@ public class UserController {
 
     public static String setAboutMe(Document user, String bio) {
 
-        if(bio.length() > 150)
-            return generateErr("متن درباره من می تواند حداکثر ۱۵۰ کاراکتر باشد");
+        if(bio.length() > 500)
+            return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
 
         user.put("bio", bio);
         userRepository.replaceOne(user.getObjectId("_id"), user);
@@ -1169,29 +1169,6 @@ public class UserController {
         )))
             return generateErr("کد ملی وارد شده در سامانه موجود است.");
 
-        List<Document> branchesDoc = null;
-
-        if(jsonObject.has("branches")) {
-
-            JSONArray branches = jsonObject.getJSONArray("branches");
-            branchesDoc = new ArrayList<>();
-
-            for (int i = 0; i < branches.length(); i++) {
-                if (!ObjectId.isValid(branches.getString(i)))
-                    return JSON_NOT_VALID_PARAMS;
-
-//                Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
-                Document branch = gradeRepository.findById(new ObjectId(branches.getString(i)));
-                if (branch == null)
-                    return JSON_NOT_VALID_PARAMS;
-
-                branchesDoc.add(
-                        new Document("_id", branch.getObjectId("_id"))
-                                .append("name", branch.getString("name"))
-                );
-            }
-        }
-
         Document city = cityRepository.findById(
                 new ObjectId(jsonObject.getString("cityId"))
         );
@@ -1199,86 +1176,116 @@ public class UserController {
         if (city == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document grade = null;
+        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
 
-        if(jsonObject.has("gradeId")) {
+        if(isStudent) {
+
+            List<Document> branchesDoc = null;
+
+            if (jsonObject.has("branches")) {
+
+                JSONArray branches = jsonObject.getJSONArray("branches");
+                branchesDoc = new ArrayList<>();
+
+                for (int i = 0; i < branches.length(); i++) {
+                    if (!ObjectId.isValid(branches.getString(i)))
+                        return JSON_NOT_VALID_PARAMS;
+
+//                Document branch = branchRepository.findById(new ObjectId(branches.getString(i)));
+                    Document branch = gradeRepository.findById(new ObjectId(branches.getString(i)));
+                    if (branch == null)
+                        return JSON_NOT_VALID_PARAMS;
+
+                    branchesDoc.add(
+                            new Document("_id", branch.getObjectId("_id"))
+                                    .append("name", branch.getString("name"))
+                    );
+                }
+            }
+
+            Document grade = null;
+
+            if (jsonObject.has("gradeId")) {
 //            grade = gradeRepository.findById(
 //                    new ObjectId(jsonObject.getString("gradeId"))
 //            );
-            grade = branchRepository.findById(
-                    new ObjectId(jsonObject.getString("gradeId"))
-            );
+                grade = branchRepository.findById(
+                        new ObjectId(jsonObject.getString("gradeId"))
+                );
 
-            if (grade == null)
-                return JSON_NOT_VALID_PARAMS;
-        }
+                if (grade == null)
+                    return JSON_NOT_VALID_PARAMS;
+            }
 
-        Document school = null;
+            if(grade != null)
+                user.put("grade", new Document("_id", grade.getObjectId("_id"))
+                        .append("name", grade.getString("name"))
+                );
+            else
 
-        if(jsonObject.has("schoolId") &&
-                (
-                        !user.containsKey("school") ||
-                        !user.get("school", Document.class).getObjectId("_id").toString().equals(jsonObject.getString("schoolId"))
-                )
-        ) {
-           school = schoolRepository.findById(
-                    new ObjectId(jsonObject.getString("schoolId"))
-            );
+                user.remove("grade");
 
-            if (school == null)
-                return JSON_NOT_VALID_PARAMS;
-        }
 
-        user.put("first_name", jsonObject.getString("firstName"));
-        user.put("last_name", jsonObject.getString("lastName"));
+            Document school = null;
 
-        if(grade != null)
-            user.put("grade", new Document("_id", grade.getObjectId("_id"))
-                    .append("name", grade.getString("name"))
-            );
-        else
+            if(jsonObject.has("schoolId") &&
+                    (
+                            !user.containsKey("school") ||
+                                    !user.get("school", Document.class).getObjectId("_id").toString().equals(jsonObject.getString("schoolId"))
+                    )
+            ) {
+                school = schoolRepository.findById(
+                        new ObjectId(jsonObject.getString("schoolId"))
+                );
 
-            user.remove("grade");
+                if (school == null)
+                    return JSON_NOT_VALID_PARAMS;
+            }
 
-        user.put("city", new Document("_id", city.getObjectId("_id"))
-                .append("name", city.getString("name"))
-        );
+            if(school != null) {
 
-        if(school != null) {
+                user.put("school", new Document("_id", school.getObjectId("_id"))
+                        .append("name", school.getString("name"))
+                );
 
-            user.put("school", new Document("_id", school.getObjectId("_id"))
-                    .append("name", school.getString("name"))
-            );
+                if(school.containsKey("user_id")) {
 
-            if(school.containsKey("user_id")) {
+                    Document schoolUser = userRepository.findById(school.getObjectId("user_id"));
 
-                Document schoolUser = userRepository.findById(school.getObjectId("user_id"));
+                    if(schoolUser != null) {
 
-                if(schoolUser != null) {
+                        List<ObjectId> students = (List<ObjectId>) schoolUser.getOrDefault("students", new ArrayList<>());
 
-                    List<ObjectId> students = (List<ObjectId>) schoolUser.getOrDefault("students", new ArrayList<>());
+                        if(!students.contains(user.getObjectId("_id"))) {
+                            students.add(user.getObjectId("_id"));
+                            userRepository.replaceOne(schoolUser.getObjectId("_id"), schoolUser);
+                        }
 
-                    if(!students.contains(user.getObjectId("_id"))) {
-                        students.add(user.getObjectId("_id"));
-                        userRepository.replaceOne(schoolUser.getObjectId("_id"), schoolUser);
                     }
 
                 }
 
             }
 
+            else
+                user.remove("school");
+
+            if(branchesDoc != null)
+                user.put("branches", branchesDoc);
+            else
+                user.remove("branches");
+
         }
 
-        else
-            user.remove("school");
+        user.put("first_name", jsonObject.getString("firstName"));
+        user.put("last_name", jsonObject.getString("lastName"));
+
+        user.put("city", new Document("_id", city.getObjectId("_id"))
+                .append("name", city.getString("name"))
+        );
 
         user.put("NID", NID);
         user.put("sex", sex);
-
-        if(branchesDoc != null)
-            user.put("branches", branchesDoc);
-        else
-            user.remove("branches");
 
         if(jsonObject.has("birthDay")) {
             user.put("birth_day", jsonObject.getLong("birthDay"));
