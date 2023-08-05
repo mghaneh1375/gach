@@ -138,7 +138,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String myLifeStyle(HttpServletRequest request,
                               @PathVariable(required = false) String studentId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         Document result = getUserWithAdvisorAccess(request, true, studentId);
         return StudentAdviceController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
     }
@@ -236,6 +236,15 @@ public class StudentAdviceRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return AdvisorController.getStudentSchedules(
                 null, getUser(request).getObjectId("_id"), notReturnPassed
+        );
+    }
+
+    @GetMapping(value = "getMySchedulesDigest")
+    @ResponseBody
+    public String getMySchedulesDigest(HttpServletRequest request
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return AdvisorController.getStudentSchedulesDigest(
+                getUser(request).getObjectId("_id")
         );
     }
 
