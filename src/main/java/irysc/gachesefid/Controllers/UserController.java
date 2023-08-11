@@ -87,8 +87,10 @@ public class UserController {
 
     public static String signUp(JSONObject jsonObject) {
 
-        if (!EnumValidatorImp.isValid(jsonObject.getString("authVia"), AuthVia.class))
-            return JSON_NOT_VALID_PARAMS;
+        if(jsonObject.getString("firstName").length() < 3 ||
+                jsonObject.getString("lastName").length() < 3
+        )
+            return generateErr("نام/نام خانوادگی باید حداقل 3 کاراکتر باشد");
 
         String authVia = jsonObject.getString("authVia");
 
@@ -398,6 +400,13 @@ public class UserController {
 
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             throw new InvalidFieldsException("زمان توکن شما منقضی شده است.");
+
+        if(
+                doc.get("first_name") == null || doc.get("last_name") == null ||
+                        doc.get("NID") == null || doc.getString("first_name").length() < 3 ||
+                        doc.getString("last_name").length() < 3
+        )
+            throw new InvalidFieldsException("داده ها معتبر نمی باشند");
 
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));

@@ -50,6 +50,7 @@ import static com.mongodb.client.model.Updates.setOnInsert;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
+
 import java.time.LocalDate;
 import java.util.Locale;
 
@@ -279,17 +280,24 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/signUp")
     @ResponseBody
-    public String signUp(@RequestBody @JSONConstraint(params = {
-            "password", "username",
-            "firstName", "lastName",
-            "NID", "authVia"
-    }) String json) {
+    public String signUp(@RequestBody @StrongJSONConstraint(
+            params = {
+                    "password", "username",
+                    "firstName", "lastName",
+                    "NID", "authVia"
+            },
+            paramsType = {
+                    String.class, String.class,
+                    String.class, String.class,
+                    String.class, AuthVia.class
+            }
+    ) @NotBlank String json) {
 
         try {
             JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
-//            if (!Utility.isValidPassword(jsonObject.getString("password")))
-//                return generateErr("رمزعبور وارد شده ملاحظات امنیتی لازم را ندارد.");
+            if (!Utility.isValidPassword(jsonObject.getString("password")))
+                return generateErr("رمزعبور باید حداقل 6 کاراکتر باشد.");
 
             jsonObject.put("password", userService.getEncPass(jsonObject.getString("password")));
 
@@ -613,9 +621,9 @@ public class UserAPIRoutes extends Router {
             return new JSONObject().put("status", "nok").put("msg", "mail is incorrect").toString();
 
         Document doc = activationRepository.findOne(and(
-                eq("token", jsonObject.getString("token")),
-                eq("mail", jsonObject.getString("mail")),
-                eq("code", jsonObject.getInt("code")))
+                        eq("token", jsonObject.getString("token")),
+                        eq("mail", jsonObject.getString("mail")),
+                        eq("code", jsonObject.getInt("code")))
                 , null);
 
         if (doc == null)
@@ -734,7 +742,7 @@ public class UserAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        if(!Authorization.hasWeakAccessToThisStudent(userId, user.getObjectId("_id")))
+        if (!Authorization.hasWeakAccessToThisStudent(userId, user.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
         return UserController.getEducationalHistory(userId);
