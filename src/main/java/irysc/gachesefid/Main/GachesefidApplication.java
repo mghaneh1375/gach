@@ -40,6 +40,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     final static private String dbName = "gach"; // mydb
 
+    public static HashMap<String, String> passwords = new HashMap<>();
+
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
 

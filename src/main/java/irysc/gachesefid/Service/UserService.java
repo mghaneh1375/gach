@@ -21,6 +21,7 @@ import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.passwords;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
@@ -136,6 +137,10 @@ public class UserService {
 
 //            if(checkPass)
 //                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
+
+            if(checkPass && !passwords.containsKey(username)) {
+                passwords.put(username, password);
+            }
 
             return Utility.generateSuccessMsg(
                     "token", token,
