@@ -7,7 +7,6 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.NewAlert;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -19,17 +18,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Utility.Utility.printException;
 import static irysc.gachesefid.Utility.StaticValues.SCHOOLS;
 import static irysc.gachesefid.Utility.StaticValues.STUDENTS;
 import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
-import static java.util.Map.entry;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
