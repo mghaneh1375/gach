@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -526,6 +527,13 @@ public class RegularQuizController extends QuizAbstract {
             students.add(stdDoc);
             quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
 
+            Document student = userRepository.findById(studentId);
+            if(student != null) {
+                AdvisorController.createNotifForAdvisor(student, null,
+                        quiz.containsKey("pay_by_student") ? "advisorQuiz" : "schoolQuiz"
+                );
+            }
+
         } catch (Exception ignore) {
         }
 
@@ -546,6 +554,12 @@ public class RegularQuizController extends QuizAbstract {
             students.add(stdDoc);
 
             hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
+
+            Document student = userRepository.findById(studentId);
+            if(student != null) {
+                AdvisorController.createNotifForAdvisor(student, null, "hw");
+            }
+
 
         } catch (Exception ignore) {
         }

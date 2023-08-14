@@ -529,4 +529,20 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+
+    @PostMapping(value = "notifyStudentForSchedule/{id}")
+    @ResponseBody
+    public String notifyStudentForSchedule(HttpServletRequest request,
+                                           @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+
+        Document user = getAdvisorUser(request);
+
+        return AdvisorController.notifyStudentForSchedule(
+                id,
+                user.getString("first_name") + " " + user.getString("last_name"),
+                user.getObjectId("_id")
+        );
+    }
+
 }
