@@ -7,6 +7,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.HttpReqRespUtils;
 import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -51,7 +52,7 @@ public class OffCodeAPIRoutes extends Router {
                                 ) @NotBlank String jsonStr) {
         return OffCodeController.storeFromShop(
                 Utility.convertPersian(new JSONObject(jsonStr)),
-                request.getRemoteAddr()
+                HttpReqRespUtils.getClientIpAddressIfServletRequestExist(request)
         );
     }
 
