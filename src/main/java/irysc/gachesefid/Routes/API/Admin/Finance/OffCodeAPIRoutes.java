@@ -34,6 +34,27 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @Validated
 public class OffCodeAPIRoutes extends Router {
 
+    @PostMapping(value = "storeFromShop")
+    @ResponseBody
+    public String storeFromShop(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {
+                                                "token", "firstName", "lastName",
+                                                "email", "phone", "orderId",
+                                                "total"
+                                        },
+                                        paramsType = {
+                                                String.class, String.class, String.class,
+                                                String.class, String.class, Positive.class,
+                                                Number.class
+                                        }
+                                ) @NotBlank String jsonStr) {
+        return OffCodeController.storeFromShop(
+                Utility.convertPersian(new JSONObject(jsonStr)),
+                request.getRemoteAddr()
+        );
+    }
+
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody
     public String store(HttpServletRequest request,
