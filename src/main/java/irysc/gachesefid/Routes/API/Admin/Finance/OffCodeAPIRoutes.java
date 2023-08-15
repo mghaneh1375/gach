@@ -46,7 +46,7 @@ public class OffCodeAPIRoutes extends Router {
                                         paramsType = {
                                                 String.class, String.class, String.class,
                                                 String.class, String.class, Positive.class,
-                                                Number.class
+                                                Object.class
                                         }
                                 ) @NotBlank String jsonStr) {
         return OffCodeController.storeFromShop(
