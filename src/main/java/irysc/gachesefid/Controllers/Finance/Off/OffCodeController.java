@@ -44,7 +44,7 @@ public class OffCodeController {
         if(!(boolean)config.getOrDefault("create_shop_off_visibility", false))
             return "not active";
 
-        double total = ((Number)jsonObject.get("total")).doubleValue();
+        double total = Double.parseDouble(jsonObject.get("total").toString());
         if(total < (int)config.getOrDefault("min_buy_amount_for_shop", 50000))
             return "not enough total";
 
@@ -100,6 +100,8 @@ public class OffCodeController {
 
         double mainMoney = ((Number) (user.get("money"))).doubleValue();
         user.put("money", mainMoney + credit);
+
+        sendSMSWithTemplate(phoneWithZero, 815, new PairValue("name", name));
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return "ok";
