@@ -1,16 +1,12 @@
 package irysc.gachesefid.Controllers.Finance.Off;
 
 import com.mongodb.client.AggregateIterable;
-import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Config.GiftController;
-import irysc.gachesefid.DB.OffcodeRepository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
-import irysc.gachesefid.Validator.ObjectIdValidator;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import org.apache.poi.ss.usermodel.Row;
@@ -26,9 +22,9 @@ import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Finance.Off.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Statics.Alerts.createOffCode;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -41,16 +37,71 @@ public class OffCodeController {
         if(!jsonObject.getString("token").equals(token))
             return JSON_NOT_ACCESS;
 
-        System.out.println(ip);
+        if(!ip.equals("31.41.35.5"))
+            return JSON_NOT_ACCESS;
+
+        Document config = getConfig();
+        if(!(boolean)config.getOrDefault("create_shop_off_visibility", false))
+            return "not active";
+
+        double total = ((Number)jsonObject.get("total")).doubleValue();
+        if(total < (int)config.getOrDefault("min_buy_amount_for_shop", 50000))
+            return "not enough total";
+
+        double credit = (total * (int)config.getOrDefault("percent_of_shop_buy", 50)) / 100;
+
+        String phone = jsonObject.getString("phone");
+        String phoneWithZero, phoneWithOutZero;
+
+        if(phone.startsWith("0")) {
+            phoneWithOutZero = phone.substring(1);
+            phoneWithZero = phone;
+        }
+        else  {
+            phoneWithOutZero = phone;
+            phoneWithZero = "0" + phone;
+        }
 
         Document user = userRepository.findOne(or(
-                eq("phone", jsonObject.getString("phone")),
+                eq("phone", phoneWithZero),
+                eq("phone", phoneWithOutZero),
                 eq("mail", jsonObject.getString("email"))
         ), null);
 
-        if(user == null)
-            return "not exist";
+        String name = jsonObject.getString("firstName") + " " + jsonObject.getString("lastName");
 
+        if(user == null) {
+
+            Document tmp = creditRepository.findOne(eq("phone", phoneWithZero), null);
+
+            if(tmp == null)
+                creditRepository.insertOne(
+                        new Document("credit", credit)
+                                .append("phone", phoneWithZero)
+                                .append("mail", jsonObject.getString("email"))
+                                .append("created_at", System.currentTimeMillis())
+                );
+            else {
+                tmp.put("credit", ((Number) tmp.get("credit")).doubleValue() + credit);
+                creditRepository.updateOne(tmp.getObjectId("_id"), set("credit", tmp.get("credit")));
+            }
+
+            sendSMSWithTemplate(phoneWithZero, 938,
+                    new PairValue("name", name),
+                    new PairValue("code", "aaa"),
+                    new PairValue("price", (int)credit + "")
+            );
+
+            return "not exist";
+        }
+
+
+        user = userRepository.findById(user.getObjectId("_id"));
+
+        double mainMoney = ((Number) (user.get("money"))).doubleValue();
+        user.put("money", mainMoney + credit);
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
         return "ok";
     }
 

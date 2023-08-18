@@ -70,6 +70,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
     public static ContentQuizRepository contentQuizRepository;
+    public static CreditRepository creditRepository;
     public static EscapeQuizQuestionRepository escapeQuizQuestionRepository;
     public static EscapeQuizRepository escapeQuizRepository;
     public static GiftRepository giftRepository;
@@ -141,6 +142,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             contentConfigRepository = new ContentConfigRepository();
             contentRepository = new ContentRepository();
             contentQuizRepository = new ContentQuizRepository();
+            creditRepository = new CreditRepository();
             escapeQuizRepository = new EscapeQuizRepository();
             escapeQuizQuestionRepository = new EscapeQuizQuestionRepository();
             giftRepository = new GiftRepository();

@@ -91,7 +91,8 @@ public class UserAPIRoutes extends Router {
     public String test() {
 
         if (1 == 1) {
-            return getFirstDayOfCurrWeek();
+
+            return "ok";
 //            System.out.println();
 //            System.out.println(getFirstDayOfFutureWeek(1));
 //            System.out.println(getFirstDayOfFutureWeek(2));

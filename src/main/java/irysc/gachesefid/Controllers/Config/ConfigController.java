@@ -18,6 +18,20 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class ConfigController {
 
+    public static String getShop() {
+
+        Document config = Utility.getConfig();
+        JSONObject jsonObject = new JSONObject();
+
+        jsonObject.put("createShopOffVisibility", config.getOrDefault("create_shop_off_visibility", true));
+        jsonObject.put("minBuyAmountForShop", config.getOrDefault("min_buy_amount_for_shop", "").toString());
+        jsonObject.put("percentOfShopBuy", config.getOrDefault("percent_of_shop_buy", "").toString());
+
+        return Utility.generateSuccessMsg(
+                "data", jsonObject
+        );
+    }
+
     public static String getCert() {
 
         Document config = Utility.getConfig();
