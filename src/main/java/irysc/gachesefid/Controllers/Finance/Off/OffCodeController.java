@@ -102,6 +102,31 @@ public class OffCodeController {
         user.put("money", mainMoney + credit);
 
         sendSMSWithTemplate(phoneWithZero, 815, new PairValue("name", name));
+        String msg = "<p>" +  "سلام " + name + "<br/>";
+        msg += "اعتبار شما به دلیل خرید از فروشگاه آیریسک " + credit + " تومان افزایش یافت.";
+        msg += "</p>";
+
+        ObjectId notifId = new ObjectId();
+        Document finalUser = user;
+        Document notif = new Document("_id", notifId)
+                .append("users_count", 1)
+                .append("title", "افزایش اعتبار")
+                .append("text", msg)
+                .append("send_via", "site")
+                .append("created_at", System.currentTimeMillis())
+                .append("users", new ArrayList<ObjectId>() {{
+                    add(finalUser.getObjectId("_id"));
+                }});
+
+        List<Document> events = (List<Document>) user.getOrDefault("events", new ArrayList<Document>());
+        events.add(
+                new Document("created_at", System.currentTimeMillis())
+                        .append("notif_id", notifId)
+                        .append("seen", false)
+        );
+
+        user.put("events", events);
+        notifRepository.insertOne(notif);
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return "ok";
