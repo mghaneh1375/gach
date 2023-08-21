@@ -462,9 +462,11 @@ public class StudentQuizController {
                 );
 
                 if(isEscapeQuiz &&
+                        jsonObject.getString("status")
+                                .equalsIgnoreCase("inProgress") &&
                         !(boolean)studentDoc.getOrDefault("can_continue", true)
                 ) {
-                    jsonObject.put("status", "finished");
+                    jsonObject.put("status", "waitForResult");
                 }
 
                 if (jsonObject.getString("status")
