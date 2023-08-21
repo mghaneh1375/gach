@@ -86,9 +86,8 @@ public class OffCodeController {
                 creditRepository.updateOne(tmp.getObjectId("_id"), set("credit", tmp.get("credit")));
             }
 
-            sendSMSWithTemplate(phoneWithZero, 938,
+            sendSMSWithTemplate(phoneWithZero, 949,
                     new PairValue("name", name),
-                    new PairValue("code", "aaa"),
                     new PairValue("price", (int)credit + "")
             );
 
