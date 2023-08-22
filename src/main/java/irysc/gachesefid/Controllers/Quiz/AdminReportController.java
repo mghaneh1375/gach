@@ -347,12 +347,11 @@ public class AdminReportController {
 
                 Object[] stats = isTashrihi ?
                         QuizAbstract.decodeTashrihi(doc.get("stat", Binary.class).getData()) :
-                        QuizAbstract.decode(doc.get("stat", Binary.class).getData())
-                ;
+                        QuizAbstract.decode(doc.get("stat", Binary.class).getData());
 
                 JSONObject jsonObject;
 
-                if(isTashrihi) {
+                if (isTashrihi) {
                     jsonObject = new JSONObject()
                             .put("name", doc.getString("name"))
                             .put("taraz", stats[0])
@@ -368,8 +367,7 @@ public class AdminReportController {
                             .put("max", df_obj.format(generalStat.getDouble("max")))
                             .put("min", df_obj.format(generalStat.getDouble("min")));
 
-                }
-                else {
+                } else {
                     totalCorrect += (int) stats[2];
 
                     jsonObject = new JSONObject()
@@ -378,7 +376,7 @@ public class AdminReportController {
                             .put("whites", stats[1])
                             .put("corrects", stats[2])
                             .put("incorrects", stats[3])
-                            .put("total", (int)stats[1] + (int)stats[2] + (int)stats[3])
+                            .put("total", (int) stats[1] + (int) stats[2] + (int) stats[3])
                             .put("percent", stats[4])
                             .put("countryRank", stats[5])
                             .put("stateRank", stats[6])
@@ -405,7 +403,7 @@ public class AdminReportController {
 
                 JSONObject jsonObject;
 
-                if(isTashrihi) {
+                if (isTashrihi) {
                     jsonObject = new JSONObject()
                             .put("name", doc.getString("name"))
                             .put("taraz", stats[0])
@@ -420,8 +418,7 @@ public class AdminReportController {
                             .put("avg", df_obj.format(generalStat.get("avg")))
                             .put("max", df_obj.format(generalStat.get("max")))
                             .put("min", df_obj.format(generalStat.get("min")));
-                }
-                else {
+                } else {
                     jsonObject = new JSONObject()
                             .put("name", doc.getString("name"))
                             .put("taraz", stats[0])
@@ -495,17 +492,17 @@ public class AdminReportController {
 
     private static String getTashrihiQuizAnswerSheet(Document quiz, Document student) {
 
-        if(!quiz.containsKey("cropped"))
+        if (!quiz.containsKey("cropped"))
             return generateErr("برش پاسخ برگها هنوز صورت نگرفته است.");
 
         Document studentDoc = null;
 
-        if(student != null) {
+        if (student != null) {
             studentDoc = userRepository.findById(student.getObjectId("_id"));
-            if(studentDoc == null)
+            if (studentDoc == null)
                 return JSON_NOT_UNKNOWN;
 
-            String prefix =  DEV_MODE ?
+            String prefix = DEV_MODE ?
                     FileUtils.uploadDir_dev + "tashrihi_answer_sheets/" + quiz.getObjectId("_id") :
                     FileUtils.uploadDir + "tashrihi_answer_sheets/" + quiz.getObjectId("_id");
 
@@ -513,11 +510,11 @@ public class AdminReportController {
 
             File f = new File(prefix + studentDoc.getString("NID"));
 
-            if(!f.exists() || !f.isDirectory())
+            if (!f.exists() || !f.isDirectory())
                 return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
 
             File[] files = f.listFiles();
-            if(files == null)
+            if (files == null)
                 return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
 
             JSONArray answerSheets = new JSONArray();
@@ -525,15 +522,15 @@ public class AdminReportController {
             prefix = "tashrihi_answer_sheets/" + quiz.getObjectId("_id") + "/" +
                     studentDoc.getString("NID") + "/";
 
-            for(File itr : files) {
+            for (File itr : files) {
 
-                if(itr.getName().equals(".") || itr.getName().equals(".."))
+                if (itr.getName().equals(".") || itr.getName().equals(".."))
                     continue;
 
                 answerSheets.put(STATICS_SERVER + prefix + itr.getName());
             }
 
-            if(answerSheets.length() == 0)
+            if (answerSheets.length() == 0)
                 return generateErr("پاسخ برگ دانش آموز موردنظر هنوز برش نخورده است");
 
             return generateSuccessMsg("data", answerSheets);
@@ -549,17 +546,17 @@ public class AdminReportController {
             List<Document> students = doc.getList("students", Document.class);
             int idx = -1;
 
-            if(studentId != null) {
+            if (studentId != null) {
 
                 idx = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                    students, "_id", studentId
+                        students, "_id", studentId
                 );
 
-                if(idx == -1)
+                if (idx == -1)
                     return JSON_NOT_VALID_PARAMS;
             }
 
-            if(doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return getTashrihiQuizAnswerSheet(doc, idx == -1 ? null : students.get(idx));
 //            if(doc.getBoolean("is_online") ||
 //                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())
@@ -1237,11 +1234,11 @@ public class AdminReportController {
         List<Document> students = quiz.getList("students", Document.class);
         ArrayList<ObjectId> studentsIdBeforeFilter = new ArrayList<>();
 
-        boolean payByStudent = (boolean)quiz.getOrDefault("pay_by_student", false);
+        boolean payByStudent = (boolean) quiz.getOrDefault("pay_by_student", false);
 
         for (Document student : students) {
 
-            if(payByStudent && !student.containsKey("paid"))
+            if (payByStudent && !student.containsKey("paid"))
                 continue;
 
             studentsIdBeforeFilter.add(student.getObjectId("_id"));
@@ -1328,7 +1325,7 @@ public class AdminReportController {
             if (questionsMark.size() != questions.size())
                 return JSON_NOT_UNKNOWN;
 
-            boolean useFromDatabase = (boolean)quiz.getOrDefault("database", true);
+            boolean useFromDatabase = (boolean) quiz.getOrDefault("database", true);
             List<Document> questionsList = createQuizQuestionsList(questions, questionsMark, useFromDatabase);
 
 
@@ -1363,6 +1360,124 @@ public class AdminReportController {
             System.out.println(x.getMessage());
             return null;
         }
+    }
+
+
+    public static String getKarnameReportExcel(Common db, boolean isAdmin,
+                                               ObjectId userId, ObjectId quizId) {
+
+        try {
+            Document quiz = hasAccess(db, isAdmin ? null : userId, quizId);
+
+            if (
+                    !quiz.containsKey("report_status") ||
+                            !quiz.containsKey("ranking_list") ||
+                            !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("زمان رویت نتایج هنوز فرانرسیده است.");
+
+            JSONArray jsonArray = new JSONArray();
+            ArrayList<ObjectId> userIds = new ArrayList<>();
+
+            for (Document doc : quiz.getList("ranking_list", Document.class))
+                userIds.add(doc.getObjectId("_id"));
+
+            ArrayList<Document> studentsInfo = userRepository.findByIds(
+                    userIds, true
+            );
+
+            List<Document> studentResults = quiz.getList("students", Document.class);
+
+            HashMap<ObjectId, String> stateNames = new HashMap<>();
+            int k = 0;
+
+            for (Document doc : quiz.getList("ranking_list", Document.class)) {
+
+                Document studentResult = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        studentResults, "_id", doc.getObjectId("_id")
+                );
+                if (studentResult == null)
+                    continue;
+
+                Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", doc.getObjectId("_id").toString())
+                        .put("name", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
+                        .put("taraz", stat[0])
+                        .put("cityRank", stat[3])
+                        .put("stateRank", stat[2])
+                        .put("rank", stat[1]);
+
+                JSONArray lessonsStats = new JSONArray();
+
+                int totalCorrects = 0;
+                int totalInCorrects = 0;
+                int totalWhites = 0;
+
+                for (Document lessonStat : studentResult.getList("lessons", Document.class)) {
+                    Object[] lessonStats = QuizAbstract.decode(lessonStat.get("stat", Binary.class).getData());
+                    lessonsStats.put(
+                            new JSONObject()
+                                    .put("name", lessonStat.getString("name"))
+                                    .put("percent", lessonStats[4])
+                                    .put("whites", lessonStats[1])
+                                    .put("corrects", lessonStats[2])
+                                    .put("inCorrects", lessonStats[3])
+                    );
+
+                    totalCorrects += (int) lessonStats[2];
+                    totalInCorrects += (int) lessonStats[3];
+                    totalWhites += (int) lessonStats[1];
+
+                }
+
+                jsonObject.put("lessonsStats", lessonsStats);
+
+                if (!studentsInfo.get(k).containsKey("city") ||
+                        studentsInfo.get(k).get("city") == null) {
+                    jsonObject.put("state", "نامشخص");
+                    jsonObject.put("city", "نامشخص");
+                } else {
+
+                    ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
+
+                    if (stateNames.containsKey(cityId))
+                        jsonObject.put("state", stateNames.get(cityId));
+                    else {
+                        Document city = cityRepository.findById(cityId);
+                        Document state = stateRepository.findById(city.getObjectId("state_id"));
+                        stateNames.put(cityId, state.getString("name"));
+                        jsonObject.put("state", stateNames.get(cityId));
+                    }
+
+                    jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+                }
+
+                if (
+                        !studentsInfo.get(k).containsKey("school") ||
+                                studentsInfo.get(k).get("school") == null
+                )
+                    jsonObject.put("school", "آیریسک");
+                else
+                    jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+
+                jsonObject.put("totalCorrects", totalCorrects);
+                jsonObject.put("totalInCorrects", totalInCorrects);
+                jsonObject.put("totalWhites", totalWhites);
+
+                jsonArray.put(jsonObject);
+                k++;
+            }
+
+            return generateSuccessMsg(
+                    "data", jsonArray
+            );
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
     }
 
     public static String getKarnameReport(Common db, boolean isAdmin,
@@ -1428,9 +1543,9 @@ public class AdminReportController {
                                     .put("inCorrects", lessonStats[3])
                     );
 
-                    totalCorrects += (int)lessonStats[2];
-                    totalInCorrects += (int)lessonStats[3];
-                    totalWhites += (int)lessonStats[1];
+                    totalCorrects += (int) lessonStats[2];
+                    totalInCorrects += (int) lessonStats[3];
+                    totalWhites += (int) lessonStats[1];
 
                 }
 

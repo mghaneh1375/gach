@@ -1,8 +1,8 @@
 package irysc.gachesefid.Utility;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONArray;
@@ -169,4 +169,20 @@ public class Excel {
 
     }
 
+//    public static ByteArrayInputStream createQuiz() {
+//
+//        Font headerFont = workbook.createFont();
+//        XSSFCellStyle cellStyle = workbook.createCellStyle();
+//
+//        cellStyle.setAlignment(XSSFCellStyle.ALIGN_CENTER);
+//        cellStyle.setVerticalAlignment(XSSFCellStyle.VERTICAL_CENTER);
+//        cellStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+//        cellStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
+//        headerFont.setBoldweight(Font.BOLDWEIGHT_BOLD);
+//        headerFont.setFontHeightInPoints((short) 36);
+//        cellStyle.setFont(headerFont);
+//
+//        cell.setCellStyle(cellStyle);
+//
+//    }
 }
