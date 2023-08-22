@@ -4,8 +4,10 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
@@ -36,6 +38,7 @@ public class Jobs implements Runnable {
         timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
         timer.schedule(new RemoveExpiredMeetings(), 0, ONE_DAY_MIL_SEC * 7);
 
+        timer.schedule(new CheckContentBuys(), 0, ONE_DAY_MIL_SEC);
 
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
@@ -613,5 +616,41 @@ public class Jobs implements Runnable {
         }
     }
 
+    private static class CheckContentBuys extends TimerTask {
+
+        @Override
+        public void run() {
+
+            List<Document> transactions = transactionRepository.find(and(
+                    eq("status", "success"),
+                    eq("section", OffCodeSections.CONTENT.getName())
+            ), new BasicDBObject("products", 1).append("user_id", 1).append("amount", 1));
+
+            for(Document transaction : transactions) {
+
+                ObjectId contentId = transaction.getObjectId("products");
+                ObjectId userId = transaction.getObjectId("user_id");
+
+                Document content = contentRepository.findById(contentId);
+                if(content == null)
+                    continue;
+
+                List<Document> students = content.getList("users", Document.class);
+                if(Utility.searchInDocumentsKeyValIdx(students, "_id", userId) == -1) {
+
+                    Document user = userRepository.findById(userId);
+                    System.out.println(user.getString("first_name") + " " + user.getString("last_name"));
+                    StudentContentController.registry(
+                            contentId, userId,
+                            transaction.getInteger("amount"),
+                            null, null
+                    );
+
+                }
+
+            }
+
+        }
+    }
 
 }

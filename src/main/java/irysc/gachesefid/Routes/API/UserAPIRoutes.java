@@ -1,7 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
 import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
@@ -10,7 +9,6 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
@@ -18,7 +16,6 @@ import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
-import irysc.gachesefid.Utility.SolarCalendar;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -27,7 +24,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -38,21 +34,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
-import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalField;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static com.mongodb.client.model.Updates.setOnInsert;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
-import java.time.LocalDate;
-import java.util.Locale;
 
 @Controller
 @RequestMapping(path = "/api/user")
@@ -91,34 +79,6 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/test")
     @ResponseBody
     public String test() {
-
-        if (1 == 1) {
-
-            return "ok";
-//            System.out.println();
-//            System.out.println(getFirstDayOfFutureWeek(1));
-//            System.out.println(getFirstDayOfFutureWeek(2));
-//            System.out.println(getFirstDayOfFutureWeek(3));
-//            System.out.println(getFirstDayOfFutureWeek(4));
-
-//            int userId = irysc.gachesefid.Controllers.Advisor.Utility.createUser("0018914373", "محمد قانع");
-//            System.out.println(userId);
-
-//            return "pk";
-        }
-
-        JSONArray tags2 = questionRepository.distinctTags("tags");
-        for (int i = 0; i < tags2.length(); i++) {
-            String tag = tags2.getString(i);
-            questionTagRepository.insertOne(
-                    new Document("tag", tag)
-                            .append("code", Utility.getRandIntForTag())
-            );
-        }
-
-        if (1 == 1)
-            return "s";
-
         return "s";
     }
 
