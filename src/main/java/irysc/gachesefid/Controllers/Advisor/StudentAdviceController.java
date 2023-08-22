@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Advisor;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOneModel;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -101,7 +102,7 @@ public class StudentAdviceController {
                     exists("paid_at", true)
             ), null);
 
-            if(request == null)
+            if (request == null)
                 return JSON_NOT_UNKNOWN;
 
             JSONObject tmp = new JSONObject();
@@ -291,7 +292,6 @@ public class StudentAdviceController {
                         new BasicDBObject("$set", update)
                 );
             }
-
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "action", "success",
@@ -539,15 +539,14 @@ public class StudentAdviceController {
                 if (advisorDesc != null)
                     jsonObject.put("advisorDesc", advisorDesc.getString("description"));
 
-            }
-            else {
+            } else {
 
                 JSONArray descs = new JSONArray();
 
-                for(Document advisorDesc : schedule.getList("advisors_desc", Document.class)) {
+                for (Document advisorDesc : schedule.getList("advisors_desc", Document.class)) {
 
                     Document advisor = userRepository.findById(advisorDesc.getObjectId("advisor_id"));
-                    if(advisor == null)
+                    if (advisor == null)
                         continue;
 
                     descs.put(
@@ -596,5 +595,34 @@ public class StudentAdviceController {
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String notifyAdvisorForSchedule(ObjectId scheduleId, String studentName, ObjectId studentId) {
+
+        Document schedule = scheduleRepository.findById(scheduleId);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!schedule.containsKey("advisors") ||
+                !schedule.getObjectId("user_id").equals(studentId)
+        )
+            return JSON_NOT_ACCESS;
+
+        int d = Utility.convertStringToDate(schedule.getString("week_start_at"));
+        int today = Utility.getToday();
+
+        if (d > today)
+            return JSON_NOT_ACCESS;
+
+        for(ObjectId advisorId : schedule.getList("advisors", ObjectId.class)) {
+
+            Document advisor = userRepository.findById(advisorId);
+            if (advisor != null) {
+                AdvisorController.createNotifForAdvisor(advisor, studentName, "karbargDone");
+            }
+
+        }
+
+        return JSON_OK;
     }
 }

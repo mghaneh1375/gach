@@ -154,22 +154,39 @@ public class EscapeQuizController extends QuizAbstract {
 
         boolean isCorrect = questionAnswer.toString().equals(stdAns.toString());
 
-        if(isCorrect && stdAnswers.get(idx) != null && stdAnswers.get(idx).containsKey("ans"))
+        if(isCorrect && stdAnswers.get(idx) != null && stdAnswers.get(idx).containsKey("ans")) {
+
+            if(idx == answers.size() - 1 && !student.containsKey("can_continue")) {
+                student.put("can_continue", false);
+                escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+            }
+
             return true;
+        }
 
         Document d = stdAnswers.get(idx) == null ? new Document("tries", 0) : stdAnswers.get(idx);
 
         int maxTry = doc.getInteger("max_try");
 
-        if (d.getInteger("tries") >= maxTry)
+        if (d.getInteger("tries") >= maxTry) {
+            if(!student.containsKey("can_continue")) {
+                student.put("can_continue", false);
+                escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+            }
             throw new InvalidFieldsException("شما حداکثر می توانید " + maxTry + " بار به این سوال پاسخ دهید");
+        }
 
         d.put("tries", d.getInteger("tries") + 1);
 
         if (isCorrect) {
             d.put("ans", stdAns);
             d.put("answer_at", System.currentTimeMillis());
+
+            if(idx == answers.size() - 1)
+                student.put("can_continue", false);
         }
+        else if(d.getInteger("tries") == maxTry)
+            student.put("can_continue", false);
 
         stdAnswers.set(idx, d);
         student.put("answers", stdAnswers);
@@ -854,8 +871,7 @@ public class EscapeQuizController extends QuizAbstract {
         try {
             questionsCount = quiz.get("questions", Document.class)
                     .getList("_ids", ObjectId.class).size();
-        } catch (Exception ignore) {
-        }
+        } catch (Exception ignore) {}
 
         long curr = System.currentTimeMillis();
 
@@ -907,7 +923,6 @@ public class EscapeQuizController extends QuizAbstract {
                     for (String attach : quiz.getList("attaches", String.class))
                         attaches.put(STATICS_SERVER + EscapeQuizRepository.FOLDER + "/" + attach);
                 }
-                ;
 
                 jsonObject.put("descBefore", quiz.getOrDefault("desc", ""));
                 jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));

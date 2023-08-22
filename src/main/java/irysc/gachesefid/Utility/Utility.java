@@ -270,7 +270,8 @@ public class Utility {
     }
 
     public static boolean isValidPassword(String in) {
-        return passwordStrengthPattern.matcher(convertPersianDigits(in)).matches();
+        return in.length() >= 6;
+//        return passwordStrengthPattern.matcher(convertPersianDigits(in)).matches();
     }
 
     public static boolean isValidNum(String in) {

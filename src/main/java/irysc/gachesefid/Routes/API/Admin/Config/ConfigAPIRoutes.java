@@ -39,6 +39,14 @@ public class ConfigAPIRoutes extends Router {
         return ConfigController.getCert();
     }
 
+    @GetMapping(path = "/getShop")
+    @ResponseBody
+    public String getShop(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ConfigController.getShop();
+    }
+
     //todo : json fields in this section
 
     @PutMapping(path = "/update")
@@ -72,7 +80,9 @@ public class ConfigAPIRoutes extends Router {
                                          "forthRankCertId", "fifthRankCertId",
                                          "minQuestionForCustomQuiz", "moneyRateCoef",
                                          "maxQuestionPerQuiz", "hwPerStudentPrice",
-                                         "minAdvicePrice", "maxVideoCallPerMonth"
+                                         "minAdvicePrice", "maxVideoCallPerMonth",
+                                         "minBuyAmountForShop", "percentOfShopBuy",
+                                         "createShopOffVisibility"
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -94,6 +104,7 @@ public class ConfigAPIRoutes extends Router {
                                          ObjectId.class, ObjectId.class, Integer.class,
                                          Number.class, Positive.class, Positive.class,
                                          Positive.class, Positive.class,
+                                         Positive.class, Positive.class, Boolean.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

@@ -42,37 +42,7 @@ public class Utility {
 
     }
 
-    public static String roomUrl(int roomId) {
-
-        HttpResponse<JsonNode> response;
-        try {
-            response = Unirest.post(
-                    SKY_ROOM_URL
-            ).header("content-type", "application/json").body(
-                    new JSONObject()
-                            .put("action", "getRoomUrl")
-                            .put("params", new JSONObject()
-                                    .put("room_id", roomId)
-                                    .put("language", "fa")
-                            )
-            ).asJson();
-        } catch (UnirestException e) {
-            return null;
-        }
-
-        if (response.getStatus() == 200) {
-
-            JSONObject jsonObject = response.getBody().getObject();
-
-            if (jsonObject.getBoolean("ok"))
-                return jsonObject.getString("result");
-        }
-
-        return null;
-
-    }
-
-    public static int createMeeting(String title) {
+    public static int createMeeting(String title, String roomUrl) {
 
         HttpResponse<JsonNode> response;
         try {
@@ -102,7 +72,7 @@ public class Utility {
                         ).header("content-type", "application/json").body(
                                 new JSONObject().put("action", "createRoom")
                                         .put("params", new JSONObject()
-                                                .put("name", "consulting-" + curr)
+                                                .put("name", roomUrl)
                                                 .put("title", title + curr)
                                                 .put("guest_login", false)
                                                 .put("op_login_first", false)

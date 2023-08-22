@@ -386,26 +386,28 @@ public class AdvisorController {
         if (advisorMeetingsCount >= maxMeetingPerAdvisorInMonth)
             return generateErr("شما در هر ماه می توانید حداکثر " + maxMeetingPerAdvisorInMonth + " جلسه ملاقات بسازید");
 
-        int roomId = irysc.gachesefid.Controllers.Advisor.Utility.createMeeting("جلسه مشاوره " + name + " - " + studentName);
+        String roomUrl = "consulting-" + curr;
+
+        int roomId = irysc.gachesefid.Controllers.Advisor.Utility.createMeeting("جلسه مشاوره " + name + " - " + studentName, roomUrl);
         if (roomId == -1)
             return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");
 
-        String roomUrl = irysc.gachesefid.Controllers.Advisor.Utility.roomUrl(roomId);
+        String url = "https://www.skyroom.online/ch/irysc/" + roomUrl;
 
         Document document = new Document("advisor_id", advisorId)
                 .append("student_id", studentId)
                 .append("created_at", curr)
                 .append("room_id", roomId)
+                .append("url", url)
                 .append("advisor_sky_id", advisorSkyRoomId)
                 .append("student_sky_id", studentSkyRoomId);
-
-        if (roomUrl != null)
-            document.append("url", roomUrl);
 
         advisorMeetingRepository.insertOne(document);
         addUserToClass(studentSkyRoomId, advisorSkyRoomId, roomId);
 
-        return generateSuccessMsg("url", roomUrl);
+        createNotifForAdvisor(std, url, "createRoom");
+
+        return generateSuccessMsg("url", url);
     }
 
     public static String getMyCurrentRoomForAdvisor(ObjectId advisorId) {
@@ -630,14 +632,6 @@ public class AdvisorController {
 
     public static String request(Document user, ObjectId advisorId, String planId) {
 
-//        if (advisorRequestsRepository.count(
-//                and(
-//                        eq("user_id", user.getObjectId("_id")),
-//                        eq("answer", "pending")
-//                )) > 0
-//        )
-//            return generateErr("شما تنها یک درخواست پاسخ داده نشده می توانید داشته باشید");
-
         if (!planId.equals("-1") && !ObjectId.isValid(planId))
             return JSON_NOT_VALID_PARAMS;
 
@@ -650,6 +644,13 @@ public class AdvisorController {
         if (user.containsKey("my_advisors") &&
                 user.getList("my_advisors", ObjectId.class).contains(advisorId))
             return generateErr("مشاور موردنظر هم اکنون به عنوان مشاور شما می باشد");
+
+        if (advisorRequestsRepository.count(and(
+                eq("answer", "pending"),
+                eq("user_id", user.getObjectId("_id")),
+                eq("advisor_id", advisorId)
+        )) > 0)
+            return generateErr("شما در حال حاضر درخواست تعیین وضعیت نشده ای برای این مشاور دارید");
 
         if (!(boolean) advisor.getOrDefault("accept_std", true))
             return JSON_NOT_ACCESS;
@@ -699,6 +700,11 @@ public class AdvisorController {
 
         ObjectId id = advisorRequestsRepository.insertOneWithReturnId(newReq);
 
+        createNotifForAdvisor(advisor,
+                user.getString("first_name") + " " + user.getString("last_name"),
+                "request"
+        );
+
         JSONObject jsonObject = new JSONObject()
                 .put("advisorId", advisorId.toString())
                 .put("id", id.toString())
@@ -732,9 +738,113 @@ public class AdvisorController {
         return false;
     }
 
-    public static void setAdvisor(Document student, Document advisor) {
+    public static void createNotifForAdvisor(Document advisor, String studentName, String mode) {
 
-//        cancelAdvisor(student, advisor, false);
+        String advisorName = advisor.getString("first_name") + " " + advisor.getString("last_name");
+
+        if (advisor.containsKey("phone"))
+            sendSMSWithTemplate(advisor.getString("phone"), 815,
+                    new PairValue("name", advisorName)
+            );
+
+        long curr = System.currentTimeMillis();
+
+        String title;
+        String msg = "<p>" +  "سلام " + advisorName + "<br/>";
+
+        switch (mode) {
+            case "finalize":
+                title = "پرداخت و نهایی سازی مشاور توسط دانش آموز";
+                msg +=  "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
+                break;
+            case "request":
+                title = "درخواست مشاوره";
+                msg += "دانش آموز " + studentName + " از شما درخواست کرده تا یک ماه مشاور ایشان باشید." + "<br/>" + "از پیشخوان بخش مشاوره سوابق ایشان را بررسی کرده و در صورت موافقت، تایید کنید." + "<br/>" + "شاد باشید";
+                break;
+            case "acceptRequest":
+                title = "تایید دانش آموز توسط مشاور";
+                msg += "درخواست شما برای مشاوره، توسط " + studentName + " پذیرفته شد." + "<br/>" + "با نهایی کردن پرداخت، فرایند مشاوره آغاز می\u200Cشود.";
+                break;
+            case "rejectRequest":
+                title = "رد دانش آموز توسط مشاور";
+                msg += "درخواست شما برای مشاوره، توسط " + studentName + " رد شد.";
+                break;
+            case "createRoom":
+                title = "ایجاد اتاق جلسه";
+                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                break;
+            case "advisorQuiz":
+                title = "تعریف آزمون توسط مشاور";
+                msg += "یک آزمون ویژه توسط مشاور برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مشاور -> مشاور من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "schoolQuiz":
+                title = "تعریف آزمون توسط مدرسه";
+                msg += "یک آزمون ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "hw":
+                title = "تعریف تمرین توسط مدرسه";
+                msg += "یک تمرین ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> تمرین ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "karbarg":
+            case "karbargDone":
+                if(mode.equals("karbarg"))
+                    title = "به روزرسانی برنامه توسط مشاور";
+                else
+                    title = "به روزرسانی برنامه توسط دانش\u200Cآموز";
+                msg += "برنامه هفتگی توسط " + studentName + " به\u200Cروزرسانی شد." + "<br/>" + "شاد باشید :)";
+                break;
+            default:
+                title = "";
+                msg = "";
+        }
+
+        msg += "</p>";
+
+        ObjectId notifId = new ObjectId();
+        Document notif = new Document("_id", notifId)
+                .append("users_count", 1)
+                .append("title", title)
+                .append("text", msg)
+                .append("send_via", "site")
+                .append("created_at", curr)
+                .append("users", new ArrayList<ObjectId>() {{
+                    add(advisor.getObjectId("_id"));
+                }});
+
+        List<Document> events = (List<Document>) advisor.getOrDefault("events", new ArrayList<Document>());
+        events.add(
+                new Document("created_at", curr)
+                        .append("notif_id", notifId)
+                        .append("seen", false)
+        );
+
+        advisor.put("events", events);
+        notifRepository.insertOne(notif);
+    }
+
+    public static String notifyStudentForSchedule(ObjectId scheduleId,
+                                                  String advisorName,
+                                                  ObjectId advisorId
+    ) {
+
+        Document schedule = scheduleRepository.findById(scheduleId);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        if(!schedule.containsKey("advisors") ||
+                !schedule.getList("advisors", ObjectId.class).contains(advisorId)
+        )
+            return JSON_NOT_ACCESS;
+
+        Document student = userRepository.findById(schedule.getObjectId("user_id"));
+        if(student == null)
+            return JSON_NOT_UNKNOWN;
+
+        createNotifForAdvisor(student, advisorName, "karbarg");
+        return JSON_OK;
+    }
+
+    public static void setAdvisor(Document student, Document advisor) {
 
         List<ObjectId> myAdvisors = (List<ObjectId>) student.getOrDefault("my_advisors", new ArrayList<>());
         myAdvisors.add(advisor.getObjectId("_id"));
@@ -743,6 +853,9 @@ public class AdvisorController {
         userRepository.replaceOneWithoutClearCache(student.getObjectId("_id"), student);
 
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
+
+        String studentName = student.getString("first_name") + " " + student.getString("last_name");
+        createNotifForAdvisor(advisor, studentName, "finalize");
 
         int idx = Utility.searchInDocumentsKeyValIdx(students, "_id", student.getObjectId("_id"));
 
@@ -776,16 +889,17 @@ public class AdvisorController {
             req.put("answer", "reject");
             req.put("answer_at", System.currentTimeMillis());
         } else {
-
-//            Document student = userRepository.findById(req.getObjectId("user_id"));
-//            if (student == null)
-//                return JSON_NOT_UNKNOWN;
-//
-//            setAdvisor(student, advisor);
-
             req.put("answer", "accept");
             req.put("answer_at", System.currentTimeMillis());
+        }
 
+        Document user = userRepository.findById(req.getObjectId("user_id"));
+        if(user != null) {
+            createNotifForAdvisor(
+                    user,
+                    advisor.getString("first_name") + " " + advisor.getString("last_name"),
+                    answer.equalsIgnoreCase(YesOrNo.NO.getName()) ? "rejectRequest" : "acceptRequest"
+            );
         }
 
         advisorRequestsRepository.replaceOne(reqId, req);

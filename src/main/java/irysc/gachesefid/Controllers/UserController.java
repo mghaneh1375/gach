@@ -87,8 +87,10 @@ public class UserController {
 
     public static String signUp(JSONObject jsonObject) {
 
-        if (!EnumValidatorImp.isValid(jsonObject.getString("authVia"), AuthVia.class))
-            return JSON_NOT_VALID_PARAMS;
+        if(jsonObject.getString("firstName").length() < 3 ||
+                jsonObject.getString("lastName").length() < 3
+        )
+            return generateErr("نام/نام خانوادگی باید حداقل 3 کاراکتر باشد");
 
         String authVia = jsonObject.getString("authVia");
 
@@ -399,17 +401,35 @@ public class UserController {
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             throw new InvalidFieldsException("زمان توکن شما منقضی شده است.");
 
+        if(
+                doc.get("first_name") == null || doc.get("last_name") == null ||
+                        doc.get("NID") == null || doc.getString("first_name").length() < 3 ||
+                        doc.getString("last_name").length() < 3
+        )
+            throw new InvalidFieldsException("داده ها معتبر نمی باشند");
+
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
         avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
         avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
+
+        ArrayList<Bson> filters = new ArrayList<>();
+
+        if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
+            filters.add(eq("phone", username));
+        else
+            filters.add(eq("mail", username));
+
+        Document credit = creditRepository.findOne(and(filters), null);
 
         Document newDoc = new Document("status", "active")
                 .append("level", false)
                 .append("first_name", doc.getString("first_name"))
                 .append("last_name", doc.getString("last_name"))
                 .append("NID", doc.getString("NID"))
-                .append("money", (double)config.getInteger("init_money"))
+                .append("money", credit == null ?
+                        (double)config.getInteger("init_money") :
+                        (double)config.getInteger("init_money") + ((Number)credit.get("credit")).doubleValue())
                 .append("coin", config.getDouble("init_coin"))
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())

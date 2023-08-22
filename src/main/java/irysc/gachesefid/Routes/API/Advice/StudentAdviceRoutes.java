@@ -133,7 +133,6 @@ public class StudentAdviceRoutes extends Router {
         return StudentAdviceController.myRequests(getStudentUser(request).getObjectId("_id"));
     }
 
-
     @GetMapping(value = {"myLifeStyle", "myLifeStyle/{studentId}"})
     @ResponseBody
     public String myLifeStyle(HttpServletRequest request,
@@ -336,6 +335,21 @@ public class StudentAdviceRoutes extends Router {
         return StudentAdviceController.setDoneTime(
                 getUser(request).getObjectId("_id"), id, itemId,
                 Utility.convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
+    @PostMapping(value = "notifyAdvisorForSchedule/{id}")
+    @ResponseBody
+    public String notifyAdvisorForSchedule(HttpServletRequest request,
+                              @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+
+        Document user = getUser(request);
+
+        return StudentAdviceController.notifyAdvisorForSchedule(
+                id,
+                user.getString("first_name") + " " + user.getString("last_name"),
+                user.getObjectId("_id")
         );
     }
 

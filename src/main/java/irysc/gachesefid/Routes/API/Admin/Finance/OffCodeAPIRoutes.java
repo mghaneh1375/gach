@@ -7,6 +7,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.HttpReqRespUtils;
 import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -33,6 +34,27 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 @RequestMapping(path = "/api/admin/off")
 @Validated
 public class OffCodeAPIRoutes extends Router {
+
+    @PostMapping(value = "storeFromShop")
+    @ResponseBody
+    public String storeFromShop(HttpServletRequest request,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {
+                                                "token", "firstName", "lastName",
+                                                "email", "phone", "orderId",
+                                                "total"
+                                        },
+                                        paramsType = {
+                                                String.class, String.class, String.class,
+                                                String.class, String.class, Positive.class,
+                                                Object.class
+                                        }
+                                ) @NotBlank String jsonStr) {
+        return OffCodeController.storeFromShop(
+                Utility.convertPersian(new JSONObject(jsonStr)),
+                HttpReqRespUtils.getClientIpAddressIfServletRequestExist(request)
+        );
+    }
 
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody

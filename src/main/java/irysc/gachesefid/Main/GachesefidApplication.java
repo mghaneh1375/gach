@@ -7,7 +7,6 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.NewAlert;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -19,17 +18,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
 import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Utility.Utility.printException;
 import static irysc.gachesefid.Utility.StaticValues.SCHOOLS;
 import static irysc.gachesefid.Utility.StaticValues.STUDENTS;
 import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
-import static java.util.Map.entry;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
@@ -44,6 +39,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
 //    final static private String password = "123456";
 
     final static private String dbName = "gach"; // mydb
+
+    public static HashMap<String, String> passwords = new HashMap<>();
 
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
@@ -73,6 +70,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
     public static ContentQuizRepository contentQuizRepository;
+    public static CreditRepository creditRepository;
     public static EscapeQuizQuestionRepository escapeQuizQuestionRepository;
     public static EscapeQuizRepository escapeQuizRepository;
     public static GiftRepository giftRepository;
@@ -144,6 +142,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             contentConfigRepository = new ContentConfigRepository();
             contentRepository = new ContentRepository();
             contentQuizRepository = new ContentQuizRepository();
+            creditRepository = new CreditRepository();
             escapeQuizRepository = new EscapeQuizRepository();
             escapeQuizQuestionRepository = new EscapeQuizQuestionRepository();
             giftRepository = new GiftRepository();
