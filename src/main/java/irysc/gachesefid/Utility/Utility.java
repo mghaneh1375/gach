@@ -455,6 +455,8 @@ public class Utility {
 
         for (String key : jsonObject.keySet()) {
             if(key.toLowerCase().contains("password") ||
+                    key.toLowerCase().contains("newpass") ||
+                    key.toLowerCase().contains("rnewpass") ||
                     key.equalsIgnoreCase("code") ||
                     key.equals("NID")
             )
