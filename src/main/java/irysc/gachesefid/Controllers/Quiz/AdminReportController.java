@@ -9,6 +9,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
@@ -16,6 +17,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -1363,8 +1365,8 @@ public class AdminReportController {
     }
 
 
-    public static String getKarnameReportExcel(Common db, boolean isAdmin,
-                                               ObjectId userId, ObjectId quizId) {
+    public static ByteArrayInputStream getKarnameReportExcel(Common db, boolean isAdmin,
+                                                             ObjectId userId, ObjectId quizId) {
 
         try {
             Document quiz = hasAccess(db, isAdmin ? null : userId, quizId);
@@ -1374,7 +1376,7 @@ public class AdminReportController {
                             !quiz.containsKey("ranking_list") ||
                             !quiz.getString("report_status").equalsIgnoreCase("ready")
             )
-                return generateErr("زمان رویت نتایج هنوز فرانرسیده است.");
+                return null;
 
             JSONArray jsonArray = new JSONArray();
             ArrayList<ObjectId> userIds = new ArrayList<>();
@@ -1391,6 +1393,23 @@ public class AdminReportController {
             HashMap<ObjectId, String> stateNames = new HashMap<>();
             int k = 0;
 
+            List<String> header = new ArrayList<String>(){
+                {
+                    add("نام");
+                    add("رتبه کل");
+                    add("استان");
+                    add("شهر");
+                    add("مدرسه");
+                    add("تراز");
+                    add("رتبه در استان");
+                    add("رتبه در شهر");
+                    add("تعداد کل درست");
+                    add("تعداد کل نادرست");
+                    add("تعداد کل نزده");
+                    add("آمار دروس");
+                }
+            };
+
             for (Document doc : quiz.getList("ranking_list", Document.class)) {
 
                 Document studentResult = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
@@ -1402,12 +1421,11 @@ public class AdminReportController {
                 Object[] stat = QuizAbstract.decodeFormatGeneral(doc.get("stat", Binary.class).getData());
 
                 JSONObject jsonObject = new JSONObject()
-                        .put("id", doc.getObjectId("_id").toString())
-                        .put("name", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
-                        .put("taraz", stat[0])
-                        .put("cityRank", stat[3])
-                        .put("stateRank", stat[2])
-                        .put("rank", stat[1]);
+                        .put("نام", studentsInfo.get(k).getString("first_name") + " " + studentsInfo.get(k).getString("last_name"))
+                        .put("تراز", stat[0])
+                        .put("رتبه در شهر", stat[3])
+                        .put("رتبه در استان", stat[2])
+                        .put("رتبه کل", stat[1]);
 
                 JSONArray lessonsStats = new JSONArray();
 
@@ -1419,11 +1437,11 @@ public class AdminReportController {
                     Object[] lessonStats = QuizAbstract.decode(lessonStat.get("stat", Binary.class).getData());
                     lessonsStats.put(
                             new JSONObject()
-                                    .put("name", lessonStat.getString("name"))
-                                    .put("percent", lessonStats[4])
-                                    .put("whites", lessonStats[1])
-                                    .put("corrects", lessonStats[2])
-                                    .put("inCorrects", lessonStats[3])
+                                    .put("نام", lessonStat.getString("name"))
+                                    .put("تعداد نزده", lessonStats[1])
+                                    .put("تعداد درست", lessonStats[2])
+                                    .put("تعداد نادرست", lessonStats[3])
+                                    .put("درصد", lessonStats[4])
                     );
 
                     totalCorrects += (int) lessonStats[2];
@@ -1432,50 +1450,48 @@ public class AdminReportController {
 
                 }
 
-                jsonObject.put("lessonsStats", lessonsStats);
+                jsonObject.put("آمار دروس", lessonsStats);
 
                 if (!studentsInfo.get(k).containsKey("city") ||
                         studentsInfo.get(k).get("city") == null) {
-                    jsonObject.put("state", "نامشخص");
-                    jsonObject.put("city", "نامشخص");
+                    jsonObject.put("استان", "نامشخص");
+                    jsonObject.put("شهر", "نامشخص");
                 } else {
 
                     ObjectId cityId = studentsInfo.get(k).get("city", Document.class).getObjectId("_id");
 
                     if (stateNames.containsKey(cityId))
-                        jsonObject.put("state", stateNames.get(cityId));
+                        jsonObject.put("استان", stateNames.get(cityId));
                     else {
                         Document city = cityRepository.findById(cityId);
                         Document state = stateRepository.findById(city.getObjectId("state_id"));
                         stateNames.put(cityId, state.getString("name"));
-                        jsonObject.put("state", stateNames.get(cityId));
+                        jsonObject.put("استان", stateNames.get(cityId));
                     }
 
-                    jsonObject.put("city", studentsInfo.get(k).get("city", Document.class).getString("name"));
+                    jsonObject.put("شهر", studentsInfo.get(k).get("city", Document.class).getString("name"));
                 }
 
                 if (
                         !studentsInfo.get(k).containsKey("school") ||
                                 studentsInfo.get(k).get("school") == null
                 )
-                    jsonObject.put("school", "آیریسک");
+                    jsonObject.put("مدرسه", "آیریسک");
                 else
-                    jsonObject.put("school", studentsInfo.get(k).get("school", Document.class).getString("name"));
+                    jsonObject.put("مدرسه", studentsInfo.get(k).get("school", Document.class).getString("name"));
 
-                jsonObject.put("totalCorrects", totalCorrects);
-                jsonObject.put("totalInCorrects", totalInCorrects);
-                jsonObject.put("totalWhites", totalWhites);
+                jsonObject.put("تعداد کل درست", totalCorrects);
+                jsonObject.put("تعداد کل نادرست", totalInCorrects);
+                jsonObject.put("تعداد کل نزده", totalWhites);
 
                 jsonArray.put(jsonObject);
                 k++;
             }
 
-            return generateSuccessMsg(
-                    "data", jsonArray
-            );
+            return Excel.write2(jsonArray, header);
 
         } catch (InvalidFieldsException e) {
-            return generateErr(e.getMessage());
+            return null;
         }
 
     }

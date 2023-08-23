@@ -1253,6 +1253,8 @@ public class Utility {
 
     public static void printException(Exception x) {
 
+        x.printStackTrace();
+
         System.out.println(x.getMessage());
         int limit = x.getStackTrace().length > 5 ? 5 : x.getStackTrace().length;
         for (int i = 0; i < limit; i++)

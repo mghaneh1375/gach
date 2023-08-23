@@ -4,6 +4,7 @@ import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.EscapeQuizController;
 import irysc.gachesefid.Controllers.Quiz.OnlineStandingController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
+import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -89,7 +90,7 @@ public class ReportAPIRoutes extends Router {
         return AdminReportController.getAuthorReport(
                 quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
-                        schoolQuizRepository, quizId);
+                                schoolQuizRepository, quizId);
     }
 
     @GetMapping(value = "/participantReport/{quizMode}/{quizId}")
@@ -118,7 +119,7 @@ public class ReportAPIRoutes extends Router {
 
         return AdminReportController.A1(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
@@ -132,10 +133,10 @@ public class ReportAPIRoutes extends Router {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
             return OnlineStandingController.getOnlineQuizRankingTableDetail(quizId, isAdmin);
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
             return EscapeQuizController.getRanking(quizId, isAdmin);
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
@@ -171,16 +172,16 @@ public class ReportAPIRoutes extends Router {
                     iryscQuizRepository, isAdmin ? null : "", quizId, userId, user == null
             );
 
-        if(user == null)
+        if (user == null)
             return JSON_NOT_ACCESS;
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return AdminReportController.getStudentStatCustomQuiz(quizId, user.getObjectId("_id"));
 
-        if(mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
+        if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return AdminReportController.getStudentStatContentQuiz(quizId, user.getObjectId("_id"));
 
-        if(!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
+        if (!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
         return AdminReportController.getStudentStat(
@@ -189,6 +190,34 @@ public class ReportAPIRoutes extends Router {
         );
     }
 
+
+    @GetMapping(value = "/getKarnameReportExcel/{mode}/{quizId}")
+    @ResponseBody
+    public void getKarnameReportExcel(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
+        try {
+
+//            Document user = getPrivilegeUser(request);
+//            boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+            boolean isAdmin = true;
+
+            ByteArrayInputStream byteArrayInputStream = AdminReportController.getKarnameReportExcel(
+                    mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
+                            mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                    schoolQuizRepository, isAdmin, null, quizId
+            ); //user.getObjectId("_id")
+
+            response.setContentType("application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=karname_report.xlsx");
+            IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+    }
 
     @GetMapping(value = "/karnameReport/{mode}/{quizId}")
     @ResponseBody
