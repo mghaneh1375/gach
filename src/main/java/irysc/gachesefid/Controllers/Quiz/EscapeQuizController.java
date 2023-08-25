@@ -128,7 +128,7 @@ public class EscapeQuizController extends QuizAbstract {
 
     }
 
-    public static boolean saveStudentAnswers(Document doc, Object stdAns,
+    public static PairValue saveStudentAnswers(Document doc, Object stdAns,
                                              Document student, ObjectId questionId
     ) throws InvalidFieldsException {
 
@@ -158,10 +158,12 @@ public class EscapeQuizController extends QuizAbstract {
 
             if(idx == answers.size() - 1 && !student.containsKey("can_continue")) {
                 student.put("can_continue", false);
-                escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+                student.put("success", true);
+                escapeQuizRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), doc);
+                return new PairValue(true, true);
             }
 
-            return true;
+            return new PairValue(true, false);
         }
 
         Document d = stdAnswers.get(idx) == null ? new Document("tries", 0) : stdAnswers.get(idx);
@@ -171,7 +173,7 @@ public class EscapeQuizController extends QuizAbstract {
         if (d.getInteger("tries") >= maxTry) {
             if(!student.containsKey("can_continue")) {
                 student.put("can_continue", false);
-                escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
+                escapeQuizRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), doc);
             }
             throw new InvalidFieldsException("شما حداکثر می توانید " + maxTry + " بار به این سوال پاسخ دهید");
         }
@@ -182,8 +184,10 @@ public class EscapeQuizController extends QuizAbstract {
             d.put("ans", stdAns);
             d.put("answer_at", System.currentTimeMillis());
 
-            if(idx == answers.size() - 1)
+            if(idx == answers.size() - 1) {
                 student.put("can_continue", false);
+                student.put("success", true);
+            }
         }
         else if(d.getInteger("tries") == maxTry)
             student.put("can_continue", false);
@@ -191,8 +195,8 @@ public class EscapeQuizController extends QuizAbstract {
         stdAnswers.set(idx, d);
         student.put("answers", stdAnswers);
 
-        escapeQuizRepository.replaceOne(doc.getObjectId("_id"), doc);
-        return isCorrect;
+        escapeQuizRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), doc);
+        return new PairValue(isCorrect, idx == answers.size() - 1);
     }
 
     public static String storeAnswer(ObjectId quizId, ObjectId questionId,
@@ -203,7 +207,37 @@ public class EscapeQuizController extends QuizAbstract {
             OnlineStandingController.QuizInfo a = checkStoreAnswer(studentId, quizId, true);
 
             try {
-                boolean isCorrect = saveStudentAnswers(a.quiz, answer, a.student, questionId);
+                PairValue p = saveStudentAnswers(a.quiz, answer, a.student, questionId);
+
+                boolean isCorrect = (boolean) p.getKey();
+                if(isCorrect) {
+                    if((boolean) p.getValue()) {
+
+                        Document quiz = escapeQuizRepository.findById(quizId);
+                        List<Document> students = quiz.getList("students", Document.class);
+
+                        long myFinishAt = a.student.getLong("finish_at");
+                        int rank = 1;
+
+                        for(Document student : students) {
+
+                            if(!student.containsKey("success") ||
+                                    student.getObjectId("_id").equals(studentId) ||
+                                    student.getLong("finish_at") >= myFinishAt
+                            )
+                                continue;
+
+                            rank++;
+                        }
+
+                        return generateSuccessMsg("reminder", a.reminder,
+                                new PairValue("isCorrect", true),
+                                new PairValue("rank", rank)
+                        );
+
+                    }
+                }
+
                 return generateSuccessMsg("reminder", a.reminder,
                         new PairValue("isCorrect", isCorrect)
                 );
@@ -357,7 +391,7 @@ public class EscapeQuizController extends QuizAbstract {
             stdDoc.put("start_at", curr);
 
         stdDoc.put("finish_at", curr);
-        escapeQuizRepository.replaceOne(quizId, doc);
+        escapeQuizRepository.replaceOneWithoutClearCache(quizId, doc);
 
         return a;
     }

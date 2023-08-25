@@ -40,6 +40,7 @@ import java.io.File;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -434,7 +435,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         Document user = getUser(request);
 
-        JSONObject jsonObject = Utility.convertPersian(
+        JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
         );
 
@@ -476,7 +477,7 @@ public class StudentQuizAPIRoutes extends Router {
                                           ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException {
 
-        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
         return StudentQuizController.updateOnlineQuizProfile(
                 getUserWithOutCheckCompleteness(request).getObjectId("_id"),
@@ -501,7 +502,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         Document user = getUser(request);
 
-        JSONObject jsonObject = Utility.convertPersian(
+        JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
         );
 
@@ -534,7 +535,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         Document user = getSchoolUser(request);
 
-        JSONObject jsonObject = Utility.convertPersian(
+        JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
         );
 
@@ -568,7 +569,7 @@ public class StudentQuizAPIRoutes extends Router {
 
         return EscapeQuizController.storeAnswer(
                 quizId, questionId,
-                user.getObjectId("_id"), new JSONObject(jsonStr).get("answer")
+                user.getObjectId("_id"), convertPersian(new JSONObject(jsonStr)).get("answer")
         );
     }
 
