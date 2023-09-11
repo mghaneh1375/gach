@@ -56,6 +56,13 @@ public class OffCodeAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getShopCopunReport")
+    @ResponseBody
+    public String getShopCopunReport(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return OffCodeController.getShopCopunReport();
+    }
+
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody
     public String store(HttpServletRequest request,

@@ -644,6 +644,16 @@ public class QuizAPIRoutes extends Router {
 
     }
 
+    @PutMapping(value = "resetEscapeQuiz/{quizId}/{stdId}")
+    @ResponseBody
+    public String resetEscapeQuiz(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                  @PathVariable @ObjectIdConstraint ObjectId stdId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return EscapeQuizController.reset(quizId, stdId);
+    }
+
 
     @GetMapping(value = "/getParticipants/{mode}/{quizId}")
     @ResponseBody
@@ -669,10 +679,14 @@ public class QuizAPIRoutes extends Router {
             );
         }
 
+        if (isAdmin &&
+                mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName())
+        )
+            return EscapeQuizController.getParticipants(quizId);
+
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ||
-                        mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
                         mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())
         ))
             return QuizController.getParticipants(

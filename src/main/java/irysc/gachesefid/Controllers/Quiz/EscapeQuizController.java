@@ -129,7 +129,7 @@ public class EscapeQuizController extends QuizAbstract {
     }
 
     public static PairValue saveStudentAnswers(Document doc, Object stdAns,
-                                             Document student, ObjectId questionId
+                                               Document student, ObjectId questionId
     ) throws InvalidFieldsException {
 
         if (stdAns.toString().isEmpty())
@@ -154,9 +154,9 @@ public class EscapeQuizController extends QuizAbstract {
 
         boolean isCorrect = questionAnswer.toString().equals(stdAns.toString());
 
-        if(isCorrect && stdAnswers.get(idx) != null && stdAnswers.get(idx).containsKey("ans")) {
+        if (isCorrect && stdAnswers.get(idx) != null && stdAnswers.get(idx).containsKey("ans")) {
 
-            if(idx == answers.size() - 1 && !student.containsKey("can_continue")) {
+            if (idx == answers.size() - 1 && !student.containsKey("can_continue")) {
                 student.put("can_continue", false);
                 student.put("success", true);
                 escapeQuizRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), doc);
@@ -171,7 +171,7 @@ public class EscapeQuizController extends QuizAbstract {
         int maxTry = doc.getInteger("max_try");
 
         if (d.getInteger("tries") >= maxTry) {
-            if(!student.containsKey("can_continue")) {
+            if (!student.containsKey("can_continue")) {
                 student.put("can_continue", false);
                 escapeQuizRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), doc);
             }
@@ -184,12 +184,11 @@ public class EscapeQuizController extends QuizAbstract {
             d.put("ans", stdAns);
             d.put("answer_at", System.currentTimeMillis());
 
-            if(idx == answers.size() - 1) {
+            if (idx == answers.size() - 1) {
                 student.put("can_continue", false);
                 student.put("success", true);
             }
-        }
-        else if(d.getInteger("tries") == maxTry)
+        } else if (d.getInteger("tries") == maxTry)
             student.put("can_continue", false);
 
         stdAnswers.set(idx, d);
@@ -210,8 +209,8 @@ public class EscapeQuizController extends QuizAbstract {
                 PairValue p = saveStudentAnswers(a.quiz, answer, a.student, questionId);
 
                 boolean isCorrect = (boolean) p.getKey();
-                if(isCorrect) {
-                    if((boolean) p.getValue()) {
+                if (isCorrect) {
+                    if ((boolean) p.getValue()) {
 
                         Document quiz = escapeQuizRepository.findById(quizId);
                         List<Document> students = quiz.getList("students", Document.class);
@@ -219,9 +218,9 @@ public class EscapeQuizController extends QuizAbstract {
                         long myFinishAt = a.student.getLong("finish_at");
                         int rank = 1;
 
-                        for(Document student : students) {
+                        for (Document student : students) {
 
-                            if(!student.containsKey("success") ||
+                            if (!student.containsKey("success") ||
                                     student.getObjectId("_id").equals(studentId) ||
                                     student.getLong("finish_at") >= myFinishAt
                             )
@@ -617,10 +616,10 @@ public class EscapeQuizController extends QuizAbstract {
 
                     for (Object ans : answers) {
 
-                        if(ans == null)
+                        if (ans == null)
                             continue;
 
-                        Document answer = (Document)ans;
+                        Document answer = (Document) ans;
 
                         jsonArray1.put(new JSONObject()
                                 .put("tries", answer.get("tries"))
@@ -654,6 +653,111 @@ public class EscapeQuizController extends QuizAbstract {
             this.lastComplete = lastComplete;
             this.solved = solved;
             this.userId = userId;
+        }
+    }
+
+    public static JSONObject convertStudentDocToJSON(
+            Document student, Document user
+    ) {
+        JSONObject jsonObject = new JSONObject()
+                .put("id", user.getObjectId("_id").toString());
+
+        if (student.containsKey("paid")) {
+            jsonObject.put("paid", student.get("paid"));
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+        } else {
+            jsonObject.put("name", user.getString("first_name") + " " + user.getString("last_name"));
+            jsonObject.put("NID", user.getString("NID"));
+            irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
+        }
+
+        if (student.containsKey("register_at"))
+            jsonObject.put("registerAt", getSolarDate(student.getLong("register_at")));
+
+        if (student.containsKey("start_at")) {
+            jsonObject.put("startAt", student.containsKey("start_at") && student.get("start_at") != null ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("start_at")) :
+                    ""
+            ).put("finishAt", student.containsKey("finish_at") && student.get("finish_at") != null ?
+                    irysc.gachesefid.Utility.Utility.getSolarDate(student.getLong("finish_at")) :
+                    ""
+            );
+        }
+
+        if (student.containsKey("rate")) {
+            jsonObject.put("rate", student.get("rate"))
+                    .put("rateAt", getSolarDate((Long) student.getOrDefault("rate_at", System.currentTimeMillis())));
+        }
+
+        jsonObject.put("canContinue", student.getOrDefault("can_continue", true));
+
+        int answers = 0;
+
+        List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
+
+        for (Document tmp : stdAnswers) {
+
+            if (tmp == null || !tmp.containsKey("answer_at"))
+                break;
+
+            answers++;
+        }
+
+
+        jsonObject.put("answers", answers);
+
+        return jsonObject;
+    }
+
+    public static String reset(ObjectId quizId, ObjectId studentId) {
+
+        try {
+            Document quiz = hasAccess(escapeQuizRepository, null, quizId);
+
+            List<Document> students = quiz.getList("students", Document.class);
+            Document std = searchInDocumentsKeyVal(students, "_id", studentId);
+
+            if(std == null)
+                return JSON_NOT_VALID_ID;
+
+            std.put("start_at", null);
+            std.put("finish_at", null);
+            std.remove("can_continue");
+            std.remove("answers");
+            std.remove("success");
+
+            escapeQuizRepository.replaceOneWithoutClearCache(quizId, quiz);
+        }
+        catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+
+        return JSON_OK;
+    }
+
+    public static String getParticipants(ObjectId quizId) {
+
+        try {
+            Document quiz = hasAccess(escapeQuizRepository, null, quizId);
+
+            JSONArray jsonArray = new JSONArray();
+
+            List<Document> students = quiz.getList("students", Document.class);
+
+            for (Document student : students) {
+
+                Document user = userRepository.findById(student.getObjectId("_id"));
+                if (user == null)
+                    continue;
+
+                jsonArray.put(convertStudentDocToJSON(student, user));
+            }
+
+            return irysc.gachesefid.Utility.Utility.generateSuccessMsg("students", jsonArray);
+        } catch (InvalidFieldsException x) {
+            return generateErr(
+                    x.getMessage()
+            );
         }
     }
 
@@ -697,6 +801,8 @@ public class EscapeQuizController extends QuizAbstract {
 
             if (o1.solved == o2.solved && o1.solved > 0)
                 return o1.lastComplete < o2.lastComplete ? -1 : 1;
+
+            if (o1.solved == o2.solved) return 0;
 
             return o1.solved > o2.solved ? -1 : 1;
         });
@@ -905,7 +1011,8 @@ public class EscapeQuizController extends QuizAbstract {
         try {
             questionsCount = quiz.get("questions", Document.class)
                     .getList("_ids", ObjectId.class).size();
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         long curr = System.currentTimeMillis();
 
