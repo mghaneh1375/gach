@@ -296,14 +296,22 @@ public class UserController {
             if(invitor == null)
                 return generateErr("کد معرف وارد شده معتبر نمی باشد.");
 
-            invitor = userRepository.findById(invitor.getObjectId("_id"));
+            int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
+
+            if(invitorCount < 40)
+                invitor = userRepository.findById(invitor.getObjectId("_id"));
+
             Document config = Utility.getConfig();
 
             if(config.containsKey("invite_coin")) {
-                invitor.put("coin",
-                        config.getDouble("invite_coin") +
-                                invitor.getDouble("coin")
-                );
+
+                if(invitorCount < 40) {
+                    invitor.put("coin",
+                            config.getDouble("invite_coin") +
+                                    invitor.getDouble("coin")
+                    );
+                }
+
                 user.put("coin",
                         config.getDouble("invite_coin") +
                                 user.getDouble("coin")
@@ -311,10 +319,14 @@ public class UserController {
             }
 
             if(config.containsKey("invite_money")) {
-                invitor.put("money",
-                        config.getInteger("invite_money") +
-                                ((Number)invitor.get("money")).doubleValue()
-                );
+
+                if(invitorCount < 40) {
+                    invitor.put("money",
+                            config.getInteger("invite_money") +
+                                    ((Number) invitor.get("money")).doubleValue()
+                    );
+                }
+
                 user.put("money",
                         config.getInteger("invite_money") +
                                 ((Number)user.get("money")).doubleValue()
@@ -323,9 +335,11 @@ public class UserController {
 
             user.put("invitor", invitor.getObjectId("_id"));
 
-            userRepository.replaceOne(
-                    invitor.getObjectId("_id"), invitor
-            );
+            if(invitorCount < 40) {
+                userRepository.replaceOne(
+                        invitor.getObjectId("_id"), invitor
+                );
+            }
 
             userRepository.replaceOne(
                     user.getObjectId("_id"), user
