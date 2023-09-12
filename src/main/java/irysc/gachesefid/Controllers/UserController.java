@@ -298,14 +298,14 @@ public class UserController {
 
             int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
 
-            if(invitorCount < 40)
+            if(invitorCount < 20)
                 invitor = userRepository.findById(invitor.getObjectId("_id"));
 
             Document config = Utility.getConfig();
 
             if(config.containsKey("invite_coin")) {
 
-                if(invitorCount < 40) {
+                if(invitorCount < 20) {
                     invitor.put("coin",
                             config.getDouble("invite_coin") +
                                     invitor.getDouble("coin")
@@ -320,7 +320,7 @@ public class UserController {
 
             if(config.containsKey("invite_money")) {
 
-                if(invitorCount < 40) {
+                if(invitorCount < 20) {
                     invitor.put("money",
                             config.getInteger("invite_money") +
                                     ((Number) invitor.get("money")).doubleValue()
@@ -335,7 +335,7 @@ public class UserController {
 
             user.put("invitor", invitor.getObjectId("_id"));
 
-            if(invitorCount < 40) {
+            if(invitorCount < 20) {
                 userRepository.replaceOne(
                         invitor.getObjectId("_id"), invitor
                 );
