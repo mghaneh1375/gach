@@ -273,7 +273,7 @@ public class TicketController {
 
             return generateSuccessMsg("data", fillJSON(request, true,
                     true, true, true,
-                    !request.getOrDefault("advisor_id", "").toString().equals(userId.toString()))
+                    userId != null && !request.getOrDefault("advisor_id", "").toString().equals(userId.toString()))
             );
 
         } catch (Exception x) {
