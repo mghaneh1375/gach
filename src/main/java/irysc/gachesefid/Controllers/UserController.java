@@ -197,16 +197,65 @@ public class UserController {
 
     public static String setIntroducer(Document user, String invitationCode) {
 
-        if (
-                !userRepository.exist(eq("invitation_code", invitationCode))
-        )
-            return Utility.generateErr("کد معرف وارد شده معتبر نمی باشد.");
+        if(user.containsKey("invitor"))
+            return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
+
+        Document invitor = userRepository.findOne(
+                eq("invitation_code", invitationCode),
+                new BasicDBObject("_id", 1).append("phone", 1)
+        );
+
+        if(invitor == null)
+            return generateErr("کد معرف وارد شده معتبر نمی باشد.");
+
+        int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
+        if(invitor.getOrDefault("phone", "").toString().length() < 4)
+            invitorCount = 100;
+
+        if(invitorCount < 20)
+            invitor = userRepository.findById(invitor.getObjectId("_id"));
 
         Document config = Utility.getConfig();
 
-        user.put("introduced", invitationCode);
-        user.put("money", ((Number)user.get("money")).doubleValue() + config.getInteger("invitation_money"));
-        user.put("coin", user.getInteger("coin") + config.getInteger("invitation_coin"));
+        if(config.containsKey("invite_coin")) {
+
+            if(invitorCount < 20) {
+                invitor.put("coin",
+                        config.getDouble("invite_coin") +
+                                invitor.getDouble("coin")
+                );
+            }
+
+            user.put("coin",
+                    config.getDouble("invite_coin") +
+                            user.getDouble("coin")
+            );
+        }
+
+        if(config.containsKey("invite_money")) {
+
+            if(invitorCount < 20) {
+                invitor.put("money",
+                        config.getInteger("invite_money") +
+                                ((Number) invitor.get("money")).doubleValue()
+                );
+            }
+
+            user.put("money",
+                    config.getInteger("invite_money") +
+                            ((Number)user.get("money")).doubleValue()
+            );
+        }
+
+        user.put("invitor", invitor.getObjectId("_id"));
+
+        if(invitorCount < 20) {
+            userRepository.replaceOne(
+                    invitor.getObjectId("_id"), invitor
+            );
+        }
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
 
         return JSON_OK;
     }
@@ -290,13 +339,17 @@ public class UserController {
                 return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
 
             Document invitor = userRepository.findOne(
-                    eq("invitation_code", jsonObject.getString("invitationCode")), new BasicDBObject("_id", 1)
+                    eq("invitation_code", jsonObject.getString("invitationCode")),
+                    new BasicDBObject("_id", 1).append("phone", 1)
             );
 
             if(invitor == null)
                 return generateErr("کد معرف وارد شده معتبر نمی باشد.");
 
             int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
+
+            if(invitor.getOrDefault("phone", "").toString().length() < 4)
+                invitorCount = 100;
 
             if(invitorCount < 20)
                 invitor = userRepository.findById(invitor.getObjectId("_id"));
