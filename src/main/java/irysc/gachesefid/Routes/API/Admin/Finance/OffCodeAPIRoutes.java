@@ -8,10 +8,8 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.HttpReqRespUtils;
-import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Validator.DateValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -23,7 +21,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
-import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.ne;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
@@ -61,6 +58,13 @@ public class OffCodeAPIRoutes extends Router {
     public String getShopCopunReport(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return OffCodeController.getShopCopunReport();
+    }
+
+    @GetMapping(value = "getShopCopunRevReport")
+    @ResponseBody
+    public String getShopCopunRevReport(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return OffCodeController.getShopCopunRevReport();
     }
 
     @PostMapping(value = "/storeWithExcel")

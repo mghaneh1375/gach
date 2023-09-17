@@ -44,41 +44,40 @@ public class OffCodeController {
                     .field("token", "LYqPozxUPrpDVAxqBs7vXp1knTnEgEYUrnbpqKtggn1DHDQofCn=?")
                     .asJson();
 
-            if(res.getStatus() == 200) {
+            if (res.getStatus() == 200) {
 
                 JSONArray output = new JSONArray();
                 JSONArray data = res.getBody().getObject().getJSONArray("data");
 
-                for(int i = 0; i < data.length(); i++) {
+                for (int i = 0; i < data.length(); i++) {
 
                     JSONObject jsonObject = data.getJSONObject(i);
 
-                    if(!jsonObject.has("name") || !jsonObject.has("discount") ||
+                    if (!jsonObject.has("name") || !jsonObject.has("discount") ||
                             !jsonObject.has("code")
                     )
                         continue;
 
                     String name = jsonObject.getString("name");
-                    if(!name.contains("_"))
+                    if (!name.contains("_"))
                         continue;
 
                     String[] splited = name.split("_");
-                    if(splited.length != 2)
+                    if (splited.length != 2)
                         continue;
 
-                    if(!ObjectId.isValid(splited[1]))
+                    if (!ObjectId.isValid(splited[1]))
                         continue;
 
                     long createdAt;
                     try {
                         createdAt = Long.parseLong(splited[0]);
-                    }
-                    catch (Exception xx) {
+                    } catch (Exception xx) {
                         continue;
                     }
 
                     Document user = userRepository.findById(new ObjectId(splited[1]));
-                    if(user == null)
+                    if (user == null)
                         continue;
 
                     JSONObject jsonObject1 = new JSONObject();
@@ -101,32 +100,69 @@ public class OffCodeController {
 
         return generateErr("خطا در برقراری ارتیاط");
     }
+
+    public static String getShopCopunRevReport() {
+
+        try {
+            HttpResponse<JsonNode> res = Unirest.post("https://shop.irysc.com/getReportRev.php")
+                    .header("accept", "application/json")
+                    .field("token", "LYqPozxUPrpDVAxqBs7vXp1knTnEgEYUrnbpqKtggn1DHDQofCn=?")
+                    .asJson();
+
+            if (res.getStatus() == 200) {
+
+                JSONArray output = new JSONArray();
+                JSONArray data = res.getBody().getObject().getJSONArray("data");
+
+                for (int i = 0; i < data.length(); i++) {
+
+                    JSONObject jsonObject = data.getJSONObject(i);
+
+                    if (!jsonObject.has("firstname") || !jsonObject.has("lastname") ||
+                            !jsonObject.has("telephone") || !jsonObject.has("email") ||
+                            !jsonObject.has("value") || !jsonObject.has("result_api") ||
+                            !jsonObject.has("created_at")
+                    )
+                        continue;
+
+                    output.put(jsonObject);
+                }
+
+                return generateSuccessMsg("data", output);
+            }
+
+        } catch (UnirestException e) {
+            return generateErr(e.getMessage());
+        }
+
+        return generateErr("خطا در برقراری ارتیاط");
+    }
+
     public static String storeFromShop(JSONObject jsonObject, String ip) {
 
-        if(!jsonObject.getString("token").equals(token))
+        if (!jsonObject.getString("token").equals(token))
             return JSON_NOT_ACCESS;
 
-        if(!ip.equals("31.41.35.5"))
+        if (!ip.equals("31.41.35.5"))
             return JSON_NOT_ACCESS;
 
         Document config = getConfig();
-        if(!(boolean)config.getOrDefault("create_shop_off_visibility", false))
+        if (!(boolean) config.getOrDefault("create_shop_off_visibility", false))
             return "not active";
 
         double total = Double.parseDouble(jsonObject.get("total").toString());
-        if(total < (int)config.getOrDefault("min_buy_amount_for_shop", 50000))
+        if (total < (int) config.getOrDefault("min_buy_amount_for_shop", 50000))
             return "not enough total";
 
-        double credit = (total * (int)config.getOrDefault("percent_of_shop_buy", 50)) / 100;
+        double credit = (total * (int) config.getOrDefault("percent_of_shop_buy", 50)) / 100;
 
         String phone = jsonObject.getString("phone");
         String phoneWithZero, phoneWithOutZero;
 
-        if(phone.startsWith("0")) {
+        if (phone.startsWith("0")) {
             phoneWithOutZero = phone.substring(1);
             phoneWithZero = phone;
-        }
-        else  {
+        } else {
             phoneWithOutZero = phone;
             phoneWithZero = "0" + phone;
         }
@@ -139,11 +175,11 @@ public class OffCodeController {
 
         String name = jsonObject.getString("firstName") + " " + jsonObject.getString("lastName");
 
-        if(user == null) {
+        if (user == null) {
 
             Document tmp = creditRepository.findOne(eq("phone", phoneWithZero), null);
 
-            if(tmp == null)
+            if (tmp == null)
                 creditRepository.insertOne(
                         new Document("credit", credit)
                                 .append("phone", phoneWithZero)
@@ -157,7 +193,7 @@ public class OffCodeController {
 
             sendSMSWithTemplate(phoneWithZero, 949,
                     new PairValue("name", name),
-                    new PairValue("price", (int)credit + "")
+                    new PairValue("price", (int) credit + "")
             );
 
             return "not exist";
@@ -170,7 +206,7 @@ public class OffCodeController {
         user.put("money", mainMoney + credit);
 
         sendSMSWithTemplate(phoneWithZero, 815, new PairValue("name", name));
-        String msg = "<p>" +  "سلام " + name + "<br/>";
+        String msg = "<p>" + "سلام " + name + "<br/>";
         msg += "اعتبار شما به دلیل خرید از فروشگاه آیریسک " + credit + " تومان افزایش یافت.";
         msg += "</p>";
 
@@ -203,47 +239,43 @@ public class OffCodeController {
     public static String update(ObjectId id, JSONObject jsonObject) {
 
         Document off = offcodeRepository.findById(id);
-        if(off == null)
+        if (off == null)
             return JSON_NOT_VALID_ID;
 
         String type, section;
         int amount;
         long d;
 
-        if(jsonObject.has("type")) {
+        if (jsonObject.has("type")) {
             type = jsonObject.getString("type");
             if (!EnumValidatorImp.isValid(type, OffCodeTypes.class))
                 return JSON_NOT_VALID_PARAMS;
-        }
-        else
+        } else
             type = off.getString("type");
 
-        if(jsonObject.has("amount")) {
+        if (jsonObject.has("amount")) {
             amount = jsonObject.getInt("amount");
             if (type.equals("percent") && amount > 100)
                 return JSON_NOT_VALID_PARAMS;
-        }
-        else
+        } else
             amount = off.getInteger("amount");
 
-        if(jsonObject.has("section")) {
+        if (jsonObject.has("section")) {
             section = jsonObject.getString("section");
 
             if (!EnumValidatorImp.isValid(section, OffCodeSections.class))
                 return JSON_NOT_VALID_PARAMS;
-        }
-        else
+        } else
             section = off.getString("section");
 
-        if(jsonObject.has("expireAt")) {
+        if (jsonObject.has("expireAt")) {
             d = jsonObject.getLong("expireAt");
             if (System.currentTimeMillis() > d)
                 return JSON_NOT_VALID_PARAMS;
-        }
-        else
+        } else
             d = off.getLong("expireAt");
 
-        if(jsonObject.has("code"))
+        if (jsonObject.has("code"))
             off.put("code", jsonObject.getString("code"));
 
         off.put("amount", amount);
@@ -262,7 +294,7 @@ public class OffCodeController {
                                long expireAt, String section) {
 
         String err = preStoreCheck(type, amount, expireAt, section);
-        if(err != null)
+        if (err != null)
             return err;
 
         String filename = FileUtils.uploadTempFile(file);
@@ -316,14 +348,14 @@ public class OffCodeController {
                 !jsonObject.has("items") &&
                 !jsonObject.has("counter");
 
-        if(isPublic && code == null)
+        if (isPublic && code == null)
             return JSON_NOT_VALID_PARAMS;
 
         String err = preStoreCheck(type, amount, expireAt, section);
-        if(err != null)
+        if (err != null)
             return err;
 
-        if(isPublic) {
+        if (isPublic) {
             Document newDoc = new Document("type", type)
                     .append("amount", amount)
                     .append("expire_at", expireAt)
@@ -337,7 +369,7 @@ public class OffCodeController {
             return returnAddResponse(null, new JSONArray().put(convertDocToJSON(newDoc)));
         }
 
-        if(!jsonObject.has("items"))
+        if (!jsonObject.has("items"))
             return JSON_NOT_VALID_PARAMS;
 
         JSONArray jsonArray = jsonObject.getJSONArray("items");
@@ -372,7 +404,7 @@ public class OffCodeController {
                     eq("code", code)
             ));
 
-        if(withCode != null) {
+        if (withCode != null) {
             constraints.add(
                     exists("code", withCode.equalsIgnoreCase("withCode"))
             );
@@ -388,7 +420,7 @@ public class OffCodeController {
                             exists("is_public", false),
                             eq("is_public", false)
                     )
-        );
+            );
 
         if (section != null)
             constraints.add(eq("section", section));
@@ -504,35 +536,35 @@ public class OffCodeController {
                 )
         ), null);
 
-        if(offs.size() == 0)
+        if (offs.size() == 0)
             return generateErr("کد تخفیف موردنظر اشتباه است.");
 
         Document off = null;
 
-        for(Document itr : offs) {
+        for (Document itr : offs) {
 
-            if(itr.containsKey("used") && itr.getBoolean("used"))
+            if (itr.containsKey("used") && itr.getBoolean("used"))
                 continue;
 
             off = itr;
             break;
         }
 
-        if(off == null)
+        if (off == null)
             return generateErr("شما قبلا از این کد استفاده کرده اید.");
 
-        if(off.getLong("expire_at") < System.currentTimeMillis())
+        if (off.getLong("expire_at") < System.currentTimeMillis())
             return generateErr("کد مدنظر منقضی شده است.");
 
-        if(off.containsKey("students") &&
-            off.getList("students", ObjectId.class).contains(userId)
+        if (off.containsKey("students") &&
+                off.getList("students", ObjectId.class).contains(userId)
         )
             return generateErr("شما قبلا از این کد استفاده کرده اید.");
 
-        if(!off.getString("section").equalsIgnoreCase(
+        if (!off.getString("section").equalsIgnoreCase(
                 OffCodeSections.ALL.getName())
         ) {
-            if(!section.equalsIgnoreCase(off.getString("section")))
+            if (!section.equalsIgnoreCase(off.getString("section")))
                 return generateErr("این کد تنها در قسمت " + GiftController.translateUseFor(off.getString("section")) + " قابل استفاده است.");
         }
 
