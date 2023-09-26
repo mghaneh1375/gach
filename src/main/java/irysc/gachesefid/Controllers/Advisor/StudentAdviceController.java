@@ -251,7 +251,7 @@ public class StudentAdviceController {
                     .append("created_at", curr)
                     .append("status", "success")
                     .append("section", OffCodeSections.COUNSELING.getName())
-                    .append("products", advisorId);
+                    .append("products", doc.getObjectId("_id"));
 
             if (off != null) {
                 transaction.append("off_code", off.getObjectId("_id"));
@@ -321,7 +321,7 @@ public class StudentAdviceController {
             transaction.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - userMoney), doc);
+        return goToPayment((int) (shouldPay - userMoney), transaction);
     }
 
     public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {
