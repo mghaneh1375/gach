@@ -208,7 +208,7 @@ public class SchoolQuizAPIRoutes extends Router {
                            ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getSchoolUser(request);
+        Document user = getQuizUser(request);
 
         return QuizController.finalizeQuiz(quizId,
                 user.getObjectId("_id"),
