@@ -517,7 +517,7 @@ public class PayPing {
                     .put("for", getTransactionTitle(transaction))
                     .put("account", transaction.getOrDefault("account_money", 0))
                     .put("offAmount", transaction.getOrDefault("off_amount", 0))
-                    .put("paid", transaction.getInteger("amount"))
+                    .put("paid", transaction.get("amount"))
                     .put("refId", transaction.getOrDefault("ref_id", ""))
                     .put("createdAt", getSolarDate(transaction.getLong("created_at")));
 

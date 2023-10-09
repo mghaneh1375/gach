@@ -337,13 +337,14 @@ public class ContentController {
         return Utility.returnRemoveResponse(excepts, removeIds);
     }
 
-    public static String addLesson(JSONObject jsonObject, ObjectId gradeId) {
+    public static String addLesson(Common db, JSONObject jsonObject, ObjectId gradeId) {
 
-        Document grade = gradeRepository.findById(gradeId);
+        Document grade = db.findById(gradeId);
         if (grade == null)
             return JSON_NOT_VALID_PARAMS;
 
-        List<Document> lessons = grade.getList("lessons", Document.class);
+        List<Document> lessons = grade.containsKey("lessons") ?
+                grade.getList("lessons", Document.class) : new ArrayList<>();
 
         if (Utility.searchInDocumentsKeyVal(lessons,
                 "name", jsonObject.getString("name")) != null
@@ -359,14 +360,17 @@ public class ContentController {
                 )
         );
 
-        gradeRepository.updateOne(gradeId, set("lessons", lessons));
+        if(lessons.size() == 1)
+            grade.put("lessons", lessons);
+
+        db.updateOne(gradeId, set("lessons", lessons));
 
         return generateSuccessMsg("id", newLessonId);
     }
 
-    public static String updateLesson(ObjectId gradeId, ObjectId lessonId, JSONObject jsonObject) {
+    public static String updateLesson(Common db, ObjectId gradeId, ObjectId lessonId, JSONObject jsonObject) {
 
-        Document grade = gradeRepository.findById(gradeId);
+        Document grade = db.findById(gradeId);
         if (grade == null)
             return JSON_NOT_VALID_ID;
 
@@ -383,7 +387,7 @@ public class ContentController {
                 !jsonObject.getString("gradeId").equals(gradeId.toString())
         ) {
 
-            newGrade = gradeRepository.findById(new ObjectId(jsonObject.getString("gradeId")));
+            newGrade = db.findById(new ObjectId(jsonObject.getString("gradeId")));
             if (newGrade == null)
                 return JSON_NOT_VALID_PARAMS;
         }
@@ -424,9 +428,9 @@ public class ContentController {
         boolean needClearCache = nameChange || newGrade != null;
 
 
-        gradeRepository.updateOne(gradeId, set("lessons", lessons));
+        db.updateOne(gradeId, set("lessons", lessons));
         if (newGrade != null)
-            gradeRepository.updateOne(newGrade.getObjectId("_id"), set("lessons", lessonsInNewGrade));
+            db.updateOne(newGrade.getObjectId("_id"), set("lessons", lessonsInNewGrade));
 
         if (needClearCache) {
 
@@ -452,7 +456,7 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String deleteLessons(JSONArray ids) {
+    public static String deleteLessons(Common db, JSONArray ids) {
 
         JSONArray excepts = new JSONArray();
         JSONArray doneIds = new JSONArray();
@@ -472,14 +476,14 @@ public class ContentController {
             }
 //                return generateErr("درس مورد نظر در یک/چند مبحث به کار رفته است که باید ابتدا آن ها را حذف نمایید.");
 
-            Document grade = gradeRepository.findOne(eq("lessons._id", lessonId), null);
+            Document grade = db.findOne(eq("lessons._id", lessonId), null);
             if (grade == null) {
                 excepts.put(i + 1);
                 continue;
             }
 
             ObjectId gradeId = grade.getObjectId("_id");
-            grade = gradeRepository.findById(gradeId);
+            grade = db.findById(gradeId);
 
             List<Document> lessons = grade.getList("lessons", Document.class);
             int idx = Utility.searchInDocumentsKeyValIdx(lessons, "_id", lessonId);
@@ -490,7 +494,7 @@ public class ContentController {
             }
 
             lessons.remove(idx);
-            gradeRepository.updateOne(
+            db.updateOne(
                     gradeId,
                     set("lessons", lessons)
             );
@@ -707,27 +711,29 @@ public class ContentController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getLessons() {
+    public static String getLessons(Common db) {
 
-        ArrayList<Document> docs = gradeRepository.find(null, null);
+        ArrayList<Document> docs = db.find(null, null);
         JSONArray lessonsJSON = new JSONArray();
 
         for (Document doc : docs) {
 
-            List<Document> lessons = doc.getList("lessons", Document.class);
             JSONObject gradeJSON = new JSONObject()
                     .put("name", doc.getString("name"))
                     .put("id", doc.getObjectId("_id").toString());
 
-            for (Document lesson : lessons) {
+            if(doc.containsKey("lessons")) {
 
-                JSONObject lessonJSON = new JSONObject()
-                        .put("grade", gradeJSON)
-                        .put("name", lesson.getString("name"))
-                        .put("id", lesson.getObjectId("_id").toString())
-                        .put("description", lesson.getString("description"));
+                for (Document lesson : doc.getList("lessons", Document.class)) {
 
-                lessonsJSON.put(lessonJSON);
+                    JSONObject lessonJSON = new JSONObject()
+                            .put("grade", gradeJSON)
+                            .put("name", lesson.getString("name"))
+                            .put("id", lesson.getObjectId("_id").toString())
+                            .put("description", lesson.getString("description"));
+
+                    lessonsJSON.put(lessonJSON);
+                }
             }
         }
 
@@ -735,9 +741,9 @@ public class ContentController {
     }
 
 
-    public static String getLessonsDigest() {
+    public static String getLessonsDigest(Common db, ObjectId parentId) {
 
-        ArrayList<Document> docs = gradeRepository.find(null, null);
+        ArrayList<Document> docs = db.find(parentId == null ? null : eq("_id", parentId), null);
         JSONArray lessonsJSON = new JSONArray();
 
         for (Document doc : docs) {
@@ -746,7 +752,10 @@ public class ContentController {
 
             for (Document lesson : lessons) {
                 lessonsJSON.put(new JSONObject()
-                        .put("name", lesson.getString("name") + " در " + doc.getString("name"))
+                        .put("name", parentId == null ?
+                                lesson.getString("name") + " در " + doc.getString("name") :
+                                lesson.getString("name")
+                        )
                         .put("id", lesson.getObjectId("_id").toString())
                 );
             }

@@ -181,7 +181,10 @@ public class AlertController {
         List<Document> events = user.getList("events", Document.class);
         JSONArray jsonArray = new JSONArray();
 
-        for (Document event : events) {
+        for (int i = events.size() - 1; i >= 0; i--) {
+
+            Document event = events.get(i);
+
             if(!event.getBoolean("seen")) {
 
                 Document notif = notifRepository.findById(event.getObjectId("notif_id"));

@@ -96,7 +96,7 @@ public class AdvisorController {
         int advisorMeetingsInMonth = advisorMeetingRepository.count(
                 and(
                         eq("advisor_id", advisorId),
-                        eq("user_id", studentId),
+                        eq("student_id", studentId),
                         gte("created_at", firstDayOfMonth)
                 )
         );
@@ -104,7 +104,7 @@ public class AdvisorController {
         int advisorMeetingsInLastMonth = advisorMeetingRepository.count(
                 and(
                         eq("advisor_id", advisorId),
-                        eq("user_id", studentId),
+                        eq("student_id", studentId),
                         gte("created_at", firstDayOfMonth),
                         lte("created_at", firstDayOfLastMonth)
                 )
@@ -1384,8 +1384,13 @@ public class AdvisorController {
 
         ObjectId lessonId = new ObjectId(data.getString("lessonId"));
         Document grade = gradeRepository.findOne(eq("lessons._id", lessonId), null);
-        if (grade == null)
-            return JSON_NOT_VALID;
+        if (grade == null) {
+
+            grade = branchRepository.findOne(eq("lessons._id", lessonId), null);
+
+            if(grade == null)
+                return JSON_NOT_VALID;
+        }
 
         Document lesson = searchInDocumentsKeyVal(
                 grade.getList("lessons", Document.class),

@@ -24,6 +24,7 @@ import javax.validation.constraints.NotNull;
 import static irysc.gachesefid.Main.GachesefidApplication.branchRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.gradeRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.printException;
 
@@ -87,9 +88,10 @@ public class ContentAPIRoutes extends Router {
         return ContentController.addGrade(new JSONObject(jsonStr).getString("name"));
     }
 
-    @PostMapping(value = "/addLesson/{gradeId}")
+    @PostMapping(value = "/addLesson/{mode}/{gradeId}")
     @ResponseBody
     public String addLesson(HttpServletRequest request,
+                            @PathVariable @NotBlank String mode,
                             @PathVariable @ObjectIdConstraint ObjectId gradeId,
                             @RequestBody @StrongJSONConstraint(params = {"name"},
                                     paramsType = {String.class},
@@ -97,8 +99,16 @@ public class ContentAPIRoutes extends Router {
                                     optionalsType = {String.class}
                             ) String json)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (!mode.equalsIgnoreCase("grade") && !mode.equalsIgnoreCase("branch"))
+            return JSON_NOT_VALID_PARAMS;
+
         getAdminPrivilegeUserVoid(request);
-        return ContentController.addLesson(new JSONObject(json), gradeId);
+
+        return ContentController.addLesson(
+                mode.equalsIgnoreCase("grade") ? gradeRepository : branchRepository,
+                new JSONObject(json), gradeId
+        );
     }
 
     @PostMapping(value = "/addSubject/{gradeId}/{lessonId}")
@@ -163,9 +173,10 @@ public class ContentAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "/updateLesson/{gradeId}/{lessonId}")
+    @PutMapping(value = "/updateLesson/{mode}/{gradeId}/{lessonId}")
     @ResponseBody
     public String updateLesson(HttpServletRequest request,
+                               @PathVariable @NotBlank String mode,
                                @PathVariable @ObjectIdConstraint ObjectId gradeId,
                                @PathVariable @ObjectIdConstraint ObjectId lessonId,
                                @RequestBody @StrongJSONConstraint(
@@ -177,8 +188,15 @@ public class ContentAPIRoutes extends Router {
                                        }
                                ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (!mode.equalsIgnoreCase("grade") && !mode.equalsIgnoreCase("branch"))
+            return JSON_NOT_VALID_PARAMS;
+
         getAdminPrivilegeUserVoid(request);
-        return ContentController.updateLesson(gradeId, lessonId, new JSONObject(jsonStr));
+        return ContentController.updateLesson(
+                mode.equalsIgnoreCase("grade") ? gradeRepository : branchRepository,
+                gradeId, lessonId, new JSONObject(jsonStr)
+        );
     }
 
     @PutMapping(value = "/updateSubject/{subjectId}")
@@ -211,24 +229,32 @@ public class ContentAPIRoutes extends Router {
     @DeleteMapping(value = "/deleteGrades")
     @ResponseBody
     public String deleteGrades(HttpServletRequest request,
-                              @RequestBody @StrongJSONConstraint(
-                                      params = {"items"},
-                                      paramsType = {JSONArray.class}
-                              ) @NotBlank String jsonStr)
+                               @RequestBody @StrongJSONConstraint(
+                                       params = {"items"},
+                                       paramsType = {JSONArray.class}
+                               ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ContentController.deleteGrade(new JSONObject(jsonStr).getJSONArray("items"));
     }
 
-    @DeleteMapping(value = "/deleteLessons")
+    @DeleteMapping(value = "/deleteLessons/{mode}")
     @ResponseBody
     public String deleteLessons(HttpServletRequest request,
-                               @RequestBody @StrongJSONConstraint(
-                                       params = {"items"},
-                                       paramsType = {JSONArray.class}) @NotBlank String jsonStr
+                                @PathVariable @NotBlank String mode,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"items"},
+                                        paramsType = {JSONArray.class}) @NotBlank String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
+
+        if (!mode.equalsIgnoreCase("grade") && !mode.equalsIgnoreCase("branch"))
+            return JSON_NOT_VALID_PARAMS;
+
         getAdminPrivilegeUserVoid(request);
-        return ContentController.deleteLessons(new JSONObject(jsonStr).getJSONArray("items"));
+        return ContentController.deleteLessons(
+                mode.equalsIgnoreCase("grade") ? gradeRepository : branchRepository,
+                new JSONObject(jsonStr).getJSONArray("items")
+        );
     }
 
     @DeleteMapping(value = "/deleteSubjects")
@@ -237,7 +263,7 @@ public class ContentAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {"items"},
                                         paramsType = {JSONArray.class}
-                                        ) @NotBlank String jsonStr
+                                ) @NotBlank String jsonStr
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ContentController.deleteSubjects(new JSONObject(jsonStr).getJSONArray("items"));
@@ -261,16 +287,27 @@ public class ContentAPIRoutes extends Router {
         return ContentController.getGradesOrBranches(branchRepository);
     }
 
-    @GetMapping(value = "/lessons")
+    @GetMapping(value = "/lessonsInGrade")
     @ResponseBody
-    public String lessons() {
-        return ContentController.getLessons();
+    public String lessonsInGrade() {
+        return ContentController.getLessons(gradeRepository);
+    }
+
+    @GetMapping(value = "/lessonsInBranch")
+    @ResponseBody
+    public String lessonsInBranch() {
+        return ContentController.getLessons(branchRepository);
     }
 
     @GetMapping(value = "/getLessonsDigest")
     @ResponseBody
-    public String getLessonsDigest() {
-        return ContentController.getLessonsDigest();
+    public String getLessonsDigest(@RequestParam(required = false, value = "searchInBranches") Boolean searchInBranches,
+                                   @RequestParam(required = false, value = "parentId") ObjectId parentId
+    ) {
+        return ContentController.getLessonsDigest(
+                searchInBranches == null || !searchInBranches ? gradeRepository : branchRepository,
+                parentId
+        );
     }
 
 
