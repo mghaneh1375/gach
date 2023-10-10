@@ -41,6 +41,8 @@ public class OpenQuizController {
 
             checkFields(mandatoryFields, forbiddenFields, jsonObject);
             Document newDoc = QuizController.store(userId, jsonObject, "irysc");
+            newDoc.put("visibility", true);
+
             openQuizRepository.insertOne(newDoc);
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
@@ -78,6 +80,7 @@ public class OpenQuizController {
             newQuiz.append(key, quiz.get(key));
         }
 
+        newQuiz.put("visibility", true);
         openQuizRepository.insertOne(newQuiz);
         return JSON_OK;
     }
