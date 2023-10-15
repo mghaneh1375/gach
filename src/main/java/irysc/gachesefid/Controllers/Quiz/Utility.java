@@ -53,7 +53,7 @@ public class Utility {
         for (String forbiddenField : forbiddenFields) {
 
             if (keys.contains(forbiddenField)) {
-                System.out.println("dwq " + forbiddenField);
+                System.out.println(forbiddenField);
                 error = true;
                 break;
             }

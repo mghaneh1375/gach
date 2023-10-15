@@ -52,7 +52,7 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] forbiddenFields = {
             "paperTheme", "database", "isRegistrable", "isUploadable",
-            "kind", "payByStudent", "perTeam", "maxTeams", "maxTry", "shouldComplete"
+            "payByStudent", "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
 
