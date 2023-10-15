@@ -12,6 +12,7 @@ import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.FileUtils;
@@ -116,7 +117,7 @@ public class QuizAPIRoutes extends Router {
                                         String.class, String.class,
                                         Positive.class, Boolean.class,
                                         Boolean.class, Boolean.class,
-                                        KindQuiz.class, Boolean.class,
+                                        String.class, Boolean.class,
                                         Positive.class, Boolean.class,
                                         Positive.class, Positive.class,
                                         Positive.class, Boolean.class
@@ -124,8 +125,14 @@ public class QuizAPIRoutes extends Router {
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getQuizUser(request);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+        if(jsonObject.has("kind") && !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
+                !jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        Document user = getQuizUser(request);
+
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (isAdmin) {
@@ -148,7 +155,8 @@ public class QuizAPIRoutes extends Router {
 
                 return RegularQuizController.create(
                         user.getObjectId("_id"),
-                        jsonObject, mode, false
+                        jsonObject, mode, false,
+                        jsonObject.has("kind") && jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
                 );
 
             }
@@ -170,7 +178,8 @@ public class QuizAPIRoutes extends Router {
             return RegularQuizController.create(
                     user.getObjectId("_id"),
                     jsonObject, mode,
-                    !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class))
+                    !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class)),
+                    jsonObject.has("kind") && jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
             );
         }
 

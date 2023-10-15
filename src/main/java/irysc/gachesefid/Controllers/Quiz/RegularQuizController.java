@@ -55,6 +55,15 @@ public class RegularQuizController extends QuizAbstract {
             "kind", "payByStudent", "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
 
+
+    private final static String[] pdfQuizMandatoryFields = {
+            "duration"
+    };
+
+    private final static String[] forbiddenFieldsForPDFQuiz = {
+            "permute", "backEn"
+    };
+
     private final static String[] schoolForbiddenFields = {
             "paperTheme", "isRegistrable", "isUploadable",
             "kind", "startRegistry", "endRegistry", "price",
@@ -63,9 +72,12 @@ public class RegularQuizController extends QuizAbstract {
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject,
-                                String mode, boolean isAdvisor) {
+                                String mode, boolean isAdvisor, boolean withPDF) {
 
         try {
+
+            if(withPDF)
+                Utility.checkFields(pdfQuizMandatoryFields, forbiddenFieldsForPDFQuiz, jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
 
@@ -96,6 +108,9 @@ public class RegularQuizController extends QuizAbstract {
             }
 
             Document newDoc = QuizController.store(userId, jsonObject, mode);
+
+            if(withPDF)
+                newDoc.put("pdf_quiz", true);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
                 schoolQuizRepository.insertOne(newDoc);
