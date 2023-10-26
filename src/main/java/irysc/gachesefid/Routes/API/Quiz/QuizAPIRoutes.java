@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
@@ -126,7 +127,7 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
-        if(jsonObject.has("kind") && !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
+        if (jsonObject.has("kind") && !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
                 !jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
         )
             return JSON_NOT_VALID_PARAMS;
@@ -186,6 +187,94 @@ public class QuizAPIRoutes extends Router {
         return JSON_NOT_VALID_PARAMS;
     }
 
+    @PutMapping(value = "setPDFQuizQuestions/{quizId}/{qNo}")
+    @ResponseBody
+    public String setPDFQuizQuestions(HttpServletRequest request,
+                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                      @PathVariable @Min(1) @Max(100) int qNo,
+                                      @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.setPDFQuizQuestions(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, qNo, file,
+                isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
+    @PutMapping(value = "setPDFQuizSubjects/{quizId}")
+    @ResponseBody
+    public String setPDFQuizSubjects(HttpServletRequest request,
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                     @RequestBody MultipartFile file
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.setPDFQuizSubjects(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, file, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "getPDFQuizAnswerSheet/{quizId}")
+    @ResponseBody
+    public String getPDFQuizAnswerSheet(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.getPDFQuizAnswerSheet(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
+    @PutMapping(value = "setPDFQuizAnswerSheet/{quizId}")
+    @ResponseBody
+    public String setPDFQuizAnswerSheet(HttpServletRequest request,
+                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                        @RequestBody @StrongJSONConstraint(
+                                                params = {
+                                                        "answers"
+                                                },
+                                                paramsType = {
+                                                        JSONArray.class
+                                                }
+                                        ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.setPDFQuizAnswerSheet(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id"),
+                new JSONObject(jsonStr).getJSONArray("answers")
+        );
+    }
+
+    @GetMapping(value = "getPDFQuizQuestions/{quizId}")
+    @ResponseBody
+    public String getQuizQuestions(HttpServletRequest request,
+                                   @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.getPDFQuizQuestions(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
     @PostMapping(value = "/edit/{mode}/{quizId}")
     @ResponseBody
     public String edit(HttpServletRequest request,
@@ -228,7 +317,7 @@ public class QuizAPIRoutes extends Router {
                                        String.class, String.class,
                                        Positive.class, Boolean.class,
                                        Boolean.class, Boolean.class,
-                                       Boolean.class, KindQuiz.class,
+                                       Boolean.class, String.class,
                                        Boolean.class, Positive.class,
                                        Boolean.class, Positive.class,
                                        Positive.class, Positive.class, Boolean.class
@@ -236,13 +325,19 @@ public class QuizAPIRoutes extends Router {
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+        if (jsonObject.has("kind") && !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
+                !jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
         Document user = getQuizUser(request);
 
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.update(
                     selectDB(mode), null, quizId,
-                    Utility.convertPersian(new JSONObject(jsonStr)), false
+                    jsonObject, false
             );
 
 
@@ -843,9 +938,9 @@ public class QuizAPIRoutes extends Router {
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
         if (isAdmin && isIRYSCQuiz(mode)) {
-            if(mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+            if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
                 return EscapeQuizController.removeQuestions(quizId, jsonArray);
-            
+
             return QuizController.removeQuestions(selectDB(mode), quizId, jsonArray);
         }
 

@@ -24,12 +24,12 @@ public class FileUtils {
     public final static String baseDir_dev = "./src/main/";
 
     public final static String uploadDir = "/var/www/statics/";
-    public final static String uploadDir_dev = "/var/www/statics/";
-//    public final static String uploadDir_dev = "./src/main/resources/assets/";
+//    public final static String uploadDir_dev = "/var/www/statics/";
+    public final static String uploadDir_dev = "./src/main/resources/assets/";
 
     public final static String limboDir = "/var/www/statics/assets/limbo" + File.separator;
-    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
-//    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
+//    public final static String limboDir_dev = "/var/www/statics/assets/limbo" + File.separator;
+    public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
 
@@ -202,6 +202,40 @@ public class FileUtils {
                     !fileType.equals("image") && !fileType.equals("pdf") && !fileType.equals("voice") &&
                     !fileType.equals("powerpoint") && !fileType.equals("word") && !fileType.equals("video")
             )
+                return null;
+
+            return fileType;
+
+        } catch (InvalidFileTypeException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static String uploadPdfFile(MultipartFile file) {
+
+        try {
+
+            String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+
+            if (!fileType.equals("pdf"))
+                return null;
+
+            return fileType;
+
+        } catch (InvalidFileTypeException e) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static String uploadExcelFile(MultipartFile file) {
+
+        try {
+
+            String fileType = (String) FileUtils.getFileType(Objects.requireNonNull(file.getOriginalFilename())).getKey();
+
+            if (!fileType.equals("excel"))
                 return null;
 
             return fileType;

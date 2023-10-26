@@ -375,6 +375,8 @@ public class RegularQuizController extends QuizAbstract {
                 .put("end", quiz.getLong("end"))
                 .put("generalMode", AllKindQuiz.IRYSC.getName())
                 .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                .put("pdfQuiz", quiz.getOrDefault("pdf_quiz", false))
+                .put("qNo", quiz.getOrDefault("q_no", 0))
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
                 .put("isRegistrable", true)
@@ -382,11 +384,14 @@ public class RegularQuizController extends QuizAbstract {
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
 
-        int questionsCount = 0;
-        try {
-            questionsCount = quiz.get("questions", Document.class)
-                    .getList("_ids", ObjectId.class).size();
-        } catch (Exception ignore) {
+        int questionsCount = jsonObject.getInt("qNo");
+
+        if(questionsCount == 0) {
+            try {
+                questionsCount = quiz.get("questions", Document.class)
+                        .getList("_ids", ObjectId.class).size();
+            } catch (Exception ignore) {
+            }
         }
 
         if (afterBuy) {
@@ -645,7 +650,10 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     void createTaraz(Document quiz) {
-        new Taraz(quiz, iryscQuizRepository);
+        if(quiz.getBoolean("pdf_quiz", false))
+            new Taraz().PDFQuizTaraz(quiz, iryscQuizRepository);
+        else
+            new Taraz(quiz, iryscQuizRepository);
     }
 
     static class Taraz {
@@ -678,6 +686,74 @@ public class RegularQuizController extends QuizAbstract {
         private List<Document> lessonsGeneralStat;
         private boolean useFromDatabase;
         private boolean hasMinusMark;
+
+        private Document questionDoc;
+
+        void PDFQuizTaraz(Document quiz, Common db) {
+
+            this.quiz = quiz;
+            this.questionDoc = quiz.get("questions", Document.class);
+            this.hasMinusMark = (boolean) quiz.getOrDefault("minus_mark", true);
+
+//            marks = questions.getList("marks", Double.class);
+
+            students = quiz.getList("students", Document.class);
+
+            marks = new ArrayList<>();
+            for (int i = 0; i < quiz.getInteger("q_no"); i++)
+                marks.add(3.0);
+
+            lessonsStat = new ArrayList<>();
+            subjectsStat = new ArrayList<>();
+            questionsList = new ArrayList<>();
+            studentsStat = new ArrayList<>();
+            questionStats = new ArrayList<>();
+            rankingList = new ArrayList<>();
+
+            states = new HashMap<>();
+            usersCities = new HashMap<>();
+
+            cityRanking = new HashMap<>();
+            stateRanking = new HashMap<>();
+
+            citySkip = new HashMap<>();
+            stateSkip = new HashMap<>();
+
+            cityOldT = new HashMap<>();
+            stateOldT = new HashMap<>();
+            subjectsGeneralStat = new ArrayList<>();
+            lessonsGeneralStat = new ArrayList<>();
+
+            fetchSubjects();
+            initStudentStats();
+
+            doCorrectStudents();
+            calcSubjectMarkSum();
+            calcLessonMarkSum();
+
+            calcSubjectsStandardDeviationAndTaraz();
+            calcLessonsStandardDeviationAndTaraz();
+
+            for (QuestionStat aStudentsStat : studentsStat)
+                aStudentsStat.calculateTotalTaraz();
+
+            studentsStat.sort(QuestionStat::compareTo);
+
+            fetchUsersData();
+            saveStudentsStats();
+
+            prepareForCityRanking();
+            calcCityRanking();
+
+            calcSubjectsStats();
+            calcLessonsStats();
+
+            save(db);
+            if (db instanceof IRYSCQuizRepository)
+                storeInRankingTable();
+        }
+
+        Taraz() {}
 
         Taraz(Document quiz, Common db) {
 
@@ -771,6 +847,65 @@ public class RegularQuizController extends QuizAbstract {
             calcLessonsStandardDeviationAndTaraz();
 
             saveStudentStats();
+        }
+
+        private void fetchSubjects() {
+
+            int k = -1;
+            List<ObjectId> subjects = this.questionDoc.getList("subjects", ObjectId.class);
+            List<Integer> answers = this.questionDoc.getList("answers", Integer.class);
+
+            for (ObjectId subjectId : subjects) {
+
+                k++;
+
+                Document tmp = new Document("answer", answers.get(k))
+                        .append("mark", marks.get(k)).append("subject_id", subjectId)
+                        .append("kind_question", "test").append("choices_count", 4);
+
+                boolean isSubjectAdded = false;
+
+                for (QuestionStat itr : subjectsStat) {
+                    if (itr.equals(subjectId)) {
+                        isSubjectAdded = true;
+                        tmp.put("lesson_id", itr.additionalId);
+                        break;
+                    }
+                }
+
+                if (!isSubjectAdded) {
+
+                    Document subject = subjectRepository.findById(subjectId);
+
+                    Document lesson = subject.get("lesson", Document.class);
+                    ObjectId lessonId = lesson.getObjectId("_id");
+
+                    subjectsStat.add(
+                            new QuestionStat(
+                                    subjectId, subject.getString("name"), lessonId
+                            )
+                    );
+
+                    tmp.put("lesson_id", lessonId);
+
+                    boolean isLessonAdded = false;
+
+                    for (QuestionStat itr : lessonsStat) {
+                        if (itr.equals(lessonId)) {
+                            isLessonAdded = true;
+                            break;
+                        }
+                    }
+
+                    if (!isLessonAdded)
+                        lessonsStat.add(
+                                new QuestionStat(lessonId,
+                                        lesson.getString("name"))
+                        );
+                }
+
+                questionsList.add(tmp);
+            }
         }
 
         private void fetchQuestions() {

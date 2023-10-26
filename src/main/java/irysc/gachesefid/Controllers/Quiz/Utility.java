@@ -202,12 +202,10 @@ public class Utility {
 
 
                     questionObj.put("stdAns", studentAnswerObj);
-                }
-                else
+                } else
                     questionObj.put("stdAns", "");
 
-            }
-            else
+            } else
                 questionObj.put("stdAns", "");
         }
 
@@ -659,6 +657,35 @@ public class Utility {
         return buff.array();
     }
 
+    static void fillWithAnswerSheetDataPDFQuiz(JSONArray jsonArray,
+                                               List<Binary> questionStat,
+                                               List<Integer> answers,
+                                               List<Number> marks) {
+
+        for (int i = 0; i < answers.size(); i++) {
+
+            double percent = -1;
+
+            if (questionStat != null) {
+                byte[] bytes = questionStat.get(i).getData();
+                percent = ((bytes[1] & 0xff) * 100.0) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
+            }
+
+            int choicesCount = 4;
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("type", "test")
+                    .put("answer", answers.get(i))
+                    .put("mark", marks.get(i))
+                    .put("choicesCount", choicesCount);
+
+            if (percent != -1)
+                jsonObject.put("percent", Math.round((percent * 100.0) / 100.0));
+
+            jsonArray.put(jsonObject);
+        }
+
+    }
 
     static void fillWithAnswerSheetData(JSONArray jsonArray,
                                         List<Binary> questionStat,
@@ -772,10 +799,10 @@ public class Utility {
 
         if (db instanceof SchoolQuizRepository) {
 
-            if(quiz.getObjectId("created_by").equals(userId))
+            if (quiz.getObjectId("created_by").equals(userId))
                 return quiz;
 
-            else if(quiz.getString("status").equals("finish") && quiz.getBoolean("visibility") &&
+            else if (quiz.getString("status").equals("finish") && quiz.getBoolean("visibility") &&
                     searchInDocumentsKeyValIdx(
                             quiz.getList("students", Document.class),
                             "_id", userId
@@ -783,14 +810,14 @@ public class Utility {
             )
                 return quiz;
 
-            else if(quiz.getString("status").equals("semi_finish") && quiz.getBoolean("visibility")) {
+            else if (quiz.getString("status").equals("semi_finish") && quiz.getBoolean("visibility")) {
 
                 Document studentDoc = searchInDocumentsKeyVal(
                         quiz.getList("students", Document.class),
                         "_id", userId
                 );
 
-                if(studentDoc != null && studentDoc.containsKey("paid"))
+                if (studentDoc != null && studentDoc.containsKey("paid"))
                     return quiz;
 
             }
@@ -1026,6 +1053,51 @@ public class Utility {
                     stdAnsAfterFilter = stdAns;
 
                 stdAnswers.add(new PairValue(p.getKey(), stdAnsAfterFilter));
+            }
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+            return JSON_NOT_VALID_PARAMS;
+        }
+
+        if (student != null)
+            student.put("answers", Utility.getStdAnswersByteArr(stdAnswers));
+        else if (doc.containsKey("answers"))
+            doc.put("student_answers", Utility.getStdAnswersByteArr(stdAnswers));
+
+        db.replaceOne(doc.getObjectId("_id"), doc);
+        return JSON_OK;
+
+    }
+
+    public static String saveStudentAnswersInPDFQuiz(Document doc, JSONArray answers,
+                                                     Document student, Common db) {
+
+        int qNo = (Integer) doc.getOrDefault("q_no", 0);
+        int choicesCount = 4;
+
+        if (qNo != answers.length())
+            return JSON_NOT_VALID_PARAMS;
+
+        ArrayList<PairValue> stdAnswers = new ArrayList<>();
+
+        try {
+            for (int idx = 0; idx < qNo; idx++) {
+
+                String stdAns = answers.get(idx).toString();
+
+                if (stdAns.isEmpty()) {
+                    stdAnswers.add(
+                            new PairValue("test", new PairValue(choicesCount, 0))
+                    );
+                    continue;
+                }
+
+                int s = Integer.parseInt(stdAns);
+
+                if (s > choicesCount || s < 0)
+                    return JSON_NOT_VALID_PARAMS;
+
+                stdAnswers.add(new PairValue("test", new PairValue(choicesCount, s)));
             }
         } catch (Exception x) {
             System.out.println(x.getMessage());

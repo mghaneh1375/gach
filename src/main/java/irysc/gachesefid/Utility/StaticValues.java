@@ -82,7 +82,7 @@ public class StaticValues {
     public final static BasicDBObject QUIZ_DIGEST =
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("start", 1).append("end", 1)
-                    .append("start_registry", 1)
+                    .append("start_registry", 1).append("pdf_quiz", 1)
                     .append("end_registry", 1)
                     .append("report_status", 1)
                     .append("tags", 1).append("mode", 1)
@@ -93,8 +93,8 @@ public class StaticValues {
     public final static BasicDBObject QUIZ_DIGEST_MANAGEMENT =
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("start", 1).append("end", 1)
-                    .append("start_registry", 1)
-                    .append("end_registry", 1)
+                    .append("start_registry", 1).append("pdf_quiz", 1)
+                    .append("end_registry", 1).append("q_no", 1)
                     .append("visibility", 1)
                     .append("database", 1).append("status", 1)
                     .append("report_status", 1)

@@ -39,6 +39,7 @@ import static irysc.gachesefid.Controllers.Certification.AdminCertification.addU
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.Excel.getCellValue;
 import static irysc.gachesefid.Utility.FileUtils.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -46,11 +47,236 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class QuizController {
 
+    public static String setPDFQuizAnswerSheet(Common db, ObjectId quizId,
+                                               ObjectId userId, JSONArray answersJSON
+    ) {
+
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+
+            if (!doc.containsKey("q_no"))
+                return generateErr("ابتدا باید تعداد سوالات را وارد نمایید");
+
+            if (doc.getInteger("q_no") != answersJSON.length())
+                return generateErr("تعداد پاسخ ها معتبر نمی باشد.");
+
+            List<Integer> answers = new ArrayList<>();
+            List<Double> marks = new ArrayList<>();
+
+            for (int i = 0; i < answersJSON.length(); i++) {
+                answers.add(answersJSON.getInt(i));
+                marks.add(3.0);
+            }
+
+            Document questions = doc.get("questions", Document.class);
+            questions.put("answers", answers);
+            questions.put("marks", marks);
+
+            db.replaceOne(quizId, doc);
+            return JSON_OK;
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+    }
+
+    public static String getPDFQuizAnswerSheet(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+            Document doc = hasAccess(db, userId, quizId);
+
+            JSONArray jsonArray = new JSONArray();
+
+            Document questions = doc.get("questions", Document.class);
+            List<Integer> answers = questions.containsKey("answers") ?
+                    questions.getList("answers", Integer.class) :
+                    new ArrayList<>();
+
+            if (answers.size() == 0 && !doc.containsKey("q_no"))
+                return generateErr("ابتدا باید تعداد سوالات را وارد نمایید");
+
+            List<Number> marks = questions.containsKey("marks") ? questions.getList("marks", Number.class) : new ArrayList<>();
+
+            if (answers.size() == 0) {
+                for (int i = 0; i < doc.getInteger("q_no"); i++) {
+                    answers.add(0);
+                    marks.add(3);
+                }
+            } else {
+                for (int i = 0; i < doc.getInteger("q_no"); i++) {
+                    marks.add(3);
+                }
+            }
+
+            List<Binary> questionStat = null;
+
+            if (doc.containsKey("question_stat")) {
+                questionStat = doc.getList("question_stat", Binary.class);
+                if (questionStat.size() != answers.size())
+                    questionStat = null;
+            }
+//            if(answers.size() != marks.size())
+//                return JSON_NOT_UNKNOWN;
+
+            fillWithAnswerSheetDataPDFQuiz(jsonArray, questionStat, answers, marks);
+            return generateSuccessMsg("data", jsonArray);
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+    }
+
+    public static String getPDFQuizQuestions(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+
+            String base = db instanceof SchoolQuizRepository ?
+                    SchoolQuizRepository.FOLDER : IRYSCQuizRepository.FOLDER;
+
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("file", quiz.containsKey("question_file") ? STATICS_SERVER + base + "/" + quiz.getString("question_file") : "")
+                    .put("qNo", quiz.getOrDefault("q_no", 0))
+            );
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+
+    }
+
+    public static String setPDFQuizQuestions(Common db, ObjectId quizId, int qNo,
+                                             MultipartFile file, ObjectId userId
+    ) {
+
+        String base = null;
+
+        if (file != null) {
+
+            base = db instanceof SchoolQuizRepository ?
+                    SchoolQuizRepository.FOLDER : IRYSCQuizRepository.FOLDER;
+
+            if (db instanceof SchoolQuizRepository &&
+                    file.getSize() > MAX_FILE_SIZE)
+                return generateErr(
+                        "حداکثر حجم مجاز، " + MAX_FILE_SIZE + " مگ است."
+                );
+
+            String fileType = uploadPdfFile(file);
+            if (fileType == null)
+                return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+        }
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد برای این نوع از آزمون قابل فراخوانی نیست");
+
+            if (quiz.getLong("start") < System.currentTimeMillis())
+                return generateErr("آزمون موردنظر شروع شده است");
+
+            if (base != null) {
+
+                String filename = FileUtils.uploadFile(file, base);
+                if (filename == null)
+                    return JSON_UNKNOWN_UPLOAD_FILE;
+
+                quiz.put("question_file", filename);
+
+            }
+
+            quiz.put("q_no", qNo);
+            db.replaceOne(quizId, quiz);
+
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    public static String setPDFQuizSubjects(Common db, ObjectId quizId,
+                                            MultipartFile subjects, ObjectId userId
+    ) {
+
+        if (subjects == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if (db instanceof SchoolQuizRepository &&
+                subjects.getSize() > MAX_FILE_SIZE)
+            return generateErr(
+                    "حداکثر حجم مجاز، " + MAX_FILE_SIZE + " مگ است."
+            );
+
+        String fileType = uploadExcelFile(subjects);
+        if (fileType == null)
+            return generateErr("فرمت فایل موردنظر معتبر نمی باشد.");
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد برای این نوع از آزمون قابل فراخوانی نیست");
+
+            if (quiz.getLong("start") < System.currentTimeMillis())
+                return generateErr("آزمون موردنظر شروع شده است");
+
+            int qNo = quiz.getInteger("q_no", 0);
+            if(qNo == 0)
+                return generateErr("لطفا ابتدا تعداد سوالات را وارد نمایید");
+
+            String filename = FileUtils.uploadTempFile(subjects);
+            if (filename == null)
+                return JSON_UNKNOWN_UPLOAD_FILE;
+
+            ArrayList<Row> rows = Excel.read(filename);
+
+            FileUtils.removeTempFile(filename);
+
+            if (rows == null)
+                return generateErr("File is not valid");
+
+            rows.remove(0);
+            List<ObjectId> subjectIds = new ArrayList<>();
+
+            for (Row row : rows) {
+                try {
+                    int code = (int) getCellValue(row.getCell(1));
+                    Document subject = subjectRepository.findBySecKey(String.format("%03d", code));
+                    if (subject == null)
+                        return generateErr("کد " + code + " معتبر نمی باشد");
+
+                    subjectIds.add(subject.getObjectId("_id"));
+                } catch (Exception exception) {
+                    return generateErr(exception.getMessage());
+                }
+            }
+
+            if(subjectIds.size() != qNo)
+                return generateErr("تعداد مباحث با تعداد سوالات برابر نمی باشد");
+
+            quiz.get("questions", Document.class).put("subjects", subjectIds);
+            db.replaceOne(quizId, quiz);
+
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
     public static String reviewContentQuiz(ObjectId quizId) {
 
         Document quiz = contentQuizRepository.findById(quizId);
 
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
         int neededTime = ContentQuizController.calcLenStatic(quiz);
@@ -1686,7 +1912,7 @@ public class QuizController {
                 }
             }
 
-            if(db instanceof EscapeQuizRepository)
+            if (db instanceof EscapeQuizRepository)
                 return doAddQuestionsToEscapeQuiz(quiz, jsonArray, excepts);
 
             return doAddQuestionsToQuiz(db, quiz, jsonArray, excepts, 3,
@@ -2104,13 +2330,12 @@ public class QuizController {
             Document quiz = hasAccess(db, null, quizId);
             boolean isEscapeQuiz = db instanceof EscapeQuizRepository;
 
-            if(isEscapeQuiz) {
-                if(quiz.getLong("end") > System.currentTimeMillis())
+            if (isEscapeQuiz) {
+                if (quiz.getLong("end") > System.currentTimeMillis())
                     return generateErr("زمان آزمون هنوز تمام نشده است");
 
                 return EscapeQuizController.giveGifts(quiz);
-            }
-            else {
+            } else {
                 if (!quiz.containsKey("report_status") ||
                         !quiz.getString("report_status").equalsIgnoreCase("ready")
                 )
@@ -2327,7 +2552,7 @@ public class QuizController {
         ), null));
 
         long zero = 0;
-        docs.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
+        docs.sort((document, t1) -> ((long) document.getOrDefault("start", zero) - (long) t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
 
         JSONArray jsonArray = new JSONArray();
 
@@ -2342,9 +2567,9 @@ public class QuizController {
 
             Document doc = docs.get(i);
 
-            if(doc.containsKey("max_teams"))
+            if (doc.containsKey("max_teams"))
                 quizAbstract = onlineStandingController;
-            else if(!doc.containsKey("launch_mode") && !doc.containsKey("minus_mark"))
+            else if (!doc.containsKey("launch_mode") && !doc.containsKey("minus_mark"))
                 quizAbstract = escapeQuizController;
             else if (doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName()))
                 quizAbstract = regularQuizController;

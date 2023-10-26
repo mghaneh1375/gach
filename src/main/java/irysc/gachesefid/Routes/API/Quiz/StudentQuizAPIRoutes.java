@@ -16,6 +16,7 @@ import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.FileUtils;
@@ -118,12 +119,18 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "reviewQuiz/{mode}/{quizId}")
     @ResponseBody
     public String reviewQuiz(HttpServletRequest request,
-                             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                             @PathVariable String mode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) && !mode.equalsIgnoreCase("pdf"))
+            return JSON_NOT_VALID_PARAMS;
+
+        if(mode.equalsIgnoreCase("pdf"))
+            mode = AllKindQuiz.IRYSC.getName();
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.reviewCustomQuiz(
@@ -191,9 +198,14 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "launch/{mode}/{quizId}")
     @ResponseBody
     public String launch(HttpServletRequest request,
-                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+                         @PathVariable @NotBlank String mode,
                          @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
+                !mode.equalsIgnoreCase("pdf")
+        )
+            return JSON_NOT_VALID_PARAMS;
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.launchCustom(
@@ -213,6 +225,12 @@ public class StudentQuizAPIRoutes extends Router {
         if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
             return EscapeQuizController.launch(
                     quizId, getUser(request).getObjectId("_id")
+            );
+
+        if(mode.equalsIgnoreCase("pdf"))
+            return StudentQuizController.launchPDFQuiz(
+                    iryscQuizRepository, quizId,
+                    getUser(request).getObjectId("_id")
             );
 
         return StudentQuizController.launch(

@@ -178,12 +178,17 @@ public class StudentQuizController {
                 }
             }
 
+            boolean isPDFQuiz = (boolean) quiz.getOrDefault("pdf_quiz", false);
+
             Document questions =
                     quiz.get("questions", Document.class);
 
-            int qNo = 0;
+            int qNo = isPDFQuiz ? (Integer) quiz.getOrDefault("q_no", -1) : 0;
 
-            if (questions.containsKey("_ids"))
+            if (qNo == -1)
+                return generateErr("لطفا ابتدا تعداد سوالات را وارد نمایید");
+
+            if (qNo == 0 && questions.containsKey("_ids"))
                 qNo = questions.getList("_ids", ObjectId.class).size();
 
             List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
@@ -200,14 +205,19 @@ public class StudentQuizController {
                     .put("questionsNo", qNo)
                     .put("description", quiz.getOrDefault("desc", ""))
                     .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
-                    .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                    .put("mode", isPDFQuiz ? "pdf" :
+                            quiz.getOrDefault("mode", "regular").toString())
                     .put("attaches", jsonArray)
                     .put("duration", neededTime);
 
             if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return returnTashrihiQuiz(quiz, stdDoc.getList("answers", Document.class), quizJSON, true, db);
 
+            if (isPDFQuiz)
+                return returnPDFQuiz(quiz, stdDoc, true, quizJSON);
+
             return returnQuiz(quiz, stdDoc, true, quizJSON);
+
         } catch (Exception x) {
             x.printStackTrace();
             return generateErr(x.getMessage());
@@ -402,7 +412,7 @@ public class StudentQuizController {
             quizzes.addAll(openQuizRepository.find(and(filters), null));
 
         long zero = 0;
-        quizzes.sort((document, t1) -> ((long)document.getOrDefault("start", zero) - (long)t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
+        quizzes.sort((document, t1) -> ((long) document.getOrDefault("start", zero) - (long) t1.getOrDefault("start", zero)) > 0 ? 1 : -1);
 
         QuizAbstract escapeQuizController = new EscapeQuizController();
         QuizAbstract onlineStandingController = new OnlineStandingController();
@@ -461,10 +471,10 @@ public class StudentQuizController {
                         quiz, true, false, true, true
                 );
 
-                if(isEscapeQuiz &&
+                if (isEscapeQuiz &&
                         jsonObject.getString("status")
                                 .equalsIgnoreCase("inProgress") &&
-                        !(boolean)studentDoc.getOrDefault("can_continue", true)
+                        !(boolean) studentDoc.getOrDefault("can_continue", true)
                 ) {
                     jsonObject.put("status", "waitForResult");
                 }
@@ -479,10 +489,9 @@ public class StudentQuizController {
                             quizAbstract.calcLen(quiz);
 
                     int reminder;
-                    if(isOnlineStandingQuiz || isEscapeQuiz) {
+                    if (isOnlineStandingQuiz || isEscapeQuiz) {
                         reminder = ((int) (quiz.getLong("end") - curr)) / 1000;
-                    }
-                    else {
+                    } else {
                         int untilYetInSecondFormat =
                                 (int) ((curr - studentDoc.getLong("start_at")) / 1000);
 
@@ -568,12 +577,12 @@ public class StudentQuizController {
                     quiz, true, false, paid, true
             );
 
-            if(creators.containsKey(quiz.getObjectId("created_by")))
+            if (creators.containsKey(quiz.getObjectId("created_by")))
                 jsonObject.put("creator", creators.get(quiz.getObjectId("created_by")));
             else {
 
                 Document creatorDoc = userRepository.findById(quiz.getObjectId("created_by"));
-                if(creatorDoc != null) {
+                if (creatorDoc != null) {
                     jsonObject.put("creator", creatorDoc.getString("first_name") + " " + creatorDoc.getString("last_name"));
                     creators.put(quiz.getObjectId("created_by"),
                             creatorDoc.getString("first_name") + " " + creatorDoc.getString("last_name")
@@ -757,6 +766,54 @@ public class StudentQuizController {
         } catch (Exception x) {
             return null;
         }
+    }
+
+    public static String launchPDFQuiz(Common db, ObjectId quizId,
+                                       ObjectId studentId) {
+
+        try {
+            A a = checkStoreAnswerPDFQuiz(db, studentId, quizId, false);
+
+            long curr = System.currentTimeMillis();
+
+            if (a.needUpdate)
+                a.student.put("start_at", a.startAt);
+
+            a.student.put("finish_at", curr);
+            db.replaceOne(quizId, a.quiz);
+
+            List<String> attaches = (List<String>) a.quiz.getOrDefault("attaches", new ArrayList<>());
+            JSONArray jsonArray = new JSONArray();
+
+            String folderBase = db instanceof IRYSCQuizRepository ?
+                    IRYSCQuizRepository.FOLDER : SchoolQuizRepository.FOLDER;
+
+            for (String attach : attaches)
+                jsonArray.put(STATICS_SERVER + folderBase + "/" + attach);
+
+            JSONObject quizJSON = new JSONObject()
+                    .put("title", a.quiz.getString("title"))
+                    .put("id", a.quiz.getObjectId("_id").toString())
+                    .put("generalMode",
+                            db instanceof IRYSCQuizRepository ? AllKindQuiz.IRYSC.getName() : "school")
+                    .put("questionsNo", a.quiz.getInteger("q_no"))
+                    .put("description", a.quiz.getOrDefault("desc", ""))
+                    .put("mode", a.quiz.getOrDefault("mode", "regular").toString())
+                    .put("attaches", jsonArray)
+                    .put("refresh", Math.abs(new Random().nextInt(5)) + 5)
+                    .put("duration", a.neededTime)
+                    .put("reminder", a.reminder)
+                    .put("isNewPerson", !a.student.containsKey("start_at") ||
+                            a.student.get("start_at") == null ||
+                            a.student.getLong("start_at") == curr
+                    );
+
+            return returnPDFQuiz(a.quiz, a.student, false, quizJSON);
+
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+
     }
 
     public static String launch(Common db, ObjectId quizId,
@@ -983,6 +1040,60 @@ public class StudentQuizController {
         return a;
     }
 
+    private static A checkStoreAnswerPDFQuiz(Common db, ObjectId studentId,
+                                             ObjectId quizId, boolean allowDelay
+    ) throws InvalidFieldsException {
+
+        long allowedDelay = allowDelay ? 300000 : 0; // 5min
+
+        Document doc = hasProtectedAccess(db, studentId, quizId);
+
+        if (doc.getOrDefault("launch_mode", "online").toString().equalsIgnoreCase("physical"))
+            throw new InvalidFieldsException("این آزمون به صورت حضوری برگزار می شود");
+
+        long end = doc.containsKey("end") ?
+                doc.getLong("end") + allowedDelay : -1;
+
+        long curr = System.currentTimeMillis();
+
+        if (doc.containsKey("start") &&
+                (
+                        doc.getLong("start") > curr ||
+                                end < curr
+                )
+        )
+            throw new InvalidFieldsException("در زمان ارزیابی قرار نداریم.");
+
+        List<Document> students = doc.getList("students", Document.class);
+
+        Document student = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                students, "_id", studentId
+        );
+
+        int neededTime = doc.getInteger("duration") * 60;
+
+        long startAt = student.containsKey("start_at") && student.get("start_at") != null ?
+                student.getLong("start_at") : curr;
+
+        int delay = doc.containsKey("end") ?
+                (startAt + neededTime * 1000L - end) > 0 ? Math.max(
+                        0,
+                        (int) (startAt + neededTime * 1000L - end) / 1000
+                ) : 0 : 0;
+
+        int reminder = neededTime -
+                (int) ((curr - startAt) / 1000) - delay;
+
+        if (reminder + allowedDelay / 1000 <= 0)
+            throw new InvalidFieldsException("شما در این آزمون شرکت کرده اید.");
+
+        A a = new A(doc, reminder, student, startAt, neededTime);
+        if (student.getOrDefault("start_at", null) == null)
+            a.setNeedUpdate();
+
+        return a;
+    }
+
     public static String storeAnswers(Common db, ObjectId quizId,
                                       ObjectId studentId, JSONArray answers) {
 
@@ -1004,6 +1115,8 @@ public class StudentQuizController {
                 result = saveStudentTashrihiAnswers(a.quiz, answers,
                         a.student.getList("answers", Document.class), db
                 );
+            else if((boolean)a.quiz.getOrDefault("pdf_quiz", false))
+                result = saveStudentAnswersInPDFQuiz(a.quiz, answers, a.student, db);
             else
                 result = saveStudentAnswers(a.quiz, answers, a.student, db);
 
@@ -1812,6 +1925,68 @@ public class StudentQuizController {
 
         return generateSuccessMsg("data", jsonObject);
 
+    }
+
+    public static String returnPDFQuiz(Document quiz, Document stdDoc,
+                                       boolean isStatNeeded, JSONObject quizJSON) {
+
+        Document questionsDoc = quiz.get("questions", Document.class);
+        List<Document> questionsList = new ArrayList<>();
+
+        List<Double> questionsMark = (List<Double>) questionsDoc.getOrDefault(
+                "marks", new ArrayList<Double>()
+        );
+
+        List<Short> answers = (List<Short>) questionsDoc.getOrDefault(
+                "answers", new ArrayList<Short>()
+        );
+
+        Object tmp = null;
+
+        if (stdDoc != null) {
+            tmp = stdDoc.getOrDefault("answers", null);
+            if (tmp != null)
+                tmp = ((Binary) tmp).getData();
+            else
+                tmp = new byte[0];
+        }
+
+        ArrayList<PairValue> stdAnswers = tmp == null ? new ArrayList<>() : Utility.getAnswers((byte[]) tmp);
+
+        for (int i = 0; i < questionsMark.size(); i++) {
+
+            Document question = new Document("mark", questionsMark.get(i));
+
+            if (isStatNeeded)
+                question.append("answer", answers.get(i));
+
+            if (i >= stdAnswers.size())
+                question.put("stdAns", "");
+            else
+                question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+
+            questionsList.add(question);
+        }
+
+        List<Binary> questionStats;
+        if (isStatNeeded && quiz.containsKey("question_stat")) {
+            questionStats = quiz.getList("question_stat", Binary.class);
+            if (questionStats.size() != questionsMark.size())
+                questionStats = null;
+        }
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("questions", questionsList);
+        jsonObject.put("quizInfo", quizJSON);
+
+        String base =
+//                db instanceof SchoolQuizRepository ?
+//                SchoolQuizRepository.FOLDER :
+                IRYSCQuizRepository.FOLDER;
+
+        jsonObject.put("file", STATICS_SERVER + base + "/" + quiz.getString("question_file"));
+
+        return generateSuccessMsg("data", jsonObject);
     }
 
     public static String returnQuiz(Document quiz, Document stdDoc,

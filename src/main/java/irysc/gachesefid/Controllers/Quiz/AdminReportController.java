@@ -14,6 +14,7 @@ import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
+import org.hibernate.validator.internal.engine.messageinterpolation.InterpolationTerm;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -693,27 +694,51 @@ public class AdminReportController {
             Document questions = doc.get("questions", Document.class);
 
             List<Number> marks = questions.getList("marks", Number.class);
-            ArrayList<PairValue> pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
+            boolean isPDFQuiz = doc.getBoolean("pdf_quiz", false);
+            ArrayList<PairValue> pairValues = null;
+
+            if(!isPDFQuiz)
+                pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
+
             List<Binary> questionStats = null;
             if (doc.containsKey("question_stat")) {
                 questionStats = doc.getList("question_stat", Binary.class);
-                if (questionStats.size() != pairValues.size())
+                if (
+                        (isPDFQuiz && questionStats.size() != doc.getInteger("q_no")) ||
+                                (!isPDFQuiz && questionStats.size() != pairValues.size())
+                )
                     questionStats = null;
             }
 
             JSONArray answersJsonArray = new JSONArray();
-            fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
+            if(isPDFQuiz)
+                fillWithAnswerSheetDataPDFQuiz(answersJsonArray, questionStats,
+                        questions.getList("answers", Integer.class), marks
+                );
+            else
+                fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
+
             ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new byte[0])).getData());
 
-            for (int i = 0; i < pairValues.size(); i++) {
-
-                if (i >= stdAnswers.size())
-                    answersJsonArray.getJSONObject(i).put("studentAns", "");
-                else {
-                    if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
-                        answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+            if(isPDFQuiz) {
+                for (int i = 0; i < doc.getInteger("q_no"); i++) {
+                    if (i >= stdAnswers.size())
+                        answersJsonArray.getJSONObject(i).put("studentAns", "");
                     else
-                        answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+                        answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                }
+            }
+            else {
+                for (int i = 0; i < pairValues.size(); i++) {
+
+                    if (i >= stdAnswers.size())
+                        answersJsonArray.getJSONObject(i).put("studentAns", "");
+                    else {
+                        if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
+                            answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                        else
+                            answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+                    }
                 }
             }
 
