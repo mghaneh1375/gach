@@ -521,7 +521,7 @@ public class GiftController {
 
             if(
                     !config.containsKey("coin_for_fifth_time") ||
-                            coin < config.getDouble("coin_for_ffifth_time")
+                            coin < config.getDouble("coin_for_fifth_time")
             )
                 return JSON_NOT_ACCESS;
 
@@ -654,7 +654,7 @@ public class GiftController {
         else if(myGift.getString("type").equalsIgnoreCase("offcode")) {
 
             JSONObject res = new JSONObject(OffCodeController.store(new JSONObject()
-                    .put("expireAt", myGift.getLong("expire_at"))
+                    .put("expireAt", System.currentTimeMillis() + 1000000) //myGift.getLong("expire_at")
                     .put("type", myGift.getString("off_code_type"))
                     .put("amount", myGift.getInteger("amount"))
                     .put("section", myGift.getString("use_for"))
