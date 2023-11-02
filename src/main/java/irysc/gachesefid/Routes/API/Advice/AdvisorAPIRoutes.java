@@ -257,6 +257,32 @@ public class AdvisorAPIRoutes extends Router {
         );
     }
 
+    @PutMapping(value = "/updateScheduleItem/{id}")
+    @ResponseBody
+    public String updateScheduleItem(HttpServletRequest request,
+                                     @PathVariable @ObjectIdConstraint ObjectId id,
+                                     @RequestBody @StrongJSONConstraint(
+                                             params = {
+                                                     "tag", "duration"
+                                             },
+                                             paramsType = {
+                                                     ObjectId.class, Positive.class
+                                             },
+                                             optionals = {
+                                                     "startAt", "description",
+                                                     "additional"
+                                             },
+                                             optionalsType = {
+                                                     String.class, String.class,
+                                                     Positive.class
+                                             }
+                                     ) @NotBlank String jsonStr) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return AdvisorController.updateScheduleItem(
+                getAdvisorUser(request).getObjectId("_id"),
+                id, convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
     @PutMapping(value = "addItemToSchedule/{userId}")
     @ResponseBody
     public String addItemToSchedule(HttpServletRequest request,

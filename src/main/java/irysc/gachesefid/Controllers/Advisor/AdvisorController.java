@@ -1511,6 +1511,57 @@ public class AdvisorController {
         );
     }
 
+    public static String updateScheduleItem(ObjectId advisorId, ObjectId itemId, JSONObject data) {
+
+        int duration = data.getInt("duration");
+        if (duration < 15 || duration > 240)
+            return generateErr("زمان هر برنامه باید بین 15 الی 240 دقیقه باشد");
+
+        ObjectId tagId = new ObjectId(data.getString("tag"));
+        Document tag = adviseTagRepository.findById(tagId);
+        if (tag == null || tag.containsKey("deleted_at"))
+            return JSON_NOT_VALID_ID;
+
+        if (tag.containsKey("number_label") && !data.has("additional"))
+            return generateErr("لطفا " + tag.getString("number_label") + " را وارد نمایید");
+
+        Document schedule = scheduleRepository.findOne(eq("days.items._id", itemId), null);
+        if(schedule == null)
+            return JSON_NOT_VALID_ID;
+
+        schedule = scheduleRepository.findById(schedule.getObjectId("_id"));
+
+        Document item = null;
+
+        for(Document day : schedule.getList("days", Document.class)) {
+            item = searchInDocumentsKeyVal(day.getList("items", Document.class), "_id", itemId);
+            if (item != null) break;
+        }
+
+        if(item == null)
+            return JSON_NOT_UNKNOWN;
+
+        if(!item.getObjectId("advisor_id").equals(advisorId))
+            return JSON_NOT_ACCESS;
+
+        item.put("tag", tag.getString("label"));
+        item.put("duration", data.getInt("duration"));
+
+        if (data.has("startAt"))
+            item.put("start_at", data.getString("startAt"));
+
+        if (data.has("description"))
+            item.put("description", data.getString("description"));
+
+        if (tag.containsKey("number_label")) {
+            item.put("additional", data.getInt("additional"));
+            item.put("additional_label", tag.getString("number_label"));
+        }
+
+        scheduleRepository.replaceOne(schedule.getObjectId("_id"), schedule);
+        return JSON_OK;
+    }
+
     private static PairValue checkUpdatable(ObjectId advisorId, ObjectId userId,
                                             ObjectId id, boolean delete) throws InvalidFieldsException {
 

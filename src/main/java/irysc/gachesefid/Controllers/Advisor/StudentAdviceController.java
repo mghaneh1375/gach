@@ -353,10 +353,10 @@ public class StudentAdviceController {
 
             List<Document> items = doc.getList("items", Document.class);
 
-            if (Utility.searchInDocumentsKeyValIdx(
-                    items, "tag", tag.getString("label")
-            ) != -1)
-                return generateErr("تگ وارد شده در روز موردنظر موجود است");
+//            if (Utility.searchInDocumentsKeyValIdx(
+//                    items, "tag", tag.getString("label")
+//            ) != -1)
+//                return generateErr("تگ وارد شده در روز موردنظر موجود است");
 
             ObjectId newId = new ObjectId();
             Document newDoc = new Document("_id", newId)
