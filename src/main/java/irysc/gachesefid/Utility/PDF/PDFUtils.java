@@ -19,9 +19,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
 
 import static irysc.gachesefid.Controllers.Advisor.Utility.getWeekDay;
@@ -157,7 +155,10 @@ public class PDFUtils {
 
                 int idx = 0;
 
-                for(Document item : day.getList("items", Document.class)) {
+                List<Document> schedules = day.getList("items", Document.class);
+                schedules.sort(Comparator.comparingInt(o -> Integer.parseInt(o.getOrDefault("start_at", "23:59").toString().replace(":", ""))));
+
+                for(Document item : schedules) {
 
                     int localMarginTop = marginTop - 10;
                     int right = (130 + idx * 90 + calcWord(item.getString("lesson")));

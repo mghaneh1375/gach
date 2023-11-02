@@ -436,7 +436,8 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, user.getObjectId("_id")
             );
 
-        return AdminReportController.getStudentAnswerSheet(selectDB(mode), null, quizId, user.getObjectId("_id"));
+        return AdminReportController.getStudentAnswerSheet(mode.equalsIgnoreCase("school") ? schoolQuizRepository :
+                selectDB(mode), null, quizId, user.getObjectId("_id"));
     }
 
     @PostMapping(path = "buy")
