@@ -1960,7 +1960,7 @@ public class StudentQuizController {
 
         ArrayList<PairValue> stdAnswers = tmp == null ? new ArrayList<>() : Utility.getAnswers((byte[]) tmp);
 
-        for (int i = 0; i < questionsMark.size(); i++) {
+        for (int i = 0; i < answers.size(); i++) {
 
             Document question = new Document("mark", questionsMark.get(i));
 
