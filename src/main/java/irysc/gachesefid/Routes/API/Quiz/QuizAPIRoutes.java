@@ -205,17 +205,17 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "setPDFQuizSubjects/{quizId}")
+    @PutMapping(value = "setPDFQuizSubjectsAndChoicesCount/{quizId}")
     @ResponseBody
-    public String setPDFQuizSubjects(HttpServletRequest request,
-                                     @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                     @RequestBody MultipartFile file
+    public String setPDFQuizSubjectsAndChoicesCount(HttpServletRequest request,
+                                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                                    @RequestBody MultipartFile file
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getQuizUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        return QuizController.setPDFQuizSubjects(
+        return QuizController.setPDFQuizSubjectsAndChoicesCount(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
                 quizId, file, isAdmin ? null : user.getObjectId("_id")
         );
@@ -270,6 +270,21 @@ public class QuizAPIRoutes extends Router {
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         return QuizController.getPDFQuizQuestions(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "getPDFQuizSubjects/{quizId}")
+    @ResponseBody
+    public String getPDFQuizSubjects(HttpServletRequest request,
+                                     @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.getPDFQuizSubjects(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
                 quizId, isAdmin ? null : user.getObjectId("_id")
         );

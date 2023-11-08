@@ -694,6 +694,8 @@ public class AdminReportController {
             Document questions = doc.get("questions", Document.class);
 
             List<Number> marks = questions.getList("marks", Number.class);
+            List<Integer> choicesCounts = questions.getList("choices_counts", Integer.class);
+
             boolean isPDFQuiz = doc.getBoolean("pdf_quiz", false);
             ArrayList<PairValue> pairValues = null;
 
@@ -711,10 +713,11 @@ public class AdminReportController {
             }
 
             JSONArray answersJsonArray = new JSONArray();
-            if(isPDFQuiz)
+            if(isPDFQuiz) {
                 fillWithAnswerSheetDataPDFQuiz(answersJsonArray, questionStats,
-                        questions.getList("answers", Integer.class), marks
+                        questions.getList("answers", Integer.class), marks, choicesCounts
                 );
+            }
             else
                 fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
 

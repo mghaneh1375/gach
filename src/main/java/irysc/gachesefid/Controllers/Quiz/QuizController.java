@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -115,10 +116,10 @@ public class QuizController {
                 if (questionStat.size() != answers.size())
                     questionStat = null;
             }
-//            if(answers.size() != marks.size())
-//                return JSON_NOT_UNKNOWN;
 
-            fillWithAnswerSheetDataPDFQuiz(jsonArray, questionStat, answers, marks);
+            List<Integer> choicesCounts = questions.getList("choices_counts", Integer.class);
+
+            fillWithAnswerSheetDataPDFQuiz(jsonArray, questionStat, answers, marks, choicesCounts);
             return generateSuccessMsg("data", jsonArray);
 
         } catch (Exception x) {
@@ -147,6 +148,41 @@ public class QuizController {
             return generateErr(e.getMessage());
         }
 
+    }
+
+    public static String getPDFQuizSubjects(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+
+            String base = db instanceof SchoolQuizRepository ?
+                    SchoolQuizRepository.FOLDER : IRYSCQuizRepository.FOLDER;
+
+            Document questions = quiz.get("questions", Document.class);
+            List<ObjectId> subjectIds = questions.containsKey("subjects") ?
+                    questions.getList("subjects", ObjectId.class) : new ArrayList<>();
+
+            JSONObject data = new JSONObject();
+
+            if(subjectIds.size() > 0) {
+                data.put("subjects", subjectRepository.findByIds(subjectIds, true)
+                        .stream().map(x -> x.getString("name")).collect(Collectors.toList()));
+                data.put("choicesCounts", questions.getList("choices_counts", Integer.class));
+            }
+            else {
+                data.put("subjects", new ArrayList<>());
+                data.put("choicesCount", new ArrayList<>());
+            }
+
+            return generateSuccessMsg("data", data);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
     }
 
     public static String setPDFQuizQuestions(Common db, ObjectId quizId, int qNo,
@@ -201,8 +237,8 @@ public class QuizController {
         }
     }
 
-    public static String setPDFQuizSubjects(Common db, ObjectId quizId,
-                                            MultipartFile subjects, ObjectId userId
+    public static String setPDFQuizSubjectsAndChoicesCount(Common db, ObjectId quizId,
+                                                           MultipartFile subjects, ObjectId userId
     ) {
 
         if (subjects == null)
@@ -229,7 +265,7 @@ public class QuizController {
                 return generateErr("آزمون موردنظر شروع شده است");
 
             int qNo = quiz.getInteger("q_no", 0);
-            if(qNo == 0)
+            if (qNo == 0)
                 return generateErr("لطفا ابتدا تعداد سوالات را وارد نمایید");
 
             String filename = FileUtils.uploadTempFile(subjects);
@@ -245,26 +281,39 @@ public class QuizController {
 
             rows.remove(0);
             List<ObjectId> subjectIds = new ArrayList<>();
+            List<Integer> choicesCounts = new ArrayList<>();
+            List<Integer> marks = new ArrayList<>();
 
             for (Row row : rows) {
                 try {
+
                     int code = (int) getCellValue(row.getCell(1));
                     Document subject = subjectRepository.findBySecKey(String.format("%03d", code));
                     if (subject == null)
                         return generateErr("کد " + code + " معتبر نمی باشد");
 
+                    int choicesCount = (int) getCellValue(row.getCell(2));
+                    if(choicesCount < 2 || choicesCount > 6)
+                        return generateErr("تعداد گزینه ها باید بین 2 و 6 باشد");
+
+                    marks.add(choicesCount - 1);
                     subjectIds.add(subject.getObjectId("_id"));
+                    choicesCounts.add(choicesCount);
+
                 } catch (Exception exception) {
                     return generateErr(exception.getMessage());
                 }
             }
 
-            if(subjectIds.size() != qNo)
+            if (subjectIds.size() != qNo)
                 return generateErr("تعداد مباحث با تعداد سوالات برابر نمی باشد");
 
-            quiz.get("questions", Document.class).put("subjects", subjectIds);
-            db.replaceOne(quizId, quiz);
+            Document questions = quiz.get("questions", Document.class);
+            questions.put("subjects", subjectIds);
+            questions.put("choices_counts", choicesCounts);
+            questions.put("marks", marks);
 
+            db.replaceOne(quizId, quiz);
             return JSON_OK;
 
         } catch (InvalidFieldsException e) {

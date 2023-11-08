@@ -12,6 +12,7 @@ import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.FileUtils;
+import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -377,6 +378,9 @@ public class RegularQuizController extends QuizAbstract {
                 .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("pdfQuiz", quiz.getOrDefault("pdf_quiz", false))
                 .put("qNo", quiz.getOrDefault("q_no", 0))
+                .put("pdfQuestionFile", (boolean)quiz.getOrDefault("pdf_quiz", false) &&
+                        !quiz.getOrDefault("question_file", "").toString().isEmpty() ?
+                        STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + quiz.getString("question_file") : "")
                 .put("launchMode", quiz.getString("launch_mode"))
                 .put("tags", quiz.getList("tags", String.class))
                 .put("isRegistrable", true)

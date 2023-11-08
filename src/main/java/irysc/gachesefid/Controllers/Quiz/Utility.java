@@ -660,7 +660,8 @@ public class Utility {
     static void fillWithAnswerSheetDataPDFQuiz(JSONArray jsonArray,
                                                List<Binary> questionStat,
                                                List<Integer> answers,
-                                               List<Number> marks) {
+                                               List<Number> marks,
+                                               List<Integer> choicesCounts) {
 
         for (int i = 0; i < answers.size(); i++) {
 
@@ -671,7 +672,7 @@ public class Utility {
                 percent = ((bytes[1] & 0xff) * 100.0) / ((bytes[1] & 0xff) + (bytes[0] & 0xff) + (bytes[2] & 0xff));
             }
 
-            int choicesCount = 4;
+            int choicesCount = choicesCounts.get(i);
 
             JSONObject jsonObject = new JSONObject()
                     .put("type", "test")
