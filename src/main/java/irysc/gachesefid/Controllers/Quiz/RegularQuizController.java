@@ -1234,66 +1234,73 @@ public class RegularQuizController extends QuizAbstract {
                     eq("name", "آیریسک تهران"), null
             ).getObjectId("_id");
 
-            for (QuestionStat itr : studentsStat) {
+            try {
+                for (QuestionStat itr : studentsStat) {
 
-                ObjectId cityId;
-                ObjectId schoolId;
+                    ObjectId cityId;
+                    ObjectId schoolId;
 
-                if (!studentsData.get(k).containsKey("city") ||
-                        studentsData.get(k).get("city") == null
-                )
-                    cityId = unknownCity;
-                else
-                    cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
-
-                if (!studentsData.get(k).containsKey("school") ||
-                        studentsData.get(k).get("school") == null
-                )
-                    schoolId = iryscSchool;
-                else
-                    schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
-
-                ObjectId stateId;
-
-                if (statesDic.containsKey(cityId))
-                    stateId = statesDic.get(cityId);
-                else {
-                    stateId = cityRepository.findById(cityId).getObjectId("state_id");
-                    statesDic.put(cityId, stateId);
-                }
-
-                for (ObjectId oId : itr.subjectTaraz.keySet()) {
-
-                    TarazRanking t = new TarazRanking(
-                            schoolId, cityId, stateId,
-                            itr.subjectTaraz.get(oId)
-                    );
-
-                    if (subjectsTarazRanking.containsKey(oId))
-                        subjectsTarazRanking.get(oId).add(t);
+                    if (!studentsData.get(k).containsKey("city") ||
+                            studentsData.get(k).get("city") == null
+                    )
+                        cityId = unknownCity;
                     else
-                        subjectsTarazRanking.put(oId, new ArrayList<>() {{
-                            add(t);
-                        }});
-                }
+                        cityId = studentsData.get(k).get("city", Document.class).getObjectId("_id");
 
-                for (ObjectId oId : itr.lessonTaraz.keySet()) {
-
-                    TarazRanking t = new TarazRanking(
-                            schoolId, cityId, stateId,
-                            itr.lessonTaraz.get(oId)
-                    );
-
-                    if (lessonsTarazRanking.containsKey(oId))
-                        lessonsTarazRanking.get(oId).add(t);
+                    if (!studentsData.get(k).containsKey("school") ||
+                            studentsData.get(k).get("school") == null
+                    )
+                        schoolId = iryscSchool;
                     else
-                        lessonsTarazRanking.put(oId, new ArrayList<>() {{
-                            add(t);
-                        }});
-                }
+                        schoolId = studentsData.get(k).get("school", Document.class).getObjectId("_id");
 
-                k++;
+                    ObjectId stateId;
+
+                    if (statesDic.containsKey(cityId))
+                        stateId = statesDic.get(cityId);
+                    else {
+                        stateId = cityRepository.findById(cityId).getObjectId("state_id");
+                        statesDic.put(cityId, stateId);
+                    }
+
+                    for (ObjectId oId : itr.subjectTaraz.keySet()) {
+
+                        TarazRanking t = new TarazRanking(
+                                schoolId, cityId, stateId,
+                                itr.subjectTaraz.get(oId)
+                        );
+
+                        if (subjectsTarazRanking.containsKey(oId))
+                            subjectsTarazRanking.get(oId).add(t);
+                        else
+                            subjectsTarazRanking.put(oId, new ArrayList<>() {{
+                                add(t);
+                            }});
+                    }
+
+                    for (ObjectId oId : itr.lessonTaraz.keySet()) {
+
+                        TarazRanking t = new TarazRanking(
+                                schoolId, cityId, stateId,
+                                itr.lessonTaraz.get(oId)
+                        );
+
+                        if (lessonsTarazRanking.containsKey(oId))
+                            lessonsTarazRanking.get(oId).add(t);
+                        else
+                            lessonsTarazRanking.put(oId, new ArrayList<>() {{
+                                add(t);
+                            }});
+                    }
+
+                    k++;
+                }
             }
+            catch (Exception ex) {
+                System.out.println(ex.getMessage());
+                ex.printStackTrace();
+            }
+
         }
 
         private void calcSchoolRanking(List<TarazRanking> allTarazRanking, boolean isForSubject, ObjectId oId) {
