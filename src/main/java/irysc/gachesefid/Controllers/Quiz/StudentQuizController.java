@@ -1937,9 +1937,16 @@ public class StudentQuizController {
                 "marks", new ArrayList<Double>()
         );
 
-        List<Short> answers = (List<Short>) questionsDoc.getOrDefault(
-                "answers", new ArrayList<Short>()
+        List<Integer> answers = (List<Integer>) questionsDoc.getOrDefault(
+                "answers", new ArrayList<Integer>()
         );
+
+        List<Integer> choicesCount = (List<Integer>) questionsDoc.getOrDefault(
+                "choices_counts", new ArrayList<Integer>()
+        );
+
+        if(answers.size() == 0)
+            return generateErr("لطفا ابتدا پاسخ سوالات را مشخص نمایید");
 
         Object tmp = null;
 
@@ -1965,6 +1972,7 @@ public class StudentQuizController {
             else
                 question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
 
+            question.put("choicesCount", choicesCount.get(i));
             questionsList.add(question);
         }
 

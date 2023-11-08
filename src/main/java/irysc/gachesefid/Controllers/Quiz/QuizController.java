@@ -62,16 +62,12 @@ public class QuizController {
                 return generateErr("تعداد پاسخ ها معتبر نمی باشد.");
 
             List<Integer> answers = new ArrayList<>();
-            List<Double> marks = new ArrayList<>();
 
-            for (int i = 0; i < answersJSON.length(); i++) {
+            for (int i = 0; i < answersJSON.length(); i++)
                 answers.add(answersJSON.getInt(i));
-                marks.add(3.0);
-            }
 
             Document questions = doc.get("questions", Document.class);
             questions.put("answers", answers);
-            questions.put("marks", marks);
 
             db.replaceOne(quizId, doc);
             return JSON_OK;
