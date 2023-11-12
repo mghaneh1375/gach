@@ -75,7 +75,7 @@ public class MongoRoutes extends Router {
                 document.put("avatar_id", avatar.getObjectId("_id"));
                 document.put("pic", avatar.getString("file"));
                 document.put("password", user.cols.get("password"));
-                document.put("coin", config.getDouble("init_coin"));
+                document.put("coin", ((Number)config.get("init_coin")).doubleValue());
                 document.put("branches", new ArrayList<>());
                 document.put("city", new Document("_id", city.getObjectId("_id"))
                         .append("name", city.getString("name"))

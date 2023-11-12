@@ -727,12 +727,16 @@ public class Utility {
 
             Message message = new MimeMessage(session);
             message.setFrom(new InternetAddress("noreply@irysc.com", "noreply@irysc.com"));
-            String title = null;
+            String title;
 
             String subject = "پیام جدید";
-            String[] splited = to.split("___");
-            title = splited[0];
-            to = splited[1];
+            if(to.contains("___")) {
+                String[] splited = to.split("___");
+                title = splited[0];
+                to = splited[1];
+            }
+            else
+                title = subject;
 
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
             message.setSubject(subject);

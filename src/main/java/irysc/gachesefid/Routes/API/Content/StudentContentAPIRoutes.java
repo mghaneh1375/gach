@@ -70,7 +70,7 @@ public class StudentContentAPIRoutes extends Router {
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return StudentContentController.buy(id, new JSONObject(jsonStr), user.getObjectId("_id"),
-                user.getDouble("money"), user.getString("phone"), user.getString("mail")
+                ((Number)user.get("money")).doubleValue(), user.getString("phone"), user.getString("mail")
         );
     }
 

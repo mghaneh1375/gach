@@ -1074,7 +1074,10 @@ public class Utility {
                                                      Document student, Common db) {
 
         int qNo = (Integer) doc.getOrDefault("q_no", 0);
-        int choicesCount = 4;
+
+        List<Integer> choicesCounts =
+                doc.get("questions", Document.class)
+                        .getList("choices_counts", Integer.class);
 
         if (qNo != answers.length())
             return JSON_NOT_VALID_PARAMS;
@@ -1083,6 +1086,9 @@ public class Utility {
 
         try {
             for (int idx = 0; idx < qNo; idx++) {
+
+                int choicesCount =
+                        (Integer) doc.getOrDefault("choices_count", choicesCounts.get(idx));
 
                 String stdAns = answers.get(idx).toString();
 

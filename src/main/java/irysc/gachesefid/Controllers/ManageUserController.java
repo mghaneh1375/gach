@@ -540,7 +540,7 @@ public class ManageUserController {
                     .append("status", "active")
                     .append("level", false)
                     .append("money", (double)config.getInteger("init_money"))
-                    .append("coin", config.getDouble("init_coin"))
+                    .append("coin", ((Number)config.get("init_coin")).doubleValue())
                     .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                     .append("events", new ArrayList<>())
                     .append("avatar_id", avatar.getObjectId("_id"))
@@ -841,7 +841,7 @@ public class ManageUserController {
 
             ObjectId oId = doAddStudent(jsonObject, avatar, System.currentTimeMillis(),
                     config.getInteger("init_money"),
-                    config.getDouble("init_coin"),
+                    ((Number)config.get("init_coin")).doubleValue(),
                     validSchool, school.get("city", Document.class)
             );
 
@@ -1000,7 +1000,7 @@ public class ManageUserController {
                 ObjectId stdId = doAddStudent(jsonObject1,
                         avatar, curr,
                         config.getInteger("init_money"),
-                        config.getDouble("init_coin"),
+                        ((Number)config.get("init_coin")).doubleValue(),
                         validSchool, school.get("city", Document.class)
                 );
 

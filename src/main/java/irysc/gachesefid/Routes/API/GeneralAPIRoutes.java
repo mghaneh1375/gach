@@ -111,7 +111,8 @@ public class GeneralAPIRoutes extends Router {
                 doc.put("money", ((Number)doc.get("money")).doubleValue() + (double) jsonObject.getInt("amount"));
 
                 if (jsonObject.has("coin")) {
-                    double d = doc.getDouble("coin") + jsonObject.getNumber("coin").doubleValue();
+                    double d = ((Number)doc.get("coin")).doubleValue() +
+                            jsonObject.getNumber("coin").doubleValue();
                     doc.put("coin", Math.round((d * 100.0)) / 100.0);
                 }
 
@@ -144,7 +145,7 @@ public class GeneralAPIRoutes extends Router {
         return PayPing.exchange(
                 user.getObjectId("_id"),
                 ((Number) user.get("money")).doubleValue(),
-                user.getDouble("coin"),
+                ((Number)user.get("coin")).doubleValue(),
                 jsonObject.getNumber("amount").doubleValue(),
                 jsonObject.getString("mode")
         );
@@ -414,7 +415,7 @@ public class GeneralAPIRoutes extends Router {
                                @RequestParam(value = "mode") String mode
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         Document user = getUser(request);
-        return GiftController.buildSpinner(mode, user.getObjectId("_id"), user.getDouble("coin"), id);
+        return GiftController.buildSpinner(mode, user.getObjectId("_id"), ((Number)user.get("coin")).doubleValue(), id);
     }
 
 
@@ -428,7 +429,8 @@ public class GeneralAPIRoutes extends Router {
         Document user = getUser(request);
         return GiftController.buildSpinnerAgain(
                 mode, user.getObjectId("_id"),
-                user.getDouble("coin"), id, repeat
+                ((Number)user.get("coin")).doubleValue(),
+                id, repeat
         );
     }
 

@@ -835,7 +835,7 @@ public class EscapeQuizController extends QuizAbstract {
 
             switch (gift.getString("type")) {
                 case "coin":
-                    double d = user.getDouble("coin") + ((Number) gift.get("amount")).doubleValue();
+                    double d = ((Number)user.get("coin")).doubleValue() + ((Number) gift.get("amount")).doubleValue();
                     user.put("coin", Math.round((d * 100.0)) / 100.0);
                     userRepository.replaceOne(user.getObjectId("_id"), user);
                     break;

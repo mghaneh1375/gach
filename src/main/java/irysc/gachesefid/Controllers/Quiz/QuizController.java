@@ -2468,7 +2468,8 @@ public class QuizController {
                     (config.containsKey("quiz_coin") &&
                             config.getDouble("quiz_coin") > 0)
             )
-                user.put("coin", user.getDouble("coin") + config.getDouble("quiz_coin"));
+                user.put("coin", ((Number)user.get("coin")).doubleValue() +
+                        config.getDouble("quiz_coin"));
 
             userRepository.replaceOne(
                     userId, user

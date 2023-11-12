@@ -164,7 +164,7 @@ public class UserController {
             if(doc.containsKey("phone_or_mail"))
                 username = doc.getString("phone_or_mail");
             else {
-                Document user = userRepository.findBySecKey(jsonObject.getString("username"));
+                Document user = userRepository.findBySecKey(jsonObject.get("username").toString());
                 if (user == null)
                     return JSON_NOT_ACCESS;
 
@@ -221,14 +221,14 @@ public class UserController {
 
             if(invitorCount < 20) {
                 invitor.put("coin",
-                        config.getDouble("invite_coin") +
-                                invitor.getDouble("coin")
+                        ((Number)config.get("invite_coin")).doubleValue() +
+                                ((Number)invitor.get("coin")).doubleValue()
                 );
             }
 
             user.put("coin",
-                    config.getDouble("invite_coin") +
-                            user.getDouble("coin")
+                    ((Number)config.get("invite_coin")).doubleValue() +
+                            ((Number)user.get("coin")).doubleValue()
             );
         }
 
@@ -360,14 +360,14 @@ public class UserController {
 
                 if(invitorCount < 20) {
                     invitor.put("coin",
-                            config.getDouble("invite_coin") +
-                                    invitor.getDouble("coin")
+                            ((Number)config.get("invite_coin")).doubleValue() +
+                                    ((Number)invitor.get("coin")).doubleValue()
                     );
                 }
 
                 user.put("coin",
-                        config.getDouble("invite_coin") +
-                                user.getDouble("coin")
+                        ((Number)config.get("invite_coin")).doubleValue() +
+                                ((Number)user.get("coin")).doubleValue()
                 );
             }
 
@@ -497,7 +497,7 @@ public class UserController {
                 .append("money", credit == null ?
                         (double)config.getInteger("init_money") :
                         (double)config.getInteger("init_money") + ((Number)credit.get("credit")).doubleValue())
-                .append("coin", config.getDouble("init_coin"))
+                .append("coin", ((Number)config.get("init_coin")).doubleValue())
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())
                 .append("avatar_id", avatar.getObjectId("_id"))

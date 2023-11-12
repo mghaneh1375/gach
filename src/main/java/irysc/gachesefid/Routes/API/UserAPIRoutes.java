@@ -92,7 +92,7 @@ public class UserAPIRoutes extends Router {
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
-        JSONObject jsonObject = new JSONObject(jsonStr);
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
         String mode = jsonObject.getString("mode");
 
         if (!mode.equalsIgnoreCase("charge") && !mode.equalsIgnoreCase("coin"))
@@ -111,11 +111,11 @@ public class UserAPIRoutes extends Router {
 
             double coin = ((Number) (user.get("coin"))).doubleValue();
 
-            if (jsonObject.getDouble("amount") > coin)
+            if (jsonObject.getNumber("amount").doubleValue() > coin)
                 return generateErr("حداکثر مقدار قابل تبدیل برای شما " + coin + " می باشد.");
 
             Document doc = Utility.getConfig();
-            amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getDouble("amount"));
+            amount = (int) (doc.getInteger("coin_rate_coef") * jsonObject.getNumber("amount").doubleValue());
         }
 
         if (amount > 500000 || amount < 40000)
@@ -146,7 +146,7 @@ public class UserAPIRoutes extends Router {
                             user.put("money", ((mainMoney - jsonObject.getInt("amount")) * 100.0) / 100.0);
                         } else {
                             double coin = ((Number) (user.get("coin"))).doubleValue();
-                            user.put("coin", ((coin - jsonObject.getDouble("amount")) * 100.0) / 100.0);
+                            user.put("coin", ((coin - jsonObject.getNumber("amount").doubleValue()) * 100.0) / 100.0);
                         }
 
                         userRepository.replaceOne(user.getObjectId("_id"), user);

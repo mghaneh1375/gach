@@ -624,7 +624,7 @@ public class GiftController {
                 return JSON_NOT_ACCESS;
 
             neededCoin = doc.getDouble("needed_for_" + repeat);
-            if(neededCoin > user.getDouble("coin"))
+            if(neededCoin > ((Number)user.get("coin")).doubleValue())
                 return JSON_NOT_ACCESS;
 
             myGift = giftRepository.findById(doc.getObjectId("gift_" + repeat));
@@ -639,16 +639,21 @@ public class GiftController {
 
         if(myGift.getString("type").equalsIgnoreCase("coin")) {
             user.put("coin",
-                    Math.round((user.getDouble("coin") + ((Number)myGift.get("amount")).doubleValue() - neededCoin) * 100.0) / 100.0
+                    Math.round((((Number)user.get("coin")).doubleValue() +
+                            ((Number)myGift.get("amount")).doubleValue() - neededCoin) * 100.0) / 100.0
             );
             changeUser = true;
         }
         else if(myGift.getString("type").equalsIgnoreCase("money")) {
 
             if(neededCoin > 0)
-                user.put("coin", Math.round((user.getDouble("coin") - neededCoin) * 100.0) / 100.0);
+                user.put("coin", Math.round((((Number)user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0);
 
-            user.put("money", Math.round((((Number)user.get("money")).doubleValue() + myGift.getInteger("amount")) * 100.0 / 100.0));
+            user.put("money", Math.round((
+                    ((Number)user.get("money")).doubleValue() +
+                    myGift.getInteger("amount")) * 100.0 / 100.0)
+            );
+
             changeUser = true;
         }
         else if(myGift.getString("type").equalsIgnoreCase("offcode")) {
@@ -665,7 +670,9 @@ public class GiftController {
                 return JSON_NOT_UNKNOWN;
 
             if(neededCoin > 0) {
-                user.put("coin", Math.round((user.getDouble("coin") - neededCoin) * 100.0) / 100.0);
+                user.put("coin", Math.round((
+                        ((Number)user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0
+                );
                 changeUser = true;
             }
         }
@@ -686,7 +693,7 @@ public class GiftController {
         if(repeat == null)
             return JSON_OK;
 
-        double coin = user.getDouble("coin");
+        double coin = ((Number)user.get("coin")).doubleValue();
         Document config = Utility.getConfig();
         JSONObject data = new JSONObject();
 
