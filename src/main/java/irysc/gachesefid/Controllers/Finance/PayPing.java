@@ -250,11 +250,11 @@ public class PayPing {
                 ) {
                     Document content = contentRepository.findById(transaction.getObjectId("products"));
                     if(content != null) {
-
                         StudentContentController.registry(
                                 content.getObjectId("_id"),
-                                studentId, transaction.getInteger("amount"),
-                                user.getString("phone"), user.getString("mail")
+                                studentId, ((Number)transaction.get("amount")).intValue(),
+                                user.getOrDefault("phone", "").toString(),
+                                user.getOrDefault("mail", "").toString()
                         );
                     }
 
@@ -413,8 +413,8 @@ public class PayPing {
                         transaction
                 );
 
-                Document finalTransaction = transaction;
-                new Thread(() -> completePay(finalTransaction)).start();
+                completePay(transaction);
+
                 return new String[]{
                         refId, transaction.getString("section"),
                         transaction.getObjectId("_id").toString()
@@ -432,15 +432,16 @@ public class PayPing {
 
             if (res.startsWith("0")) {
 
-                transaction.put("sale_ref_id", saleRefId);
-                transaction.put("status", "success");
+                try {
+                    transaction.put("sale_ref_id", saleRefId);
+                    transaction.put("status", "success");
 
-                res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+                    res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
+                    transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
+                }
+                catch (Exception ignore) {}
 
-                transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
-
-                Document finalTransaction1 = transaction;
-                new Thread(() -> completePay(finalTransaction1)).start();
+                completePay(transaction);
 
 //                System.out.println(res);
                 return new String[] {

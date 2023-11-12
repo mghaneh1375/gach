@@ -419,14 +419,14 @@ public class StudentContentController {
 
         contentRepository.replaceOne(contentId, content);
 
-        if(mail != null) {
-//            new Thread(() -> sendMail(
-//                    mail,
-//                    SERVER + "recp/" + transaction.getObjectId("_id").toString(),
-//                    "successQuiz",
-//                    user.getString("first_name") + " " + user.getString("last_name")
-//            )).start();
-        }
+//        if(mail != null) {
+////            new Thread(() -> sendMail(
+////                    mail,
+////                    SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+////                    "successQuiz",
+////                    user.getString("first_name") + " " + user.getString("last_name")
+////            )).start();
+//        }
 
         return tmp;
     }
@@ -510,53 +510,46 @@ public class StudentContentController {
                 userRepository.replaceOne(userId, user);
             }
 
-            Document finalOff = off;
-            double finalOffAmount = offAmount;
+            Document doc = new Document("user_id", userId)
+                    .append("amount", 0)
+                    .append("account_money", shouldPay)
+                    .append("created_at", curr)
+                    .append("status", "success")
+                    .append("section", OffCodeSections.CONTENT.getName())
+                    .append("products", contentId);
 
-            new Thread(() -> {
+            if (off != null) {
+                doc.append("off_code", off.getObjectId("_id"));
+                doc.append("off_amount", (int) offAmount);
+            }
 
-                Document doc = new Document("user_id", userId)
-                        .append("amount", 0)
-                        .append("account_money", shouldPay)
-                        .append("created_at", curr)
-                        .append("status", "success")
-                        .append("section", OffCodeSections.CONTENT.getName())
-                        .append("products", contentId);
+            transactionRepository.insertOne(doc);
 
-                if (finalOff != null) {
-                    doc.append("off_code", finalOff.getObjectId("_id"));
-                    doc.append("off_amount", (int) finalOffAmount);
+            registry(contentId, userId, shouldPay, phone, mail);
+
+            if (off != null) {
+
+                BasicDBObject update;
+
+                if (off.containsKey("is_public") &&
+                        off.getBoolean("is_public")
+                ) {
+                    List<ObjectId> students = off.getList("students", ObjectId.class);
+                    students.add(userId);
+                    update = new BasicDBObject("students", students);
+                } else {
+                    update = new BasicDBObject("used", true)
+                            .append("used_at", curr)
+                            .append("used_section", OffCodeSections.CONTENT.getName())
+                            .append("used_for", userId);
                 }
 
-                transactionRepository.insertOne(doc);
-                registry(contentId, userId, shouldPay, phone, mail);
+                offcodeRepository.updateOne(
+                        off.getObjectId("_id"),
+                        new BasicDBObject("$set", update)
+                );
+            }
 
-                if (finalOff != null) {
-
-                    BasicDBObject update;
-
-                    if (finalOff.containsKey("is_public") &&
-                            finalOff.getBoolean("is_public")
-                    ) {
-                        List<ObjectId> students = finalOff.getList("students", ObjectId.class);
-                        students.add(userId);
-                        update = new BasicDBObject("students", students);
-                    } else {
-
-                        update = new BasicDBObject("used", true)
-                                .append("used_at", curr)
-                                .append("used_section", OffCodeSections.GACH_EXAM.getName())
-                                .append("used_for", userId);
-                    }
-
-                    offcodeRepository.updateOne(
-                            finalOff.getObjectId("_id"),
-                            new BasicDBObject("$set", update)
-                    );
-                }
-
-
-            }).start();
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "action", "success",
