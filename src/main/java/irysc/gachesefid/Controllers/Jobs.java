@@ -38,7 +38,7 @@ public class Jobs implements Runnable {
         timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
         timer.schedule(new RemoveExpiredMeetings(), 0, ONE_DAY_MIL_SEC * 7);
 
-        timer.schedule(new CheckContentBuys(), 0, ONE_DAY_MIL_SEC);
+        timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
 
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);

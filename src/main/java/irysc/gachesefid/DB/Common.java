@@ -142,8 +142,11 @@ public abstract class Common extends Repository {
 
         Document deleted = documentMongoCollection.findOneAndDelete(filter);
 
-        if (deleted != null)
+        if (deleted != null) {
             removeFromCache(table, deleted.getObjectId("_id"));
+            if(secKey != null)
+                removeFromCache(table, deleted.get(secKey));
+        }
 
         return deleted;
     }
@@ -243,6 +246,9 @@ public abstract class Common extends Repository {
     public void replaceOne(Bson filter, Document newDoc) {
         documentMongoCollection.replaceOne(filter, newDoc);
         removeFromCache(table, newDoc.getObjectId("_id"));
+
+        if(secKey != null)
+            removeFromCache(table, secKey);
     }
 
     public void replaceOne(ObjectId id, Document newDoc) {

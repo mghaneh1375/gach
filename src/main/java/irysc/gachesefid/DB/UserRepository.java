@@ -236,6 +236,8 @@ public class UserRepository extends Common {
 
     public void checkCache(Document newDoc) {
         removeFromCache(table, newDoc.getObjectId("_id"));
+        if(secKey != null)
+            removeFromCache(table, newDoc.get(secKey));
     }
 
     public void checkCache(ObjectId oId) {
