@@ -307,9 +307,11 @@ public class StudentContentController {
 
     public static String get(boolean isAdmin, Document user, String slug) {
 
-        Document content = contentRepository.findBySecKey(slug);
+        Document content = contentRepository.findOne(eq("slug", slug), null);
         if(content == null)
             return JSON_NOT_VALID_ID;
+
+        content = contentRepository.findById(content.getObjectId("_id"));
 
         Document stdDoc = null;
 
