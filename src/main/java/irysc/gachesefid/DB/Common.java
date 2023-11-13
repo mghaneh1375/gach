@@ -246,8 +246,12 @@ public abstract class Common extends Repository {
     }
 
     public void replaceOne(ObjectId id, Document newDoc) {
+
         documentMongoCollection.replaceOne(eq("_id", id), newDoc);
         removeFromCache(table, id);
+
+        if(secKey != null)
+            removeFromCache(table, secKey);
     }
 
     public void replaceOneWithoutClearCache(ObjectId id, Document newDoc) {
