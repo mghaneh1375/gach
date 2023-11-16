@@ -58,7 +58,7 @@ public class StudentContentController {
 
             Document d = contentRepository.findById(doc.getObjectId("_id"));
             d.put("teacher", String.join("__", newList));
-            contentRepository.replaceOne(doc.getObjectId("_id"), d);
+            contentRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), d);
         }
 
         return JSON_OK;
@@ -299,7 +299,7 @@ public class StudentContentController {
         content.put("rate", Math.round(oldTotalRate / rateCount * 100.0) / 100.0);
         content.put("rate_count", rateCount);
 
-        contentRepository.replaceOne(contentId, content);
+        contentRepository.replaceOneWithoutClearCache(contentId, content);
 
         return generateSuccessMsg("data", content.get("rate"));
     }
@@ -378,7 +378,7 @@ public class StudentContentController {
             users.add(new Document("_id", userId)
                     .append("paid", 0).append("register_at", System.currentTimeMillis()));
 
-            contentRepository.replaceOne(content.getObjectId("_id"), content);
+            contentRepository.replaceOneWithoutClearCache(content.getObjectId("_id"), content);
         }
 
         JSONObject data = new JSONObject().put("sessions", jsonArray);
@@ -425,7 +425,6 @@ public class StudentContentController {
         content.put("users", users);
 
         contentRepository.replaceOneWithoutClearCache(contentId, content);
-//        Document wwww  = contentRepository.findById(contentId);
 
 //        if(mail != null) {
 ////            new Thread(() -> sendMail(
@@ -515,7 +514,7 @@ public class StudentContentController {
                 newUserMoney -= Math.min(shouldPay, money);
                 Document user = userRepository.findById(userId);
                 user.put("money", newUserMoney);
-                userRepository.replaceOne(userId, user);
+                userRepository.replaceOneWithoutClearCache(userId, user);
             }
 
             Document doc = new Document("user_id", userId)
