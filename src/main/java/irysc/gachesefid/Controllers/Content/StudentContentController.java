@@ -411,9 +411,15 @@ public class StudentContentController {
         if(content == null)
             return null;
 
-        List<Document> users = content.getList("users", Document.class);
+        List<Document> users;
+        if(content.size() == 0)
+            users = new ArrayList<>();
+        else
+            users = content.getList("users", Document.class);
+
         Document tmp = new Document("_id", userId)
-                .append("paid", paid).append("register_at", System.currentTimeMillis());
+                .append("paid", paid)
+                .append("register_at", System.currentTimeMillis());
 
         users.add(tmp);
         content.put("users", users);

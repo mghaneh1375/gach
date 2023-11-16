@@ -639,12 +639,13 @@ public class Jobs implements Runnable {
                 if(Utility.searchInDocumentsKeyValIdx(students, "_id", userId) == -1) {
 
                     Document user = userRepository.findById(userId);
-                    System.out.println(user.getString("first_name") + " " + user.getString("last_name"));
-                    StudentContentController.registry(
-                            contentId, userId,
-                            transaction.getInteger("amount"),
-                            null, null
-                    );
+
+                    if(user != null)
+                        StudentContentController.registry(
+                                contentId, userId,
+                                transaction.getInteger("amount"),
+                                null, null
+                        );
 
                 }
 
