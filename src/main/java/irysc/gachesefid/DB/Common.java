@@ -30,10 +30,6 @@ public abstract class Common extends Repository {
     String table = "";
     String secKey = "";
 
-    public boolean isOIDInCache(ObjectId oId){
-        return isInCache(table, oId) != null;
-    }
-
     public boolean exist(Bson filter) {
         return documentMongoCollection.countDocuments(filter) > 0;
     }
@@ -170,10 +166,10 @@ public abstract class Common extends Repository {
             Document doc = cursor.iterator().next();
 
             if (!table.isEmpty()) {
-                if (secKey.isEmpty())
-                    addToCache(table, doc, CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
+                if (secKey == null || secKey.isEmpty())
+                    addToCache(table, doc, null, CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
                 else
-                    addToCache(table, doc, secKey, CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
+                    addToCache(table, doc, doc.get(secKey), CLASS_LIMIT_CACHE_SIZE, CLASS_EXPIRATION_SEC);
             }
 
             return doc;
