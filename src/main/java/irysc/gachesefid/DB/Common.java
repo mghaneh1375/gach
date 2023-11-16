@@ -161,9 +161,9 @@ public abstract class Common extends Repository {
 
     public synchronized Document findById(ObjectId id) {
 
-//        Document cached = isInCache(table, id);
-//        if (cached != null)
-//            return cached;
+        Document cached = isInCache(table, id);
+        if (cached != null)
+            return cached;
 
         FindIterable<Document> cursor = documentMongoCollection.find(eq("_id", id));
         if (cursor.iterator().hasNext()) {
@@ -192,9 +192,9 @@ public abstract class Common extends Repository {
 
     public synchronized Document findBySecKey(Object val) {
 
-//        Document cached = isInCache(table, val);
-//        if (cached != null)
-//            return cached;
+        Document cached = isInCache(table, val);
+        if (cached != null)
+            return cached;
 
         FindIterable<Document> cursor = documentMongoCollection.find(eq(secKey, val));
 

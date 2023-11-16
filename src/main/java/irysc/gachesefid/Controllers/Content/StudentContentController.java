@@ -425,6 +425,7 @@ public class StudentContentController {
         content.put("users", users);
 
         contentRepository.replaceOneWithoutClearCache(contentId, content);
+//        Document wwww  = contentRepository.findById(contentId);
 
 //        if(mail != null) {
 ////            new Thread(() -> sendMail(
