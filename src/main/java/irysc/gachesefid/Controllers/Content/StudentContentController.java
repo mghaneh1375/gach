@@ -307,11 +307,9 @@ public class StudentContentController {
 
     public static String get(boolean isAdmin, Document user, String slug) {
 
-        Document content = contentRepository.findOne(eq("slug", slug), null);
+        Document content = contentRepository.findBySecKey(slug);
         if(content == null)
             return JSON_NOT_VALID_ID;
-
-        content = contentRepository.findById(content.getObjectId("_id"));
 
         Document stdDoc = null;
 
@@ -418,8 +416,9 @@ public class StudentContentController {
                 .append("paid", paid).append("register_at", System.currentTimeMillis());
 
         users.add(tmp);
+        content.put("users", users);
 
-        contentRepository.replaceOne(contentId, content);
+        contentRepository.replaceOneWithoutClearCache(contentId, content);
 
 //        if(mail != null) {
 ////            new Thread(() -> sendMail(
