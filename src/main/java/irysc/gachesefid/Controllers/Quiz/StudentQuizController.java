@@ -27,6 +27,7 @@ import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.fetchQuizInvoice;
 import static irysc.gachesefid.Controllers.Question.Utilities.fetchFilter;
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.createQuizQuestionsList;
+import static irysc.gachesefid.Controllers.Quiz.PackageController.tagsColor;
 import static irysc.gachesefid.Controllers.Quiz.QuizController.payFromWallet;
 import static irysc.gachesefid.Controllers.Quiz.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -423,6 +424,20 @@ public class StudentQuizController {
         for (int z = quizzes.size() - 1; z >= 0; z--) {
 
             Document quiz = quizzes.get(z);
+            String backColor = tagsColor.get("default");
+
+            if (quiz.containsKey("tags")) {
+                List<String> t = quiz.getList("tags", String.class);
+                if (t.size() > 0) {
+
+                    for (String key : tagsColor.keySet()) {
+                        if (t.get(0).contains(key)) {
+                            backColor = tagsColor.get(key);
+                            break;
+                        }
+                    }
+                }
+            }
 
             boolean isIRYSCQuiz = quiz.containsKey("launch_mode") ||
                     quiz.getOrDefault("mode", "").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName());
@@ -437,11 +452,14 @@ public class StudentQuizController {
                     isEscapeQuiz ? escapeQuizController : openQuizAbstract;
 
             if (isSchool) {
-                data.put(quizAbstract.convertDocToJSON(
-                        quiz, true, false, true, true
-                ));
-            } else {
 
+                JSONObject jsonObject = quizAbstract.convertDocToJSON(
+                        quiz, true, false, true, true
+                );
+                jsonObject.put("backColor", backColor);
+                data.put(jsonObject);
+
+            } else {
 
                 Document studentDoc = null;
                 boolean isOwner = false;
@@ -470,6 +488,8 @@ public class StudentQuizController {
                 JSONObject jsonObject = quizAbstract.convertDocToJSON(
                         quiz, true, false, true, true
                 );
+
+                jsonObject.put("backColor", backColor);
 
                 if (isEscapeQuiz &&
                         jsonObject.getString("status")
@@ -518,7 +538,6 @@ public class StudentQuizController {
                 data.put(jsonObject);
             }
         }
-
 
         return generateSuccessMsg("data", data);
     }

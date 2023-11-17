@@ -127,7 +127,8 @@ public class QuizAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
-        if (jsonObject.has("kind") && !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
+        if (jsonObject.has("kind") &&
+                !EnumValidatorImp.isValid(jsonObject.getString("kind"), KindQuiz.class) &&
                 !jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
         )
             return JSON_NOT_VALID_PARAMS;

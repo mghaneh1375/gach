@@ -210,7 +210,7 @@ public class PackageController {
         return getPackageQuizzes(packageId, true);
     }
 
-    private final static Map<String, String> tagsColor = Stream.of(new String[][] {
+    public final static Map<String, String> tagsColor = Stream.of(new String[][] {
             { "شیمی", "#FF5722" },
             { "کامپیوتر", "#607D8B" },
             { "نجوم", "#03A9F4" },

@@ -74,13 +74,7 @@ public class UserAPIRoutes extends Router {
 
         return generateSuccessMsg("data", jsonArray);
     }
-
-
-    @GetMapping(value = "/test")
-    @ResponseBody
-    public String test() {
-        return "s";
-    }
+    
 
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody

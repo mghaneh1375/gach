@@ -67,7 +67,7 @@ public class RegularQuizController extends QuizAbstract {
 
     private final static String[] schoolForbiddenFields = {
             "paperTheme", "isRegistrable", "isUploadable",
-            "kind", "startRegistry", "endRegistry", "price",
+            "startRegistry", "endRegistry", "price",
             "priority", "showResultsAfterCorrectionNotLoginUsers",
             "perTeam", "maxTeams", "maxTry", "shouldComplete"
     };
@@ -282,17 +282,24 @@ public class RegularQuizController extends QuizAbstract {
                 .put("end", quiz.getLong("end"))
                 .put("generalMode", AllKindQuiz.SCHOOL.getName())
                 .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                .put("pdfQuiz", quiz.getOrDefault("pdf_quiz", false))
+                .put("qNo", quiz.getOrDefault("q_no", 0))
                 .put("launchMode", quiz.getString("launch_mode"))
+                .put("pdfQuestionFile", (boolean)quiz.getOrDefault("pdf_quiz", false) &&
+                        !quiz.getOrDefault("question_file", "").toString().isEmpty() ?
+                        STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + quiz.getString("question_file") : "")
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
 
+        int questionsCount = jsonObject.getInt("qNo");
 
-        int questionsCount = 0;
-        try {
-            questionsCount = quiz.get("questions", Document.class)
-                    .getList("_ids", ObjectId.class).size();
-        } catch (Exception ignore) {
+        if(questionsCount == 0) {
+            try {
+                questionsCount = quiz.get("questions", Document.class)
+                        .getList("_ids", ObjectId.class).size();
+            } catch (Exception ignore) {}
         }
+
 
         long curr = System.currentTimeMillis();
 
