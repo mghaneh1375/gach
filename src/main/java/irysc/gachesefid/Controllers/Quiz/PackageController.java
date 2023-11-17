@@ -211,11 +211,17 @@ public class PackageController {
     }
 
     private final static Map<String, String> tagsColor = Stream.of(new String[][] {
-            { "شیمی", "#00FF00" },
-            { "ریاضی", "#FF0000" },
-            { "فیزیک", "#0000FF" },
-            { "زیست", "#00FFFF" },
-            { "ادبی", "#FFFF00" },
+            { "شیمی", "#FF5722" },
+            { "کامپیوتر", "#607D8B" },
+            { "نجوم", "#03A9F4" },
+            { "اقتصاد", "#FFC107" },
+            { "تفکر", "#9E9E9E" },
+            { "جغرافیا", "#CDDC39" },
+            { "زمین", "#009688" },
+            { "ریاضی", "#f44336" },
+            { "فیزیک", "#00BCD4" },
+            { "زیست", "#4CAF50" },
+            { "ادبی", "#FF9800" },
             { "default", "#ffefce" },
     }).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
