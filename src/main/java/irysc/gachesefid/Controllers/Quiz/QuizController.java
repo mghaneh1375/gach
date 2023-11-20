@@ -616,19 +616,35 @@ public class QuizController {
             throw new InvalidFieldsException("حداکثر تعداد دانش آموز در یک آزمون می تواند " + maxStd + " باشد");
 
         Document question = quiz.get("questions", Document.class);
-        if (!question.containsKey("_ids"))
+        boolean pdfQuiz = quiz.getBoolean("pdf_quiz", false);
+
+        if (!pdfQuiz && !question.containsKey("_ids"))
             throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
 
-        List<ObjectId> questionIds = question.getList("_ids", ObjectId.class);
+        if(pdfQuiz && !question.containsKey("subjects"))
+            throw new InvalidFieldsException("لطفا ابتدا مباحث سوال/سوالات خود را مشخص کنید");
 
-        if (questionIds.size() == 0)
+        if(pdfQuiz && !question.containsKey("answers"))
+            throw new InvalidFieldsException("لطفا ابتدا پاسخ سوال/سوالات خود را مشخص کنید");
+
+        int qNo;
+        List<ObjectId> questionIds = null;
+
+        if(!pdfQuiz) {
+            questionIds = question.getList("_ids", ObjectId.class);
+            qNo = questionIds.size();
+        }
+        else
+            qNo = (Integer) quiz.getOrDefault("q_no", 0);
+
+        if (qNo == 0)
             throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
 
         int maxQ = (int) config.getOrDefault("max_question_per_quiz", 20);
-        if (maxQ < questionIds.size())
+        if (maxQ < qNo)
             throw new InvalidFieldsException("حداکثر تعداد سوال در هر آزمون می تواند " + maxQ + " باشد");
 
-        if (quiz.getBoolean("database")) {
+        if (!pdfQuiz && quiz.getBoolean("database")) {
 
             List<Document> questions = questionRepository.findByIds(
                     questionIds, true
@@ -638,6 +654,7 @@ public class QuizController {
                 throw new InvalidFieldsException("خطای نامشخص");
 
             return new PairValue(studentsCount, questions);
+
         }
 
         return new PairValue(studentsCount,
@@ -758,7 +775,7 @@ public class QuizController {
             int studentsCount = (int) p.getKey();
             int total;
 
-            if (quiz.getBoolean("database")) {
+            if (quiz.getBoolean("database") && !quiz.getBoolean("pdf_quiz", false)) {
                 List<Document> questions = (List<Document>) p.getValue();
                 PairValue res = calcPrice(questions, studentsCount, false);
                 total = (int) ((double) res.getKey());
@@ -2709,8 +2726,12 @@ public class QuizController {
 
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
-            else if (db instanceof SchoolQuizRepository)
-                new RegularQuizController.Taraz(quiz, schoolQuizRepository);
+            else if (db instanceof SchoolQuizRepository) {
+                if(quiz.getBoolean("pdf_quiz", false))
+                    new RegularQuizController.Taraz().PDFQuizTaraz(quiz, schoolQuizRepository);
+                else
+                    new RegularQuizController.Taraz(quiz, schoolQuizRepository);
+            }
             else if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                 new TashrihiQuizController().createTaraz(quiz);

@@ -93,7 +93,11 @@ public class TransactionController {
         if (quiz != null) {
             section.append(" - ").append(quiz.getString("title")).append(" ( تعداد دانش آموزان: ");
             section.append(quiz.getList("students", Document.class).size()).append(" - تعداد سوالات: ");
-            section.append(quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size());
+            section.append(
+                    quiz.getBoolean("pdf_quiz", false) ?
+                            quiz.getInteger("q_no") :
+                            quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size()
+            );
 
             if ((boolean) quiz.getOrDefault("database", true))
                 section.append(" - استفاده شده از مجموعه سوالات آیریسک ");

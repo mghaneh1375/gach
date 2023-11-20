@@ -126,11 +126,17 @@ public class StudentQuizAPIRoutes extends Router {
         Document user = getUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
-        if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) && !mode.equalsIgnoreCase("pdf"))
+        if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
+                !mode.equalsIgnoreCase("pdf") &&
+                !mode.equalsIgnoreCase("school_pdf")
+        )
             return JSON_NOT_VALID_PARAMS;
 
         if(mode.equalsIgnoreCase("pdf"))
             mode = AllKindQuiz.IRYSC.getName();
+
+        else if(mode.equalsIgnoreCase("school_pdf"))
+            mode = AllKindQuiz.SCHOOL.getName();
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.reviewCustomQuiz(
@@ -203,7 +209,8 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
-                !mode.equalsIgnoreCase("pdf")
+                !mode.equalsIgnoreCase("pdf") &&
+                !mode.equalsIgnoreCase("school_pdf")
         )
             return JSON_NOT_VALID_PARAMS;
 
@@ -227,11 +234,14 @@ public class StudentQuizAPIRoutes extends Router {
                     quizId, getUser(request).getObjectId("_id")
             );
 
-        if(mode.equalsIgnoreCase("pdf"))
+        if(mode.contains("pdf")) {
+            Document user = getUser(request);
             return StudentQuizController.launchPDFQuiz(
-                    iryscQuizRepository, quizId,
-                    getUser(request).getObjectId("_id")
+                    Authorization.isAdmin(user.getList("accesses", String.class)) ?
+                            iryscQuizRepository : schoolQuizRepository,
+                    quizId, user.getObjectId("_id")
             );
+        }
 
         return StudentQuizController.launch(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?

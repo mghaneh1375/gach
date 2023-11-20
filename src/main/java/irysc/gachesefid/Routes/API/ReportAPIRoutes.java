@@ -119,7 +119,8 @@ public class ReportAPIRoutes extends Router {
 
         return AdminReportController.A1(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
-                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
+                        mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
+                                schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
     }
