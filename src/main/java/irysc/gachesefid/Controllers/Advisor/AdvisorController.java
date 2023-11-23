@@ -215,6 +215,9 @@ public class AdvisorController {
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
+        if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
+            return generateErr("لینک وارد شده نامعتبر است");
+
         Document newDoc = new Document("advisor_id", advisorId)
                 .append("price", data.getInt("price"))
                 .append("title", data.getString("title"))
@@ -233,6 +236,9 @@ public class AdvisorController {
 
         if (data.has("maxChat"))
             newDoc.append("max_chat", data.getInt("maxChat"));
+
+        if(data.has("videoLink"))
+            newDoc.append("video_link", data.getString("videoLink"));
 
         advisorFinanceOfferRepository.insertOne(newDoc);
 
@@ -255,6 +261,9 @@ public class AdvisorController {
 
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
+
+        if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
+            return generateErr("لینک وارد شده نامعتبر است");
 
         doc.put("title", data.getString("title"));
         doc.put("price", data.getInt("price"));
@@ -280,6 +289,11 @@ public class AdvisorController {
             doc.put("max_chat", data.getInt("maxChat"));
         else
             doc.remove("max_chat");
+
+        if(data.has("videoLink"))
+            doc.put("video_link", data.getString("videoLink"));
+        else
+            doc.remove("video_link");
 
         advisorFinanceOfferRepository.replaceOne(doc.getObjectId("_id"), doc);
 

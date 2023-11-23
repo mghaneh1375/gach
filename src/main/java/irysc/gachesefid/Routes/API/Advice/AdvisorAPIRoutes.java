@@ -113,11 +113,11 @@ public class AdvisorAPIRoutes extends Router {
                                          },
                                          optionals = {
                                                  "description", "maxKarbarg", "maxExam",
-                                                 "maxChat"
+                                                 "maxChat", "videoLink"
                                          },
                                          optionalsType = {
                                                  String.class, Positive.class, Positive.class,
-                                                 Positive.class
+                                                 Positive.class, String.class
                                          }
                                  ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -158,11 +158,11 @@ public class AdvisorAPIRoutes extends Router {
                                       },
                                       optionals = {
                                               "description", "maxKarbarg", "maxExam",
-                                              "maxChat"
+                                              "maxChat", "videoLink"
                                       },
                                       optionalsType = {
                                               String.class, Positive.class, Positive.class,
-                                              Positive.class
+                                              Positive.class, String.class
                                       }
                               ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

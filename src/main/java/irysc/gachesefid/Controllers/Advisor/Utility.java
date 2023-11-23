@@ -214,6 +214,7 @@ public class Utility {
                 .put("stdCount", students.size())
                 .put("rate", advisor.getOrDefault("rate", 0))
                 .put("bio", advisor.getString("bio"))
+                .put("videoLink", advisor.getOrDefault("video_link", ""))
                 .put("id", advisor.getObjectId("_id").toString())
                 .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"));
 
@@ -258,7 +259,8 @@ public class Utility {
                 .put("videoCalls", doc.getInteger("video_calls"))
                 .put("maxKarbarg", doc.getOrDefault("max_karbarg", -1))
                 .put("maxExam", doc.getOrDefault("max_exam", -1))
-                .put("maxChat", doc.getOrDefault("max_chat", -1));
+                .put("maxChat", doc.getOrDefault("max_chat", -1))
+                .put("videoLink", doc.getOrDefault("video_link", ""));
 
         if(fullAccess) {
             jsonObject

@@ -1144,14 +1144,22 @@ public class UserController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String setAboutMe(Document user, String bio) {
+    public static String setAboutMe(Document user, JSONObject jsonObject) {
+
+        String bio = jsonObject.getString("aboutMe");
 
         if(bio.length() > 500)
             return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
 
-        user.put("bio", bio);
-        userRepository.replaceOne(user.getObjectId("_id"), user);
+        if(jsonObject.has("videoLink") && !isValidURL(jsonObject.getString("videoLink")))
+            return generateErr("لینک ویدیو معتبر نمی باشد");
 
+        user.put("bio", bio);
+
+        if(jsonObject.has("videoLink"))
+            user.put("video_link", jsonObject.getString("videoLink"));
+
+        userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;
     }
 

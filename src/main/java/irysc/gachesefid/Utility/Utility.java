@@ -25,6 +25,9 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -1506,5 +1509,16 @@ public class Utility {
 
         return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
                 sc.month) + delimeter + String.format(loc, "%02d", sc.date);
+    }
+
+    public static boolean isValidURL(String url) {
+
+        try {
+            new URL(url).toURI();
+        } catch (MalformedURLException | URISyntaxException e) {
+            return false;
+        }
+
+        return true;
     }
 }

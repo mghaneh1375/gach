@@ -50,7 +50,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -75,7 +75,7 @@ public class StaticValues {
                     .append("rate", 1).append("birth_day", 1)
                     .append("rate_count", 1).append("tags", 1)
                     .append("students", 1).append("form_list", 1)
-                    .append("bio", 1)
+                    .append("bio", 1).append("video_link", 1)
                     .append("pic", 1)
             ;
 

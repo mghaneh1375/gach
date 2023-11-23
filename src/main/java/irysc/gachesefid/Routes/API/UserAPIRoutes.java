@@ -14,9 +14,7 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
-import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.Positive;
-import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Utility.*;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -34,7 +32,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 
-
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -46,7 +43,6 @@ import static irysc.gachesefid.Utility.Utility.*;
 @RequestMapping(path = "/api/user")
 @Validated
 public class UserAPIRoutes extends Router {
-
 
 
     @Autowired
@@ -64,7 +60,7 @@ public class UserAPIRoutes extends Router {
 
         JSONArray jsonArray = new JSONArray();
 
-        for(String p : passwords.keySet()) {
+        for (String p : passwords.keySet()) {
 
             jsonArray.put(new JSONObject()
                     .put("username", p)
@@ -74,7 +70,7 @@ public class UserAPIRoutes extends Router {
 
         return generateSuccessMsg("data", jsonArray);
     }
-    
+
 
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody
@@ -237,10 +233,12 @@ public class UserAPIRoutes extends Router {
     public String aboutMe(HttpServletRequest request,
                           @RequestBody @StrongJSONConstraint(
                                   params = {"aboutMe"},
-                                  paramsType = {String.class}
+                                  paramsType = {String.class},
+                                  optionals = {"videoLink"},
+                                  optionalsType = {String.class}
                           ) String json
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json).getString("aboutMe"));
+        return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json));
     }
 
 
