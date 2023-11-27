@@ -215,7 +215,7 @@ public class StudentQuizController {
                 return returnTashrihiQuiz(quiz, stdDoc.getList("answers", Document.class), quizJSON, true, db);
 
             if (isPDFQuiz)
-                return returnPDFQuiz(quiz, stdDoc, true, quizJSON);
+                return returnPDFQuiz(quiz, stdDoc, true, quizJSON, db instanceof SchoolQuizRepository);
 
             return returnQuiz(quiz, stdDoc, true, quizJSON);
 
@@ -827,7 +827,7 @@ public class StudentQuizController {
                             a.student.getLong("start_at") == curr
                     );
 
-            return returnPDFQuiz(a.quiz, a.student, false, quizJSON);
+            return returnPDFQuiz(a.quiz, a.student, false, quizJSON, db instanceof SchoolQuizRepository);
 
         } catch (Exception x) {
             return generateErr(x.getMessage());
@@ -1947,7 +1947,8 @@ public class StudentQuizController {
     }
 
     public static String returnPDFQuiz(Document quiz, Document stdDoc,
-                                       boolean isStatNeeded, JSONObject quizJSON) {
+                                       boolean isStatNeeded, JSONObject quizJSON,
+                                       boolean isSchoolQuiz) {
 
         Document questionsDoc = quiz.get("questions", Document.class);
         List<Document> questionsList = new ArrayList<>();
@@ -2007,8 +2008,8 @@ public class StudentQuizController {
         jsonObject.put("quizInfo", quizJSON);
 
         String base =
-//                db instanceof SchoolQuizRepository ?
-//                SchoolQuizRepository.FOLDER :
+                isSchoolQuiz ?
+                SchoolQuizRepository.FOLDER :
                 IRYSCQuizRepository.FOLDER;
 
         jsonObject.put("file", STATICS_SERVER + base + "/" + quiz.getString("question_file"));
