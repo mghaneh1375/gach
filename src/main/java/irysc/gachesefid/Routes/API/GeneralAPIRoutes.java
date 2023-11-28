@@ -206,6 +206,7 @@ public class GeneralAPIRoutes extends Router {
                     if (section.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()) ||
                             section.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName())
                     ) {
+                        // todo: onlinestanding quiz and escape quiz
 
                         String forWhat = "آزمون آیریسک";
                         modelAndView.addObject("section", "quiz");
@@ -241,7 +242,31 @@ public class GeneralAPIRoutes extends Router {
                                                 frontEndUrl + "myCustomQuizzes" : frontEndUrl
                         );
 
-                    } else if (section.equalsIgnoreCase("charge"))
+                    }
+
+                    else if (
+                            section.equalsIgnoreCase(OffCodeSections.SCHOOL_QUIZ.getName()) ||
+                                    section.equalsIgnoreCase(OffCodeSections.COUNSELING_QUIZ.getName())
+                    ) {
+
+                        modelAndView.addObject("section", "quiz");
+                        modelAndView.addObject("forWhat", "آزمون");
+                        modelAndView.addObject("myQuizzesUrl",
+                                section.equalsIgnoreCase(OffCodeSections.COUNSELING_QUIZ.getName()) ?
+                                        frontEndUrl + "myAdvisor/quiz" : frontEndUrl + "mySchoolQuizzes"
+                        );
+                    }
+
+                    else if (
+                            section.equalsIgnoreCase(OffCodeSections.SCHOOL_HW.getName())
+                    ) {
+
+                        modelAndView.addObject("section", "hw");
+                        modelAndView.addObject("forWhat", "تمرین");
+                        modelAndView.addObject("myHwsUrl", frontEndUrl + "mySchoolHWs");
+                    }
+
+                    else if (section.equalsIgnoreCase("charge"))
                         modelAndView.addObject("section", section);
                     else if (section.equalsIgnoreCase(OffCodeSections.CONTENT.toString())) {
                         modelAndView.addObject("section", section);

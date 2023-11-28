@@ -76,7 +76,7 @@ public class Utility {
             long end = quiz.getLong("end");
 
             if ((end - start) / (60000) < duration)
-                throw new InvalidFieldsException("فاصله زمانی بین آغاز و پایان آزمون موردنظر باید حداقل " + duration + " ثانبه باشد.");
+                throw new InvalidFieldsException("فاصله زمانی بین آغاز و پایان آزمون موردنظر باید حداقل " + duration + " دقیقه باشد.");
 
         }
 

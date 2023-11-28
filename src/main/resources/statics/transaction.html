@@ -45,6 +45,20 @@
             </p>
         </div>
 
+        <div id="hwDIV" class="hidden">
+
+            <p class="marginTop50 blue-bold fontSize13 marginBottom0">
+                نام خرید :<span>[[${forWhat}]]</span>
+            </p>
+
+            <p class="colorOrange marginUpDown fontSize13">
+                <span>برای مشاهده تمارین به صفحه</span>
+                <span class="hidden" id="myHwsLinkHref">[[${myHwsUrl}]]</span>
+                <span class="my-link" id="myHwsLink">تمارین من</span>
+                <span>بروید.</span>
+            </p>
+        </div>
+
         <div id="contentDIV" class="hidden">
 
             <p class="marginTop50 blue-bold fontSize13 marginBottom0">
@@ -129,6 +143,8 @@
             const section = $("#section").text();
             if(section === 'quiz')
                 $("#quizDIV").removeClass('hidden');
+            else if(section === 'hw')
+                $("#hwDIV").removeClass('hidden');
             else if(section === 'content')
                 $("#contentDIV").removeClass('hidden');
 
