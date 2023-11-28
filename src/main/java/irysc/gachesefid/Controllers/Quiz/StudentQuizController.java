@@ -575,7 +575,7 @@ public class StudentQuizController {
         }
 
         ArrayList<Document> quizzes = schoolQuizRepository.find(
-                and(filters), null, Sorts.descending("start_at")
+                and(filters), null, Sorts.descending("created_at")
         );
 
         QuizAbstract quizAbstract = new RegularQuizController();
