@@ -546,7 +546,6 @@ public class StudentQuizController {
 
         ObjectId userId = user.getObjectId("_id");
 
-        JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();
 
         filters.add(in("students._id", userId));
@@ -578,6 +577,8 @@ public class StudentQuizController {
 
         QuizAbstract quizAbstract = new RegularQuizController();
         HashMap<ObjectId, String> creators = new HashMap<>();
+        JSONArray data = new JSONArray();
+        ArrayList<JSONObject> jsonObjectArrayList = new ArrayList<>();
 
         for (Document quiz : quizzes) {
 
@@ -639,9 +640,13 @@ public class StudentQuizController {
                 }
             }
 
-
-            data.put(jsonObject);
+            jsonObjectArrayList.add(jsonObject);
         }
+
+        jsonObjectArrayList.sort(Comparator.comparingLong(o -> o.getLong("startAt")));
+
+        for(JSONObject jsonObject : jsonObjectArrayList)
+            data.put(jsonObject);
 
         return generateSuccessMsg("data", data);
     }
