@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Quiz;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Config.GiftController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
@@ -573,12 +574,13 @@ public class StudentQuizController {
                 filters.add(gt("start", curr));
         }
 
-        ArrayList<Document> quizzes = schoolQuizRepository.find(and(filters), null);
+        ArrayList<Document> quizzes = schoolQuizRepository.find(
+                and(filters), null, Sorts.descending("start_at")
+        );
 
         QuizAbstract quizAbstract = new RegularQuizController();
         HashMap<ObjectId, String> creators = new HashMap<>();
         JSONArray data = new JSONArray();
-        ArrayList<JSONObject> jsonObjectArrayList = new ArrayList<>();
 
         for (Document quiz : quizzes) {
 
@@ -640,13 +642,11 @@ public class StudentQuizController {
                 }
             }
 
-            jsonObjectArrayList.add(jsonObject);
+
+            data.put(jsonObject);
         }
 
-        jsonObjectArrayList.sort(Comparator.comparingLong(o -> o.getLong("startAt")));
 
-        for(JSONObject jsonObject : jsonObjectArrayList)
-            data.put(jsonObject);
 
         return generateSuccessMsg("data", data);
     }
