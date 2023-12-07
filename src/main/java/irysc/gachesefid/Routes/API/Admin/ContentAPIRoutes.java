@@ -349,10 +349,10 @@ public class ContentAPIRoutes extends Router {
 
     @GetMapping(value = "/getSubjectsKeyVals")
     @ResponseBody
-    public String getSubjectsKeyVals(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdvisorUser(request);
-        return ContentController.getSubjectsKeyVals();
+    public String getSubjectsKeyVals(
+            @RequestParam(required = false, value = "lessonId") ObjectId lessonId
+    ) {
+        return ContentController.getSubjectsKeyVals(lessonId);
     }
 
 }

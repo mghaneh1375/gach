@@ -1061,20 +1061,32 @@ public class ContentController {
         return JSON_OK;
     }
 
-    public static String getSubjectsKeyVals() {
+    public static String getSubjectsKeyVals(ObjectId lessonId) {
 
-        ArrayList<Document> subjects = subjectRepository.find(null, null);
+        ArrayList<Document> subjects = subjectRepository.find(
+                lessonId == null ? null : eq("lesson._id", lessonId), null
+        );
+
         JSONArray jsonArray = new JSONArray();
 
         for (Document subject : subjects) {
-            Document lesson = subject.get("lesson", Document.class);
-            Document grade = subject.get("grade", Document.class);
+            if(lessonId == null) {
+                Document lesson = subject.get("lesson", Document.class);
+                Document grade = subject.get("grade", Document.class);
 
-            jsonArray.put(
-                    new JSONObject()
-                            .put("name", subject.getString("name") + " در " + lesson.getString("name") + " در " + grade.getString("name"))
-                            .put("id", subject.getObjectId("_id").toString())
-            );
+                jsonArray.put(
+                        new JSONObject()
+                                .put("name", subject.getString("name") + " در " + lesson.getString("name") + " در " + grade.getString("name"))
+                                .put("id", subject.getObjectId("_id").toString())
+                );
+            }
+            else {
+                jsonArray.put(
+                        new JSONObject()
+                                .put("name", subject.getString("name"))
+                                .put("id", subject.getObjectId("_id").toString())
+                );
+            }
 
         }
 

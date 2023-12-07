@@ -206,6 +206,55 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+    @PutMapping(value = "setPDFQuizInfo/{quizId}")
+    @ResponseBody
+    public String setPDFQuizInfo(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {"info"},
+                                         paramsType = {JSONArray.class}
+                                 ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.setPDFQuizInfo(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("info")
+        );
+    }
+
+    @GetMapping(value = "getGradesAndBranches/{quizId}")
+    @ResponseBody
+    public String getGradesAndBranches(HttpServletRequest request,
+                                       @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.getGradesAndBranches(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "getPDFQuizInfo/{quizId}")
+    @ResponseBody
+    public String getPDFQuizInfo(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+
+        Document user = getQuizUser(request);
+        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+
+        return QuizController.getPDFQuizInfo(
+                isAdmin ? iryscQuizRepository : schoolQuizRepository,
+                quizId, isAdmin ? null : user.getObjectId("_id")
+        );
+    }
+
     @PutMapping(value = "setPDFQuizSubjectsAndChoicesCount/{quizId}")
     @ResponseBody
     public String setPDFQuizSubjectsAndChoicesCount(HttpServletRequest request,

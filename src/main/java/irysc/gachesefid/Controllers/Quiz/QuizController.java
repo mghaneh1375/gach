@@ -164,12 +164,11 @@ public class QuizController {
 
             JSONObject data = new JSONObject();
 
-            if(subjectIds.size() > 0) {
+            if (subjectIds.size() > 0) {
                 data.put("subjects", subjectRepository.findByIds(subjectIds, true)
                         .stream().map(x -> x.getString("name")).collect(Collectors.toList()));
                 data.put("choicesCounts", questions.getList("choices_counts", Integer.class));
-            }
-            else {
+            } else {
                 data.put("subjects", new ArrayList<>());
                 data.put("choicesCount", new ArrayList<>());
             }
@@ -233,6 +232,245 @@ public class QuizController {
         }
     }
 
+    public static String setPDFQuizInfo(Common db, ObjectId quizId,
+                                        ObjectId userId, JSONArray jsonArray
+    ) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد برای این نوع از آزمون قابل فراخوانی نیست");
+
+            if (quiz.getLong("start") < System.currentTimeMillis())
+                return generateErr("آزمون موردنظر شروع شده است");
+
+            int qNo = quiz.getInteger("q_no", 0);
+            if (qNo == 0)
+                return generateErr("لطفا ابتدا تعداد سوالات را وارد نمایید");
+
+            if (jsonArray.length() != qNo)
+                return generateErr("تعداد رکوردها با تعداد سوالات برابر نمی باشد");
+
+            List<ObjectId> distinctSubjectIds = new ArrayList<>();
+            List<ObjectId> subjectIds = new ArrayList<>();
+            List<Integer> choicesCounts = new ArrayList<>();
+            List<Integer> answers = new ArrayList<>();
+            List<Integer> marks = new ArrayList<>();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+
+                try {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    if (!jsonObject.has("mark") ||
+                            !jsonObject.has("choicesCount") ||
+                            !jsonObject.has("ans") ||
+                            !jsonObject.has("subject")
+                    )
+                        return generateErr("اطلاعات وارد شده نامعتبر است");
+
+                    String sId = jsonObject.getString("subject");
+                    if (!ObjectId.isValid(sId))
+                        return generateErr("اطلاعات وارد شده نامعتبر است");
+
+                    if (jsonObject.getInt("choicesCount") > 7 || jsonObject.getInt("choicesCount") < 2)
+                        return generateErr("اطلاعات وارد شده نامعتبر است");
+
+                    if (jsonObject.getInt("ans") < 1 ||
+                            jsonObject.getInt("choicesCount") < jsonObject.getInt("ans")
+                    )
+                        return generateErr("اطلاعات وارد شده نامعتبر است");
+
+                    if (jsonObject.getInt("mark") < 1)
+                        return generateErr("اطلاعات وارد شده نامعتبر است");
+
+                    ObjectId oId = new ObjectId(sId);
+
+                    if (!distinctSubjectIds.contains(oId))
+                        distinctSubjectIds.add(oId);
+
+                    subjectIds.add(oId);
+
+                    answers.add(jsonObject.getInt("ans"));
+                    marks.add(jsonObject.getInt("mark"));
+                    choicesCounts.add(jsonObject.getInt("choicesCount"));
+                } catch (Exception x) {
+                    return generateErr("اطلاعات وارد شده نامعتبر است");
+                }
+
+            }
+
+            if (subjectRepository.findByIds(distinctSubjectIds, true) == null)
+                return generateErr("اطلاعات وارد شده نامعتبر است");
+
+            Document questions = quiz.get("questions", Document.class);
+            questions.put("subjects", subjectIds);
+            questions.put("choices_counts", choicesCounts);
+            questions.put("answers", answers);
+            questions.put("marks", marks);
+
+            db.replaceOne(quizId, quiz);
+            return JSON_OK;
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    private static void fillGradeJSON(JSONArray jsonArray, Document doc,
+                                      List<ObjectId> selectedGrades,
+                                      List<ObjectId> selectedLessons,
+                                      boolean isOlympiad,
+                                      HashMap<ObjectId, JSONArray> subjectsInLesson) {
+
+        JSONObject grade = new JSONObject()
+                .put("id", doc.getObjectId("_id").toString())
+                .put("item", doc.getString("name"))
+                .put("isOlympiad", isOlympiad);
+
+        if(selectedGrades.contains(doc.getObjectId("_id"))) {
+
+            JSONArray lessonsJSON = new JSONArray();
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            if(lessons != null) {
+
+                for (Document lesson : lessons) {
+
+                    ObjectId lId = lesson.getObjectId("_id");
+
+                    JSONObject lessonJSON = new JSONObject()
+                            .put("item", lesson.getString("name"))
+                            .put("id", lId.toString());
+
+                    if (selectedLessons.contains(lesson.getObjectId("_id"))) {
+
+                        if (subjectsInLesson.containsKey(lId))
+                            lessonJSON.put("subjects", subjectsInLesson.get(lId));
+                        else {
+                            ArrayList<Document> subjects = subjectRepository.find(
+                                    eq("lesson._id", lId), null
+                            );
+
+                            JSONArray subjectsJSON = new JSONArray();
+
+                            for (Document subject : subjects) {
+                                subjectsJSON.put(
+                                        new JSONObject()
+                                                .put("item", subject.getString("name"))
+                                                .put("id", subject.getObjectId("_id").toString())
+                                );
+                            }
+
+                            subjectsInLesson.put(lId, subjectsJSON);
+                            lessonJSON.put("subjects", subjectsJSON);
+                        }
+                    }
+
+                    lessonsJSON.put(lessonJSON);
+                }
+
+                grade.put("lessons", lessonsJSON);
+            }
+        }
+
+        jsonArray.put(grade);
+
+    }
+    public static String getGradesAndBranches(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            Document questions = quiz.get("questions", Document.class);
+
+            List<ObjectId> subjectIds = questions.containsKey("subjects") ?
+                    questions.getList("subjects", ObjectId.class) : new ArrayList<>();
+
+            List<ObjectId> selectedGrades = new ArrayList<>();
+            List<ObjectId> selectedLessons = new ArrayList<>();
+
+            if(subjectIds.size() > 0) {
+                List<Document> subjects = subjectRepository.findByIds(subjectIds, true);
+                if(subjects != null) {
+                    selectedGrades.addAll(subjects.stream()
+                            .map(document -> document.get("grade", Document.class).getObjectId("_id"))
+                            .collect(Collectors.toList())
+                    );
+                    selectedLessons.addAll(subjects.stream()
+                            .map(document -> document.get("lesson", Document.class).getObjectId("_id"))
+                            .collect(Collectors.toList())
+                    );
+                }
+            }
+
+            JSONArray jsonArray = new JSONArray();
+
+            ArrayList<Document> docs = gradeRepository.find(null, null);
+            HashMap<ObjectId, JSONArray> subjectsInLesson = new HashMap<>();
+
+            for (Document doc : docs)
+                fillGradeJSON(jsonArray, doc, selectedGrades, selectedLessons, false, subjectsInLesson);
+
+            docs = branchRepository.find(null, null);
+            for (Document doc : docs)
+                fillGradeJSON(jsonArray, doc, selectedGrades, selectedLessons, true, subjectsInLesson);
+
+            return generateSuccessMsg("data", jsonArray);
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    public static String getPDFQuizInfo(Common db, ObjectId quizId, ObjectId userId) {
+
+        try {
+
+            Document quiz = hasAccess(db, userId, quizId);
+
+            if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
+                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+
+            Document questions = quiz.get("questions", Document.class);
+
+            List<ObjectId> subjectIds = questions.containsKey("subjects") ?
+                    questions.getList("subjects", ObjectId.class) : new ArrayList<>();
+
+            List<Integer> answers = questions.containsKey("answers") ?
+                    questions.getList("answers", Integer.class) : new ArrayList<>();
+
+            List<Integer> choicesCounts = questions.containsKey("choices_counts") ?
+                    questions.getList("choices_counts", Integer.class) : new ArrayList<>();
+
+            List<Integer> marks = questions.containsKey("marks") ?
+                    questions.getList("marks", Integer.class) : new ArrayList<>();
+
+            JSONObject data = new JSONObject();
+            List<Document> subjects = subjectRepository.findByIds(subjectIds, true);
+
+            if (subjectIds.size() > 0) {
+                data.put("subjects",
+                        subjects.stream().map(x -> x.getObjectId("_id").toString()).collect(Collectors.toList())
+                );
+                data.put("grades", subjects.stream().map(x -> x.get("grade", Document.class).getObjectId("_id").toString()).collect(Collectors.toList()));
+                data.put("lessons", subjects.stream().map(x -> x.get("lesson", Document.class).getObjectId("_id").toString()).collect(Collectors.toList()));
+            } else {
+                data.put("subjects", new ArrayList<>());
+            }
+
+            data.put("choicesCounts", choicesCounts);
+            data.put("answers", answers);
+            data.put("marks", marks);
+
+            return generateSuccessMsg("data", data);
+
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
     public static String setPDFQuizSubjectsAndChoicesCount(Common db, ObjectId quizId,
                                                            MultipartFile subjects, ObjectId userId
     ) {
@@ -289,7 +527,7 @@ public class QuizController {
                         return generateErr("کد " + code + " معتبر نمی باشد");
 
                     int choicesCount = (int) getCellValue(row.getCell(2));
-                    if(choicesCount < 2 || choicesCount > 6)
+                    if (choicesCount < 2 || choicesCount > 6)
                         return generateErr("تعداد گزینه ها باید بین 2 و 6 باشد");
 
                     marks.add(choicesCount - 1);
@@ -621,20 +859,19 @@ public class QuizController {
         if (!pdfQuiz && !question.containsKey("_ids"))
             throw new InvalidFieldsException("لطفا ابتدا سوال/سوالات خود را به آزمون اضافه کنید");
 
-        if(pdfQuiz && !question.containsKey("subjects"))
+        if (pdfQuiz && !question.containsKey("subjects"))
             throw new InvalidFieldsException("لطفا ابتدا مباحث سوال/سوالات خود را مشخص کنید");
 
-        if(pdfQuiz && !question.containsKey("answers"))
+        if (pdfQuiz && !question.containsKey("answers"))
             throw new InvalidFieldsException("لطفا ابتدا پاسخ سوال/سوالات خود را مشخص کنید");
 
         int qNo;
         List<ObjectId> questionIds = null;
 
-        if(!pdfQuiz) {
+        if (!pdfQuiz) {
             questionIds = question.getList("_ids", ObjectId.class);
             qNo = questionIds.size();
-        }
-        else
+        } else
             qNo = (Integer) quiz.getOrDefault("q_no", 0);
 
         if (qNo == 0)
@@ -2485,7 +2722,7 @@ public class QuizController {
                     (config.containsKey("quiz_coin") &&
                             config.getDouble("quiz_coin") > 0)
             )
-                user.put("coin", ((Number)user.get("coin")).doubleValue() +
+                user.put("coin", ((Number) user.get("coin")).doubleValue() +
                         config.getDouble("quiz_coin"));
 
             userRepository.replaceOne(
@@ -2727,12 +2964,11 @@ public class QuizController {
             if (db instanceof OpenQuizRepository)
                 new RegularQuizController.Taraz(quiz, openQuizRepository);
             else if (db instanceof SchoolQuizRepository) {
-                if(quiz.getBoolean("pdf_quiz", false))
+                if (quiz.getBoolean("pdf_quiz", false))
                     new RegularQuizController.Taraz().PDFQuizTaraz(quiz, schoolQuizRepository);
                 else
                     new RegularQuizController.Taraz(quiz, schoolQuizRepository);
-            }
-            else if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
+            } else if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName())) {
 
                 new TashrihiQuizController().createTaraz(quiz);
 
