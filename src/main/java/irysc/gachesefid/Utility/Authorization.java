@@ -12,9 +12,27 @@ import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
 public class Authorization {
 
+    public static boolean isWeakAdmin(List<String> accesses) {
+        return accesses.contains(Access.ADMIN.getName()) ||
+                accesses.contains(Access.SUPERADMIN.getName()) ||
+                accesses.contains(Access.EDITOR.getName()) ||
+                accesses.contains(Access.CONTENT.getName());
+    }
     public static boolean isAdmin(List<String> accesses) {
         return accesses.contains(Access.ADMIN.getName()) ||
                 accesses.contains(Access.SUPERADMIN.getName());
+    }
+
+    public static boolean isEditor(List<String> accesses) {
+        return accesses.contains(Access.ADMIN.getName()) ||
+                accesses.contains(Access.SUPERADMIN.getName()) ||
+                accesses.contains(Access.EDITOR.getName());
+    }
+
+    public static boolean isContent(List<String> accesses) {
+        return accesses.contains(Access.ADMIN.getName()) ||
+                accesses.contains(Access.SUPERADMIN.getName()) ||
+                accesses.contains(Access.CONTENT.getName());
     }
 
     public static boolean isAgent(List<String> accesses) {

@@ -5,10 +5,13 @@ import com.mongodb.client.model.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.NotifVia;
+import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -49,18 +52,18 @@ public class NotifController {
 
     public static String myNotifs(Document user) {
 
-        if(!user.containsKey("events"))
+        if (!user.containsKey("events"))
             return generateSuccessMsg("data", new JSONArray());
 
         List<Document> notifs = user.getList("events", Document.class);
         JSONArray jsonArray = new JSONArray();
 
-        for(int i = notifs.size() - 1; i >= 0; i--) {
+        for (int i = notifs.size() - 1; i >= 0; i--) {
 
             Document notif = notifs.get(i);
 
             Document n = notifRepository.findById(notif.getObjectId("notif_id"));
-            if(n == null)
+            if (n == null)
                 continue;
 
             JSONObject jsonObject = new JSONObject()
@@ -70,7 +73,7 @@ public class NotifController {
                     .put("desc", n.getString("text"))
                     .put("createdAt", getSolarDate(n.getLong("created_at")));
 
-            if(n.containsKey("attach") && !n.getString("attach").isEmpty())
+            if (n.containsKey("attach") && !n.getString("attach").isEmpty())
                 jsonObject.put("attach", STATICS_SERVER + "notifs/" + n.getString("attach"));
 
             jsonArray.put(jsonObject);
@@ -91,11 +94,11 @@ public class NotifController {
                     continue;
 
                 orFilter.add(eq(key, new ObjectId(id)));
+            } catch (Exception ignore) {
             }
-            catch (Exception ignore) {}
         }
 
-        if(orFilter.size() > 0)
+        if (orFilter.size() > 0)
             return or(orFilter);
 
         return null;
@@ -109,8 +112,9 @@ public class NotifController {
             if (res != null)
                 filters.add(res);
 
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {};
+        ;
     }
 
     private static Bson fetchFilters(JSONObject filtersJSON) {
@@ -119,52 +123,52 @@ public class NotifController {
         filters.add(eq("status", "active"));
         filters.add(exists("block_notif", false));
 
-        if(filtersJSON.getString("via").equalsIgnoreCase(NotifVia.MAIL.toString()))
+        if (filtersJSON.getString("via").equalsIgnoreCase(NotifVia.MAIL.toString()))
             filters.add(exists("mail", true));
 
-        if(filtersJSON.getString("via").equalsIgnoreCase(NotifVia.SMS.toString()))
+        if (filtersJSON.getString("via").equalsIgnoreCase(NotifVia.SMS.toString()))
             filters.add(exists("phone", true));
 
-        if(filtersJSON.has("cities"))
+        if (filtersJSON.has("cities"))
             processFilter(filters, filtersJSON, "cities", "city._id");
 
-        if(filtersJSON.has("states"))
+        if (filtersJSON.has("states"))
             processFilter(filters, filtersJSON, "states", "state._id");
 
-        if(filtersJSON.has("grades"))
+        if (filtersJSON.has("grades"))
             processFilter(filters, filtersJSON, "grades", "grade._id");
 
-        if(filtersJSON.has("branches"))
+        if (filtersJSON.has("branches"))
             processFilter(filters, filtersJSON, "branches", "branches._id");
 
-        if(filtersJSON.has("schools"))
+        if (filtersJSON.has("schools"))
             processFilter(filters, filtersJSON, "schools", "school._id");
 
-        if(filtersJSON.has("minCoin"))
+        if (filtersJSON.has("minCoin"))
             filters.add(gte("coin", filtersJSON.getNumber("minCoin").doubleValue()));
 
-        if(filtersJSON.has("maxCoin"))
+        if (filtersJSON.has("maxCoin"))
             filters.add(lte("coin", filtersJSON.getNumber("maxCoin").doubleValue()));
 
-        if(filtersJSON.has("minMoney"))
+        if (filtersJSON.has("minMoney"))
             filters.add(gte("money", filtersJSON.getInt("minMoney")));
 
-        if(filtersJSON.has("maxMoney"))
+        if (filtersJSON.has("maxMoney"))
             filters.add(lte("money", filtersJSON.getInt("maxMoney")));
 
-        if(filtersJSON.has("sex"))
+        if (filtersJSON.has("sex"))
             filters.add(eq("sex", filtersJSON.getString("sex")));
 
-        if(filtersJSON.has("nids")) {
+        if (filtersJSON.has("nids")) {
 
             JSONArray jsonArray = filtersJSON.getJSONArray("nids");
             ArrayList<String> validatedNids = new ArrayList<>();
 
-            for(int i = 0; i < jsonArray.length(); i++) {
+            for (int i = 0; i < jsonArray.length(); i++) {
 
                 String nid = Utility.convertPersianDigits(jsonArray.getString(i));
 
-                if(!Utility.validationNationalCode(nid))
+                if (!Utility.validationNationalCode(nid))
                     continue;
 
                 validatedNids.add(nid);
@@ -173,16 +177,16 @@ public class NotifController {
             filters.add(in("NID", validatedNids));
         }
 
-        if(filtersJSON.has("phones")) {
+        if (filtersJSON.has("phones")) {
 
             JSONArray jsonArray = filtersJSON.getJSONArray("phones");
             ArrayList<String> validatedPhones = new ArrayList<>();
 
-            for(int i = 0; i < jsonArray.length(); i++) {
+            for (int i = 0; i < jsonArray.length(); i++) {
 
                 String phone = Utility.convertPersianDigits(jsonArray.getString(i));
 
-                if(!PhoneValidator.isValid(phone))
+                if (!PhoneValidator.isValid(phone))
                     continue;
 
                 validatedPhones.add(phone);
@@ -191,20 +195,20 @@ public class NotifController {
             filters.add(in("phone", validatedPhones));
         }
 
-        if(filtersJSON.has("accesses")) {
+        if (filtersJSON.has("accesses")) {
 
             JSONArray jsonArray = filtersJSON.getJSONArray("accesses");
             ArrayList<Bson> orFilter = new ArrayList<>();
 
-            for(int i = 0; i < jsonArray.length(); i++) {
+            for (int i = 0; i < jsonArray.length(); i++) {
 
-                if(!EnumValidatorImp.isValid(jsonArray.getString(i), Access.class))
+                if (!EnumValidatorImp.isValid(jsonArray.getString(i), Access.class))
                     continue;
 
                 orFilter.add(in("accesses", jsonArray.getString(i)));
             }
 
-            if(orFilter.size() > 0)
+            if (orFilter.size() > 0)
                 filters.add(or(orFilter));
         }
 
@@ -222,8 +226,8 @@ public class NotifController {
                     continue;
 
                 ids.add(new ObjectId(id));
+            } catch (Exception ignore) {
             }
-            catch (Exception ignore) {}
         }
 
         return ids;
@@ -259,8 +263,8 @@ public class NotifController {
 
                 users = newFounded;
             }
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         try {
             if (filtersJSON.has("packages")) {
@@ -290,8 +294,8 @@ public class NotifController {
 
                 users = newFounded;
             }
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         try {
 
@@ -300,7 +304,7 @@ public class NotifController {
             )) {
 
                 ArrayList<ObjectId> userIds = new ArrayList<>();
-                for(Document user : users)
+                for (Document user : users)
                     userIds.add(user.getObjectId("_id"));
 
                 int min = filtersJSON.has("minRank") ? filtersJSON.getInt("minRank") : -1;
@@ -308,7 +312,7 @@ public class NotifController {
 
                 ArrayList<Document> ranks = tarazRepository.find(in("user_id", userIds),
                         new BasicDBObject("_id", 1).append("user_id", 1)
-                            .append("rank", 1)
+                                .append("rank", 1)
                 );
 
                 ArrayList<Document> newFounded = new ArrayList<>();
@@ -319,70 +323,67 @@ public class NotifController {
                             ranks, "user_id", userId
                     );
 
-                    if(rank == null) {
-                        if(min == -1)
+                    if (rank == null) {
+                        if (min == -1)
                             newFounded.add(user);
                         continue;
                     }
 
                     boolean satisfyRank;
 
-                    if(min != -1)
+                    if (min != -1)
                         satisfyRank = rank.getInteger("rank") <= min;
                     else
                         satisfyRank = rank.getInteger("rank") >= max;
 
-                    if(satisfyRank)
+                    if (satisfyRank)
                         newFounded.add(user);
                 }
 
                 users = newFounded;
             }
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         return users;
     }
 
-    public static String store(JSONObject filtersJSON, MultipartFile f) {
+    public static String store(JSONObject filtersJSON, MultipartFile f, MultipartFile list) {
 
         BasicDBObject neededFields = new BasicDBObject("_id", 1);
         String sendVia = filtersJSON.getString("via");
 
-        if(sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
+        if (sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
             neededFields.append("events", 1);
             neededFields.append("first_name", 1);
             neededFields.append("last_name", 1);
 
-            if(filtersJSON.getBoolean("sendMail")) {
+            if (filtersJSON.getBoolean("sendMail")) {
                 neededFields.append("mail", 1);
             }
 
-            if(filtersJSON.getBoolean("sendSMS")) {
+            if (filtersJSON.getBoolean("sendSMS")) {
                 neededFields.append("phone", 1);
             }
-        }
-
-        else if(sendVia.equalsIgnoreCase(NotifVia.MAIL.toString())) {
+        } else if (sendVia.equalsIgnoreCase(NotifVia.MAIL.toString())) {
             neededFields.append("mail", 1);
             neededFields.append("first_name", 1);
             neededFields.append("last_name", 1);
-        }
-
-        else if(sendVia.equalsIgnoreCase(NotifVia.SMS.toString()))
+        } else if (sendVia.equalsIgnoreCase(NotifVia.SMS.toString()))
             neededFields.append("phone", 1);
-
 
         ArrayList<Document> users = userRepository.find(and(fetchFilters(filtersJSON)),
                 neededFields
         );
 
-        if(users.size() == 0)
+        boolean checkZero = !sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) || users.size() != 0 || list == null;
+
+        if (checkZero && users.size() == 0)
             return generateErr("کاربری با فیلترهای اعمال شده پیدا نشد");
 
         users = postFilter(filtersJSON, users);
 
-        if(users.size() == 0)
+        if (checkZero && users.size() == 0)
             return generateErr("کاربری با فیلترهای اعمال شده پیدا نشد");
 
         ObjectId notifId = new ObjectId();
@@ -401,16 +402,25 @@ public class NotifController {
         List<WriteModel<Document>> mailWrites = new ArrayList<>();
         List<WriteModel<Document>> smsWrites = new ArrayList<>();
 
+        List<String> mailAddresses = new ArrayList<>();
+
         String attach = null;
 
-        if(users.size() > 0 && f != null)
+        if (users.size() > 0 && f != null)
             attach = FileUtils.uploadFile(f, "notifs");
+
+        String mailMsg = sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
+                filtersJSON.getString("text")
+                        .replace("<figure class=\"image\"><img src", "<figure class=\"image\"><img style='max-width: 100%' src") :
+                "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com";
+
+        String mailTitle = filtersJSON.getString("title");
 
         for (Document user : users) {
             userIds.add(user.getObjectId("_id"));
-            if(sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
+            if (sendVia.equalsIgnoreCase(NotifVia.SITE.toString())) {
                 List<Document> events = user.getList("events", Document.class);
-                if(attach != null)
+                if (attach != null)
                     events.add(
                             new Document("created_at", curr)
                                     .append("notif_id", notifId)
@@ -431,29 +441,32 @@ public class NotifController {
                 ));
             }
 
-            if((sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ||
+            if ((sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ||
                     filtersJSON.getBoolean("sendMail")) && user.containsKey("mail")
             ) {
 
-                Document d = new Document("mode", "notif")
-                        .append("status", "pending")
-                        .append("notif_id", notifId.toString())
-                        .append("mail", user.getString("mail"))
-                        .append("title", filtersJSON.getString("title"))
-                        .append("msg", sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
-                                filtersJSON.getString("text")
-                                        .replace("<figure class=\"image\"><img src", "<figure class=\"image\"><img style='max-width: 100%' src") :
-                                "پیام جدیدی در آیریسک داری" + "<br/>https://e.irysc.com")
-                        .append("created_at", curr)
-                        .append("name", user.getString("first_name") + " " + user.getString("last_name"));
+                String mailAddress = user.getString("mail");
 
-                if(attach != null)
-                    d.append("attach", attach);
+                if (!mailAddresses.contains(mailAddress)) {
 
-                mailWrites.add(new InsertOneModel<>(d));
+                    Document d = new Document("mode", "notif")
+                            .append("status", "pending")
+                            .append("notif_id", notifId.toString())
+                            .append("mail", mailAddress)
+                            .append("title", mailTitle)
+                            .append("msg", mailMsg)
+                            .append("created_at", curr)
+                            .append("name", user.getString("first_name") + " " + user.getString("last_name"));
+
+                    if (attach != null)
+                        d.append("attach", attach);
+
+                    mailAddresses.add(mailAddress);
+                    mailWrites.add(new InsertOneModel<>(d));
+                }
             }
 
-            if((sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ||
+            if ((sendVia.equalsIgnoreCase(NotifVia.SMS.toString()) ||
                     filtersJSON.getBoolean("sendSMS")) && user.containsKey("phone")
             ) {
                 smsWrites.add(new InsertOneModel<>(
@@ -470,24 +483,66 @@ public class NotifController {
         }
 
         notif.append("users", userIds);
-        if(attach != null)
+        if (attach != null)
             notif.append("attach", attach);
 
         notifRepository.insertOne(notif);
 
-        if(mailWrites.size() > 0)
-            mailQueueRepository.bulkWrite(mailWrites);
+        if (mailWrites.size() > 0 || list != null) {
 
-        if(smsWrites.size() > 0)
+            if (list != null && sendVia.equalsIgnoreCase(NotifVia.MAIL.toString())) {
+
+                String filename = FileUtils.uploadTempFile(list);
+                ArrayList<Row> rows = Excel.read(filename);
+
+                if (rows != null) {
+
+                    for (Row row : rows) {
+
+                        Cell cell = row.getCell(0);
+                        if (cell == null)
+                            continue;
+
+                        String mailAddress = cell.getStringCellValue();
+
+                        if (!mailAddresses.contains(mailAddress)) {
+
+                            Document d = new Document("mode", "notif")
+                                    .append("status", "pending")
+                                    .append("notif_id", notifId.toString())
+                                    .append("mail", mailAddress)
+                                    .append("title", mailTitle)
+                                    .append("msg", mailMsg)
+                                    .append("created_at", curr)
+                                    .append("name", "کاربر");
+
+                            if (attach != null)
+                                d.append("attach", attach);
+
+                            mailAddresses.add(mailAddress);
+                            mailWrites.add(new InsertOneModel<>(d));
+                        }
+                    }
+                }
+
+                FileUtils.removeTempFile(filename);
+            }
+
+            if (mailWrites.size() > 0)
+                mailQueueRepository.bulkWrite(mailWrites);
+        }
+
+        if (smsWrites.size() > 0)
             smsQueueRepository.bulkWrite(smsWrites);
 
-        if(writes.size() > 0) {
+        System.out.println(writes.size());
+
+        if (writes.size() > 0) {
             new Thread(() -> {
                 userRepository.bulkWrite(writes);
                 for (ObjectId userId : userIds)
                     userRepository.clearFromCache(userId);
             }).start();
-
         }
 
         return generateSuccessMsg("id", notifId.toString(),
@@ -506,11 +561,11 @@ public class NotifController {
         ArrayList<ObjectId> removed = new ArrayList<>();
         ArrayList<Object> userIds = new ArrayList<>();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -518,7 +573,7 @@ public class NotifController {
             ObjectId oId = new ObjectId(id);
 
             Document notif = notifRepository.findOneAndDelete(eq("_id", oId));
-            if(notif == null) {
+            if (notif == null) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -528,8 +583,8 @@ public class NotifController {
             done.put(oId.toString());
         }
 
-        if(removed.size() > 0) {
-            for(ObjectId objectId : removed) {
+        if (removed.size() > 0) {
+            for (ObjectId objectId : removed) {
                 Bson update = Updates.pull("events", eq("notif_id", objectId));
                 userRepository.updateMany(exists("events.0"), update);
             }
@@ -555,12 +610,12 @@ public class NotifController {
     public static String getNotif(ObjectId id, Document user) {
 
         Document notif = notifRepository.findById(id);
-        if(notif == null)
+        if (notif == null)
             return JSON_NOT_VALID_ID;
 
         boolean oldSeen = false;
 
-        if(user != null) {
+        if (user != null) {
             ObjectId userId = user.getObjectId("_id");
 
             if (!notif.getList("users", ObjectId.class).contains(userId))
@@ -572,7 +627,7 @@ public class NotifController {
                     events, "notif_id", id
             );
 
-            if(n != null)
+            if (n != null)
                 oldSeen = n.getBoolean("seen");
 
             if (n != null && !n.getBoolean("seen")) {
@@ -587,7 +642,7 @@ public class NotifController {
                 .put("oldSeen", oldSeen)
                 .put("createdAt", Utility.getSolarDate(notif.getLong("created_at")));
 
-        if(notif.containsKey("attach") && !notif.getString("attach").isEmpty())
+        if (notif.containsKey("attach") && !notif.getString("attach").isEmpty())
             jsonObject.put("attach", STATICS_SERVER + "notifs/" + notif.getString("attach"));
 
         return generateSuccessMsg("data", jsonObject);
@@ -601,7 +656,7 @@ public class NotifController {
                 events, "notif_id", id
         );
 
-        if(n != null && !n.getBoolean("seen")) {
+        if (n != null && !n.getBoolean("seen")) {
             n.put("seen", true);
             userRepository.replaceOne(user.getObjectId("_id"), user);
         }
@@ -612,7 +667,7 @@ public class NotifController {
     public static String getStudents(ObjectId id) {
 
         Document doc = notifRepository.findById(id);
-        if(doc == null)
+        if (doc == null)
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
@@ -620,10 +675,10 @@ public class NotifController {
                 doc.getList("users", ObjectId.class), false
         );
 
-        if(users == null)
+        if (users == null)
             return JSON_NOT_UNKNOWN;
 
-        for(Document user : users) {
+        for (Document user : users) {
             JSONObject jsonObject = new JSONObject();
             Utility.fillJSONWithUser(jsonObject, user);
             jsonArray.put(jsonObject);

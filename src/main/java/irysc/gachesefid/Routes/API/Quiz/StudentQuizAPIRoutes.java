@@ -124,7 +124,7 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
 
         Document user = getUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
 
         if(!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
                 !mode.equalsIgnoreCase("pdf") &&

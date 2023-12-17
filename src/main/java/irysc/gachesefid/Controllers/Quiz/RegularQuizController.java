@@ -1090,9 +1090,12 @@ public class RegularQuizController extends QuizAbstract {
         private void calcSubjectMarkSum() {
             for (QuestionStat itr : subjectsStat) {
                 for (QuestionStat aStudentsStat : studentsStat) {
-                    itr.marks.add(
-                            (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
-                    );
+                    if(aStudentsStat.subjectTotalMark.get(itr.id) == null || aStudentsStat.subjectTotalMark.get(itr.id) == 0)
+                        itr.marks.add(0.0);
+                    else
+                        itr.marks.add(
+                                (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
+                        );
                 }
             }
         }

@@ -153,14 +153,19 @@ public class Utilities {
                     );
                 } else if (doc.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName()) && jsonObject.has("stdAns")) {
 
-                    double stdAns = jsonObject.getDouble("stdAns");
+                    try {
+                        double stdAns = jsonObject.getNumber("stdAns").doubleValue();
 
-                    if (doc.getDouble("answer") - doc.getDouble("telorance") < stdAns &&
-                            doc.getDouble("answer") + doc.getDouble("telorance") > stdAns
-                    )
-                        jsonObject.put("stdMark", doc.getDouble("mark"));
-                    else
+                        if (doc.getDouble("answer") - doc.getDouble("telorance") < stdAns &&
+                                doc.getDouble("answer") + doc.getDouble("telorance") > stdAns
+                        )
+                            jsonObject.put("stdMark", doc.getDouble("mark"));
+                        else
+                            jsonObject.put("stdMark", 0);
+                    }
+                    catch (Exception err) {
                         jsonObject.put("stdMark", 0);
+                    }
                 }
 
             }

@@ -739,8 +739,14 @@ public class AdminReportController {
                     else {
                         if (pairValues.get(i).getKey().toString().equalsIgnoreCase(QuestionType.TEST.getName()))
                             answersJsonArray.getJSONObject(i).put("studentAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
-                        else
-                            answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+                        else {
+                            try {
+                                answersJsonArray.getJSONObject(i).put("studentAns", stdAnswers.get(i).getValue());
+                            }
+                            catch (Exception x) {
+                                answersJsonArray.getJSONObject(i).put("studentAns", "");
+                            }
+                        }
                     }
                 }
             }

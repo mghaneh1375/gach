@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
+import static java.lang.Double.isNaN;
 
 public abstract class QuizAbstract {
 
@@ -506,69 +507,76 @@ public abstract class QuizAbstract {
             totalMark += qMark;
             short status;
 
-            if (studentAnswers.size() <= idx)
-                status = 0;
-
-            else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
-                    QuestionType.TEST.getName()
-            )) {
-
-                PairValue pairValue = (PairValue) studentAnswers.get(idx).getValue();
-
-                if (
-                        pairValue.getValue().toString().isEmpty() ||
-                                pairValue.getValue().toString().equalsIgnoreCase("0")
-                )
+            try {
+                if (studentAnswers.size() <= idx)
                     status = 0;
 
-                else if (pairValue.getValue().toString()
-                        .equalsIgnoreCase(question.get("answer").toString())
-                ) {
-                    mark = question.getDouble("mark");
-                    status = 1;
-                } else {
+                else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
+                        QuestionType.TEST.getName()
+                )) {
 
-                    if(hasMinusMark)
-                        mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
-                    else
-                        mark = 0;
+                    PairValue pairValue = (PairValue) studentAnswers.get(idx).getValue();
 
-                    status = -1;
-                }
-            } else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
-                    QuestionType.SHORT_ANSWER.getName()
-            )) {
+                    if (
+                            pairValue.getValue().toString().isEmpty() ||
+                                    pairValue.getValue().toString().equalsIgnoreCase("0")
+                    )
+                        status = 0;
 
-                if (
-                        studentAnswers.get(idx).getValue().toString().isEmpty()
-                )
-                    status = 0;
-
-                else {
-                    double stdAns = (double) studentAnswers.get(idx).getValue();
-
-                    if (question.getDouble("answer") - question.getDouble("telorance") < stdAns &&
-                            question.getDouble("answer") + question.getDouble("telorance") > stdAns
+                    else if (pairValue.getValue().toString()
+                            .equalsIgnoreCase(question.get("answer").toString())
                     ) {
                         mark = question.getDouble("mark");
                         status = 1;
                     } else {
 
-                        if(hasMinusMark)
-                            mark = -question.getDouble("mark");
+                        if (hasMinusMark)
+                            mark = -question.getDouble("mark") / (question.getInteger("choices_count") - 1);
                         else
                             mark = 0;
 
                         status = -1;
                     }
-                }
+                } else if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(
+                        QuestionType.SHORT_ANSWER.getName()
+                )) {
+
+                    if (
+                            studentAnswers.get(idx).getValue().toString().isEmpty() ||
+                                    isNaN(((Number) studentAnswers.get(idx).getValue()).doubleValue())
+                    )
+                        status = 0;
+
+                    else {
+                        double stdAns = ((Number) studentAnswers.get(idx).getValue()).doubleValue();
+                        double qAns = ((Number) question.get("answer")).doubleValue();
+
+                        if (qAns - question.getDouble("telorance") < stdAns &&
+                                qAns + question.getDouble("telorance") > stdAns
+                        ) {
+                            mark = question.getDouble("mark");
+                            status = 1;
+                        } else {
+
+                            if (hasMinusMark)
+                                mark = -question.getDouble("mark");
+                            else
+                                mark = 0;
+
+                            status = -1;
+                        }
+                    }
+                } else
+                    status = 0;
+
+                updateStats(mark, question, qMark, status);
+                return status;
+            }
+            catch (Exception x) {
+                System.out.println(x.getMessage());
             }
 
-            else
-                status = 0;
-
-            updateStats(mark, question, qMark, status);
-            return status;
+            return 0;
         }
 
         private void updateStats(double mark, Document question, double qMark, short status) {
@@ -657,10 +665,14 @@ public abstract class QuizAbstract {
         void calculateTaraz(double mean, double sd,
                             ObjectId oId, boolean isForSubject) {
 
-            double percent =
-                    isForSubject ?
-                            subjectTotalMark.get(oId) == 0 ? 0 : subjectMark.get(oId) / subjectTotalMark.get(oId) :
-                            lessonTotalMark.get(oId) == 0 ? 0 : lessonMark.get(oId) / lessonTotalMark.get(oId);
+            double percent = 0;
+            try {
+                percent = isForSubject ?
+                        subjectTotalMark.get(oId) == 0 ? 0 : subjectMark.get(oId) / subjectTotalMark.get(oId) :
+                        lessonTotalMark.get(oId) == 0 ? 0 : lessonMark.get(oId) / lessonTotalMark.get(oId);
+            }
+            catch (Exception ignore) {}
+
             percent *= 100;
 
             double t = sd == 0 ? 5000 : 2000.0 * ((percent - mean) / sd) + 5000;
@@ -703,17 +715,20 @@ public abstract class QuizAbstract {
             else if (!isForSubject && lessonTaraz != null && lessonTaraz.containsKey(oId))
                 t = lessonTaraz.get(oId);
 
-            int w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
-            int c = isForSubject ? subjectCorrects.get(oId) : lessonCorrects.get(oId);
-            int ic = isForSubject ? subjectIncorrects.get(oId) : lessonIncorrects.get(oId);
-            double p = isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId);
+            Integer w = isForSubject ? subjectWhites.get(oId) : lessonWhites.get(oId);
+            Integer c = isForSubject ? subjectCorrects.get(oId) : lessonCorrects.get(oId);
+            Integer ic = isForSubject ? subjectIncorrects.get(oId) : lessonIncorrects.get(oId);
+            Double p = isForSubject ? subjectPercent.get(oId) : lessonPercent.get(oId);
 
             byte[] bb = ByteBuffer.allocate(4).putInt((int) t).array();
             out[0] = bb[2];
             out[1] = bb[3];
-            out[2] = (byte) w;
-            out[3] = (byte) c;
-            out[4] = (byte) ic;
+            out[2] = w == null ? (byte)0 : (byte) w.intValue();
+            out[3] = c == null ? (byte)0 : (byte) c.intValue();
+            out[4] = ic == null ? (byte)0 : (byte) ic.intValue();
+
+            if(p == null)
+                p = 0.0;
 
             boolean minus = false;
             if (p < 0) {

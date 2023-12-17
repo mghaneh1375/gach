@@ -28,7 +28,7 @@ public class AdminAPIRoutes extends Router {
     public String buyers(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId id
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return AdminContentController.buyers(id);
     }
 
@@ -36,7 +36,7 @@ public class AdminAPIRoutes extends Router {
     @ResponseBody
     public String getAllContents(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return AdminContentController.getAllContents();
     }
 
@@ -52,7 +52,7 @@ public class AdminAPIRoutes extends Router {
                                         optionalsType = {}
                                 ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
         return AdminContentController.forceRegistry(id, jsonObject.getJSONArray("items"), jsonObject.getInt("paid"));
     }
@@ -67,7 +67,7 @@ public class AdminAPIRoutes extends Router {
                                     paramsType = {JSONArray.class}
                             ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return AdminContentController.forceFire(id, new JSONObject(jsonStr).getJSONArray("items"));
     }
 }

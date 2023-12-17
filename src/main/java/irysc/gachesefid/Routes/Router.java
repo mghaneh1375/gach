@@ -80,6 +80,25 @@ public class Router {
         isWantedAccess(request, Access.ADMIN.getName());
     }
 
+    protected void getWeakAdminPrivilegeUserVoid(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        isWantedAccess(request, Access.WEAK_ADMIN.getName());
+    }
+    protected void getEditorPrivilegeUserVoid(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        isWantedAccess(request, Access.EDITOR.getName());
+    }
+
+    protected Document getEditorPrivilegeUser(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        return isWantedAccess(request, Access.EDITOR.getName());
+    }
+
+    protected void getContentPrivilegeUserVoid(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        isWantedAccess(request, Access.CONTENT.getName());
+    }
+
     protected Document getAdminPrivilegeUser(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         return isWantedAccess(request, Access.ADMIN.getName());
@@ -201,6 +220,18 @@ public class Router {
                         !Authorization.isAdmin(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
+                if (wantedAccess.equals(Access.EDITOR.getName()) &&
+                        !Authorization.isEditor(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                if (wantedAccess.equals(Access.CONTENT.getName()) &&
+                        !Authorization.isContent(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
+                if (wantedAccess.equals(Access.WEAK_ADMIN.getName()) &&
+                        !Authorization.isWeakAdmin(u.getList("accesses", String.class)))
+                    throw new NotAccessException("Access denied");
+
                 if (wantedAccess.equals(Access.SCHOOL.getName()) &&
                         !Authorization.isSchool(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
@@ -211,7 +242,8 @@ public class Router {
 
                 if (wantedAccess.equals("quiz") &&
                         !Authorization.isSchool(u.getList("accesses", String.class)) &&
-                        !Authorization.isAdvisor(u.getList("accesses", String.class))
+                        !Authorization.isAdvisor(u.getList("accesses", String.class)) &&
+                        !Authorization.isContent(u.getList("accesses", String.class))
                 )
                     throw new NotAccessException("Access denied");
 

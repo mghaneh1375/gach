@@ -221,7 +221,6 @@ public class StudentQuizController {
             return returnQuiz(quiz, stdDoc, true, quizJSON);
 
         } catch (Exception x) {
-            x.printStackTrace();
             return generateErr(x.getMessage());
         }
     }
@@ -2066,10 +2065,15 @@ public class StudentQuizController {
             if (i >= stdAnswers.size())
                 question.put("stdAns", "");
             else {
-                if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
-                    question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
-                else
-                    question.put("stdAns", stdAnswers.get(i).getValue());
+                try {
+                    if (question.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TEST.getName()))
+                        question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
+                    else
+                        question.put("stdAns", stdAnswers.get(i).getValue());
+                }
+                catch (Exception x) {
+                    question.put("stdAns", "");
+                }
             }
             i++;
         }

@@ -64,7 +64,7 @@ public class QuestionAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
 
         return QuestionController.subjectQuestions(
                 isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode,
@@ -80,7 +80,7 @@ public class QuestionAPIRoutes extends Router {
                                           paramsType = {JSONArray.class}
                                   ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         PairValue p = CommonController.removeAllReturnDocs(
                 questionRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
@@ -132,7 +132,7 @@ public class QuestionAPIRoutes extends Router {
                                            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         PairValue p = CommonController.removeAllReturnDocs(
                 escapeQuizQuestionRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
@@ -203,7 +203,7 @@ public class QuestionAPIRoutes extends Router {
         if (questionFile == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getContentPrivilegeUserVoid(request);
         return QuestionController.addQuestion(subjectId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
@@ -227,7 +227,7 @@ public class QuestionAPIRoutes extends Router {
         if (questionFile == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getContentPrivilegeUserVoid(request);
         return QuestionController.addEscapeQuizQuestion(questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
@@ -265,7 +265,7 @@ public class QuestionAPIRoutes extends Router {
                                }
                        ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return QuestionController.updateQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
@@ -286,7 +286,7 @@ public class QuestionAPIRoutes extends Router {
                                                  }
                                          ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return QuestionController.updateEscapeQuizQuestion(questionId, questionFile, answerFile, convertPersian(new JSONObject(jsonStr)));
     }
 
@@ -299,7 +299,7 @@ public class QuestionAPIRoutes extends Router {
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getContentPrivilegeUserVoid(request);
         return QuestionController.addBatch(file);
     }
 
@@ -312,11 +312,11 @@ public class QuestionAPIRoutes extends Router {
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getContentPrivilegeUserVoid(request);
         return QuestionController.addBatchEscapeQuizQuestions(file);
     }
 
-    @GetMapping
+    @GetMapping(value = "search")
     @ResponseBody
     public String search(HttpServletRequest request,
                          @RequestParam(required = false, value = "isSubjectsNeeded") Boolean isSubjectsNeeded,
@@ -334,10 +334,10 @@ public class QuestionAPIRoutes extends Router {
                          @RequestParam(required = false, value = "authorId") ObjectId authorId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        getAdminPrivilegeUser(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return QuestionController.search(true,
-                isSubjectsNeeded == null ? true : isSubjectsNeeded,
-                isAuthorsNeeded == null ? true : isAuthorsNeeded,
+                isSubjectsNeeded == null || isSubjectsNeeded,
+                isAuthorsNeeded == null || isAuthorsNeeded,
                 justUnVisible, organizationId, organizationLike,
                 subjectId, lessonId, questionId, quizId, authorId,
                 level, kindQuestion, sortBy

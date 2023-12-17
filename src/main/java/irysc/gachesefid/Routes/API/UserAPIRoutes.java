@@ -9,7 +9,9 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
@@ -19,6 +21,7 @@ import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,6 +34,12 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
+
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -71,6 +80,135 @@ public class UserAPIRoutes extends Router {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    @GetMapping(value = "/fixQuiz")
+    @ResponseBody
+    public String fixQuiz() throws ParseException {
+        Document quiz = iryscQuizRepository.findById(new ObjectId("651a49d52cd29b3fcd1114a0"));
+        List<Document> students = quiz.getList("students", Document.class);
+        List<Document> questions = questionRepository.findByIds(
+                quiz.get("questions", Document.class).getList("_ids", ObjectId.class), true
+        );
+
+        List<QuestionType> types = questions.stream().map(document -> document.getString("kind_question")).map(String::toUpperCase).map(QuestionType::valueOf)
+                .collect(Collectors.toList());
+
+        List<Object> answers = questions.stream().map(document -> document.get("answer")).collect(Collectors.toList());
+
+        byte[] answersByte = new byte[0];
+        int idx = -1;
+
+        for (Document question : questions) {
+            idx++;
+            answersByte = irysc.gachesefid.Controllers.Quiz.Utility.addAnswerToByteArr(answersByte, question.getOrDefault("kind_question", "test").toString(),
+                    types.get(idx).equals(QuestionType.TEST) ?
+                            new PairValue(question.getInteger("choices_count"), question.get("answer")) :
+                            question.get("answer")
+            );
+        }
+
+        quiz.get("questions", Document.class).put("answers", answersByte);
+
+        for (Document student : students) {
+
+            if (student == null)
+                continue;
+
+            Object tmp = student.getOrDefault("answers", null);
+            if (tmp != null)
+                tmp = ((Binary) tmp).getData();
+            else
+                tmp = new byte[0];
+
+            ArrayList<PairValue> oldStdAnswers = tmp == null ? new ArrayList<>() : irysc.gachesefid.Controllers.Quiz.Utility.getAnswers((byte[]) tmp);
+            List<QuestionType> stdTypes = oldStdAnswers.stream().map(pairValue -> pairValue.getKey().toString())
+                    .map(String::toUpperCase)
+                    .map(QuestionType::valueOf).collect(Collectors.toList());
+
+            if (stdTypes.size() != types.size()) {
+                System.out.println("err1");
+            } else {
+
+                boolean hasErr = false;
+
+                for (int i = 0; i < types.size(); i++) {
+                    System.out.println(stdTypes.get(i) + " " + types.get(i));
+                    if (!stdTypes.get(i).equals(types.get(i))) {
+                        System.out.println("err2 in " + i);
+                        hasErr = true;
+                    }
+                }
+
+                if(!hasErr) continue;
+
+                ArrayList<PairValue> newStdAnswers = new ArrayList<>();
+
+                idx = -1;
+                for (PairValue p : oldStdAnswers) {
+
+                    idx++;
+                    String stdAns = p.getValue() instanceof PairValue ?
+                            ((PairValue)p.getValue()).getValue().toString() : p.getValue().toString();
+
+                    Object stdAnsAfterFilter;
+                    QuestionType type = types.get(idx);
+
+                    if (stdAns.isEmpty()) {
+                        if (type.equals(QuestionType.TEST)) {
+                            newStdAnswers.add(new PairValue(
+                                    type.getName(),
+                                    new PairValue(((PairValue) p.getValue()).getKey(),
+                                            0)
+                            ));
+                        } else if (type.equals(QuestionType.SHORT_ANSWER))
+                            newStdAnswers.add(new PairValue(type.getName(), null));
+                        else if (type.equals(QuestionType.MULTI_SENTENCE)) {
+
+                            String s = "";
+                            for (int z = 0; z < p.getValue().toString().length(); z++)
+                                s += "_";
+
+                            newStdAnswers.add(new PairValue(type.getName(), s.toCharArray()));
+                        }
+                        continue;
+                    }
+
+                    if (type.equals(QuestionType.TEST)) {
+                        int s = NumberFormat.getInstance().parse(stdAns).intValue();
+                        stdAnsAfterFilter = new PairValue(4, s);
+                    } else if (type.equals(QuestionType.SHORT_ANSWER))
+                        stdAnsAfterFilter = Double.parseDouble(stdAns);
+                    else if (type.equals(QuestionType.MULTI_SENTENCE)) {
+
+                        if (p.getValue().toString().length() != stdAns.length())
+                            return JSON_NOT_VALID_PARAMS;
+
+                        if (!stdAns.matches("^[01_]+$"))
+                            return JSON_NOT_VALID_PARAMS;
+
+                        stdAnsAfterFilter = stdAns.toCharArray();
+                    } else
+                        stdAnsAfterFilter = stdAns;
+
+                    newStdAnswers.add(new PairValue(type.getName(), stdAnsAfterFilter));
+                }
+
+                student.put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getStdAnswersByteArr(newStdAnswers));
+
+            }
+
+//                        System.out.println("err2 " + i);
+//                        System.out.println("real ans " + answers.get(i));
+//                        System.out.println("std ans " + ((stdAnswers.get(i).getValue() instanceof PairValue) ?
+//                                ((PairValue)stdAnswers.get(i).getValue()).getValue() : stdAnswers.get(i).getValue()
+//                        ));
+
+        }
+
+        iryscQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+//                }
+//            }
+        return "";
+    }
 
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody

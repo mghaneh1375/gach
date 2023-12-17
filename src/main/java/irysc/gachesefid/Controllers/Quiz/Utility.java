@@ -482,7 +482,7 @@ public class Utility {
 
                 i = j;
             } else if (questions.get(i).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
-                bytes.add(getByteArr(questions.get(i).getDouble("answer")));
+                bytes.add(getByteArr(((Number)questions.get(i).get("answer")).doubleValue()));
                 i++;
             } else if (questions.get(i).getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
                 bytes.add(getByteArr(questions.get(i).getString("answer").toCharArray()));
@@ -502,7 +502,7 @@ public class Utility {
         return buff.array();
     }
 
-    static byte[] addAnswerToByteArr(byte[] answers, String type, Object answer) {
+    public static byte[] addAnswerToByteArr(byte[] answers, String type, Object answer) {
 
         try {
             ByteBuffer buff;
