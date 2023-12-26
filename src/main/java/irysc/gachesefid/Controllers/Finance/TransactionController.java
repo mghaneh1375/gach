@@ -18,8 +18,7 @@ import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
-import static irysc.gachesefid.Utility.Utility.getSolarDate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class TransactionController {
 
@@ -59,6 +58,7 @@ public class TransactionController {
                 continue;
 
             Document user = doc.get("user", Document.class);
+            double accountMoney = Math.max(0, ((Number)doc.getOrDefault("account_money", 0)).doubleValue());
 
             JSONObject jsonObject = new JSONObject()
                     .put("createdAt", Utility.getSolarDate(doc.getLong("created_at")))
@@ -67,20 +67,20 @@ public class TransactionController {
                     .put("useOff", doc.containsKey("off_code"))
                     .put("section", GiftController.translateUseFor(doc.getString("section")))
                     .put("amount", doc.get("amount"))
-                    .put("accountMoney", doc.getOrDefault("account_money", 0))
+                    .put("accountMoney", formatPrice((int)accountMoney))
                     .put("user", user.getString("first_name") + " " + user.getString("last_name"))
                     .put("userNID", user.getString("NID"))
                     .put("userPhone", user.getString("phone"));
 
             sum += jsonObject.getNumber("amount").doubleValue();
-            accountMoneySum += jsonObject.getNumber("accountMoney").doubleValue();
+            accountMoneySum += accountMoney;
 
             data.put(jsonObject);
         }
 
         return generateSuccessMsg("data", data,
-                new PairValue("sum", sum),
-                new PairValue("accountMoneySum", accountMoneySum)
+                new PairValue("sum", formatPrice((int)sum)),
+                new PairValue("accountMoneySum", formatPrice((int)accountMoneySum))
         );
     }
 
