@@ -46,7 +46,7 @@ public class AuthorAPIRoutes extends Router {
     @ResponseBody
     public String getAuthorsKeyVals(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return AuthorController.getAuthorsKeyVals();
     }
 

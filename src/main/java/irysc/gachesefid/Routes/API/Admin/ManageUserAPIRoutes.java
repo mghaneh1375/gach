@@ -110,7 +110,7 @@ public class ManageUserAPIRoutes extends Router {
                                 @RequestParam(value = "mail", required = false) String mail,
                                 @RequestParam(value = "NID", required = false) String NID
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return ManageUserController.fetchTinyUser(
                 level, name, lastname,
                 phone, mail, NID, gradeId, branchId

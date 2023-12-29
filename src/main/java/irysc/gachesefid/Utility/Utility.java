@@ -682,7 +682,7 @@ public class Utility {
             html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
             html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
             html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
-            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>تهران، میدان انقلاب، ابتدای خیابان آزادی، بن بست قائم مقام ، پلاک 5 - 02166917230</p>";
+            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>نشانی: دانشگاه صنعتی شریف، ساختمان ابن سینا، طبقه چهارم - 021-91096320</p>";
             html += "</div>";
             html += "</div>";
 
@@ -787,7 +787,7 @@ public class Utility {
             html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
             html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
             html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
-            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>تهران، میدان انقلاب، ابتدای خیابان آزادی، بن بست قائم مقام ، پلاک 5 - 02166917230</p>";
+            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>نشانی: دانشگاه صنعتی شریف، ساختمان ابن سینا، طبقه چهارم - 021-91096320</p>";
             html += "</div>";
             html += "</div>";
 

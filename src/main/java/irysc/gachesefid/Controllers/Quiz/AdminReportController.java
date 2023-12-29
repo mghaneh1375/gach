@@ -559,7 +559,8 @@ public class AdminReportController {
                     return JSON_NOT_VALID_PARAMS;
             }
 
-            if (doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            if (doc.getOrDefault("mode", KindQuiz.REGULAR.getName()).toString()
+                    .equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                 return getTashrihiQuizAnswerSheet(doc, idx == -1 ? null : students.get(idx));
 //            if(doc.getBoolean("is_online") ||
 //                    !doc.getString("mode").equalsIgnoreCase(KindQuiz.REGULAR.getName())

@@ -362,7 +362,7 @@ public class TicketController {
             return JSON_NOT_VALID_PARAMS;
 
         boolean isAdvisor = Authorization.isAdvisor(accesses);
-        boolean isAdmin = Authorization.isAdmin(accesses);
+        boolean isAdmin = Authorization.isEditor(accesses);
 
         if(jsonObject.has("section") &&
                 jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
@@ -388,7 +388,7 @@ public class TicketController {
 
         if (
                 (isAdmin && !jsonObject.has("userId")) ||
-                        (!isAdvisor && jsonObject.has("userId"))
+                        (!isAdvisor && !isAdmin && jsonObject.has("userId"))
         )
             return JSON_NOT_VALID_PARAMS;
 
@@ -607,7 +607,7 @@ public class TicketController {
     public static String addFileToRequest(List<String> accesses, ObjectId userId,
                                           ObjectId requestId, MultipartFile file) {
 
-        boolean isAdmin = Authorization.isAdvisor(accesses);
+        boolean isAdmin = Authorization.isAdvisor(accesses) || Authorization.isEditor(accesses);
         Document request = ticketRepository.findById(requestId);
 
         if (request == null)

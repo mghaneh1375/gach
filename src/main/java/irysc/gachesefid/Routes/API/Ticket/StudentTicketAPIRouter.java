@@ -99,7 +99,10 @@ public class StudentTicketAPIRouter extends Router {
 
         Document user = getUser(request);
 
-        if(Authorization.isAdvisor(user.getList("accesses", String.class)))
+        if(
+                Authorization.isAdvisor(user.getList("accesses", String.class)) ||
+                        Authorization.isEditor(user.getList("accesses", String.class))
+        )
             return TicketController.setRequestAnswer(
                     requestId, user.getObjectId("_id"),
                     new JSONObject(jsonStr)

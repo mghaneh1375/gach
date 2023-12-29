@@ -46,7 +46,7 @@ public class RequestAPIRoutes extends Router {
         if (dates == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         return RequestController.getAll(isPending, isFinished, searchInArchive,
                 type, userId, sendDate, answerDate, sendDateEndLimit, answerDateEndLimit);
     }
@@ -62,7 +62,7 @@ public class RequestAPIRoutes extends Router {
                                            optionalsType = {String.class}
                                    ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
         JSONObject jsonObject = new JSONObject(jsonStr);
         return RequestController.setRequestAnswer(requestId,
                 jsonObject.getBoolean("answer"),

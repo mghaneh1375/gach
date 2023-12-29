@@ -605,7 +605,7 @@ public class QuizAPIRoutes extends Router {
                                            }
                                    ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
 
         JSONObject jsonObject = new JSONObject(jsonStr);
         if (jsonObject.getJSONArray("items").length() != 1)
@@ -628,7 +628,7 @@ public class QuizAPIRoutes extends Router {
                                               ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
 
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
@@ -1510,7 +1510,7 @@ public class QuizAPIRoutes extends Router {
     @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")
     @ResponseBody
     public String getQuizAnswerSheets(HttpServletRequest request,
-                                      @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                      @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                       @PathVariable @ObjectIdConstraint ObjectId quizId,
                                       @RequestParam(required = false, value = "studentId") ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -1519,9 +1519,9 @@ public class QuizAPIRoutes extends Router {
 
         boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
+        if (isAdmin && isIRYSCQuiz(mode))
             return AdminReportController.getQuizAnswerSheets(
-                    iryscQuizRepository, null, quizId, studentId
+                    selectDB(mode), null, quizId, studentId
             );
 
         return AdminReportController.getQuizAnswerSheets(

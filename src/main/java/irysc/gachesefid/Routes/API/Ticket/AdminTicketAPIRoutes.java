@@ -8,7 +8,6 @@ import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
@@ -20,12 +19,10 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
-import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.or;
 import static irysc.gachesefid.Main.GachesefidApplication.ticketRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @RestController
 @RequestMapping(path = "/api/admin/ticket/")
@@ -59,7 +56,7 @@ public class AdminTicketAPIRoutes extends Router {
 //        if (dates == null)
 //            return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
+        getEditorPrivilegeUserVoid(request);
 
         return TicketController.getRequests(
                 searchInArchive, status,
@@ -77,7 +74,7 @@ public class AdminTicketAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         Document user = getUser(request);
         return TicketController.getRequest(ticketId,
-                Authorization.isAdmin(user.getList("accesses", String.class)) ? null
+                Authorization.isEditor(user.getList("accesses", String.class)) ? null
                         : user.getObjectId("_id")
         );
     }
@@ -90,9 +87,8 @@ public class AdminTicketAPIRoutes extends Router {
                                  paramsType = {JSONArray.class}
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-//        getAdminPrivilegeUserVoid(request);
         Document user = getUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = Authorization.isEditor(user.getList("accesses", String.class));
 
         return CommonController.removeAll(ticketRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),

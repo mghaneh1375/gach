@@ -1143,7 +1143,7 @@ public class QuizController {
 
                 Document doc = new Document("user_id", userId)
                         .append("amount", 0)
-                        .append("account_money", shouldPay)
+                        .append("account_money", shouldPay > 100 ? shouldPay : 0)
                         .append("created_at", curr)
                         .append("status", "success")
                         .append("section", OffCodeSections.SCHOOL_QUIZ.getName())
