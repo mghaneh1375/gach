@@ -66,6 +66,8 @@ public class Authorization {
     public static boolean isStudent(List<String> accesses) {
         return accesses.contains(Access.ADMIN.getName()) ||
                 accesses.contains(Access.SUPERADMIN.getName()) ||
+                accesses.contains(Access.CONTENT.getName()) ||
+                accesses.contains(Access.EDITOR.getName()) ||
                 accesses.contains(Access.STUDENT.getName());
     }
 

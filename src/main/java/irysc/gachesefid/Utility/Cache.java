@@ -30,8 +30,8 @@ public class Cache {
         if(o == null || key == null)
             return false;
 
-        if(o.getClass().getName().equals(key.getClass().getName()))
-            return o.equals(key);
+        if(o.getClass().getName().equals(key.getClass().getName()) && o.equals(key))
+            return true;
 
         if(secondaryKey != null &&
                 o.getClass().getName().equals(secondaryKey.getClass().getName()))

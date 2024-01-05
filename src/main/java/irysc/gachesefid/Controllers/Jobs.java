@@ -447,13 +447,19 @@ public class Jobs implements Runnable {
 
             long yesterday = System.currentTimeMillis() - 86400000;
 
-            int limit = mails.size() > 30 ? 30 : mails.size();
+            int limit = Math.min(mails.size(), 30);
             ArrayList<ObjectId> ids = new ArrayList<>();
 
             for(int i = 0; i < limit; i++) {
 
                 try {
                     Document mail = mails.get(i);
+
+                    if(!mail.containsKey("mail") ||
+                            mail.getString("mail") == null) {
+                        ids.add(mail.getObjectId("_id"));
+                        continue;
+                    }
 
                     if(Utility.sendMailWithAttach(
                             mail.containsKey("title") ?

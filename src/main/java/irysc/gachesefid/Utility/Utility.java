@@ -710,7 +710,7 @@ public class Utility {
 
     public static boolean sendMailWithAttach(String to, String msg, String username, String filename) {
 
-        if (DEV_MODE)
+        if (DEV_MODE || to == null)
             return true;
 
         Properties prop = new Properties();

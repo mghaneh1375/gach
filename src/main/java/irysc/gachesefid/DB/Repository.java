@@ -27,9 +27,8 @@ public class Repository {
 
             if (cached.get(i).equals(id)) {
 
-                if (cached.get(i).checkExpiration()) {
+                if (cached.get(i).checkExpiration())
                     return (Document) cached.get(i).getValue();
-                }
 
                 cached.remove(i);
                 return null;
