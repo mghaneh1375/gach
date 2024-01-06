@@ -300,7 +300,7 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String getAllCertsDigest(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return AdminCertification.getAllCertsDigest();
     }
 
@@ -317,7 +317,7 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String getAllContentQuizzesDigest(HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return QuizController.getAllContentQuizzesDigest();
     }
 
