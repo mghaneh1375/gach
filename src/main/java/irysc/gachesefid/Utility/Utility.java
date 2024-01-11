@@ -181,14 +181,14 @@ public class Utility {
         String dd = getToday("/");
         int d = Integer.parseInt(dd.split("/")[2]);
 
-        if(d == 1)
+        if (d == 1)
             return d;
 
-        for(int i = 1; i <= 31; i++) {
+        for (int i = 1; i <= 31; i++) {
             dd = getPast("/", i);
             d = Integer.parseInt(dd.split("/")[2]);
 
-            if(d == 1) {
+            if (d == 1) {
                 return convertStringToDate(dd);
             }
         }
@@ -201,21 +201,21 @@ public class Utility {
         String dd = getToday("/");
         int m = Integer.parseInt(dd.split("/")[1]), d;
 
-        if(m == 1)
+        if (m == 1)
             m = 12;
         else
             m--;
 
 //        LocalDate todaydate = LocalDate.now();
 
-        for(int i = 0; i <= 62; i++) {
+        for (int i = 0; i <= 62; i++) {
 
             dd = getPast("/", i);
 
             d = Integer.parseInt(dd.split("/")[2]);
             int mm = Integer.parseInt(dd.split("/")[1]);
 
-            if(d == 1 && mm == m) {
+            if (d == 1 && mm == m) {
 //                todaydate = todaydate.minusDays(i);
 //                return todaydate.toEpochDay() * ONE_DAY_MIL_SEC;
                 return convertStringToDate(dd);
@@ -314,12 +314,12 @@ public class Utility {
                                   String template
     ) {
 
-        if(DEV_MODE)
+        if (DEV_MODE)
             return true;
 
         receptor = convertPersianDigits(receptor);
 
-        if(!PhoneValidator.isValid(receptor)) {
+        if (!PhoneValidator.isValid(receptor)) {
             System.out.println("not valid phone num");
             return false;
         }
@@ -328,7 +328,7 @@ public class Utility {
             KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
             SendResult Result = api.verifyLookup(receptor, token, token2, token3, template);
 
-            if(Result.getStatus() == 6 ||
+            if (Result.getStatus() == 6 ||
                     Result.getStatus() == 11 ||
                     Result.getStatus() == 13 ||
                     Result.getStatus() == 14 ||
@@ -348,7 +348,7 @@ public class Utility {
 
     public static boolean sendSMSWithoutTemplate(String receptor, String msg) {
 
-        if(DEV_MODE)
+        if (DEV_MODE)
             return true;
 
         receptor = convertPersianDigits(receptor);
@@ -376,7 +376,7 @@ public class Utility {
                     .header("cache-control", "no-cache")
                     .asString();
 
-            if(response != null)
+            if (response != null)
                 System.out.println(response.getBody());
 
             return true;
@@ -392,9 +392,9 @@ public class Utility {
     }
 
 
-    public static boolean sendSMSWithTemplate(String receptor, int templateId, PairValue ... paramsPair) {
+    public static boolean sendSMSWithTemplate(String receptor, int templateId, PairValue... paramsPair) {
 
-        if(DEV_MODE)
+        if (DEV_MODE)
             return true;
 
         receptor = convertPersianDigits(receptor);
@@ -408,7 +408,7 @@ public class Utility {
 
             JSONObject params = new JSONObject();
 
-            for(PairValue p : paramsPair)
+            for (PairValue p : paramsPair)
                 params.put(p.getKey().toString(), p.getValue());
 
             jsonObject.put("parameters", params);
@@ -421,7 +421,7 @@ public class Utility {
                     .body(jsonObject)
                     .asString();
 
-            if(response != null)
+            if (response != null)
                 System.out.println(response.getBody());
 
             return true;
@@ -457,7 +457,7 @@ public class Utility {
     public static JSONObject convertPersian(JSONObject jsonObject) {
 
         for (String key : jsonObject.keySet()) {
-            if(key.toLowerCase().contains("password") ||
+            if (key.toLowerCase().contains("password") ||
                     key.toLowerCase().contains("newpass") ||
                     key.toLowerCase().contains("rnewpass") ||
                     key.equalsIgnoreCase("code") ||
@@ -468,7 +468,7 @@ public class Utility {
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                if(str.charAt(0) == '0' ||
+                if (str.charAt(0) == '0' ||
                         key.equalsIgnoreCase("phone") ||
                         key.equalsIgnoreCase("tel") ||
                         key.equals("NID")
@@ -560,26 +560,25 @@ public class Utility {
 
             String subject = "";
 
-            if(mode.equalsIgnoreCase("signUp")
-                || mode.equalsIgnoreCase("forget"))
+            if (mode.equalsIgnoreCase("signUp")
+                    || mode.equalsIgnoreCase("forget"))
                 subject = "کد تایید";
-            else if(mode.equalsIgnoreCase("successTransaction"))
+            else if (mode.equalsIgnoreCase("successTransaction"))
                 subject = "شارژ حساب";
-            else if(mode.equalsIgnoreCase("successSignUp"))
+            else if (mode.equalsIgnoreCase("successSignUp"))
                 subject = "ثبت نام موفق در سایت";
-            else if(mode.equalsIgnoreCase("successQuiz"))
+            else if (mode.equalsIgnoreCase("successQuiz"))
                 subject = "خرید/ساخت آزمون";
-            else if(mode.equalsIgnoreCase("notif")) {
+            else if (mode.equalsIgnoreCase("notif")) {
                 subject = "پیام جدید";
                 String[] splited = to.split("___");
                 title = splited[0];
                 to = splited[1];
-            }
-            else if(mode.equalsIgnoreCase("quizReminder"))
+            } else if (mode.equalsIgnoreCase("quizReminder"))
                 subject = "یادآوری آزمون";
-            else if(mode.equalsIgnoreCase("offcode"))
+            else if (mode.equalsIgnoreCase("offcode"))
                 subject = "ایجاد کد تخفیف";
-            else if(mode.equalsIgnoreCase("karname"))
+            else if (mode.equalsIgnoreCase("karname"))
                 subject = "ایجاد کارنامه / ساخت تراز ";
 
             message.setRecipients(
@@ -588,7 +587,7 @@ public class Utility {
 
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
 
-            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
+            String html ="<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
             html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
                     "border-color: rgb(255, 102, 0);\n" +
                     "max-width: 700px;\n" +
@@ -599,16 +598,16 @@ public class Utility {
                     "clear: both;\n" +
                     "height: 80px;'>";
 
-            if(title == null)
+            if (title == null)
                 html += "<h3 style='color: rgb(1, 50, 67);\n" +
                         "font-family: IRANSans;\n" +
                         "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + subject +  "</h3>";
+                        "margin-top: 20px; float: right;'>" + subject + "</h3>";
             else
                 html += "<h3 style='color: rgb(1, 50, 67);\n" +
                         "font-family: IRANSans;\n" +
                         "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + title +  "</h3>";
+                        "margin-top: 20px; float: right;'>" + title + "</h3>";
 
 
             html += "<img style='height: 60px;\n" +
@@ -623,43 +622,38 @@ public class Utility {
             else
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
-            if(mode.equalsIgnoreCase("notif"))
-                html += msg;
+            if (mode.equalsIgnoreCase("notif"))
+                html += msg.replaceAll("<img", "<img style='max-width: 100%'");
             else if (mode.equalsIgnoreCase("signUp") ||
                     mode.equalsIgnoreCase("forget")) {
                 html += "<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>";
                 html += "<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>" + msg + "</p>";
-            }
-            else if (mode.equalsIgnoreCase("successSignUp"))
+            } else if (mode.equalsIgnoreCase("successSignUp"))
                 html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>";
             else if (mode.equalsIgnoreCase("quizReminder")) {
                 html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>فردا آزمون " + msg + " در سامانه آیریسک برگزار میشود.</p>";
                 html += "<p>فراموش نکنی!</p>";
-            }
-            else if (mode.equalsIgnoreCase("successTransaction")) {
+            } else if (mode.equalsIgnoreCase("successTransaction")) {
                 String[] splited = msg.split("_");
                 html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>حساب شما در آیریسک " + Utility.formatPrice(Integer.parseInt(splited[0])) + " تومان شارژ شد.</p>";
                 html += "<p>" +
                         "<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>" +
                         "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
                         + "</p>";
-            }
-            else if (mode.equalsIgnoreCase("offcode")) {
+            } else if (mode.equalsIgnoreCase("offcode")) {
                 html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شارژ تشویقی شما به صورت اختصاصی در پیشخوان کاربری تان قرار گرفت. از بخش تخفیف ها آن را ببینید</p>";
                 html += "<p>" +
                         "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
                         "<br /><a href='" + msg + "'>" + msg + "</a>"
                         + "</p>";
-            }
-            else if (mode.equalsIgnoreCase("karname")) {
+            } else if (mode.equalsIgnoreCase("karname")) {
                 String[] splited = msg.split("_");
                 html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون " + splited[0] + " در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ های تشریحی را هم بررسی کنی</p>";
                 html += "<p>" +
                         "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
                         "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
                         + "</p>";
-            }
-            else if (mode.equals("changeMail"))
+            } else if (mode.equals("changeMail"))
                 html += "<p>You have requested to change your email account in ÖKF LMS, tap the button below to change your email:</p>";
             else if (mode.equalsIgnoreCase("successQuiz")) {
                 html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شما موفق شدی در آزمون ثبت نام کنی.</p>";
@@ -670,12 +664,8 @@ public class Utility {
 
             }
 
-            if (mode.equals("examReqRes"))
-                html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>Your language proficiency exam result is:</p>";
-            else if (mode.equals("changeMail"))
+            if (mode.equals("changeMail"))
                 html += "<a target='_blank' style='background-color: #BB0000; color: white; font-size: 1.4em; font-weight: bolder; padding-top: 10px; padding-bottom: 10px; padding-left: 20px; padding-right: 20px; text-decoration: none' href='" + msg + "'>Change Email</a>";
-            else if (mode.equals("createOffCode"))
-                html += "<p>This credit will be automatically deducted from all your payments on the website until it expires.</p>";
 
             html += "</div>";
 
@@ -733,12 +723,11 @@ public class Utility {
             String title;
 
             String subject = "پیام جدید";
-            if(to.contains("___")) {
+            if (to.contains("___")) {
                 String[] splited = to.split("___");
                 title = splited[0];
                 to = splited[1];
-            }
-            else
+            } else
                 title = subject;
 
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
@@ -757,16 +746,16 @@ public class Utility {
                     "clear: both;\n" +
                     "height: 80px;'>";
 
-            if(title == null)
+            if (title == null)
                 html += "<h3 style='color: rgb(1, 50, 67);\n" +
                         "font-family: IRANSans;\n" +
                         "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + subject +  "</h3>";
+                        "margin-top: 20px; float: right;'>" + subject + "</h3>";
             else
                 html += "<h3 style='color: rgb(1, 50, 67);\n" +
                         "font-family: IRANSans;\n" +
                         "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + title +  "</h3>";
+                        "margin-top: 20px; float: right;'>" + title + "</h3>";
 
 
             html += "<img style='height: 60px;\n" +
@@ -796,19 +785,19 @@ public class Utility {
             Multipart multipart = new MimeMultipart();
             multipart.addBodyPart(mimeBodyPart);
 
-            if(filename != null && !filename.isEmpty()) {
+            if (filename != null && !filename.isEmpty()) {
 
                 MimeBodyPart messageBodyPart = new MimeBodyPart();
 
                 DataSource source;
 
-                if(mailAttaches.containsKey(filename))
+                if (mailAttaches.containsKey(filename))
                     source = mailAttaches.get(filename);
                 else {
                     String file = FileUtils.uploadDir + "notifs/" + filename;
                     source = new FileDataSource(file);
 
-                    if(mailAttaches.keySet().size() >= 100)
+                    if (mailAttaches.keySet().size() >= 100)
                         mailAttaches = new HashMap<>();
 
                     mailAttaches.put(filename, source);
@@ -993,37 +982,33 @@ public class Utility {
         if (sendDateSolar != null) {
             String[] splited = sendDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
-        }
-        else
+        } else
             dates.add(null);
 
         if (answerDateSolar != null) {
             String[] splited = answerDateSolar.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
-        }
-        else
+        } else
             dates.add(null);
 
         if (sendDateSolarEndLimit != null) {
             String[] splited = sendDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
-        }
-        else
+        } else
             dates.add(null);
 
         if (answerDateSolarEndLimit != null) {
             String[] splited = answerDateSolarEndLimit.split("-");
             dates.add(JalaliCalendar.jalaliToGregorian(
-                    new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
+                            new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
                     .format("-"));
-        }
-        else
+        } else
             dates.add(null);
 
         return dates;
@@ -1069,7 +1054,7 @@ public class Utility {
 
     public static Object getOrDefault(JSONObject jsonObject, String key, Object defaultValue) {
 
-        if(!jsonObject.has(key))
+        if (!jsonObject.has(key))
             return defaultValue;
 
         return jsonObject.get(key);
@@ -1077,7 +1062,7 @@ public class Utility {
 
     public static ObjectId getOrDefaultObjectId(JSONObject jsonObject, String key) {
 
-        if(!jsonObject.has(key))
+        if (!jsonObject.has(key))
             return null;
 
         return new ObjectId(jsonObject.get(key).toString());
@@ -1086,7 +1071,7 @@ public class Utility {
     public static String getRandIntForSubjectId() {
 
         int number = Math.abs(random.nextInt(999));
-        if(number < 100)
+        if (number < 100)
             number += 100;
 
         String code = String.format("%03d", number);
@@ -1100,7 +1085,7 @@ public class Utility {
     public static int getRandIntForTag() {
 
         int number = Math.abs(random.nextInt(999));
-        if(number < 100)
+        if (number < 100)
             number += 100;
 
         if (questionTagRepository.exist(eq("code", number)))
@@ -1115,7 +1100,7 @@ public class Utility {
 
     public static String getSolarDate(long time) {
 
-        if(time < 1610494635)
+        if (time < 1610494635)
             return "";
 
         Date d = new Date(time);
@@ -1282,50 +1267,49 @@ public class Utility {
                 .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
                 .put("NID", user.getString("NID"));
 
-        if(user.containsKey("city")) {
+        if (user.containsKey("city")) {
             Document city = (Document) user.get("city");
-            if(city != null && city.containsKey("name"))
+            if (city != null && city.containsKey("name"))
                 jsonObject1.put("city", city.getString("name"));
         }
 
-        if(!jsonObject1.has("city"))
+        if (!jsonObject1.has("city"))
             jsonObject1.put("city", "");
 
-        if(user.containsKey("school")) {
+        if (user.containsKey("school")) {
             Document school = (Document) user.get("school");
-            if(school != null && school.containsKey("name"))
+            if (school != null && school.containsKey("name"))
                 jsonObject1.put("school", school.getString("name"));
         }
 
-        if(!jsonObject1.has("school"))
+        if (!jsonObject1.has("school"))
             jsonObject1.put("school", "");
 
-        if(user.containsKey("grade")) {
+        if (user.containsKey("grade")) {
             Document grade = (Document) user.get("grade");
-            if(grade != null && grade.containsKey("name"))
+            if (grade != null && grade.containsKey("name"))
                 jsonObject1.put("grade", grade.getString("name"));
         }
 
-        if(!jsonObject1.has("grade"))
+        if (!jsonObject1.has("grade"))
             jsonObject1.put("grade", "");
 
 
-        if(user.containsKey("branches")) {
+        if (user.containsKey("branches")) {
             List<Document> branches = user.getList("branches", Document.class);
-            if(branches.size() > 0) {
+            if (branches.size() > 0) {
                 StringBuilder sb = new StringBuilder();
                 for (Document branch : branches) {
                     sb.append(branch.getString("name")).append(" - ");
                 }
                 jsonObject1.put("branches", sb.substring(0, sb.toString().length() - 3));
-            }
-            else jsonObject1.put("branches", "");
+            } else jsonObject1.put("branches", "");
         }
 
-        if(!jsonObject1.has("branches"))
+        if (!jsonObject1.has("branches"))
             jsonObject1.put("branches", "");
 
-        if(user.containsKey("rank"))
+        if (user.containsKey("rank"))
             jsonObject1.put("rank", user.get("rank"));
         else {
             Document rank = tarazRepository.findOne(eq("user_id", user.getObjectId("_id")), JUST_RANK);
@@ -1359,8 +1343,7 @@ public class Utility {
                 return arrayNationalCode[0] == temp;
             else
                 return arrayNationalCode[0] == 11 - temp;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -1431,7 +1414,7 @@ public class Utility {
     public static Document findAccountOff(ObjectId userId,
                                           long curr,
                                           String section
-                                          ) {
+    ) {
         return offcodeRepository.findOne(
                 and(
                         exists("code", false),
@@ -1452,7 +1435,7 @@ public class Utility {
 
         ArrayList<ObjectId> tmp = new ArrayList<>();
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
             tmp.add(doc.getObjectId("_id"));
         }
 

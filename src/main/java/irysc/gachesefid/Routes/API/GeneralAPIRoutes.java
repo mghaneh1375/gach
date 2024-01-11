@@ -309,7 +309,7 @@ public class GeneralAPIRoutes extends Router {
     public String getAllQuizzesDigest(HttpServletRequest request,
                                       @RequestParam(required = false, value = "isOpenQuizzesNeeded") Boolean isOpenQuizzesNeeded
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+        getWeakAdminPrivilegeUserVoid(request);
         return QuizController.getAllQuizzesDigest(isOpenQuizzesNeeded);
     }
 
