@@ -770,7 +770,7 @@ public class Utility {
             else
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
-            html += msg;
+            html += msg.replaceAll("<img", "<img style='max-width: 100%'");
             html += "</div>";
 
             html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
