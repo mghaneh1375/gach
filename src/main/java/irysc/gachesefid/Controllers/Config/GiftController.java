@@ -659,7 +659,10 @@ public class GiftController {
         else if(myGift.getString("type").equalsIgnoreCase("offcode")) {
 
             JSONObject res = new JSONObject(OffCodeController.store(new JSONObject()
-                    .put("expireAt", System.currentTimeMillis() + 1000000) //myGift.getLong("expire_at")
+                    .put("expireAt", myGift.containsKey("expire_at") ?
+                            myGift.getLong("expire_at") :
+                            System.currentTimeMillis() + 1000000
+                    )
                     .put("type", myGift.getString("off_code_type"))
                     .put("amount", myGift.getInteger("amount"))
                     .put("section", myGift.getString("use_for"))
