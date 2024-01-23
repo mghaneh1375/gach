@@ -773,14 +773,26 @@ public class RegularQuizController extends QuizAbstract {
             this.useFromDatabase = (boolean) quiz.getOrDefault("database", true);
             this.hasMinusMark = (boolean) quiz.getOrDefault("minus_mark", true);
 
-//            marks = questions.getList("marks", Double.class);
-
             students = quiz.getList("students", Document.class);
             questionIds = questions.getList("_ids", ObjectId.class);
 
             marks = new ArrayList<>();
-            for (int i = 0; i < questionIds.size(); i++)
-                marks.add(3.0);
+
+            try {
+
+                if(!questions.containsKey("marks") ||
+                        questions.getList("marks", Double.class).size() != questionIds.size()
+                ) {
+                    for (int i = 0; i < questionIds.size(); i++)
+                        marks.add(3.0);
+                }
+
+                marks = questions.getList("marks", Double.class);
+            }
+            catch (Exception ignore) {
+                for (int i = 0; i < questionIds.size(); i++)
+                    marks.add(3.0);
+            }
 
             lessonsStat = new ArrayList<>();
             subjectsStat = new ArrayList<>();
