@@ -623,7 +623,7 @@ public class Utility {
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
             if (mode.equalsIgnoreCase("notif"))
-                html += msg.replaceAll("<img", "<img style='max-width: 100%'");
+                html += msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'");
             else if (mode.equalsIgnoreCase("signUp") ||
                     mode.equalsIgnoreCase("forget")) {
                 html += "<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>";
@@ -770,7 +770,7 @@ public class Utility {
             else
                 html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
 
-            html += msg.replaceAll("<img", "<img style='max-width: 100%'");
+            html += msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'");
             html += "</div>";
 
             html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
