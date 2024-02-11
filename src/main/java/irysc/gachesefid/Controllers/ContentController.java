@@ -794,6 +794,9 @@ public class ContentController {
 
         for (Document doc : docs) {
 
+            if(!doc.containsKey("lessons"))
+                continue;
+
             List<Document> lessons = doc.getList("lessons", Document.class);
 
             JSONArray lessonsJSON = new JSONArray();
