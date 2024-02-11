@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API;
 
 
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.AlertController;
 import irysc.gachesefid.Controllers.Certification.AdminCertification;
 import irysc.gachesefid.Controllers.Config.CityController;
@@ -27,6 +28,7 @@ import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -41,8 +43,11 @@ import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 
+import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+import static irysc.gachesefid.Utility.Utility.getToday;
 
 
 @Controller
@@ -534,6 +539,35 @@ public class GeneralAPIRoutes extends Router {
                           @RequestParam(required = false) @NotBlank String refId
     ) {
         return "Ad";
+    }
+
+    @GetMapping(value = "/rss")
+    @ResponseBody
+    public String rss() {
+
+        JSONArray jsonArray = new JSONArray();
+
+        Document rss = rssRepository.findBySecKey(getToday());
+        if(rss == null) {
+            rss = rssRepository.findOne(exists("news.0"), null, Sorts.descending("today"));
+        }
+
+        if(rss == null)
+            return generateSuccessMsg("data", jsonArray);
+
+        for(Document news : rss.getList("news", Document.class)) {
+            jsonArray.put(new JSONObject()
+                    .put("link", news.getString("link"))
+                    .put("description", news.getString("description"))
+                    .put("title", news.getString("title"))
+                    .put("date", Utility.getSolarDate(news.getLong("date_ts")))
+                    .put("mainImage", news.getString("main_image"))
+                    .put("categories", news.getList("categories", String.class))
+                    .put("contents", news.getString("content"))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 
     @GetMapping(value = "/myOffs")

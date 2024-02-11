@@ -317,6 +317,13 @@ public class ContentAPIRoutes extends Router {
         return ContentController.gradeLessons();
     }
 
+
+    @GetMapping(value = "/gradeLessonsInGradesAndBranches")
+    @ResponseBody
+    public String gradeLessonsInGradesAndBranches() {
+        return ContentController.gradeLessonsInGradesAndBranches();
+    }
+
     @GetMapping(value = "/all")
     @ResponseBody
     public String all(

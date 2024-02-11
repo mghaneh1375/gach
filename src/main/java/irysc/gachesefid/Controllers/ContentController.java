@@ -765,6 +765,55 @@ public class ContentController {
         return generateSuccessMsg("data", lessonsJSON);
     }
 
+    public static String gradeLessonsInGradesAndBranches() {
+
+        ArrayList<Document> docs = gradeRepository.find(null, null);
+        JSONArray jsonArray = new JSONArray();
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            JSONArray lessonsJSON = new JSONArray();
+            JSONObject gradeJSON = new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            for (Document lesson : lessons) {
+                lessonsJSON.put(new JSONObject()
+                        .put("name", lesson.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                );
+            }
+
+            gradeJSON.put("lessons", lessonsJSON);
+            jsonArray.put(gradeJSON);
+        }
+
+        docs = branchRepository.find(null, null);
+
+        for (Document doc : docs) {
+
+            List<Document> lessons = doc.getList("lessons", Document.class);
+
+            JSONArray lessonsJSON = new JSONArray();
+            JSONObject gradeJSON = new JSONObject()
+                    .put("name", doc.getString("name"))
+                    .put("id", doc.getObjectId("_id").toString());
+
+            for (Document lesson : lessons) {
+                lessonsJSON.put(new JSONObject()
+                        .put("name", lesson.getString("name"))
+                        .put("id", lesson.getObjectId("_id").toString())
+                );
+            }
+
+            gradeJSON.put("lessons", lessonsJSON);
+            jsonArray.put(gradeJSON);
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 
     public static String gradeLessons() {
 

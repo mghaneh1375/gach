@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.sql.Connection;
@@ -31,6 +32,7 @@ import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
         "irysc.gachesefid.Security", "irysc.gachesefid.Service"})
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
+@EnableScheduling
 public class GachesefidApplication implements WebMvcConfigurer {
 
     final static private String username = "root";
@@ -87,6 +89,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static QuestionReportRepository questionReportRepository;
     public static QuestionTagRepository questionTagRepository;
     public static RequestRepository requestRepository;
+    public static RSSRepository rssRepository;
     public static SchoolQuestionRepository schoolQuestionRepository;
     public static ScheduleRepository scheduleRepository;
     public static SchoolQuizRepository schoolQuizRepository;
@@ -161,6 +164,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             questionTagRepository = new QuestionTagRepository();
             questionReportRepository = new QuestionReportRepository();
             requestRepository = new RequestRepository();
+            rssRepository = new RSSRepository();
             schoolQuestionRepository = new SchoolQuestionRepository();
             schoolQuizRepository = new SchoolQuizRepository();
             schoolRepository = new SchoolRepository();
