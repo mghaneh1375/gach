@@ -507,8 +507,17 @@ public class ContentController {
     public static String addSubject(ObjectId gradeId, ObjectId lessonId, JSONObject subject) {
 
         Document grade = gradeRepository.findById(gradeId);
-        if (grade == null)
-            return JSON_NOT_VALID_ID;
+        boolean isForBranch = false;
+
+        if (grade == null) {
+
+            grade = branchRepository.findById(gradeId);
+
+            if(grade == null)
+                return JSON_NOT_VALID_ID;
+
+            isForBranch = true;
+        }
 
         List<Document> lessons = grade.getList("lessons", Document.class);
         Document lesson = Utility.searchInDocumentsKeyVal(lessons, "_id", lessonId);
@@ -526,21 +535,23 @@ public class ContentController {
 
         String code = getRandIntForSubjectId();
 
-        ObjectId oId = subjectRepository.insertOneWithReturnId(
-                new Document("name", subject.getString("name"))
-                        .append("code", code)
-                        .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
-                        .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
-                        .append("easy_price", subject.getInt("easyPrice"))
-                        .append("mid_price", subject.getInt("midPrice"))
-                        .append("hard_price", subject.getInt("hardPrice"))
-                        .append("school_easy_price", subject.getInt("schoolEasyPrice"))
-                        .append("school_mid_price", subject.getInt("schoolMidPrice"))
-                        .append("school_hard_price", subject.getInt("schoolHardPrice"))
-                        .append("description", subject.has("description") ? subject.getString("description") : "")
-                        .append("created_at", System.currentTimeMillis())
-        );
+        Document newDoc = new Document("name", subject.getString("name"))
+                .append("code", code)
+                .append("grade", new Document("_id", gradeId).append("name", grade.getString("name")))
+                .append("lesson", new Document("_id", lessonId).append("name", lesson.getString("name")))
+                .append("easy_price", subject.getInt("easyPrice"))
+                .append("mid_price", subject.getInt("midPrice"))
+                .append("hard_price", subject.getInt("hardPrice"))
+                .append("school_easy_price", subject.getInt("schoolEasyPrice"))
+                .append("school_mid_price", subject.getInt("schoolMidPrice"))
+                .append("school_hard_price", subject.getInt("schoolHardPrice"))
+                .append("description", subject.has("description") ? subject.getString("description") : "")
+                .append("created_at", System.currentTimeMillis());
 
+        if(isForBranch)
+            newDoc.append("is_for_branch", true);
+
+        ObjectId oId = subjectRepository.insertOneWithReturnId(newDoc);
         return generateSuccessMsg("id", oId.toString(), new PairValue("code", code));
     }
 
