@@ -420,8 +420,12 @@ public class Utility {
             if(isAdmin)
                 video = doc.containsKey("video") ? doc.getString("video") : null;
             else if(doc.containsKey("chunk_at") && doc.containsKey("video")) {
-                String folderName = doc.getString("video").split("\\.mp4")[0];
-                video = VIDEO_STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
+                if(!(Boolean) doc.getOrDefault("external_link", false)) {
+                    String folderName = doc.getString("video").split("\\.mp4")[0];
+                    video = VIDEO_STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
+                }
+                else
+                    video = doc.getString("video");
             }
 
             jsonObject.put("video", video);

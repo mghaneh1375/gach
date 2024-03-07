@@ -168,7 +168,7 @@ public class AdminContentController {
             JSONArray jsonArray = new JSONArray();
             for(Document session : doc.getList("sessions", Document.class)) {
                 jsonArray.put(new JSONObject()
-                        .put("name", session.getString("title"))
+                        .put("name", session.get("title"))
                         .put("id", session.getObjectId("_id").toString())
                 );
             }

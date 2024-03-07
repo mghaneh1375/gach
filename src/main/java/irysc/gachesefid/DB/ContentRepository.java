@@ -46,7 +46,7 @@ public class ContentRepository extends Common {
                 FileUtils.removeFile(attach, FOLDER);
         }
 
-        if(session.containsKey("video"))
+        if(session.containsKey("video") && !(Boolean)session.getOrDefault("external_link", false))
             FileUtils.removeFile(session.getString("video"), FOLDER);
     }
 }
