@@ -26,10 +26,10 @@ public class Utility {
     static Document returnIfNoRegistry(ObjectId id) throws InvalidFieldsException {
 
         Document doc = contentRepository.findById(id);
-        if(doc == null)
+        if (doc == null)
             throw new InvalidFieldsException("id is not valid");
 
-        if(doc.getList("users", Document.class).size() > 0)
+        if (doc.getList("users", Document.class).size() > 0)
             throw new InvalidFieldsException("بسته موردنظر خریده شده است و این امکان وجود ندارد.");
 
         return doc;
@@ -42,7 +42,7 @@ public class Utility {
                 .put("question", item.get("question"))
                 .put("answer", item.get("answer"));
 
-        if(isAdmin) {
+        if (isAdmin) {
             jsonObject.put("id", item.getObjectId("_id").toString())
                     .put("priority", item.get("priority"))
                     .put("visibility", item.get("visibility"));
@@ -68,14 +68,14 @@ public class Utility {
                 .put("duration", doc.getInteger("duration"))
                 .put("sessionsCount", doc.getInteger("sessions_count"));
 
-        if(!isAdmin && doc.containsKey("img"))
+        if (!isAdmin && doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
-        if(doc.containsKey("off")) {
+        if (doc.containsKey("off")) {
 
             long curr = System.currentTimeMillis();
 
-            if(doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
+            if (doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
 
                 int val = doc.getInteger("off");
                 String type = doc.getString("off_type");
@@ -91,7 +91,7 @@ public class Utility {
 
         }
 
-        if(isAdmin) {
+        if (isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
                     .put("createdAt", irysc.gachesefid.Utility.Utility.getSolarDate(doc.getLong("created_at")))
                     .put("buyers", doc.getList("users", Document.class).size());
@@ -102,7 +102,8 @@ public class Utility {
 
     static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy,
                               boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded,
-                              Document user) throws InvalidFieldsException {
+                              Document user
+    ) throws InvalidFieldsException {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))
@@ -123,19 +124,19 @@ public class Utility {
 
         List<Document> students = doc.getList("users", Document.class);
 
-        if(students.size() > 10)
+        if (students.size() > 10)
             jsonObject.put("buyers", students.size());
 
         JSONArray lastBuyers = new JSONArray();
         int counter = 0;
 
-        for(int i = students.size() - 1; i >= 0; i--) {
+        for (int i = students.size() - 1; i >= 0; i--) {
 
-            if(counter > 3)
+            if (counter > 3)
                 break;
 
             Document userTmp = userRepository.findById(students.get(i).getObjectId("_id"));
-            if(userTmp == null)
+            if (userTmp == null)
                 continue;
 
             lastBuyers.put(new JSONObject()
@@ -148,16 +149,16 @@ public class Utility {
 
         jsonObject.put("lastBuyers", lastBuyers);
 
-        if(includeFAQ) {
+        if (includeFAQ) {
             Document config = contentConfigRepository.findBySecKey("first");
-            if(config != null) {
+            if (config != null) {
 
                 List<Document> faqs = config.getList("faq", Document.class);
                 JSONArray faqJSON = new JSONArray();
 
-                for(Document faq : faqs) {
+                for (Document faq : faqs) {
 
-                    if(!faq.getBoolean("visibility") && !isAdmin)
+                    if (!faq.getBoolean("visibility") && !isAdmin)
                         continue;
 
                     faqJSON.put(convertFAQDigest(faq, isAdmin));
@@ -167,14 +168,14 @@ public class Utility {
             }
         }
 
-        if(doc.containsKey("img"))
+        if (doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
-        if(!afterBuy && doc.containsKey("off")) {
+        if (!afterBuy && doc.containsKey("off")) {
 
             long curr = System.currentTimeMillis();
 
-            if(doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
+            if (doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
 
                 int val = doc.getInteger("off");
                 String type = doc.getString("off_type");
@@ -190,15 +191,15 @@ public class Utility {
 
         }
 
-        if(afterBuy && stdDoc != null && stdDoc.containsKey("rate"))
+        if (afterBuy && stdDoc != null && stdDoc.containsKey("rate"))
             jsonObject.put("stdRate", stdDoc.get("rate"));
 
-        if(afterBuy && doc.containsKey("final_exam_id") && stdDoc != null) {
+        if (afterBuy && doc.containsKey("final_exam_id") && stdDoc != null) {
 
             ObjectId quizId = doc.getObjectId("final_exam_id");
             long curr = System.currentTimeMillis();
 
-            if(stdDoc.containsKey("start_at") &&
+            if (stdDoc.containsKey("start_at") &&
                     !stdDoc.containsKey("check_cert") &&
                     doc.containsKey("cert_id")
             ) {
@@ -206,12 +207,12 @@ public class Utility {
                 boolean needCheck = true;
                 int diffDay = 0;
 
-                if(doc.containsKey("cert_duration")) {
+                if (doc.containsKey("cert_duration")) {
 
                     long registerAt = stdDoc.getLong("register_at");
                     diffDay = (int) Math.floor((curr - registerAt) * 1.0 / ONE_DAY_MIL_SEC);
 
-                    if(diffDay > doc.getInteger("cert_duration")) {
+                    if (diffDay > doc.getInteger("cert_duration")) {
                         stdDoc.put("check_cert", false);
                         contentRepository.replaceOne(doc.getObjectId("_id"), doc);
                         needCheck = false;
@@ -219,11 +220,11 @@ public class Utility {
 
                 }
 
-                if(needCheck) {
+                if (needCheck) {
 
                     double percent = -1;
 
-                    if(doc.containsKey("final_exam_min_mark")) {
+                    if (doc.containsKey("final_exam_min_mark")) {
 
                         Document quiz = contentQuizRepository.findById(quizId);
                         if (quiz == null)
@@ -267,13 +268,12 @@ public class Utility {
                             stdDoc.put("check_cert", percent >= doc.getInteger("final_exam_min_mark"));
                             contentRepository.replaceOne(doc.getObjectId("_id"), doc);
                         }
-                    }
-                    else {
+                    } else {
                         stdDoc.put("check_cert", true);
                         contentRepository.replaceOne(doc.getObjectId("_id"), doc);
                     }
 
-                    if((boolean)stdDoc.getOrDefault("check_cert", false)) {
+                    if ((boolean) stdDoc.getOrDefault("check_cert", false)) {
 
                         JSONObject params = new JSONObject()
                                 .put("std_name", user.getString("first_name") + " " + user.getString("last_name"))
@@ -282,7 +282,7 @@ public class Utility {
                                 .put("issue_at", irysc.gachesefid.Utility.Utility.getToday("/"))
                                 .put("diff_day", diffDay + "");
 
-                        if(percent != -1)
+                        if (percent != -1)
                             params.put("mark", String.format("%.2f", percent / 5));
 
                         addUserToContentCert(doc.getObjectId("cert_id"), params);
@@ -299,46 +299,47 @@ public class Utility {
                     .put("finalExamId", quizId.toString())
             ;
 
-            if((boolean)stdDoc.getOrDefault("check_cert", false))
+            if ((boolean) stdDoc.getOrDefault("check_cert", false))
                 jsonObject.put("certStatus", "ready")
                         .put("certId", doc.getObjectId("cert_id").toString());
 
         }
 
-        if(isAdmin) {
+        if (isAdmin) {
             jsonObject.put("visibility", doc.getBoolean("visibility"))
                     .put("priority", doc.getOrDefault("priority", 1))
                     .put("finalExamMinMark", doc.getOrDefault("final_exam_min_mark", -1))
                     .put("buyers", doc.getList("users", Document.class).size());
 
-            if(doc.containsKey("off")) {
+            if (doc.containsKey("off")) {
                 jsonObject.put("off", doc.get("off"));
                 jsonObject.put("offType", doc.get("off_type"));
                 jsonObject.put("offExpiration", doc.get("off_expiration"));
                 jsonObject.put("offStart", doc.get("off_start"));
             }
 
-            if(doc.containsKey("cert_id"))
+            if (doc.containsKey("cert_id"))
                 jsonObject.put("certId", doc.getObjectId("cert_id").toString());
 
-            if(doc.containsKey("final_exam_id"))
+            if (doc.containsKey("final_exam_id"))
                 jsonObject.put("finalExamId", doc.getObjectId("final_exam_id").toString());
 
-            if(doc.containsKey("final_exam_min_mark"))
+            if (doc.containsKey("final_exam_min_mark"))
                 jsonObject.put("finalExamMinMark", doc.get("final_exam_min_mark"));
 
-        }
-        else
+        } else
             jsonObject.put("afterBuy", afterBuy);
 
-        if(isSessionsNeeded) {
+        if (isSessionsNeeded) {
 
             List<Document> sessions = doc.getList("sessions", Document.class);
             JSONArray sessionsJSON = new JSONArray();
 
             for (Document session : sessions) {
-                if(!isAdmin && !afterBuy && !session.getBoolean("visibility")) continue;
-                sessionsJSON.put(sessionDigest(session, false, afterBuy, doc.getInteger("price") == 0, true));
+                if (!isAdmin && !afterBuy && !session.getBoolean("visibility")) continue;
+                sessionsJSON.put(
+                        sessionDigest(session, false, afterBuy, doc.getInteger("price") == 0, true, null)
+                );
             }
 
             jsonObject.put("sessions", sessionsJSON);
@@ -353,16 +354,16 @@ public class Utility {
         jsonObject.put("chapters", chaptersJSON);
 
         Document config = contentConfigRepository.findBySecKey("first");
-        if(config != null) {
+        if (config != null) {
             List<Document> advs = config.getList("advs", Document.class);
 
             List<Document> visible_advs = new ArrayList<>();
-            for(Document itr : advs) {
-                if(itr.getBoolean("visibility"))
+            for (Document itr : advs) {
+                if (itr.getBoolean("visibility"))
                     visible_advs.add(itr);
             }
 
-            if(visible_advs.size() > 0) {
+            if (visible_advs.size() > 0) {
                 int idx = irysc.gachesefid.Utility.Utility.getRandIntForGift(visible_advs.size());
                 jsonObject.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + visible_advs.get(idx).getString("file"));
             }
@@ -371,10 +372,13 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject sessionDigest(Document doc, boolean isAdmin,
-                                    boolean afterBuy, boolean isFree, boolean returnFree) {
+    static JSONObject sessionDigest(
+            Document doc, boolean isAdmin,
+            boolean afterBuy, boolean isFree, boolean returnFree,
+            ObjectId userId
+    ) {
 
-        if(doc == null)
+        if (doc == null)
             return new JSONObject();
 
         List<String> attaches = doc.containsKey("attaches") ? doc.getList("attaches", String.class)
@@ -389,42 +393,51 @@ public class Utility {
                 .put("description", doc.get("description"))
                 .put("attachesCount", attaches.size());
 
-        if(doc.containsKey("exam_id")) {
+        if (doc.containsKey("exam_id")) {
             jsonObject
                     .put("examId", doc.getObjectId("exam_id").toString())
                     .put("hasExam", true)
                     .put("minMark", doc.getOrDefault("min_mark", -1))
             ;
-        }
-        else
+            if(afterBuy || isAdmin) {
+                Document exam = contentQuizRepository.findById(doc.getObjectId("exam_id"));
+                boolean canDoQuiz = false;
+
+                if(exam != null)
+                    canDoQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                            exam.getList("students", Document.class), "_id", userId
+                    ) == -1;
+
+                jsonObject.put("canDoQuiz", canDoQuiz);
+            }
+        } else
             jsonObject.put("hasExam", false);
 
-        if(isAdmin)
+        if (isAdmin)
             jsonObject.put("visibility", doc.get("visibility"))
                     .put("priority", doc.get("priority"))
                     .put("hasVideo", doc.containsKey("video") && doc.get("video") != null);
 
-        if(isAdmin || afterBuy || doc.getInteger("price") == 0 || isFree) {
+        if (isAdmin || afterBuy || doc.getInteger("price") == 0 || isFree) {
 
-            if(!returnFree && !afterBuy && isFree && doc.getInteger("price") > 0) {
+            if (!returnFree && !afterBuy && isFree && doc.getInteger("price") > 0) {
                 return jsonObject;
             }
 
             JSONArray attachesJSONArr = new JSONArray();
-            for(String itr : attaches)
+            for (String itr : attaches)
                 attachesJSONArr.put(STATICS_SERVER + ContentRepository.FOLDER + "/" + itr);
 
             jsonObject.put("attaches", attachesJSONArr);
             String video = null;
 
-            if(isAdmin)
+            if (isAdmin)
                 video = doc.containsKey("video") ? doc.getString("video") : null;
-            else if(doc.containsKey("chunk_at") && doc.containsKey("video")) {
-                if(!(Boolean) doc.getOrDefault("external_link", false)) {
+            else if (doc.containsKey("chunk_at") && doc.containsKey("video")) {
+                if (!(Boolean) doc.getOrDefault("external_link", false)) {
                     String folderName = doc.getString("video").split("\\.mp4")[0];
                     video = VIDEO_STATICS_SERVER + "videos/" + folderName + "/playlist.m3u8";
-                }
-                else
+                } else
                     video = doc.getString("video");
             }
 

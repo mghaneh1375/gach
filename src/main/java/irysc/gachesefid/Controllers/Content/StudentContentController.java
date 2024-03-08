@@ -42,14 +42,14 @@ public class StudentContentController {
                 new BasicDBObject("teacher", 1)
         );
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             List<String> newList = new ArrayList<>();
             String[] splited = doc.getString("teacher").split("__");
 
-            for(String itr : splited) {
+            for (String itr : splited) {
 
-                if(itr.equals(oldName))
+                if (itr.equals(oldName))
                     newList.add(newName);
                 else
                     newList.add(itr);
@@ -71,13 +71,13 @@ public class StudentContentController {
     public static String chapters(ObjectId contentId) {
 
         Document doc = contentRepository.findById(contentId);
-        if(doc == null)
+        if (doc == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> chapters = (List<Document>) doc.getOrDefault("chapters", new ArrayList<>());
         JSONArray jsonArray = new JSONArray();
 
-        for(Document chapter : chapters) {
+        for (Document chapter : chapters) {
             jsonArray.put(new JSONObject()
                     .put("title", chapter.getString("title"))
                     .put("desc", chapter.getString("desc"))
@@ -123,7 +123,7 @@ public class StudentContentController {
                 exists("teacher_bio")
         ), new BasicDBObject("teacher_bio", 1));
 
-        if(doc == null)
+        if (doc == null)
             return generateSuccessMsg("data", "");
 
         return generateSuccessMsg("data", doc.getString("teacher_bio"));
@@ -143,38 +143,38 @@ public class StudentContentController {
 
         ArrayList<Bson> filters = new ArrayList<>();
 
-        if(!isAdmin)
+        if (!isAdmin)
             filters.add(eq("visibility", true));
 
-        if(!isAdmin && userId != null)
+        if (!isAdmin && userId != null)
             filters.add(nin("users._id", userId));
 
-        if(title != null)
+        if (title != null)
             filters.add(regex("title", Pattern.compile(Pattern.quote(title), Pattern.CASE_INSENSITIVE)));
 
-        if(tag != null)
+        if (tag != null)
             filters.add(in("tags", tag));
 
-        if(hasCert != null)
+        if (hasCert != null)
             filters.add(exists("cert_id", hasCert));
 
-        if(minPrice != null)
+        if (minPrice != null)
             filters.add(gte("price", minPrice));
 
-        if(maxPrice != null)
+        if (maxPrice != null)
             filters.add(lte("price", maxPrice));
 
-        if(minDurationFilter != null)
+        if (minDurationFilter != null)
             filters.add(gte("duration", minDurationFilter));
 
-        if(maxDurationFilter != null)
+        if (maxDurationFilter != null)
             filters.add(lte("duration", maxDurationFilter));
 
-        if(teacher != null)
+        if (teacher != null)
             filters.add(regex("teacher", Pattern.compile(Pattern.quote(teacher))));
 
-        if(isAdmin) {
-            if(visibility != null)
+        if (isAdmin) {
+            if (visibility != null)
                 filters.add(eq("visibility", visibility));
         }
 
@@ -186,7 +186,7 @@ public class StudentContentController {
                 Sorts.ascending("priority")
         );
 
-        if(!isAdmin && filters.size() <= 2) {
+        if (!isAdmin && filters.size() <= 2) {
 
             int min = 1000000000;
             int max = -1;
@@ -194,21 +194,21 @@ public class StudentContentController {
             int maxDuration = -1;
             int minDuration = 10000000;
 
-            for(Document doc : docs) {
+            for (Document doc : docs) {
 
                 int price = doc.getInteger("price");
                 int duration = doc.getInteger("duration");
 
-                if(price < min)
+                if (price < min)
                     min = price;
 
-                if(price > max)
+                if (price > max)
                     max = price;
 
-                if(duration < minDuration)
+                if (duration < minDuration)
                     minDuration = duration;
 
-                if(duration > maxDuration)
+                if (duration > maxDuration)
                     maxDuration = duration;
 
                 data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false));
@@ -235,11 +235,11 @@ public class StudentContentController {
         JSONArray jsonArray = contentRepository.distinctTags("teacher");
         List<String> distincts = new ArrayList<>();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String[] splited = jsonArray.getString(i).split("__");
-            for(String itr : splited) {
-                if(!distincts.contains(itr))
+            for (String itr : splited) {
+                if (!distincts.contains(itr))
                     distincts.add(itr);
             }
 
@@ -256,7 +256,7 @@ public class StudentContentController {
                 CONTENT_DIGEST
         );
 
-        for(Document doc : docs)
+        for (Document doc : docs)
             data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false));
 
         return generateSuccessMsg("data", data);
@@ -265,12 +265,12 @@ public class StudentContentController {
 
     public static String rate(ObjectId contentId, ObjectId userId, int rate) {
 
-        if(rate <= 0 || rate > 5)
+        if (rate <= 0 || rate > 5)
             return JSON_NOT_VALID_PARAMS;
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
         Document stdDoc = searchInDocumentsKeyVal(
@@ -278,19 +278,19 @@ public class StudentContentController {
                 "_id", userId
         );
 
-        if(stdDoc == null)
+        if (stdDoc == null)
             return JSON_NOT_ACCESS;
 
-        int oldRate = (int)stdDoc.getOrDefault("rate", 0);
+        int oldRate = (int) stdDoc.getOrDefault("rate", 0);
         stdDoc.put("rate", rate);
         stdDoc.put("rate_at", System.currentTimeMillis());
 
-        double oldTotalRate = (double)content.getOrDefault("rate", (double)0);
-        int rateCount = (int)content.getOrDefault("rate_count", 0);
+        double oldTotalRate = (double) content.getOrDefault("rate", (double) 0);
+        int rateCount = (int) content.getOrDefault("rate_count", 0);
 
         oldTotalRate *= rateCount;
 
-        if(oldRate == 0)
+        if (oldRate == 0)
             rateCount++;
 
         oldTotalRate -= oldRate;
@@ -308,14 +308,14 @@ public class StudentContentController {
     public static String get(boolean isAdmin, Document user, String slug) {
 
         Document content = contentRepository.findBySecKey(slug);
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
         Document stdDoc = null;
 
         ObjectId userId = user == null ? null : user.getObjectId("_id");
 
-        if(!isAdmin && userId != null)
+        if (!isAdmin && userId != null)
             stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                     content.getList("users", Document.class), "_id", userId
             );
@@ -323,7 +323,7 @@ public class StudentContentController {
         try {
 
             return generateSuccessMsg("data", Utility.convert(
-                    content, isAdmin,isAdmin || stdDoc != null, true, stdDoc, true, user
+                    content, isAdmin, isAdmin || stdDoc != null, true, stdDoc, true, user
             ));
 
         } catch (InvalidFieldsException e) {
@@ -337,7 +337,7 @@ public class StudentContentController {
     ) {
 
         Document content = contentRepository.findBySecKey(slug);
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> sessions = content.getList("sessions", Document.class);
@@ -346,7 +346,7 @@ public class StudentContentController {
                 sessions, "_id", sessionId
         );
 
-        if(wantedSession == null)
+        if (wantedSession == null)
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
@@ -357,23 +357,23 @@ public class StudentContentController {
         ) != -1;
 
         boolean isFree = content.getInteger("price") == 0;
-        if(!afterBuy && !isFree && wantedSession.getInteger("price") > 0)
+        if (!afterBuy && !isFree && wantedSession.getInteger("price") > 0)
             return JSON_NOT_ACCESS;
 
-        for(Document session : sessions) {
+        for (Document session : sessions) {
 
-            if(!wantedSession.getString("chapter").equalsIgnoreCase(session.getString("chapter")))
+            if (!wantedSession.getString("chapter").equalsIgnoreCase(session.getString("chapter")))
                 continue;
 
             JSONObject jsonObject = Utility.sessionDigest(
-                    session, isAdmin, afterBuy, isFree, false
+                    session, isAdmin, afterBuy, isFree, false, userId
             );
 
             jsonObject.put("selected", session.getObjectId("_id").equals(sessionId));
             jsonArray.put(jsonObject);
         }
 
-        if(!afterBuy && userId != null && isFree) {
+        if (!afterBuy && userId != null && isFree) {
 
             users.add(new Document("_id", userId)
                     .append("paid", 0).append("register_at", System.currentTimeMillis()));
@@ -384,35 +384,36 @@ public class StudentContentController {
         JSONObject data = new JSONObject().put("sessions", jsonArray);
 
         Document config = contentConfigRepository.findBySecKey("first");
-        if(config != null) {
+        if (config != null) {
             List<Document> advs = config.getList("advs", Document.class);
 
             List<Document> visible_advs = new ArrayList<>();
-            for(Document itr : advs) {
-                if(itr.getBoolean("visibility"))
+            for (Document itr : advs) {
+                if (itr.getBoolean("visibility"))
                     visible_advs.add(itr);
             }
 
-            if(visible_advs.size() > 0) {
+            if (visible_advs.size() > 0) {
                 int idx = irysc.gachesefid.Utility.Utility.getRandIntForGift(visible_advs.size());
                 data.put("adv", STATICS_SERVER + ContentRepository.FOLDER + "/" + visible_advs.get(idx).getString("file"));
             }
         }
 
+        data.put("contentId", content.getObjectId("_id").toString());
 
         return generateSuccessMsg("data", data);
     }
 
     public static Document registry(ObjectId contentId, ObjectId userId,
-                                  double paid, String phone, String mail) {
+                                    double paid, String phone, String mail) {
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return null;
 
         List<Document> users;
-        if(content.size() == 0)
+        if (content.size() == 0)
             users = new ArrayList<>();
         else
             users = content.getList("users", Document.class);
@@ -444,13 +445,13 @@ public class StudentContentController {
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
-        if(!content.getBoolean("visibility"))
+        if (!content.getBoolean("visibility"))
             return JSON_NOT_ACCESS;
 
-        if(irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+        if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                 content.getList("users", Document.class), "_id", userId) != -1
         )
             return generateErr("شما قبلا این دوره را خریداری را کرده اید.");
@@ -478,9 +479,9 @@ public class StudentContentController {
 
         double shouldPayDouble = content.getInteger("price") * 1.0;
 
-        if(content.containsKey("off")) {
+        if (content.containsKey("off")) {
 
-            if(content.getLong("off_start") <= curr && content.getLong("off_expiration") >= curr) {
+            if (content.getLong("off_start") <= curr && content.getLong("off_expiration") >= curr) {
 
                 int val = content.getInteger("off");
                 String type = content.getString("off_type");
@@ -495,7 +496,7 @@ public class StudentContentController {
 
         double offAmount = 0;
 
-        if(off != null) {
+        if (off != null) {
             offAmount +=
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
                             shouldPayDouble * off.getInteger("amount") / 100.0 :
@@ -591,14 +592,89 @@ public class StudentContentController {
 
     }
 
+    public static String startSessionQuiz(ObjectId contentId, ObjectId sessionId, ObjectId userId) {
+
+        Document content = contentRepository.findById(contentId);
+
+        if (content == null)
+            return JSON_NOT_VALID_ID;
+
+        Document session = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("sessions", Document.class), "_id", sessionId
+        );
+
+        if (session == null || !session.containsKey("exam_id"))
+            return JSON_NOT_VALID_ID;
+
+        Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("users", Document.class),
+                "_id", userId
+        );
+
+        if (std == null)
+            return JSON_NOT_ACCESS;
+
+        Document quiz = contentQuizRepository.findById(
+                session.getObjectId("exam_id")
+        );
+
+        if (quiz == null)
+            return JSON_NOT_UNKNOWN;
+
+        List<Document> studentsList = quiz.getList("students", Document.class);
+
+        Document stdInQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                studentsList, "_id", userId
+        );
+
+        if (stdInQuiz != null)
+            return generateErr("شما یکبار در آزمون این جلسه شرکت کرده اید.");
+
+        int neededTime = ContentQuizController.calcLenStatic(quiz);
+        long curr = System.currentTimeMillis();
+
+        stdInQuiz = new Document("start_at", curr)
+                .append("finish_at", null)
+                .append("_id", userId)
+                .append("expire_at", curr + neededTime * 1000L)
+                .append("answers", new byte[0]);
+
+        studentsList.add(stdInQuiz);
+
+        quiz.put("registered", quiz.getInteger("registered") + 1);
+        contentQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+        JSONObject quizJSON = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("generalMode", "content")
+                .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                .put("description", quiz.getOrDefault("description", ""))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                .put("refresh", 2)
+                .put("duration", neededTime)
+                .put("reminder", neededTime)
+                .put("isNewPerson", true);
+
+        List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String attach : attaches)
+            jsonArray.put(STATICS_SERVER + ContentQuizRepository.FOLDER + "/" + attach);
+
+        quizJSON.put("attaches", jsonArray);
+
+        return StudentQuizController.returnQuiz(quiz, null, false, quizJSON);
+    }
+
     public static String startFinalQuiz(ObjectId contentId, ObjectId userId) {
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
-        if(!content.containsKey("final_exam_id"))
+        if (!content.containsKey("final_exam_id"))
             return JSON_NOT_ACCESS;
 
         Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
@@ -606,23 +682,23 @@ public class StudentContentController {
                 "_id", userId
         );
 
-        if(std == null)
+        if (std == null)
             return JSON_NOT_ACCESS;
 
-        if(std.containsKey("start_at"))
+        if (std.containsKey("start_at"))
             return generateErr("شما یکبار در آزمون پایان دوره شرکت کرده اید.");
 
         Document quiz = contentQuizRepository.findById(
                 content.getObjectId("final_exam_id")
         );
 
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_UNKNOWN;
 
         int neededTime = ContentQuizController.calcLenStatic(quiz);
         long curr = System.currentTimeMillis();
 
-        if(!std.containsKey("start_at")) {
+        if (!std.containsKey("start_at")) {
 
             Document stdDoc = new Document("start_at", curr)
                     .append("finish_at", null)
@@ -664,25 +740,24 @@ public class StudentContentController {
         return StudentQuizController.returnQuiz(quiz, std, false, quizJSON);
     }
 
-
     public static String storeAnswers(ObjectId quizId, ObjectId studentId, JSONArray answers) {
 
         long allowedDelay = 1800000; // 0.5hour
 
         try {
             Document quiz = contentQuizRepository.findById(quizId);
-            if(quiz == null)
+            if (quiz == null)
                 return JSON_NOT_VALID_ID;
 
             Document stdDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                     quiz.getList("students", Document.class), "_id", studentId
             );
 
-            if(stdDoc == null)
+            if (stdDoc == null)
                 return JSON_NOT_ACCESS;
 
             long curr = System.currentTimeMillis();
-            if(curr > stdDoc.getLong("expire_at") + allowedDelay)
+            if (curr > stdDoc.getLong("expire_at") + allowedDelay)
                 return generateErr("فرصت شرکت در آزمون به اتمام رسیده است.");
 
             int neededTime = QuizAbstract.calcLenStatic(quiz);
@@ -710,10 +785,10 @@ public class StudentContentController {
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
-        if(!content.containsKey("final_exam_id"))
+        if (!content.containsKey("final_exam_id"))
             return JSON_NOT_ACCESS;
 
         Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
@@ -721,17 +796,17 @@ public class StudentContentController {
                 "_id", userId
         );
 
-        if(std == null)
+        if (std == null)
             return JSON_NOT_ACCESS;
 
-        if(!std.containsKey("start_at"))
+        if (!std.containsKey("start_at"))
             return generateErr("شما در این آزمون شرکت نکرده اید.");
 
         Document quiz = contentQuizRepository.findById(
                 content.getObjectId("final_exam_id")
         );
 
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_UNKNOWN;
 
         int neededTime = ContentQuizController.calcLenStatic(quiz);
@@ -760,11 +835,70 @@ public class StudentContentController {
         return StudentQuizController.returnQuiz(quiz, stdDoc, true, quizJSON);
     }
 
+    public static String reviewSessionQuiz(ObjectId contentId, ObjectId sessionId, ObjectId userId) {
+
+        Document content = contentRepository.findById(contentId);
+
+        if (content == null)
+            return JSON_NOT_VALID_ID;
+
+        Document session = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("sessions", Document.class), "_id", sessionId
+        );
+
+        if (session == null || !session.containsKey("exam_id"))
+            return JSON_NOT_VALID_ID;
+
+        Document std = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                content.getList("users", Document.class),
+                "_id", userId
+        );
+
+        if (std == null)
+            return JSON_NOT_ACCESS;
+
+        Document quiz = contentQuizRepository.findById(
+                session.getObjectId("exam_id")
+        );
+
+        if (quiz == null)
+            return JSON_NOT_UNKNOWN;
+
+        Document stdInQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                quiz.getList("students", Document.class), "_id", userId
+        );
+
+        if (stdInQuiz == null)
+            return generateErr("شما در این آزمون شرکت نکرده اید.");
+
+        int neededTime = ContentQuizController.calcLenStatic(quiz);
+
+        JSONObject quizJSON = new JSONObject()
+                .put("title", quiz.getString("title"))
+                .put("id", quiz.getObjectId("_id").toString())
+                .put("generalMode", "content")
+                .put("questionsNo", quiz.get("questions", Document.class).getList("_ids", ObjectId.class).size())
+                .put("description", quiz.getOrDefault("description", ""))
+                .put("descriptionAfter", quiz.getOrDefault("desc_after", ""))
+                .put("mode", quiz.getOrDefault("mode", "regular").toString())
+                .put("duration", neededTime);
+
+        List<String> attaches = (List<String>) quiz.getOrDefault("attaches", new ArrayList<>());
+        JSONArray jsonArray = new JSONArray();
+
+        for (String attach : attaches)
+            jsonArray.put(STATICS_SERVER + ContentQuizRepository.FOLDER + "/" + attach);
+
+        quizJSON.put("attaches", jsonArray);
+
+        return StudentQuizController.returnQuiz(quiz, stdInQuiz, true, quizJSON);
+    }
+
     public static String rates(ObjectId contentId) {
 
         Document content = contentRepository.findById(contentId);
 
-        if(content == null)
+        if (content == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> users = content.getList("users", Document.class);
@@ -773,11 +907,11 @@ public class StudentContentController {
 
         for (Document user : users) {
 
-            if(!user.containsKey("rate"))
+            if (!user.containsKey("rate"))
                 continue;
 
             Document std = userRepository.findById(user.getObjectId("_id"));
-            if(std == null)
+            if (std == null)
                 continue;
 
             JSONObject jsonObject = new JSONObject()

@@ -174,47 +174,7 @@ public class ContentQuizController extends QuizAbstract {
                                    String mail, List<ObjectId> quizIds,
                                    int paid, ObjectId transactionId, String stdName
     ) {
-
-        ArrayList<Document> added = new ArrayList<>();
-
-        for (ObjectId quizId : quizIds) {
-
-            try {
-                Document quiz = iryscQuizRepository.findById(quizId);
-                List<Document> students = quiz.getList("students", Document.class);
-
-                if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                        students, "_id", studentId
-                ) != -1)
-                    continue;
-
-                Document stdDoc = new Document("_id", studentId)
-                        .append("paid", paid / quizIds.size())
-                        .append("register_at", System.currentTimeMillis())
-                        .append("finish_at", null)
-                        .append("start_at", null)
-                        .append("answers", new byte[0]);
-
-                if ((boolean) quiz.getOrDefault("permute", false))
-                    stdDoc.put("question_indices", new ArrayList<>());
-
-                students.add(stdDoc);
-                added.add(stdDoc);
-                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
-
-                iryscQuizRepository.replaceOne(
-                        quizId, quiz
-                );
-
-                if(transactionId != null && mail != null) {
-                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
-                }
-
-                //todo : send notif
-            } catch (Exception ignore) {}
-        }
-
-        return added;
+        return null;
     }
 
     @Override
