@@ -362,4 +362,23 @@ public class ContentAPIRoutes extends Router {
         return ContentController.getSubjectsKeyVals(lessonId);
     }
 
+    @PutMapping(value = "updateBatchSubjects")
+    @ResponseBody
+    public String updateBatchSubjects(HttpServletRequest request,
+                                      @RequestBody @StrongJSONConstraint(
+                                              params = {
+                                                      "midPrice", "easyPrice",
+                                                      "hardPrice", "schoolMidPrice",
+                                                      "schoolEasyPrice", "schoolHardPrice"
+                                              },
+                                              paramsType = {
+                                                      Positive.class, Positive.class,
+                                                      Positive.class, Positive.class,
+                                                      Positive.class, Positive.class
+                                              }
+                                      ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ContentController.updateBatchSubjects(new JSONObject(jsonStr));
+    }
 }

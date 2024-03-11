@@ -504,6 +504,18 @@ public class ContentController {
         return Utility.returnRemoveResponse(excepts, doneIds);
     }
 
+    public static String updateBatchSubjects(JSONObject data) {
+        BasicDBObject update = new BasicDBObject();
+        update.append("easy_price", data.getInt("easyPrice"));
+        update.append("mid_price", data.getInt("midPrice"));
+        update.append("hard_price", data.getInt("hardPrice"));
+        update.append("school_easy_price", data.getInt("schoolEasyPrice"));
+        update.append("school_mid_price", data.getInt("schoolMidPrice"));
+        update.append("school_hard_price", data.getInt("schoolHardPrice"));
+        subjectRepository.updateMany(exists("_id", true), new BasicDBObject("$set", update));
+        return JSON_OK;
+    }
+
     public static String addSubject(ObjectId gradeId, ObjectId lessonId, JSONObject subject) {
 
         Document grade = gradeRepository.findById(gradeId);
