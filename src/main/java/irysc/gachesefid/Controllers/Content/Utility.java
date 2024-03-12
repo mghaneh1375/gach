@@ -393,23 +393,22 @@ public class Utility {
                 .put("description", doc.get("description"))
                 .put("attachesCount", attaches.size());
 
-        if (doc.containsKey("exam_id")) {
+        if (doc.containsKey("exam_id") && (afterBuy || isAdmin)) {
             jsonObject
                     .put("examId", doc.getObjectId("exam_id").toString())
                     .put("hasExam", true)
                     .put("minMark", doc.getOrDefault("min_mark", -1))
             ;
-            if(afterBuy || isAdmin) {
-                Document exam = contentQuizRepository.findById(doc.getObjectId("exam_id"));
-                boolean canDoQuiz = false;
 
-                if(exam != null)
-                    canDoQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
-                            exam.getList("students", Document.class), "_id", userId
-                    ) == -1;
+            Document exam = contentQuizRepository.findById(doc.getObjectId("exam_id"));
+            boolean canDoQuiz = false;
 
-                jsonObject.put("canDoQuiz", canDoQuiz);
-            }
+            if(exam != null)
+                canDoQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
+                        exam.getList("students", Document.class), "_id", userId
+                ) == -1;
+
+            jsonObject.put("canDoQuiz", canDoQuiz);
         } else
             jsonObject.put("hasExam", false);
 

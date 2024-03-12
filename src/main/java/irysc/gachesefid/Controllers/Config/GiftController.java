@@ -585,7 +585,7 @@ public class GiftController {
     public static String giveMyGift(ObjectId id, String repeat, Document user) {
 
         try {
-            Thread.sleep(3000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
