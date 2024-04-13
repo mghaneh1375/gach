@@ -1115,9 +1115,17 @@ public class RegularQuizController extends QuizAbstract {
         private void calcLessonMarkSum() {
             for (QuestionStat itr : lessonsStat) {
                 for (QuestionStat aStudentsStat : studentsStat) {
-                    itr.marks.add(
-                            (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
-                    );
+                    try {
+                        if (aStudentsStat == null)
+                            itr.marks.add(0.0);
+                        else
+                            itr.marks.add(
+                                    (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
+                            );
+                    }
+                    catch (Exception x) {
+                        itr.marks.add(0.0);
+                    }
                 }
             }
         }
