@@ -440,7 +440,8 @@ public abstract class QuizAbstract {
         }
 
         short doCorrectMultiSentence(Document question, int idx) {
-
+            if(studentAnswers.size() <= idx)
+                return (short)0;
             String stdAns = studentAnswers.get(idx).getValue().toString();
             String answer = question.getString("answer");
             double qMark = question.getDouble("mark");
