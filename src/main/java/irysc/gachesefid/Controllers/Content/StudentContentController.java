@@ -94,7 +94,10 @@ public class StudentContentController {
     public static String teacherPackages(String teacher) {
 
         List<Document> docs = contentRepository.find(
-                regex("teacher", Pattern.compile(Pattern.quote(teacher))),
+                and(
+                        regex("teacher", Pattern.compile(Pattern.quote(teacher))),
+                        eq("visibility", true)
+                ),
                 CONTENT_DIGEST,
                 Sorts.ascending("priority")
         );
