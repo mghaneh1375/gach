@@ -106,6 +106,30 @@ public abstract class Common extends Repository {
         return result;
     }
 
+    public ArrayList<Document> findLimited(Bson filter, Bson project, int skip, int limit) {
+
+        FindIterable<Document> cursor;
+
+        if (project == null) {
+            if (filter == null)
+                cursor = documentMongoCollection.find().skip(skip).limit(limit);
+            else
+                cursor = documentMongoCollection.find(filter).skip(skip).limit(limit);
+        } else {
+            if (filter == null)
+                cursor = documentMongoCollection.find().projection(project).skip(skip).limit(limit);
+            else
+                cursor = documentMongoCollection.find(filter).projection(project).skip(skip).limit(limit);
+        }
+
+        ArrayList<Document> result = new ArrayList<>();
+
+        for (Document doc : cursor)
+            result.add(doc);
+
+        return result;
+    }
+
     public Document findOne(Bson filter, Bson project) {
 
         FindIterable<Document> cursor;
@@ -140,7 +164,7 @@ public abstract class Common extends Repository {
 
         if (deleted != null) {
             removeFromCache(table, deleted.getObjectId("_id"));
-            if(secKey != null)
+            if (secKey != null)
                 removeFromCache(table, deleted.get(secKey));
         }
 
@@ -243,7 +267,7 @@ public abstract class Common extends Repository {
         documentMongoCollection.replaceOne(filter, newDoc);
         removeFromCache(table, newDoc.getObjectId("_id"));
 
-        if(secKey != null)
+        if (secKey != null)
             removeFromCache(table, secKey);
     }
 
@@ -252,7 +276,7 @@ public abstract class Common extends Repository {
         documentMongoCollection.replaceOne(eq("_id", id), newDoc);
         removeFromCache(table, id);
 
-        if(secKey != null)
+        if (secKey != null)
             removeFromCache(table, secKey);
     }
 
@@ -292,9 +316,11 @@ public abstract class Common extends Repository {
         documentMongoCollection.deleteMany(filter);
     }
 
-    public AggregateIterable<Document> findWithJoinUser(String userKey, String finalUserKey,
-                                                        Bson match, Bson project,
-                                                        Bson sortFilter) {
+    public AggregateIterable<Document> findWithJoinUser(
+            String userKey, String finalUserKey,
+            Bson match, Bson project,
+            Bson sortFilter, Integer skip, Integer limit
+    ) {
 
         List<Bson> filters = new ArrayList<>();
 
@@ -319,6 +345,12 @@ public abstract class Common extends Repository {
         if (sortFilter != null)
             filters.add(sort(sortFilter));
 
+        if(skip != null)
+            filters.add(skip(skip));
+
+        if(limit != null)
+            filters.add(limit(limit));
+
         return documentMongoCollection.aggregate(filters);
     }
 
@@ -340,35 +372,34 @@ public abstract class Common extends Repository {
         for (Document doc : cursor)
             tmp.add(doc);
 
-        for(ObjectId oId : objectIds) {
+        for (ObjectId oId : objectIds) {
 
             boolean find = false;
             for (Document doc : tmp) {
-                if(doc.getObjectId("_id").equals(oId)) {
+                if (doc.getObjectId("_id").equals(oId)) {
                     infos.add(doc);
                     find = true;
                     break;
                 }
             }
 
-            if(!find)
+            if (!find)
                 return null;
         }
 
-        if(1 == 1)
+        if (1 == 1)
             return infos;
 
-        if(preserveOrder) {
+        if (preserveOrder) {
             int idx, counter = 0;
             for (Document doc : cursor) {
                 idx = objectIds.indexOf(doc.getObjectId("_id"));
                 infos.set(idx, doc);
                 counter++;
             }
-            if(counter != objectIds.size())
+            if (counter != objectIds.size())
                 return null;
-        }
-        else {
+        } else {
 
         }
 
@@ -395,35 +426,34 @@ public abstract class Common extends Repository {
         for (Document doc : cursor)
             tmp.add(doc);
 
-        for(Object oId : objectIds) {
+        for (Object oId : objectIds) {
 
             boolean find = false;
             for (Document doc : tmp) {
-                if(doc.getObjectId("_id").equals(oId)) {
+                if (doc.getObjectId("_id").equals(oId)) {
                     infos.add(doc);
                     find = true;
                     break;
                 }
             }
 
-            if(!find)
+            if (!find)
                 return null;
         }
 
-        if(1 == 1)
+        if (1 == 1)
             return infos;
 
-        if(preserveOrder) {
+        if (preserveOrder) {
             int idx, counter = 0;
             for (Document doc : cursor) {
                 idx = objectIds.indexOf(doc.getObjectId("_id"));
                 infos.set(idx, doc);
                 counter++;
             }
-            if(counter != objectIds.size())
+            if (counter != objectIds.size())
                 return null;
-        }
-        else {
+        } else {
 
         }
 
@@ -436,7 +466,7 @@ public abstract class Common extends Repository {
     public ArrayList<Document> findPreserveOrderWitNull(String key, List<ObjectId> objectIds) {
 
         ArrayList<Document> infos = new ArrayList<>();
-        for(int i = 0; i < objectIds.size(); i++)
+        for (int i = 0; i < objectIds.size(); i++)
             infos.add(null);
 
         FindIterable<Document> cursor =
@@ -445,15 +475,15 @@ public abstract class Common extends Repository {
         int idx, counter = 0;
         for (Document doc : cursor) {
             idx = objectIds.indexOf(doc.getObjectId(key));
-            if(idx != -1) {
+            if (idx != -1) {
                 infos.set(idx, doc);
                 counter++;
             }
         }
-        if(counter != objectIds.size()) {
+        if (counter != objectIds.size()) {
             idx = 0;
-            for(Document doc : infos) {
-                if(doc == null)
+            for (Document doc : infos) {
+                if (doc == null)
                     infos.set(idx, new Document(key, objectIds.get(idx))
                             .append("_id", new ObjectId())
                     );

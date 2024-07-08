@@ -2,15 +2,15 @@ package irysc.gachesefid.DB;
 
 import irysc.gachesefid.Main.GachesefidApplication;
 
-public class SchoolRepository extends Common {
-
-    public SchoolRepository() {
-        init();
-    }
+public class TeachTagReportRepository extends Common {
 
     @Override
     void init() {
-        table = "school";
+        table = "teach_tag_report";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
+    }
+
+    public TeachTagReportRepository() {
+        init();
     }
 }

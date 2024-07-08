@@ -3,7 +3,9 @@ package irysc.gachesefid.Utility;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.KavenegarApi;
 import irysc.gachesefid.Kavenegar.excepctions.ApiException;
 import irysc.gachesefid.Kavenegar.excepctions.HttpException;
@@ -587,7 +589,7 @@ public class Utility {
 
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
 
-            String html ="<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
+            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
             html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
                     "border-color: rgb(255, 102, 0);\n" +
                     "max-width: 700px;\n" +
@@ -1256,16 +1258,7 @@ public class Utility {
 
     }
 
-    public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
-
-        //todo: customize with common user info
-        JSONObject jsonObject1 = new JSONObject()
-                .put("id", user.getObjectId("_id").toString())
-                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
-                .put("phone", user.getOrDefault("phone", ""))
-                .put("mail", user.getOrDefault("mail", ""))
-                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-                .put("NID", user.getString("NID"));
+    private static void fillJSONWithUserCommonInfo(JSONObject jsonObject1, Document user) {
 
         if (user.containsKey("city")) {
             Document city = (Document) user.get("city");
@@ -1315,7 +1308,32 @@ public class Utility {
             Document rank = tarazRepository.findOne(eq("user_id", user.getObjectId("_id")), JUST_RANK);
             jsonObject1.put("rank", rank == null ? -1 : rank.get("rank"));
         }
+    }
 
+    public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
+
+        //todo: customize with common user info
+        JSONObject jsonObject1 = new JSONObject()
+                .put("id", user.getObjectId("_id").toString())
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("phone", user.getOrDefault("phone", ""))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                .put("NID", user.getString("NID"));
+
+        fillJSONWithUserCommonInfo(jsonObject1, user);
+        jsonObject.put("student", jsonObject1);
+    }
+
+    public static void fillJSONWithUserPublicInfo(JSONObject jsonObject, Document user) {
+
+        //todo: customize with common user info
+        JSONObject jsonObject1 = new JSONObject()
+                .put("id", user.getObjectId("_id").toString())
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"));
+
+        fillJSONWithUserCommonInfo(jsonObject1, user);
         jsonObject.put("student", jsonObject1);
     }
 
@@ -1503,5 +1521,54 @@ public class Utility {
         }
 
         return true;
+    }
+
+    public static void logForOffCodeUsage(
+            Document offDoc, ObjectId userId,
+            String usedSection, Object usedFor
+    ) {
+
+        BasicDBObject update;
+
+        if (offDoc.containsKey("is_public") &&
+                offDoc.getBoolean("is_public")
+        ) {
+            List<ObjectId> students = offDoc.getList("students", ObjectId.class);
+            students.add(userId);
+            update = new BasicDBObject("students", students);
+        } else {
+
+            update = new BasicDBObject("used", true)
+                    .append("used_at", System.currentTimeMillis())
+                    .append("used_section", usedSection)
+                    .append("used_for", usedFor);
+        }
+
+        offcodeRepository.updateOne(
+                offDoc.getObjectId("_id"),
+                new BasicDBObject("$set", update)
+        );
+    }
+
+    public static Document findOff(String offCode, ObjectId userId) throws InvalidFieldsException {
+
+        Document offDoc;
+        long curr = System.currentTimeMillis();
+
+        if (offCode == null) {
+            offDoc = Utility.findAccountOff(
+                    userId, curr, OffCodeSections.CLASSES.getName()
+            );
+        } else {
+            offDoc = validateOffCode(
+                    offCode, userId, curr,
+                    OffCodeSections.CLASSES.getName()
+            );
+
+            if (offDoc == null)
+                throw new InvalidFieldsException("کد تخفیف وارد شده معتبر نمی باشد.");
+        }
+
+        return offDoc;
     }
 }

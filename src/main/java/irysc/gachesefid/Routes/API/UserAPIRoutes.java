@@ -16,7 +16,9 @@ import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
 import irysc.gachesefid.Service.UserService;
-import irysc.gachesefid.Utility.*;
+import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -34,17 +36,16 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
-
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -376,9 +377,7 @@ public class UserAPIRoutes extends Router {
     public String fetchUser(HttpServletRequest request,
                             @PathVariable(required = false) String userId)
             throws NotActivateAccountException, UnAuthException, InvalidFieldsException, NotCompleteAccountException {
-
         Document user = (Document) getUserWithSchoolAccess(request, false, false, userId).get("user");
-
         return generateSuccessMsg("user",
                 UserController.isAuth(user)
         );
@@ -436,10 +435,20 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String aboutMe(HttpServletRequest request,
                           @RequestBody @StrongJSONConstraint(
-                                  params = {"aboutMe"},
-                                  paramsType = {String.class},
-                                  optionals = {"videoLink"},
-                                  optionalsType = {String.class}
+                                  params = {
+                                          "teachAboutMe", "adviceAboutMe"
+                                  },
+                                  paramsType = {
+                                          String.class, String.class
+                                  },
+                                  optionals = {
+                                          "teachVideoLink", "adviceVideoLink",
+                                          "defaultTeachPrice"
+                                  },
+                                  optionalsType = {
+                                          String.class, String.class,
+                                          Positive.class
+                                  }
                           ) String json
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json));

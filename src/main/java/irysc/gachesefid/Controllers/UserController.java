@@ -48,7 +48,6 @@ public class UserController {
                     new PairValue(GradeSchool.MOTEVASETEAVAL.getName(), "متوسطه اول"),
                     new PairValue(GradeSchool.MOTEVASETEDOVOM.getName(), "متوسطه دوم")
             ),
-//            new FormField(false, "bio", "بیو", "اختیاری", false),
     };
 
     private static FormField[] fieldsNeededForAdvisor = new FormField[]{
@@ -580,8 +579,12 @@ public class UserController {
                         .put("name", state.getString("name"))
                 )
                 .put("branches", branchesJSON)
-                .put("bio", user.getOrDefault("bio", ""))
+                .put("adviceBio", user.getOrDefault("advice_bio", ""))
+                .put("adviceVideoLink", user.getOrDefault("advice_video_link", ""))
+                .put("teachBio", user.getOrDefault("teach_bio", ""))
+                .put("teachVideoLink", user.getOrDefault("teach_video_link", ""))
                 .put("acceptStd", user.getOrDefault("accept_std", true))
+                .put("defaultTeachPrice", user.getOrDefault("default_teach_price", 0))
                 .put("lastName", user.getString("last_name"))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
@@ -1146,18 +1149,46 @@ public class UserController {
 
     public static String setAboutMe(Document user, JSONObject jsonObject) {
 
-        String bio = jsonObject.getString("aboutMe");
+        String teachBio = jsonObject.getString("teachAboutMe");
 
-        if(bio.length() > 500)
+        if(teachBio.length() > 500)
             return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
 
-        if(jsonObject.has("videoLink") && !isValidURL(jsonObject.getString("videoLink")))
+        if(jsonObject.has("teachVideoLink") && !isValidURL(jsonObject.getString("teachVideoLink")))
             return generateErr("لینک ویدیو معتبر نمی باشد");
 
-        user.put("bio", bio);
+        String adviceBio = jsonObject.getString("adviceAboutMe");
 
-        if(jsonObject.has("videoLink"))
-            user.put("video_link", jsonObject.getString("videoLink"));
+        if(adviceBio.length() > 500)
+            return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
+
+        Integer defaultTeachPrice = null;
+
+        if(jsonObject.has("defaultTeachPrice")) {
+            Document config = getConfig();
+            defaultTeachPrice = jsonObject.getInt("defaultTeachPrice");
+
+            if(defaultTeachPrice < config.getInteger("min_teach_price"))
+                return generateErr("حداقل مبلغ حق التدریس " + config.getInteger("min_teach_price") + " می باشد");
+
+            if(defaultTeachPrice > config.getInteger("max_teach_price"))
+                return generateErr("حداکثر مبلغ حق التدریس " + config.getInteger("max_teach_price") + " می باشد");
+        }
+
+        if(jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
+            return generateErr("لینک ویدیو معتبر نمی باشد");
+
+        user.put("teach_bio", teachBio);
+        user.put("advice_bio", adviceBio);
+
+        if(jsonObject.has("teachVideoLink"))
+            user.put("teach_video_link", jsonObject.getString("teachVideoLink"));
+
+        if(jsonObject.has("adviceVideoLink"))
+            user.put("advice_video_link", jsonObject.getString("adviceVideoLink"));
+
+        if(defaultTeachPrice != null)
+            user.put("default_teach_price", defaultTeachPrice);
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;
@@ -1681,7 +1712,6 @@ public class UserController {
 
     }
 
-
     public static String getEducationalHistory(ObjectId userId) {
 
         Document student = userRepository.findById(userId);
@@ -1760,5 +1790,17 @@ public class UserController {
         fillJSONWithEducationalHistory(student, output, true);
 
         return generateSuccessMsg("data", output);
+    }
+
+    public static String setMyFields(Document user, JSONArray fields) {
+
+        for(int i = 0; i < fields.length(); i++) {
+            try {
+                JSONObject jsonObject = fields.getJSONObject(i);
+            }
+            catch (Exception ignore) {}
+        }
+
+        return JSON_OK;
     }
 }

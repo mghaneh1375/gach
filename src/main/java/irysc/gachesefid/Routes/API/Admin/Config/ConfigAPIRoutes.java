@@ -54,7 +54,8 @@ public class ConfigAPIRoutes extends Router {
     public String update(HttpServletRequest request,
                          @RequestBody @StrongJSONConstraint(
                                  paramsType = {}, params = {},
-                                 optionals = {"initCoin", "initMoney",
+                                 optionals = {
+                                         "initCoin", "initMoney",
                                          "inviteMoney", "inviteCoin",
                                          "completeInfoMoney", "completeInfoCoin",
                                          "quizMoney", "quizCoin",
@@ -82,7 +83,9 @@ public class ConfigAPIRoutes extends Router {
                                          "maxQuestionPerQuiz", "hwPerStudentPrice",
                                          "minAdvicePrice", "maxVideoCallPerMonth",
                                          "minBuyAmountForShop", "percentOfShopBuy",
-                                         "createShopOffVisibility"
+                                         "createShopOffVisibility", "maxTeachCap",
+                                         "iryscTeachPercent", "iryscAdvicePercent",
+                                         "minTeachPrice", "maxTeachPrice"
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -104,7 +107,9 @@ public class ConfigAPIRoutes extends Router {
                                          ObjectId.class, ObjectId.class, Integer.class,
                                          Number.class, Positive.class, Positive.class,
                                          Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Boolean.class
+                                         Positive.class, Positive.class, Boolean.class,
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class, Positive.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

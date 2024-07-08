@@ -18,7 +18,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.sql.Connection;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
@@ -35,21 +34,12 @@ import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
 @EnableScheduling
 public class GachesefidApplication implements WebMvcConfigurer {
 
-    final static private String username = "root";
-    final static private String password = "Ghhy@110";
-//    final static private String username = "test";
-//    final static private String password = "123456";
-
-    final static private String dbName = "gach"; // mydb
-
     public static HashMap<String, String> passwords = new HashMap<>();
 
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
 
     );
-    public static Connection con = null;
-    public static Map<String, Integer> commonVals = new HashMap<>();
     public static MongoDatabase mongoDatabase;
 
     public static AccessRequestRepository accessRequestRepository;
@@ -71,6 +61,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static ConfigRepository configRepository;
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
+    public static CommentRepository commentRepository;
     public static ContentQuizRepository contentQuizRepository;
     public static CreditRepository creditRepository;
     public static EscapeQuizQuestionRepository escapeQuizQuestionRepository;
@@ -99,6 +90,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static StateRepository stateRepository;
     public static SubjectRepository subjectRepository;
     public static TarazRepository tarazRepository;
+    public static TeachScheduleRepository teachScheduleRepository;
+    public static TeachReportRepository teachReportRepository;
+    public static TeachTagReportRepository teachTagReportRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
     public static UserGiftRepository userGiftRepository;
@@ -111,12 +105,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     private static void setupDB() {
         try {
-
-//            Class.forName("com.mysql.jdbc.Driver");
-//            con = DriverManager.getConnection("jdbc:mysql://localhost/" + dbName + "?useUnicode=true&characterEncoding=UTF-8", username, password);
-//            Statement st = con.createStatement();
-//            st.executeUpdate("SET GLOBAL WAIT_TIMEOUT = 315360");
-//            st.executeUpdate("SET GLOBAL INTERACTIVE_TIMEOUT = 315360");
 
             MongoClientSettings settings = MongoClientSettings.builder()
                     .applyConnectionString(connString)
@@ -143,6 +131,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             coinHistoryRepository = new CoinHistoryRepository();
             configRepository = new ConfigRepository();
             contentConfigRepository = new ContentConfigRepository();
+            commentRepository = new CommentRepository();
             contentRepository = new ContentRepository();
             contentQuizRepository = new ContentQuizRepository();
             creditRepository = new CreditRepository();
@@ -176,6 +165,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
             tarazRepository = new TarazRepository();
             ticketRepository = new TicketRepository();
             transactionRepository = new TransactionRepository();
+            teachScheduleRepository = new TeachScheduleRepository();
+            teachReportRepository = new TeachReportRepository();
+            teachTagReportRepository = new TeachTagReportRepository();
             userGiftRepository = new UserGiftRepository();
             userRepository = new UserRepository();
             notifRepository = new NotifRepository();
