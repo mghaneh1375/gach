@@ -110,8 +110,10 @@ public class StudentContentController {
                 exists("teacher_bio")
         ), new BasicDBObject("teacher_bio", 1));
 
-        return generateSuccessMsg("data", new JSONObject()
-                .put("packages", data).put("bio", doc == null ? "" : doc.getString("teacher_bio"))
+        return generateSuccessMsg("data",
+                new JSONObject()
+                        .put("packages", data)
+                        .put("bio", doc == null ? "" : doc.getString("teacher_bio"))
         );
     }
 

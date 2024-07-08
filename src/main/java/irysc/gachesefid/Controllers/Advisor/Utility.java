@@ -213,8 +213,8 @@ public class Utility {
                 .put("acceptStd", advisor.getOrDefault("accept_std", true))
                 .put("stdCount", students.size())
                 .put("rate", advisor.getOrDefault("rate", 0))
-                .put("bio", advisor.getString("bio"))
-                .put("videoLink", advisor.getOrDefault("video_link", ""))
+                .put("bio", advisor.getString("advice_bio"))
+                .put("videoLink", advisor.getOrDefault("advice_video_link", ""))
                 .put("id", advisor.getObjectId("_id").toString())
                 .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"));
 

@@ -129,7 +129,8 @@ public class TicketController {
                                 .append("chats", 1).append("ref_id", 1).append("additional", 1)
                                 .append("advisor_id", 1)
                         ),
-                        Sorts.descending("send_date"));
+                        Sorts.descending("send_date"), null, null
+                );
 
         JSONArray jsonArray = new JSONArray();
         HashMap<String, List<Object>> refs = new HashMap<>();
@@ -262,8 +263,9 @@ public class TicketController {
 
         try {
             AggregateIterable<Document> docs =
-                    ticketRepository.findWithJoinUser("user_id", "student",
-                            match(filter), null, null
+                    ticketRepository.findWithJoinUser(
+                            "user_id", "student",
+                            match(filter), null, null, null, null
                     );
 
             if (!docs.iterator().hasNext())

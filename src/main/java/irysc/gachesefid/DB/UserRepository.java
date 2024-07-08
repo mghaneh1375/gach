@@ -6,26 +6,18 @@ import com.mongodb.client.FindIterable;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
-import irysc.gachesefid.Models.Quiz;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdValidator;
-import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
-import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.convertPersianDigits;
 import static irysc.gachesefid.Utility.Utility.printException;
 
 public class UserRepository extends Common {
@@ -213,27 +205,6 @@ public class UserRepository extends Common {
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 
-    public int isExistByNID(String NID, ObjectId userId) {
-
-        FindIterable<Document> cursor = documentMongoCollection.find(or(
-                eq("NID", NID),
-                eq("passport_no", NID)
-        )).projection(new BasicDBObject("_id", true).append("NID", true).append("passport_no", true));
-
-        for (Document doc : cursor) {
-
-            if (doc.getObjectId("_id").equals(userId))
-                continue;
-
-            if (doc.containsKey("NID") && doc.getString("NID").equals(NID))
-                return -4;
-
-            return -2;
-        }
-
-        return 0;
-    }
-
     public void checkCache(Document newDoc) {
         removeFromCache(table, newDoc.getObjectId("_id"));
         if(secKey != null)
@@ -242,98 +213,5 @@ public class UserRepository extends Common {
 
     public void checkCache(ObjectId oId) {
         removeFromCache(table, oId);
-    }
-
-    // todo : after all transfer from mysql to mongo it should be delete
-    public static ArrayList<Quiz> findAllMysql() {
-
-        ArrayList<Quiz> users = new ArrayList<>();
-
-        try {
-            String sql = "select u.*, r.cityId, r.email, s.id as schooId from users u, redundantinfo1 r, schoolstudent ss, school s where s.uId = ss.sId and ss.uId = u.id and r.uId = u.id and u.level = 1 and u.NID is not null and u.phoneNum is not null";
-            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-
-                ResultSetMetaData rsmd = rs.getMetaData();
-                Quiz user = new Quiz();
-
-                boolean firstId = true;
-
-                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                    String key = rsmd.getColumnName(i);
-                    if(key.equalsIgnoreCase("id")) {
-                        if(firstId)
-                            firstId = false;
-                        else
-                          key = "sId";
-                    }
-
-                    if (rs.getObject(i) instanceof String)
-                        user.cols.put(key, convertPersianDigits(rs.getObject(i).toString()));
-                    else
-                        user.cols.put(key, rs.getObject(i));
-                }
-
-                user.cols.put("NID", user.cols.get("NID").toString().replace("-", "").replace(" ", ""));
-                if(!Utility.validationNationalCode(user.cols.get("NID").toString()))
-                    continue;
-
-                if(!PhoneValidator.isValid(user.cols.get("phoneNum").toString()))
-                    continue;
-
-                if(user.cols.get("firstName").toString().isEmpty() ||
-                    user.cols.get("lastName").toString().isEmpty()
-                )
-                    continue;
-
-                users.add(user);
-            }
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
-
-        return users;
-    }
-
-    public static ArrayList<Document> fetchAuthorsFromMySQL() {
-
-
-        ArrayList<Document> output = new ArrayList<>();
-
-        try {
-            String sql = "select u.firstName, u.lastName, u.username, (select count(*) from question where author = u.id) as q_no, u.id from users u where u.level = 10";
-            PreparedStatement ps = GachesefidApplication.con.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-
-                Document doc = new Document("first_name", rs.getString(1))
-                        .append("last_name", rs.getString(2))
-                        .append("username", rs.getString(3))
-                        .append("code", rs.getInt(5))
-                        .append("q_no", rs.getInt(4));
-
-                if(doc.getString("last_name").isEmpty()) {
-                    String[] splited = doc.getString("first_name").split(" ");
-                    if(splited.length >= 2) {
-
-                        String tmp = "";
-                        for(int i = 0; i < splited.length - 1; i++)
-                            tmp += splited[i] + " ";
-
-                        doc.put("first_name", tmp);
-                        doc.put("last_name", splited[splited.length - 1]);
-                    }
-                }
-
-                output.add(doc);
-            }
-        }
-        catch (Exception x) {
-            x.printStackTrace();
-        }
-
-        return output;
     }
 }

@@ -37,6 +37,8 @@ public class StaticValues {
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC_LONG = 1000 * SMS_RESEND_SEC * 3;
 
+    public final static long PAY_SCHEDULE_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
+
     public final static int CLASS_LIMIT_CACHE_SIZE = 1000;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
 
@@ -50,7 +52,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -75,7 +77,26 @@ public class StaticValues {
                     .append("rate", 1).append("birth_day", 1)
                     .append("rate_count", 1).append("tags", 1)
                     .append("students", 1).append("form_list", 1)
-                    .append("bio", 1).append("video_link", 1)
+                    .append("advice_bio", 1).append("advice_video_link", 1)
+                    .append("pic", 1)
+            ;
+
+    public final static BasicDBObject SCHEDULE_DIGEST =
+            new BasicDBObject("title", 1).append("_id", 1)
+                    .append("start_at", 1).append("length", 1)
+                    .append("created_at", 1).append("visibility", 1)
+                    .append("price", 1).append("teach_mode", 1)
+                    .append("students", 1).append("requests", 1)
+                    .append("time", 1).append("min_cap", 1)
+                    .append("max_cap", 1).append("user_id", 1)
+                    .append("can_request", 1);
+
+    public final static BasicDBObject TEACH_PUBLIC_DIGEST =
+            new BasicDBObject("first_name", 1).append("_id", 1)
+                    .append("last_name", 1)
+                    .append("teach_rate", 1).append("birth_day", 1)
+                    .append("teach_rate_count", 1).append("teach_tags", 1)
+                    .append("teach_bio", 1).append("teach_video_link", 1)
                     .append("pic", 1)
             ;
 
@@ -146,6 +167,15 @@ public class StaticValues {
             .append("first_name", 1)
             .append("last_name", 1)
             .append("NID", 1)
+            .append("pic", 1);
+
+    public final static BasicDBObject USER_PUBLIC_INFO = new BasicDBObject("_id", 1)
+            .append("first_name", 1)
+            .append("last_name", 1)
+            .append("school", 1)
+            .append("grade", 1)
+            .append("branches", 1)
+            .append("rank", 1)
             .append("pic", 1);
 
     public final static BasicDBObject USER_MANAGEMENT_INFO_DIGEST = new BasicDBObject("_id", 1)
