@@ -76,10 +76,10 @@ public class UserAPIRoutes extends Router {
                 eq("status", "finish")
         ), null).forEach(document -> {
 
-            document.getList("gifts", Document.class).stream().filter(gift-> gift.getBoolean("selected").equals(true))
+            document.getList("gifts", Document.class).stream().filter(gift -> gift.getBoolean("selected").equals(true))
                     .findFirst().ifPresent(selectedGift -> {
 
-                        if(!selectedGift.getString("label").contains("تخفیف"))
+                        if (!selectedGift.getString("label").contains("تخفیف"))
                             return;
 
                         boolean isPercent = selectedGift.getString("label").contains("%");
@@ -93,11 +93,11 @@ public class UserAPIRoutes extends Router {
                                 )), null
                         );
 
-                        if(off != null) {
+                        if (off != null) {
 
                             Document wantedGift;
 
-                            if(gifts.containsKey(document.getObjectId("gift")))
+                            if (gifts.containsKey(document.getObjectId("gift")))
                                 wantedGift = gifts.get(document.getObjectId("gift"));
                             else {
                                 wantedGift = giftRepository.findById(document.getObjectId("gift"));
@@ -106,8 +106,7 @@ public class UserAPIRoutes extends Router {
 
                             off.put("expire_at", wantedGift.getLong("expire_at"));
                             offcodeRepository.replaceOne(off.getObjectId("_id"), off);
-                        }
-                        else {
+                        } else {
                             miss.getAndIncrement();
                             System.out.println(selectedGift);
                         }
@@ -145,7 +144,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String fixQuiz() throws ParseException {
 
-        if(1 == 1) {
+        if (1 == 1) {
             sendMailWithAttach("test___mghaneh1375@gmail.com", "<figure><img src='https://statics.irysc.com/ck/1704958395409.jpg'></figure>", "محمد قانع", null);
             return "";
         }
@@ -205,7 +204,7 @@ public class UserAPIRoutes extends Router {
                     }
                 }
 
-                if(!hasErr) continue;
+                if (!hasErr) continue;
 
                 ArrayList<PairValue> newStdAnswers = new ArrayList<>();
 
@@ -214,7 +213,7 @@ public class UserAPIRoutes extends Router {
 
                     idx++;
                     String stdAns = p.getValue() instanceof PairValue ?
-                            ((PairValue)p.getValue()).getValue().toString() : p.getValue().toString();
+                            ((PairValue) p.getValue()).getValue().toString() : p.getValue().toString();
 
                     Object stdAnsAfterFilter;
                     QuestionType type = types.get(idx);
@@ -436,22 +435,54 @@ public class UserAPIRoutes extends Router {
     public String aboutMe(HttpServletRequest request,
                           @RequestBody @StrongJSONConstraint(
                                   params = {
-                                          "teachAboutMe", "adviceAboutMe"
+                                          "adviceAboutMe", "wantToTeach"
                                   },
                                   paramsType = {
-                                          String.class, String.class
+                                          String.class, Boolean.class
                                   },
                                   optionals = {
                                           "teachVideoLink", "adviceVideoLink",
-                                          "defaultTeachPrice"
+                                          "defaultTeachPrice", "teachAboutMe"
                                   },
                                   optionalsType = {
                                           String.class, String.class,
-                                          Positive.class
+                                          Positive.class, String.class
                                   }
-                          ) String json
+                          ) @NotBlank String json
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json));
+    }
+
+    @GetMapping(value = "getMyFields")
+    @ResponseBody
+    public String getMyFields(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return UserController.getMyFields(getAdvisorUser(request));
+    }
+
+    @PutMapping(value = "setMyFields")
+    @ResponseBody
+    public String setMyFields(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {},
+                    paramsType = {},
+                    optionals = {
+                            "lessons", "grades",
+                            "branches"
+                    },
+                    optionalsType = {
+                            JSONArray.class, JSONArray.class,
+                            JSONArray.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject = new JSONObject(jsonStr);
+        return UserController.setMyFields(
+                getUser(request),
+                jsonObject.has("lessons") ? jsonObject.getJSONArray("lessons") : null,
+                jsonObject.has("grades") ? jsonObject.getJSONArray("grades") : null,
+                jsonObject.has("branches") ? jsonObject.getJSONArray("branches") : null
+        );
     }
 
 

@@ -278,13 +278,13 @@ public class ContentAPIRoutes extends Router {
     @GetMapping(value = "/grades")
     @ResponseBody
     public String grades() {
-        return ContentController.getGradesOrBranches(gradeRepository);
+        return ContentController.getGradesOrBranches(gradeRepository, false);
     }
 
     @GetMapping(value = "/branches")
     @ResponseBody
     public String branches() {
-        return ContentController.getGradesOrBranches(branchRepository);
+        return ContentController.getGradesOrBranches(branchRepository, true);
     }
 
     @GetMapping(value = "/lessonsInGrade")

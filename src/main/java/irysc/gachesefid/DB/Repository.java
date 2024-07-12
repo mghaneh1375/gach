@@ -4,12 +4,12 @@ import irysc.gachesefid.Utility.Cache;
 import org.bson.Document;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class Repository {
 
-    static HashMap<String, ArrayList<Cache>> generalCached = new HashMap<>();
+    static ConcurrentHashMap<String, ArrayList<Cache>> generalCached = new ConcurrentHashMap<>();
 
     public static void clearCache(String table) {
         if (generalCached.containsKey(table))

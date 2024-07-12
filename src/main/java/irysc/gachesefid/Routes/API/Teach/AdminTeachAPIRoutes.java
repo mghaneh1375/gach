@@ -7,6 +7,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -57,12 +58,22 @@ public class AdminTeachAPIRoutes extends Router {
         return TeachController.setAdvisorIRYSCPercent(advisorId, teachPercent, advicePercent);
     }
 
-    @GetMapping(value = "getAllTags")
+    @GetMapping(value = "getAdvisorIRYSCPercent/{advisorId}")
     @ResponseBody
-    public String getAllTags(HttpServletRequest request
+    public String getAdvisorIRYSCPercent(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId advisorId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return TeachController.getAdvisorIRYSCPercent(advisorId);
+    }
+
+    @GetMapping(value = "getAllReportTags")
+    @ResponseBody
+    public String getAllReportTags(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return TeachTagReportController.getAllTags(null);
+        return TeachTagReportController.getAllReportTags(null, true);
     }
 
     @PostMapping(value = "createReportTag")
@@ -71,11 +82,12 @@ public class AdminTeachAPIRoutes extends Router {
                                   @RequestBody @StrongJSONConstraint(
                                           params = {
                                                   "label", "priority",
-                                                  "mode"
+                                                  "mode", "visibility"
                                           },
                                           paramsType = {
-                                                  String.class, Integer.class,
-                                                  TeachReportTagMode.class
+                                                  String.class, Positive.class,
+                                                  TeachReportTagMode.class,
+                                                  Boolean.class
                                           }
                                   ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -90,11 +102,12 @@ public class AdminTeachAPIRoutes extends Router {
                                 @RequestBody @StrongJSONConstraint(
                                         params = {
                                                 "label", "priority",
-                                                "mode"
+                                                "mode", "visibility"
                                         },
                                         paramsType = {
                                                 String.class, Integer.class,
-                                                TeachReportTagMode.class
+                                                TeachReportTagMode.class,
+                                                Boolean.class
                                         }
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

@@ -1054,17 +1054,32 @@ public class ContentController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    public static String getGradesOrBranches(Common db) {
+    public static String getGradesOrBranches(Common db, boolean isLessonsNeeded) {
 
         JSONArray jsonArray = new JSONArray();
+        BasicDBObject projection = new BasicDBObject("_id", 1).append("name", 1);
+        if(isLessonsNeeded)
+            projection.append("lessons", 1);
 
-        ArrayList<Document> docs = db.find(null, new BasicDBObject("_id", 1).append("name", 1));
+        ArrayList<Document> docs = db.find(null, projection);
+
         for (Document doc : docs) {
-            jsonArray.put(
-                    new JSONObject()
-                            .put("id", doc.getObjectId("_id").toString())
-                            .put("name", doc.getString("name"))
-            );
+            JSONObject jsonObject = new JSONObject()
+                    .put("id", doc.getObjectId("_id").toString())
+                    .put("name", doc.getString("name"));
+
+            if(isLessonsNeeded && doc.containsKey("lessons")) {
+                JSONArray lessonsJSON = new JSONArray();
+                doc.getList("lessons", Document.class)
+                        .forEach(lessonDoc -> lessonsJSON.put(
+                                new JSONObject()
+                                        .put("id", lessonDoc.getObjectId("_id").toString())
+                                        .put("name", lessonDoc.getString("name"))
+                        ));
+                jsonObject.put("lessons", lessonsJSON);
+            }
+
+            jsonArray.put(jsonObject);
         }
 
         return generateSuccessMsg("data", jsonArray);
