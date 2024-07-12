@@ -12,6 +12,7 @@ import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.*;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
+import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.Binary;
@@ -25,6 +26,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -86,7 +88,7 @@ public class UserController {
 
     public static String signUp(JSONObject jsonObject) {
 
-        if(jsonObject.getString("firstName").length() < 3 ||
+        if (jsonObject.getString("firstName").length() < 3 ||
                 jsonObject.getString("lastName").length() < 3
         )
             return generateErr("نام/نام خانوادگی باید حداقل 3 کاراکتر باشد");
@@ -158,9 +160,9 @@ public class UserController {
 
         String username = doc.getString("username");
 
-        if(!doc.containsKey("NID")) {
+        if (!doc.containsKey("NID")) {
 
-            if(doc.containsKey("phone_or_mail"))
+            if (doc.containsKey("phone_or_mail"))
                 username = doc.getString("phone_or_mail");
             else {
                 Document user = userRepository.findBySecKey(jsonObject.get("username").toString());
@@ -180,7 +182,7 @@ public class UserController {
             Utility.sendSMS(username, code + "", "", "", "activationCode");
         else
             Utility.sendMail(
-                    username, code + "","signUp", doc.getString("first_name") + " " + doc.getString("last_name")
+                    username, code + "", "signUp", doc.getString("first_name") + " " + doc.getString("last_name")
             );
 
         doc.put("code", code);
@@ -196,7 +198,7 @@ public class UserController {
 
     public static String setIntroducer(Document user, String invitationCode) {
 
-        if(user.containsKey("invitor"))
+        if (user.containsKey("invitor"))
             return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
 
         Document invitor = userRepository.findOne(
@@ -204,36 +206,36 @@ public class UserController {
                 new BasicDBObject("_id", 1).append("phone", 1)
         );
 
-        if(invitor == null)
+        if (invitor == null)
             return generateErr("کد معرف وارد شده معتبر نمی باشد.");
 
         int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
-        if(invitor.getOrDefault("phone", "").toString().length() < 4)
+        if (invitor.getOrDefault("phone", "").toString().length() < 4)
             invitorCount = 100;
 
-        if(invitorCount < 20)
+        if (invitorCount < 20)
             invitor = userRepository.findById(invitor.getObjectId("_id"));
 
         Document config = Utility.getConfig();
 
-        if(config.containsKey("invite_coin")) {
+        if (config.containsKey("invite_coin")) {
 
-            if(invitorCount < 20) {
+            if (invitorCount < 20) {
                 invitor.put("coin",
-                        ((Number)config.get("invite_coin")).doubleValue() +
-                                ((Number)invitor.get("coin")).doubleValue()
+                        ((Number) config.get("invite_coin")).doubleValue() +
+                                ((Number) invitor.get("coin")).doubleValue()
                 );
             }
 
             user.put("coin",
-                    ((Number)config.get("invite_coin")).doubleValue() +
-                            ((Number)user.get("coin")).doubleValue()
+                    ((Number) config.get("invite_coin")).doubleValue() +
+                            ((Number) user.get("coin")).doubleValue()
             );
         }
 
-        if(config.containsKey("invite_money")) {
+        if (config.containsKey("invite_money")) {
 
-            if(invitorCount < 20) {
+            if (invitorCount < 20) {
                 invitor.put("money",
                         config.getInteger("invite_money") +
                                 ((Number) invitor.get("money")).doubleValue()
@@ -242,13 +244,13 @@ public class UserController {
 
             user.put("money",
                     config.getInteger("invite_money") +
-                            ((Number)user.get("money")).doubleValue()
+                            ((Number) user.get("money")).doubleValue()
             );
         }
 
         user.put("invitor", invitor.getObjectId("_id"));
 
-        if(invitorCount < 20) {
+        if (invitorCount < 20) {
             userRepository.replaceOne(
                     invitor.getObjectId("_id"), invitor
             );
@@ -318,23 +320,23 @@ public class UserController {
         for (FormField field : wantedList) {
             if (field.isMandatory && !keys.contains(field.key))
                 return generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
-            if(keys.contains(field.key) && field.pairValues != null) {
+            if (keys.contains(field.key) && field.pairValues != null) {
 
                 boolean find = false;
-                for(PairValue p : field.pairValues) {
-                    if(jsonObject.get(field.key).equals(p.getKey())) {
+                for (PairValue p : field.pairValues) {
+                    if (jsonObject.get(field.key).equals(p.getKey())) {
                         find = true;
                         break;
                     }
                 }
-                if(!find)
+                if (!find)
                     return JSON_NOT_VALID_PARAMS;
             }
         }
 
         if (role.equals(Access.STUDENT.getName())) {
 
-            if(user.containsKey("invitor"))
+            if (user.containsKey("invitor"))
                 return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
 
             Document invitor = userRepository.findOne(
@@ -342,37 +344,37 @@ public class UserController {
                     new BasicDBObject("_id", 1).append("phone", 1)
             );
 
-            if(invitor == null)
+            if (invitor == null)
                 return generateErr("کد معرف وارد شده معتبر نمی باشد.");
 
             int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
 
-            if(invitor.getOrDefault("phone", "").toString().length() < 4)
+            if (invitor.getOrDefault("phone", "").toString().length() < 4)
                 invitorCount = 100;
 
-            if(invitorCount < 20)
+            if (invitorCount < 20)
                 invitor = userRepository.findById(invitor.getObjectId("_id"));
 
             Document config = Utility.getConfig();
 
-            if(config.containsKey("invite_coin")) {
+            if (config.containsKey("invite_coin")) {
 
-                if(invitorCount < 20) {
+                if (invitorCount < 20) {
                     invitor.put("coin",
-                            ((Number)config.get("invite_coin")).doubleValue() +
-                                    ((Number)invitor.get("coin")).doubleValue()
+                            ((Number) config.get("invite_coin")).doubleValue() +
+                                    ((Number) invitor.get("coin")).doubleValue()
                     );
                 }
 
                 user.put("coin",
-                        ((Number)config.get("invite_coin")).doubleValue() +
-                                ((Number)user.get("coin")).doubleValue()
+                        ((Number) config.get("invite_coin")).doubleValue() +
+                                ((Number) user.get("coin")).doubleValue()
                 );
             }
 
-            if(config.containsKey("invite_money")) {
+            if (config.containsKey("invite_money")) {
 
-                if(invitorCount < 20) {
+                if (invitorCount < 20) {
                     invitor.put("money",
                             config.getInteger("invite_money") +
                                     ((Number) invitor.get("money")).doubleValue()
@@ -381,13 +383,13 @@ public class UserController {
 
                 user.put("money",
                         config.getInteger("invite_money") +
-                                ((Number)user.get("money")).doubleValue()
+                                ((Number) user.get("money")).doubleValue()
                 );
             }
 
             user.put("invitor", invitor.getObjectId("_id"));
 
-            if(invitorCount < 20) {
+            if (invitorCount < 20) {
                 userRepository.replaceOne(
                         invitor.getObjectId("_id"), invitor
                 );
@@ -467,7 +469,7 @@ public class UserController {
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
             throw new InvalidFieldsException("زمان توکن شما منقضی شده است.");
 
-        if(
+        if (
                 doc.get("first_name") == null || doc.get("last_name") == null ||
                         doc.get("NID") == null || doc.getString("first_name").length() < 3 ||
                         doc.getString("last_name").length() < 3
@@ -476,7 +478,7 @@ public class UserController {
 
         Document config = Utility.getConfig();
         Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
-        avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+        avatar.put("used", (int) avatar.getOrDefault("used", 0) + 1);
         avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
         ArrayList<Bson> filters = new ArrayList<>();
@@ -494,9 +496,9 @@ public class UserController {
                 .append("last_name", doc.getString("last_name"))
                 .append("NID", doc.getString("NID"))
                 .append("money", credit == null ?
-                        (double)config.getInteger("init_money") :
-                        (double)config.getInteger("init_money") + ((Number)credit.get("credit")).doubleValue())
-                .append("coin", ((Number)config.get("init_coin")).doubleValue())
+                        (double) config.getInteger("init_money") :
+                        (double) config.getInteger("init_money") + ((Number) credit.get("credit")).doubleValue())
+                .append("coin", ((Number) config.get("init_coin")).doubleValue())
                 .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                 .append("events", new ArrayList<>())
                 .append("avatar_id", avatar.getObjectId("_id"))
@@ -516,7 +518,7 @@ public class UserController {
             newDoc.append("mail", username);
 
         userRepository.insertOne(newDoc);
-        if(doc.getString("auth_via").equals(AuthVia.MAIL.getName()))
+        if (doc.getString("auth_via").equals(AuthVia.MAIL.getName()))
             sendMail(
                     username, "", "successSignUp",
                     doc.getString("first_name") + " " + doc.getString("last_name")
@@ -561,12 +563,12 @@ public class UserController {
                 .put("invitationCode", user.get("invitation_code"))
                 .put("NID", user.getString("NID"))
                 .put("grade", !user.containsKey("grade") ? "" : new JSONObject().put("id",
-                        ((Document) user.get("grade")).getObjectId("_id").toString())
+                                ((Document) user.get("grade")).getObjectId("_id").toString())
                         .put("name",
                                 ((Document) user.get("grade")).getString("name"))
                 )
                 .put("school", !user.containsKey("school") ? "" : new JSONObject().put("id",
-                        ((Document) user.get("school")).getObjectId("_id").toString())
+                                ((Document) user.get("school")).getObjectId("_id").toString())
                         .put("name",
                                 ((Document) user.get("school")).getString("name"))
                 )
@@ -588,17 +590,18 @@ public class UserController {
                 .put("lastName", user.getString("last_name"))
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
-                .put("phone", user.getOrDefault("phone", ""));
+                .put("phone", user.getOrDefault("phone", ""))
+                .put("wantToTeach", user.containsKey("teach"));
 
 //        jsonObject.put("birthDay", user.containsKey("birth_day") ? getSolarJustDate(user.getLong("birth_day")) : "");
         jsonObject.put("birthDay", user.getOrDefault("birth_day", ""));
 
-        if(user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0)
+        if (user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0)
             jsonObject.put("hasAdvisor", true);
         else
             jsonObject.put("hasAdvisor", false);
 
-        if(user.containsKey("block_notif"))
+        if (user.containsKey("block_notif"))
             jsonObject.put("blockNotif", true);
 
         if (user.containsKey("form_list")) {
@@ -663,20 +666,20 @@ public class UserController {
 
         for (FormField field : fields) {
 
-            JSONObject jsonObject =  new JSONObject()
+            JSONObject jsonObject = new JSONObject()
                     .put("key", field.key)
                     .put("help", field.help)
                     .put("isMandatory", field.isMandatory)
                     .put("title", field.title)
                     .put("isJustNum", field.isJustNum);
 
-            if(field.pairValues != null) {
+            if (field.pairValues != null) {
                 JSONArray jsonArray1 = new JSONArray();
-                for(PairValue p : field.pairValues)
+                for (PairValue p : field.pairValues)
                     jsonArray1.put(
                             new JSONObject()
-                                .put("id", p.getKey())
-                                .put("item", p.getValue())
+                                    .put("id", p.getKey())
+                                    .put("item", p.getValue())
                     );
 
                 jsonObject.put("keyVals", jsonArray1);
@@ -870,7 +873,7 @@ public class UserController {
 
             if (user.containsKey("avatar_id")) {
                 Document oldAvatar = avatarRepository.findById(user.getObjectId("avatar_id"));
-                if(oldAvatar != null) {
+                if (oldAvatar != null) {
                     oldAvatar.put("used", oldAvatar.getInteger("used") - 1);
                     avatarRepository.updateOne(oldAvatar.getObjectId("_id"), set("used", oldAvatar.getInteger("used")));
                 }
@@ -1105,17 +1108,16 @@ public class UserController {
                     .put("kind", kind)
                     .put("address", doc.getOrDefault("address", ""));
 
-            if(isAdmin && doc.containsKey("user_id")) {
+            if (isAdmin && doc.containsKey("user_id")) {
 
                 Document user = userRepository.findById(doc.getObjectId("user_id"));
 
                 jsonObject.put("manager",
                         user.getString("first_name") + " " +
-                        user.getString("last_name")
+                                user.getString("last_name")
                 );
                 jsonObject.put("managerPhone", user.getOrDefault("phone", ""));
-            }
-            else if(isAdmin)
+            } else if (isAdmin)
                 jsonObject.put("manager", "").put("managerPhone", "");
 
             if (grade.equals(GradeSchool.DABESTAN.getName()))
@@ -1149,46 +1151,57 @@ public class UserController {
 
     public static String setAboutMe(Document user, JSONObject jsonObject) {
 
-        String teachBio = jsonObject.getString("teachAboutMe");
+        String teachBio = null;
+        boolean wantToTeach = jsonObject.getBoolean("wantToTeach");
 
-        if(teachBio.length() > 500)
-            return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
+        if (wantToTeach && jsonObject.has("teachAboutMe")) {
+            teachBio = jsonObject.getString("teachAboutMe");
+            if (teachBio.length() > 500)
+                return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
+        }
 
-        if(jsonObject.has("teachVideoLink") && !isValidURL(jsonObject.getString("teachVideoLink")))
+        if (wantToTeach && jsonObject.has("teachVideoLink") && !isValidURL(jsonObject.getString("teachVideoLink")))
             return generateErr("لینک ویدیو معتبر نمی باشد");
 
         String adviceBio = jsonObject.getString("adviceAboutMe");
 
-        if(adviceBio.length() > 500)
+        if (adviceBio.length() > 500)
             return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
 
         Integer defaultTeachPrice = null;
 
-        if(jsonObject.has("defaultTeachPrice")) {
+        if (wantToTeach && jsonObject.has("defaultTeachPrice")) {
             Document config = getConfig();
             defaultTeachPrice = jsonObject.getInt("defaultTeachPrice");
 
-            if(defaultTeachPrice < config.getInteger("min_teach_price"))
+            if (defaultTeachPrice < config.getInteger("min_teach_price"))
                 return generateErr("حداقل مبلغ حق التدریس " + config.getInteger("min_teach_price") + " می باشد");
 
-            if(defaultTeachPrice > config.getInteger("max_teach_price"))
+            if (defaultTeachPrice > config.getInteger("max_teach_price"))
                 return generateErr("حداکثر مبلغ حق التدریس " + config.getInteger("max_teach_price") + " می باشد");
         }
 
-        if(jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
+        if (jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
             return generateErr("لینک ویدیو معتبر نمی باشد");
 
-        user.put("teach_bio", teachBio);
+        if (wantToTeach) {
+            if (teachBio != null)
+                user.put("teach_bio", teachBio);
+            if (jsonObject.has("teachVideoLink"))
+                user.put("teach_video_link", jsonObject.getString("teachVideoLink"));
+            if (defaultTeachPrice != null)
+                user.put("default_teach_price", defaultTeachPrice);
+            user.put("teach", true);
+        } else {
+            user.remove("teach_bio");
+            user.remove("teach_video_link");
+            user.remove("default_teach_price");
+            user.remove("teach");
+        }
+
         user.put("advice_bio", adviceBio);
-
-        if(jsonObject.has("teachVideoLink"))
-            user.put("teach_video_link", jsonObject.getString("teachVideoLink"));
-
-        if(jsonObject.has("adviceVideoLink"))
+        if (jsonObject.has("adviceVideoLink"))
             user.put("advice_video_link", jsonObject.getString("adviceVideoLink"));
-
-        if(defaultTeachPrice != null)
-            user.put("default_teach_price", defaultTeachPrice);
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;
@@ -1201,7 +1214,7 @@ public class UserController {
         Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
         Document config = getConfig();
 
-        double exchangeRate = ((Number)config.get("coin_rate_coef")).doubleValue();
+        double exchangeRate = ((Number) config.get("coin_rate_coef")).doubleValue();
         DecimalFormat decfor = new DecimalFormat("0.000");
 
         double a = (10000.0 / exchangeRate);
@@ -1234,8 +1247,8 @@ public class UserController {
                 ))
                 .put("activeQuizzes", iryscQuizRepository.count(
                         and(
-                            in("students._id", user.getObjectId("_id")),
-                            gt("start", curr)
+                                in("students._id", user.getObjectId("_id")),
+                                gt("start", curr)
                         )
                 ))
                 .put("passedQuizzes", iryscQuizRepository.count(
@@ -1265,7 +1278,7 @@ public class UserController {
 
     public static String blockNotif(Document user) {
 
-        if(user.containsKey("block_notif"))
+        if (user.containsKey("block_notif"))
             user.remove("block_notif");
         else
             user.put("block_notif", true);
@@ -1280,9 +1293,9 @@ public class UserController {
         if (!Utility.validationNationalCode(NID))
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
-        if(jsonObject.has("birthDay")) {
+        if (jsonObject.has("birthDay")) {
             long age = (System.currentTimeMillis() - jsonObject.getLong("birthDay")) / (ONE_DAY_MIL_SEC * 365);
-            if(age <= 5)
+            if (age <= 5)
                 return generateErr("تاریخ تولد وارد شده معتبر نمی باشد");
         }
 
@@ -1304,7 +1317,7 @@ public class UserController {
 
         boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
 
-        if(isStudent) {
+        if (isStudent) {
 
             List<Document> branchesDoc = null;
 
@@ -1343,7 +1356,7 @@ public class UserController {
                     return JSON_NOT_VALID_PARAMS;
             }
 
-            if(grade != null)
+            if (grade != null)
                 user.put("grade", new Document("_id", grade.getObjectId("_id"))
                         .append("name", grade.getString("name"))
                 );
@@ -1354,7 +1367,7 @@ public class UserController {
 
             Document school = null;
 
-            if(jsonObject.has("schoolId") &&
+            if (jsonObject.has("schoolId") &&
                     (
                             !user.containsKey("school") ||
                                     !user.get("school", Document.class).getObjectId("_id").toString().equals(jsonObject.getString("schoolId"))
@@ -1368,21 +1381,21 @@ public class UserController {
                     return JSON_NOT_VALID_PARAMS;
             }
 
-            if(school != null) {
+            if (school != null) {
 
                 user.put("school", new Document("_id", school.getObjectId("_id"))
                         .append("name", school.getString("name"))
                 );
 
-                if(school.containsKey("user_id")) {
+                if (school.containsKey("user_id")) {
 
                     Document schoolUser = userRepository.findById(school.getObjectId("user_id"));
 
-                    if(schoolUser != null) {
+                    if (schoolUser != null) {
 
                         List<ObjectId> students = (List<ObjectId>) schoolUser.getOrDefault("students", new ArrayList<>());
 
-                        if(!students.contains(user.getObjectId("_id"))) {
+                        if (!students.contains(user.getObjectId("_id"))) {
                             students.add(user.getObjectId("_id"));
                             userRepository.replaceOne(schoolUser.getObjectId("_id"), schoolUser);
                         }
@@ -1391,12 +1404,10 @@ public class UserController {
 
                 }
 
-            }
-
-            else
+            } else
                 user.remove("school");
 
-            if(branchesDoc != null)
+            if (branchesDoc != null)
                 user.put("branches", branchesDoc);
             else
                 user.remove("branches");
@@ -1413,7 +1424,7 @@ public class UserController {
         user.put("NID", NID);
         user.put("sex", sex);
 
-        if(jsonObject.has("birthDay")) {
+        if (jsonObject.has("birthDay")) {
             user.put("birth_day", jsonObject.getLong("birthDay"));
         }
 
@@ -1443,14 +1454,13 @@ public class UserController {
                 )
         );
 
-        if(gradeId != null) {
+        if (gradeId != null) {
             filters.add(and(
                     eq("grade_id", gradeId),
                     lt("grade_rank", 50)
 
             ));
-        }
-        else
+        } else
             filters.add(
                     lt("rank", 50)
             );
@@ -1462,11 +1472,11 @@ public class UserController {
         );
 
         ArrayList<ObjectId> userIds = new ArrayList<>();
-        for(Document doc : docs)
+        for (Document doc : docs)
             userIds.add(doc.getObjectId("user_id"));
 
         ArrayList<Document> users = userRepository.findByIds(userIds, true);
-        if(users == null)
+        if (users == null)
             return JSON_NOT_UNKNOWN;
 
         JSONArray jsonArray = new JSONArray();
@@ -1477,7 +1487,7 @@ public class UserController {
         int oldSum = -1;
         int skip = 1;
 
-        for(Document user : users) {
+        for (Document user : users) {
 
             int currSum = docs.get(i).getInteger("cum_sum_last_five");
 
@@ -1532,7 +1542,7 @@ public class UserController {
                 );
 
                 if (studentDocInQuiz == null || (
-                        (boolean)quiz.getOrDefault("pay_by_student", false) && !studentDocInQuiz.containsKey("paid")
+                        (boolean) quiz.getOrDefault("pay_by_student", false) && !studentDocInQuiz.containsKey("paid")
                 ))
                     continue;
 
@@ -1541,7 +1551,7 @@ public class UserController {
                 double totalQuizMark = 0;
                 List<Number> marks = quiz.get("questions", Document.class).getList("marks", Number.class);
 
-                if(isTashrihi) {
+                if (isTashrihi) {
 
                     for (Number mark : marks)
                         totalQuizMark += mark.doubleValue();
@@ -1559,7 +1569,7 @@ public class UserController {
                         .put("stateRank", stats[2])
                         .put("rank", stats[1]);
 
-                if(isTashrihi) {
+                if (isTashrihi) {
                     jsonObject.put("mark", stats[4])
                             .put("mode", "tashrihi")
                             .put("totalMark", totalQuizMark);
@@ -1573,18 +1583,17 @@ public class UserController {
                 if (quiz.containsKey("start") && quiz.containsKey("end"))
                     jsonObject.put("date", getSolarDate(quiz.getLong("start")) + " تا " + getSolarDate(quiz.getLong("end")));
 
-                else if(quiz.containsKey("students")) {
+                else if (quiz.containsKey("students")) {
                     Document tmp = searchInDocumentsKeyVal(quiz.getList("students", Document.class),
                             "_id", userId
                     );
 
-                    if(tmp != null && tmp.containsKey("finish_at") && tmp.get("finish_at") != null)
+                    if (tmp != null && tmp.containsKey("finish_at") && tmp.get("finish_at") != null)
                         jsonObject.put("date", getSolarDate(tmp.getLong("finish_at")));
                 }
 
                 jsonArray.put(jsonObject);
-            }
-            catch (Exception ignore) {
+            } catch (Exception ignore) {
                 ignore.printStackTrace();
             }
         }
@@ -1639,32 +1648,30 @@ public class UserController {
 
     public static void fillJSONWithEducationalHistory(Document student, JSONObject output, boolean isRankNeeded) {
 
-        if(student.containsKey("school") && student.get("school") != null)
+        if (student.containsKey("school") && student.get("school") != null)
             output.put("school", student.get("school", Document.class).getString("name"));
         else
             output.put("school", "");
 
-        if(student.containsKey("city")) {
+        if (student.containsKey("city")) {
             Document city = (Document) student.get("city");
-            if(city != null && city.containsKey("name"))
+            if (city != null && city.containsKey("name"))
                 output.put("city", city.getString("name"));
             else
                 output.put("city", "");
-        }
-        else
+        } else
             output.put("city", "");
 
-        if(student.containsKey("grade")) {
+        if (student.containsKey("grade")) {
             Document grade = (Document) student.get("grade");
-            if(grade != null && grade.containsKey("name"))
+            if (grade != null && grade.containsKey("name"))
                 output.put("grade", grade.getString("name"));
-        }
-        else
+        } else
             output.put("grade", "");
 
-        if(student.containsKey("branches")) {
+        if (student.containsKey("branches")) {
             List<Document> branches = student.getList("branches", Document.class);
-            if(branches.size() > 0) {
+            if (branches.size() > 0) {
 
                 StringBuilder sb = new StringBuilder();
 
@@ -1673,13 +1680,11 @@ public class UserController {
                 }
 
                 output.put("branches", sb.substring(0, sb.toString().length() - 3));
-            }
-            else output.put("branches", "");
-        }
-        else
+            } else output.put("branches", "");
+        } else
             output.put("branches", "");
 
-        if(isRankNeeded) {
+        if (isRankNeeded) {
             if (student.containsKey("rank"))
                 output.put("rank", student.get("rank"));
             else {
@@ -1688,16 +1693,16 @@ public class UserController {
             }
         }
 
-        if(student.containsKey("my_advisors")) {
+        if (student.containsKey("my_advisors")) {
 
             List<ObjectId> myAdvisors = student.getList("my_advisors", ObjectId.class);
             JSONArray advisorsJSON = new JSONArray();
 
-            for(ObjectId advisorId : myAdvisors) {
+            for (ObjectId advisorId : myAdvisors) {
 
                 Document advisor = userRepository.findById(advisorId);
 
-                if(advisor != null)
+                if (advisor != null)
                     advisorsJSON.put(irysc.gachesefid.Controllers.Advisor.Utility.convertToJSONDigest(
                             null, advisor
                     ));
@@ -1715,17 +1720,17 @@ public class UserController {
     public static String getEducationalHistory(ObjectId userId) {
 
         Document student = userRepository.findById(userId);
-        if(student == null)
+        if (student == null)
             return JSON_NOT_UNKNOWN;
 
         List<Document> iryscQuizzes = iryscQuizRepository.find(and(
-                eq("students._id", userId),
-                exists("report_status"),
-                eq("report_status", "ready")
-        ), new BasicDBObject("title", 1).append("_id", 1)
-                .append("start", 1).append("end", 1)
-                .append("ranking_list", 1).append("mode", 1)
-                .append("questions", 1), Sorts.descending("created_at")
+                        eq("students._id", userId),
+                        exists("report_status"),
+                        eq("report_status", "ready")
+                ), new BasicDBObject("title", 1).append("_id", 1)
+                        .append("start", 1).append("end", 1)
+                        .append("ranking_list", 1).append("mode", 1)
+                        .append("questions", 1), Sorts.descending("created_at")
         );
 
         List<Document> openQuizzes = openQuizRepository.find(and(
@@ -1792,15 +1797,143 @@ public class UserController {
         return generateSuccessMsg("data", output);
     }
 
-    public static String setMyFields(Document user, JSONArray fields) {
+    public static String getMyFields(Document user) {
 
-        for(int i = 0; i < fields.length(); i++) {
-            try {
-                JSONObject jsonObject = fields.getJSONObject(i);
-            }
-            catch (Exception ignore) {}
+        JSONArray lessons = new JSONArray();
+        JSONArray branches = new JSONArray();
+        JSONArray grades = new JSONArray();
+
+        if(user.containsKey("teach_lessons")) {
+            user.getList("teach_lessons", ObjectId.class)
+                    .stream().map(ObjectId::toString)
+                    .forEach(lessons::put);
         }
 
+        if(user.containsKey("teach_grades")) {
+            user.getList("teach_grades", ObjectId.class)
+                    .stream().map(ObjectId::toString)
+                    .forEach(grades::put);
+        }
+
+        if(user.containsKey("teach_branches")) {
+            user.getList("teach_branches", ObjectId.class)
+                    .stream().map(ObjectId::toString)
+                    .forEach(branches::put);
+        }
+
+        Document config = getConfig();
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("lessons", lessons)
+                .put("grades", grades)
+                .put("branches", branches)
+                .put("iryscTeachPercent", user.getOrDefault("irysc_teach_percent", config.get("irysc_teach_percent")))
+                .put("iryscAdvicePercent", user.getOrDefault("irysc_advice_percent", config.get("irysc_advice_percent")))
+        );
+    }
+
+    public static String setMyFields(
+            Document user,
+            JSONArray lessonsId,
+            JSONArray gradesId,
+            JSONArray branchesId
+    ) {
+
+        List<ObjectId> tmpLessonsId = null;
+        List<ObjectId> tmpBranchesId = null;
+        List<ObjectId> tmpGradesId = null;
+
+        if(lessonsId != null) {
+            tmpLessonsId = new ArrayList<>();
+            for (int i = 0; i < lessonsId.length(); i++) {
+                if (!ObjectId.isValid(lessonsId.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+                tmpLessonsId.add(new ObjectId(lessonsId.getString(i)));
+            }
+        }
+
+        if(gradesId != null) {
+            tmpGradesId = new ArrayList<>();
+            for (int i = 0; i < gradesId.length(); i++) {
+                if (!ObjectId.isValid(gradesId.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+                tmpGradesId.add(new ObjectId(gradesId.getString(i)));
+            }
+        }
+
+        if(branchesId != null) {
+            tmpBranchesId = new ArrayList<>();
+            for (int i = 0; i < branchesId.length(); i++) {
+                if (!ObjectId.isValid(branchesId.getString(i)))
+                    return JSON_NOT_VALID_PARAMS;
+                tmpBranchesId.add(new ObjectId(branchesId.getString(i)));
+            }
+        }
+
+        if(
+                tmpLessonsId == null && tmpBranchesId == null &&
+                        tmpGradesId == null
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Document> foundBranches =
+                gradeRepository.findByIds(tmpBranchesId, true);
+
+        if(foundBranches == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Document> foundGrades =
+                branchRepository.findByIds(tmpGradesId, true);
+
+        if(foundGrades == null)
+            return JSON_NOT_VALID_PARAMS;
+
+        if(tmpLessonsId != null) {
+            List<ObjectId> allIds = new ArrayList<>();
+            for(Document grade : foundGrades) {
+                allIds.addAll(
+                        grade.getList("lessons", Document.class).stream()
+                                .map(document -> document.getObjectId("_id"))
+                                .collect(Collectors.toList())
+                );
+            }
+
+            for(ObjectId id : tmpLessonsId)
+                if(!allIds.contains(id)) return JSON_NOT_VALID_PARAMS;
+        }
+
+        BasicDBObject updateQuery = new BasicDBObject();
+
+        if(tmpBranchesId != null) {
+            List<ObjectId> branches = user.containsKey("teach_branches") ?
+                    user.getList("teach_branches", ObjectId.class) :
+                    new ArrayList<>();
+            branches.addAll(tmpBranchesId);
+            updateQuery.append("teach_branches", branches);
+            user.put("teach_branches", branches);
+        }
+
+        if(tmpLessonsId != null) {
+            List<ObjectId> lessons = user.containsKey("teach_lessons") ?
+                    user.getList("teach_lessons", ObjectId.class) :
+                    new ArrayList<>();
+            lessons.addAll(tmpLessonsId);
+            updateQuery.append("teach_lessons", lessons);
+            user.put("teach_lessons", lessons);
+        }
+
+        if(tmpGradesId != null) {
+            List<ObjectId> grades = user.containsKey("teach_grades") ?
+                    user.getList("teach_grades", ObjectId.class) :
+                    new ArrayList<>();
+            grades.addAll(tmpGradesId);
+            updateQuery.append("teach_grades", grades);
+            user.put("teach_grades", grades);
+        }
+
+        userRepository.updateOne(user.getObjectId("_id"),
+                new BasicDBObject("$set", updateQuery)
+        );
         return JSON_OK;
     }
 }

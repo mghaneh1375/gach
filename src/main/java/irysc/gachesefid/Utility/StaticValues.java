@@ -97,7 +97,8 @@ public class StaticValues {
                     .append("teach_rate", 1).append("birth_day", 1)
                     .append("teach_rate_count", 1).append("teach_tags", 1)
                     .append("teach_bio", 1).append("teach_video_link", 1)
-                    .append("pic", 1)
+                    .append("pic", 1).append("teaches", 1)
+                    .append("form_list", 1)
             ;
 
     public final static BasicDBObject QUIZ_DIGEST =

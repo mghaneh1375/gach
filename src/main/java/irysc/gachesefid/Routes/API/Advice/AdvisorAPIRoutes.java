@@ -401,8 +401,10 @@ public class AdvisorAPIRoutes extends Router {
 
     @GetMapping(value = "getAdvisorTags/{id}")
     @ResponseBody
-    public String getAdvisorTags(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId id
+    public String getAdvisorTags(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestParam(value = "mode") String mode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
         getAdminPrivilegeUser(request);
@@ -411,7 +413,10 @@ public class AdvisorAPIRoutes extends Router {
         if (advisor == null)
             return JSON_NOT_VALID_ID;
 
-        List<String> tags = (List<String>) advisor.getOrDefault("tags", new ArrayList<Document>());
+        List<String> tags = (List<String>) advisor.getOrDefault(
+                mode.equals("teach") ? "teach_tags" : "tags",
+                new ArrayList<Document>()
+        );
         JSONArray jsonArray = new JSONArray();
 
         for (String tag : tags)
@@ -425,6 +430,7 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String addAdvisorTag(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId id,
+                                @RequestParam(value = "mode") String mode,
                                 @RequestBody @StrongJSONConstraint(
                                         params = {"tags"},
                                         paramsType = {JSONArray.class}
@@ -441,44 +447,44 @@ public class AdvisorAPIRoutes extends Router {
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("tags");
 
         for (int i = 0; i < jsonArray.length(); i++) {
-
             String tag = jsonArray.getString(i);
-
             if (tags.contains(tag))
                 continue;
-
             tags.add(tag);
         }
 
-        advisor.put("tags", tags);
+        advisor.put(mode.equals("teach") ? "teach_tags" : "tags", tags);
         userRepository.replaceOne(id, advisor);
         return JSON_OK;
     }
 
     @DeleteMapping(value = "removeAdvisorTag/{id}")
     @ResponseBody
-    public String removeAdvisorTag(HttpServletRequest request,
-                                   @PathVariable @ObjectIdConstraint ObjectId id,
-                                   @RequestBody @StrongJSONConstraint(
-                                           params = {"tag"},
-                                           paramsType = {String.class}
-                                   ) @NotBlank String jsonStr
+    public String removeAdvisorTag(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestParam(value = "mode") String mode,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"tag"},
+                    paramsType = {String.class}
+            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         getAdminPrivilegeUser(request);
         Document advisor = userRepository.findById(id);
 
         if (advisor == null)
             return JSON_NOT_VALID_ID;
 
-        List<String> tags = (List<String>) advisor.getOrDefault("tags", new ArrayList<Document>());
+        List<String> tags = (List<String>) advisor.getOrDefault(
+                mode.equals("teach") ? "teach_tags" : "tags",
+                new ArrayList<Document>()
+        );
         String tag = new JSONObject(jsonStr).getString("tag");
 
         tags.remove(tag);
-        advisor.put("tags", tags);
+        advisor.put(mode.equals("teach") ? "teach_tags" : "tags", tags);
 
         userRepository.replaceOne(id, advisor);
-
         return JSON_OK;
     }
 

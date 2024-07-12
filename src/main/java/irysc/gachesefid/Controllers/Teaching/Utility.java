@@ -72,11 +72,23 @@ public class Utility {
                 .put("bio", teacher.getString("teach_bio"))
                 .put("videoLink", teacher.getOrDefault("teach_video_link", ""))
                 .put("id", teacher.getObjectId("_id").toString())
+                .put("teaches", teacher.getOrDefault("teaches", 0))
                 .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"));
 
         if (teacher.containsKey("teach_tags"))
-            jsonObject.put("teach_tags", teacher.getList("tags", String.class));
+            jsonObject.put("tags", teacher.getList("teach_tags", String.class));
 
+        if(teacher.containsKey("form_list")) {
+            Document form = searchInDocumentsKeyVal(
+                    teacher.getList("form_list", Document.class),
+                    "role", "advisor"
+            );
+            if(form != null) {
+                jsonObject.put("form", new JSONObject()
+                        .put("workSchools", form.getString("work_schools"))
+                );
+            }
+        }
         if (stdId != null) {
             List<Document> rates = (List<Document>) teacher.getOrDefault("teach_rates", new ArrayList<>());
 
@@ -163,7 +175,6 @@ public class Utility {
                 .put("length", schedule.get("length"))
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
                 .put("createdAt", getSolarDate(schedule.getLong("created_at")))
-                .put("time", schedule.getOrDefault("time", ""))
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1))
                 .put("requestsCount", schedule.containsKey("requests") ?
@@ -190,9 +201,9 @@ public class Utility {
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
-                .put("time", schedule.getOrDefault("time", ""))
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1))
+                .put("description", schedule.getOrDefault("description", 1))
                 .put("id", schedule.getObjectId("_id").toString());
 
         if (Objects.equals(
@@ -214,7 +225,6 @@ public class Utility {
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
-                .put("time", schedule.getOrDefault("time", ""))
                 .put("id", schedule.getObjectId("_id").toString());
     }
 

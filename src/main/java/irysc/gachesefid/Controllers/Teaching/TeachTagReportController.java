@@ -14,6 +14,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.teachReportRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.teachTagReportRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
@@ -32,7 +33,8 @@ public class TeachTagReportController {
 
         Document newDoc = new Document("label", jsonObject.getString("label"))
                 .append("priority", jsonObject.getInt("priority"))
-                .append("mode", jsonObject.getString("mode"));
+                .append("mode", jsonObject.getString("mode"))
+                .append("visibility", jsonObject.getBoolean("visibility"));
 
         return teachTagReportRepository.insertOneWithReturn(newDoc);
     }
@@ -95,12 +97,12 @@ public class TeachTagReportController {
         return JSON_OK;
     }
 
-    public static String getAllTags(String mode) {
+    public static String getAllReportTags(String mode, boolean isAdmin) {
 
         List<Bson> filters = new ArrayList<>();
         filters.add(exists("deleted_at", false));
-        if(mode != null) {
-            if(!EnumValidatorImp.isValid(mode, TeachReportTagMode.class))
+        if (mode != null) {
+            if (!EnumValidatorImp.isValid(mode, TeachReportTagMode.class))
                 return JSON_NOT_VALID_PARAMS;
             filters.add(eq("mode", mode));
         }
@@ -111,12 +113,31 @@ public class TeachTagReportController {
         JSONArray jsonArray = new JSONArray();
 
         for (Document tag : tags) {
-
             JSONObject jsonObject = new JSONObject()
                     .put("id", tag.getObjectId("_id").toString())
                     .put("label", tag.getString("label"))
                     .put("priority", tag.getInteger("priority"))
+                    .put("visibility", tag.getBoolean("visibility"))
                     .put("mode", tag.getString("mode"));
+
+            if (isAdmin) {
+                jsonObject
+                        .put(
+                                "reportsCount",
+                                teachReportRepository.count(
+                                        eq("tag_id", tag.getObjectId("_id"))
+                                )
+                        )
+                        .put(
+                                "unseenReportsCount",
+                                teachReportRepository.count(
+                                        and(
+                                                eq("tag_id", tag.getObjectId("_id")),
+                                                eq("seen", false)
+                                        )
+                                )
+                        );
+            }
 
             jsonArray.put(jsonObject);
         }

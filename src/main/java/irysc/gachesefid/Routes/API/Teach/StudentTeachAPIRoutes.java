@@ -18,6 +18,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
+
 @Controller
 @RequestMapping(path = "/api/teach/student/")
 @Validated
@@ -88,12 +92,23 @@ public class StudentTeachAPIRoutes extends Router {
         );
     }
 
-    @GetMapping(value = "getAllTags")
+    @GetMapping(value = "getAllReportTags")
     @ResponseBody
-    public String getAllTags(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return TeachTagReportController.getAllTags(TeachReportTagMode.USER.getName());
+    public String getAllReportTags(){
+        return TeachTagReportController.getAllReportTags(
+                TeachReportTagMode.USER.getName(), false
+        );
     }
 
+
+    @GetMapping(value = "getDistinctTags")
+    @ResponseBody
+    public String getDistinctTags() {
+        return generateSuccessMsg("data", userRepository.distinctTagsWithFilter(
+                and(
+                        eq("accesses", "advisor"),
+                        exists("teach_tags")
+                ), "teach_tags")
+        );
+    }
 }

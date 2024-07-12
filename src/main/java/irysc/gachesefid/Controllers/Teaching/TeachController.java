@@ -2,10 +2,7 @@ package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Models.TeachMode;
-import irysc.gachesefid.Utility.JalaliCalendar;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Validator.DateValidator;
-import irysc.gachesefid.Validator.TimeValidator;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -42,16 +39,32 @@ public class TeachController {
         return JSON_OK;
     }
 
+    public static String getAdvisorIRYSCPercent(ObjectId advisorId) {
+        Document user = userRepository.findById(advisorId);
+        if(user == null)
+            return JSON_NOT_VALID_ID;
+
+        if(user.containsKey("irysc_teach_percent"))
+            return generateSuccessMsg("data",
+                    new JSONObject()
+                            .put("iryscTeachPercent", user.get("irysc_teach_percent"))
+                            .put("iryscAdvicePercent", user.get("irysc_advice_percent"))
+            );
+
+        Document config = getConfig();
+        return generateSuccessMsg("data",
+                new JSONObject()
+                        .put("iryscTeachPercent", config.get("irysc_teach_percent"))
+                        .put("iryscAdvicePercent", config.get("irysc_advice_percent"))
+        );
+    }
 
 
     // ######################## ADVISOR SECTION ######################
 
     public static String createNewSchedule(Document user, JSONObject jsonObject) {
 
-        if (!DateValidator.isValid(jsonObject.getString("start")))
-            return generateErr("زمان نامعتبر است");
-
-        if (!DateValidator.gt(jsonObject.getString("start"), getToday("/")))
+        if (jsonObject.getLong("start") < System.currentTimeMillis())
             return generateErr("زمان باید بزرگ تر از امروز باشد");
 
         int defaultPrice = (int) user.getOrDefault("default_teach_price", -1);
@@ -69,23 +82,15 @@ public class TeachController {
         )
             return generateErr("لطفا حداکثر تعداد نفرات برای تشکیل جلسه را تعیین نمایید");
 
-        if (jsonObject.has("time") && !TimeValidator.isValid(jsonObject.getString("time")))
-            return generateErr("زمان نامعبتر است");
-
-        Document config = getConfig();
-        if (jsonObject.getInt("maxCap") > config.getInteger("max_teach_cap"))
-            return generateErr("حداکثر تعداد نفرات در هر جلسه نباید بیشتر از " + config.getInteger("max_teach_cap") + " باشد");
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName())) {
+            Document config = getConfig();
+            if (jsonObject.getInt("maxCap") > config.getInteger("max_teach_cap"))
+                return generateErr("حداکثر تعداد نفرات در هر جلسه نباید بیشتر از " + config.getInteger("max_teach_cap") + " باشد");
+        }
 
         ObjectId userId = user.getObjectId("_id");
-        String s = Utility.convertStringToDate(jsonObject.getString("start"), "-");
-        String[] splited = s.split("-");
-        long start = Utility.getTimestamp(JalaliCalendar.jalaliToGregorian(
-                        new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2]))
-                .format("-")
-        );
-
         Document newDoc = new Document("user_id", userId)
-                .append("start_at", start)
+                .append("start_at", jsonObject.getLong("start"))
                 .append("length", jsonObject.getInt("length"))
                 .append("created_at", System.currentTimeMillis())
                 .append("visibility", jsonObject.getBoolean("visibility"))
@@ -106,21 +111,18 @@ public class TeachController {
         if (jsonObject.has("title"))
             newDoc.append("title", jsonObject.getString("title"));
 
-        if (jsonObject.has("time"))
-            newDoc.append("time", jsonObject.getString("time"));
-
         if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName())) {
             newDoc.append("max_cap", jsonObject.getInt("maxCap"));
             newDoc.append("min_cap", jsonObject.getInt("minCap"));
         }
 
-        teachScheduleRepository.insertOne(newDoc);
+        ObjectId id = teachScheduleRepository.insertOneWithReturnId(newDoc);
         if (user.containsKey("teach")) {
             user.put("teach", true);
             userRepository.updateOne(userId, set("teach", true));
         }
 
-        return JSON_OK;
+        return generateSuccessMsg("id", id);
     }
 
     public static String removeSchedule(ObjectId userId, ObjectId scheduleId) {

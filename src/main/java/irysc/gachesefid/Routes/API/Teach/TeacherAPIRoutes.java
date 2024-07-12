@@ -12,7 +12,6 @@ import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -38,19 +37,18 @@ public class TeacherAPIRoutes extends Router {
                                                     "visibility", "teachMode"
                                             },
                                             paramsType = {
-                                                    String.class, Positive.class,
+                                                    Long.class, Positive.class,
                                                     Boolean.class, TeachMode.class
                                             },
                                             optionals = {
                                                     "description", "price",
                                                     "minCap", "maxCap", "title",
-                                                    "time", "needRegistryConfirmation"
+                                                    "needRegistryConfirmation"
                                             },
                                             optionalsType = {
                                                     String.class, Positive.class,
                                                     Positive.class, Positive.class,
-                                                    String.class, String.class,
-                                                    Boolean.class
+                                                    String.class, Boolean.class
                                             }
                                     ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -120,11 +118,11 @@ public class TeacherAPIRoutes extends Router {
     }
 
 
-    @GetMapping(value = "getAllTags")
+    @GetMapping(value = "getAllReportTags")
     @ResponseBody
-    public String getAllTags(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return TeachTagReportController.getAllTags(TeachReportTagMode.TEACHER.getName());
+    public String getAllReportTags() {
+        return TeachTagReportController.getAllReportTags(
+                TeachReportTagMode.TEACHER.getName(), false
+        );
     }
 }

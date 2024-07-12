@@ -406,7 +406,7 @@ public class StudentTeachController {
         );
 
         List<JSONObject> docs = new ArrayList<>();
-        long one_year_ms = ONE_DAY_MIL_SEC * 365;
+        long oneYearMs = ONE_DAY_MIL_SEC * 365;
 
         boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
                 tag == null && minRate == null && maxRate == null;
@@ -423,7 +423,7 @@ public class StudentTeachController {
 
             int age = -1;
             if (teacher.containsKey("birth_day")) {
-                age = (int) ((curr - teacher.getLong("birth_day")) / one_year_ms);
+                age = (int) ((curr - teacher.getLong("birth_day")) / oneYearMs);
                 jsonObject.put("age", age);
             }
 
@@ -450,6 +450,7 @@ public class StudentTeachController {
         });
 
         JSONArray jsonArray = new JSONArray();
+        docs.forEach(jsonArray::put);
 
         if (isAllFiltersOff)
             return generateSuccessMsg("data", new JSONObject()
