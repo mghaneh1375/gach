@@ -37,11 +37,12 @@ public class AdminTeachAPIRoutes extends Router {
             @RequestParam(required = false, value = "to") Long to,
             @RequestParam(required = false, value = "justHasStudents") Boolean justHasStudents,
             @RequestParam(required = false, value = "justHasRequests") Boolean justHasRequests,
-            @RequestParam(required = false, value = "teachMode") String teachMode
+            @RequestParam(required = false, value = "teachMode") String teachMode,
+            @RequestParam(required = false, value = "activeMode") String activeMode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return TeachController.getSchedules(
-                userId, from, to,
+                userId, from, to, activeMode,
                 justHasStudents, justHasRequests, teachMode
         );
     }

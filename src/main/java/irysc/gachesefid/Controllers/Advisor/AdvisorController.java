@@ -27,6 +27,7 @@ import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
 import static irysc.gachesefid.Controllers.UserController.fillJSONWithEducationalHistory;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.SkyRoomUtils.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -213,7 +214,7 @@ public class AdvisorController {
             return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
 
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
-            return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
+            return generateErr("تعداد تماس\u200Cهای تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
         if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
             return generateErr("لینک وارد شده نامعتبر است");
@@ -260,7 +261,7 @@ public class AdvisorController {
             return generateErr("قیمت هر بسته باید حداقل " + config.getInteger("min_advice_price") + " باشد");
 
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
-            return generateErr("تعداد تماس های تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
+            return generateErr("تعداد تماس\u200Cهای تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
         if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
             return generateErr("لینک وارد شده نامعتبر است");
@@ -402,11 +403,11 @@ public class AdvisorController {
 
         String roomUrl = "consulting-" + curr;
 
-        int roomId = irysc.gachesefid.Controllers.Advisor.Utility.createMeeting("جلسه مشاوره " + name + " - " + studentName, roomUrl);
+        int roomId = createMeeting("جلسه مشاوره " + name + " - " + studentName, roomUrl, 2, false);
         if (roomId == -1)
             return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");
 
-        String url = "https://www.skyroom.online/ch/irysc/" + roomUrl;
+        String url = SKY_ROOM_PUBLIC_URL + roomUrl;
 
         Document document = new Document("advisor_id", advisorId)
                 .append("student_id", studentId)
@@ -417,10 +418,9 @@ public class AdvisorController {
                 .append("student_sky_id", studentSkyRoomId);
 
         advisorMeetingRepository.insertOne(document);
-        addUserToClass(studentSkyRoomId, advisorSkyRoomId, roomId);
+        addUserToClass(Collections.singletonList(studentSkyRoomId), advisorSkyRoomId, roomId);
 
-        createNotifForAdvisor(std, url, "createRoom");
-
+        createNotifAndSendSMS(std, url, "createRoom");
         return generateSuccessMsg("url", url);
     }
 
@@ -679,7 +679,7 @@ public class AdvisorController {
                             eq("visibility", true)
                     )
             ) > 0)
-                return generateErr("لطفا یکی از بسته های پیشنهادی را انتخاب نمایید");
+                return generateErr("لطفا یکی از بسته\u200Cهای پیشنهادی را انتخاب نمایید");
 
             Document config = getConfig();
 
@@ -714,7 +714,7 @@ public class AdvisorController {
 
         ObjectId id = advisorRequestsRepository.insertOneWithReturnId(newReq);
 
-        createNotifForAdvisor(advisor,
+        createNotifAndSendSMS(advisor,
                 user.getString("first_name") + " " + user.getString("last_name"),
                 "request"
         );
@@ -752,90 +752,6 @@ public class AdvisorController {
         return false;
     }
 
-    public static void createNotifForAdvisor(Document advisor, String studentName, String mode) {
-
-        String advisorName = advisor.getString("first_name") + " " + advisor.getString("last_name");
-
-        if (advisor.containsKey("phone"))
-            sendSMSWithTemplate(advisor.getString("phone"), 815,
-                    new PairValue("name", advisorName)
-            );
-
-        long curr = System.currentTimeMillis();
-
-        String title;
-        String msg = "<p>" +  "سلام " + advisorName + "<br/>";
-
-        switch (mode) {
-            case "finalize":
-                title = "پرداخت و نهایی سازی مشاور توسط دانش آموز";
-                msg +=  "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
-                break;
-            case "request":
-                title = "درخواست مشاوره";
-                msg += "دانش آموز " + studentName + " از شما درخواست کرده تا یک ماه مشاور ایشان باشید." + "<br/>" + "از پیشخوان بخش مشاوره سوابق ایشان را بررسی کرده و در صورت موافقت، تایید کنید." + "<br/>" + "شاد باشید";
-                break;
-            case "acceptRequest":
-                title = "تایید دانش آموز توسط مشاور";
-                msg += "درخواست شما برای مشاوره، توسط " + studentName + " پذیرفته شد." + "<br/>" + "با نهایی کردن پرداخت، فرایند مشاوره آغاز می\u200Cشود.";
-                break;
-            case "rejectRequest":
-                title = "رد دانش آموز توسط مشاور";
-                msg += "درخواست شما برای مشاوره، توسط " + studentName + " رد شد.";
-                break;
-            case "createRoom":
-                title = "ایجاد اتاق جلسه";
-                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
-                break;
-            case "advisorQuiz":
-                title = "تعریف آزمون توسط مشاور";
-                msg += "یک آزمون ویژه توسط مشاور برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مشاور -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
-                break;
-            case "schoolQuiz":
-                title = "تعریف آزمون توسط مدرسه";
-                msg += "یک آزمون ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
-                break;
-            case "hw":
-                title = "تعریف تمرین توسط مدرسه";
-                msg += "یک تمرین ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> تمرین ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
-                break;
-            case "karbarg":
-            case "karbargDone":
-                if(mode.equals("karbarg"))
-                    title = "به روزرسانی برنامه توسط مشاور";
-                else
-                    title = "به روزرسانی برنامه توسط دانش\u200Cآموز";
-                msg += "برنامه هفتگی توسط " + studentName + " به\u200Cروزرسانی شد." + "<br/>" + "شاد باشید :)";
-                break;
-            default:
-                title = "";
-                msg = "";
-        }
-
-        msg += "</p>";
-
-        ObjectId notifId = new ObjectId();
-        Document notif = new Document("_id", notifId)
-                .append("users_count", 1)
-                .append("title", title)
-                .append("text", msg)
-                .append("send_via", "site")
-                .append("created_at", curr)
-                .append("users", new ArrayList<ObjectId>() {{
-                    add(advisor.getObjectId("_id"));
-                }});
-
-        List<Document> events = (List<Document>) advisor.getOrDefault("events", new ArrayList<Document>());
-        events.add(
-                new Document("created_at", curr)
-                        .append("notif_id", notifId)
-                        .append("seen", false)
-        );
-
-        advisor.put("events", events);
-        notifRepository.insertOne(notif);
-    }
-
     public static String notifyStudentForSchedule(ObjectId scheduleId,
                                                   String advisorName,
                                                   ObjectId advisorId
@@ -854,7 +770,7 @@ public class AdvisorController {
         if(student == null)
             return JSON_NOT_UNKNOWN;
 
-        createNotifForAdvisor(student, advisorName, "karbarg");
+        createNotifAndSendSMS(student, advisorName, "karbarg");
         return JSON_OK;
     }
 
@@ -869,7 +785,7 @@ public class AdvisorController {
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
 
         String studentName = student.getString("first_name") + " " + student.getString("last_name");
-        createNotifForAdvisor(advisor, studentName, "finalize");
+        createNotifAndSendSMS(advisor, studentName, "finalize");
 
         int idx = Utility.searchInDocumentsKeyValIdx(students, "_id", student.getObjectId("_id"));
 
@@ -909,7 +825,7 @@ public class AdvisorController {
 
         Document user = userRepository.findById(req.getObjectId("user_id"));
         if(user != null) {
-            createNotifForAdvisor(
+            createNotifAndSendSMS(
                     user,
                     advisor.getString("first_name") + " " + advisor.getString("last_name"),
                     answer.equalsIgnoreCase(YesOrNo.NO.getName()) ? "rejectRequest" : "acceptRequest"

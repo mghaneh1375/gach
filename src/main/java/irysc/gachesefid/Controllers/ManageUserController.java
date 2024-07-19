@@ -78,10 +78,13 @@ public class ManageUserController {
         filters.add(exists("remove_at", false));
 
         if (level != null) {
-            if (!EnumValidatorImp.isValid(level, Access.class))
+            if (!EnumValidatorImp.isValid(level, Access.class) &&
+                    !level.equalsIgnoreCase("all")
+            )
                 return JSON_NOT_VALID_PARAMS;
 
-            filters.add(eq("accesses", level));
+            if(!level.equalsIgnoreCase("all"))
+                filters.add(eq("accesses", level));
         }
 
         if (NID != null)

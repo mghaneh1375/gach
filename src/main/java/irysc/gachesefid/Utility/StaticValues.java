@@ -18,8 +18,9 @@ public class StaticValues {
 
     public static final String KEY = "okfbogendesignmohammadghane1375!";
 
-    public static final long ONE_HOUR_MIL_SEC = 60 * 60 * 1000;
-    public static final long ONE_DAY_MIL_SEC = 86400000;
+    public static final long ONE_MIN_MSEC = 60000;
+    public static final long ONE_HOUR_MIL_SEC = 60 * ONE_MIN_MSEC;
+    public static final long ONE_DAY_MIL_SEC = 24 * ONE_HOUR_MIL_SEC;
     public static final long TWO_DAY_MIL_SEC = 86400000 * 2;
 
     public final static long TOKEN_EXPIRATION_MSEC = 60 * 60 * 24 * 7 * 1000;
@@ -38,6 +39,7 @@ public class StaticValues {
     public final static int SMS_VALIDATION_EXPIRATION_MSEC_LONG = 1000 * SMS_RESEND_SEC * 3;
 
     public final static long PAY_SCHEDULE_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
+    public final static long SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
 
     public final static int CLASS_LIMIT_CACHE_SIZE = 1000;
     public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
@@ -52,7 +54,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
 
     public static final String ANSI_RESET = "\u001B[0m";
@@ -81,7 +83,7 @@ public class StaticValues {
                     .append("pic", 1)
             ;
 
-    public final static BasicDBObject SCHEDULE_DIGEST =
+    public final static BasicDBObject SCHEDULE_DIGEST_FOR_TEACHER =
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("start_at", 1).append("length", 1)
                     .append("created_at", 1).append("visibility", 1)
@@ -89,7 +91,8 @@ public class StaticValues {
                     .append("students", 1).append("requests", 1)
                     .append("time", 1).append("min_cap", 1)
                     .append("max_cap", 1).append("user_id", 1)
-                    .append("can_request", 1);
+                    .append("can_request", 1).append("need_registry_confirmation", 1)
+                    .append("sky_room_url", 1);
 
     public final static BasicDBObject TEACH_PUBLIC_DIGEST =
             new BasicDBObject("first_name", 1).append("_id", 1)

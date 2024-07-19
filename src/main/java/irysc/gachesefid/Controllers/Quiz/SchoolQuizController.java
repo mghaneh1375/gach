@@ -243,7 +243,7 @@ public class SchoolQuizController {
 
             return generateSuccessMsg(
                     "excepts",
-                    "بجز ردیف های زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts,
+                    "بجز ردیف\u200Cهای زیر سایرین به درستی به آزمون اضافه گردیدند. " + excepts,
                     new PairValue("errs", errs)
             );
 

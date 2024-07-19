@@ -1,30 +1,24 @@
 package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.Access;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.OffCodeTypes;
-import irysc.gachesefid.Models.TeachMode;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Utility;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Filters.lte;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Controllers.Teaching.Utility.*;
-import static irysc.gachesefid.Controllers.Teaching.Utility.publicConvertSchedule;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -37,9 +31,11 @@ public class StudentTeachController {
         ObjectId userId = user.getObjectId("_id");
 
         try {
-            Document schedule = getSchedule(userId, scheduleId, false);
+            Document schedule = getSchedule(userId, scheduleId, false, false);
 
-            if (!schedule.getBoolean("can_request"))
+            if (!schedule.getBoolean("can_request") ||
+                    !schedule.getBoolean("need_registry_confirmation")
+            )
                 return JSON_NOT_ACCESS;
 
             long curr = System.currentTimeMillis();
@@ -54,28 +50,87 @@ public class StudentTeachController {
                 if (Utility.searchInDocumentsKeyValIdx(requests, "_id", userId) != -1)
                     return generateErr("شما قبلا برای این برنامه زمانی درخواست داده اید");
             }
+//            if (schedule.getString("teach_mode").equalsIgnoreCase(
+//                    TeachMode.SEMI_PRIVATE.getName()
+//            ))
+//                return prePayForSemiPrivateSchedule(schedule, user);
 
-            if (schedule.getString("teach_mode").equalsIgnoreCase(
-                    TeachMode.SEMI_PRIVATE.getName()
-            ))
-                return prePayForSemiPrivateSchedule(schedule, user);
-
-            String registryStatus = schedule.getBoolean("need_registry_confirmation") ? "pending" : "accept";
             Document newReqDoc = new Document("_id", userId)
                     .append("created_at", System.currentTimeMillis())
-                    .append("status", registryStatus);
-
-            if (registryStatus.equals("accept")) {
-                newReqDoc.append("expire_at", curr + PAY_SCHEDULE_EXPIRATION_MSEC);
-                schedule.put("can_request", false);
-            }
+                    .append("status", "pending")
+                    .append("expire_at", curr + SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC);
 
             requests.add(newReqDoc);
+            schedule.put("requests", requests);
+            teachScheduleRepository.updateOne(scheduleId, set("requests", requests));
 
-            teachScheduleRepository.replaceOneWithoutClearCache(scheduleId, schedule);
-            return JSON_OK;
+            Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
+            createNotifAndSendSMS(
+                    advisor,
+                    getSolarDate(schedule.getLong("start_at")) + "__" + user.getString("first_name") + " " + user.getString("last_name"),
+                    "newTeachRequest"
+            );
+            userRepository.updateOne(
+                    advisor.getObjectId("_id"),
+                    set("events", advisor.get("events"))
+            );
+
+            return generateSuccessMsg("data", "pending");
+
         } catch (Exception x) {
             return generateErr(x.getMessage());
+        }
+    }
+
+    public static String cancelRequest(
+            ObjectId userId, String name, ObjectId scheduleId
+    ) {
+        try {
+            Document schedule = getSchedule(userId, scheduleId, false, false);
+
+            if (!schedule.containsKey("requests"))
+                return JSON_NOT_ACCESS;
+
+            List<Document> requests = schedule.getList("requests", Document.class);
+            Document req = searchInDocumentsKeyVal(requests, "_id", userId);
+
+            if (req == null)
+                return JSON_NOT_ACCESS;
+
+            //todo: cancel pre pay scenario
+            if (!req.getString("status").equalsIgnoreCase(TeachRequestStatus.PENDING.getName()) &&
+                    !req.getString("status").equalsIgnoreCase(TeachRequestStatus.ACCEPT.getName())
+            )
+                return generateErr("درخواست شما در وضعیت کنسلی قرار ندارد");
+
+            BasicDBObject update = new BasicDBObject("requests", requests);
+
+            //todo: consider semi-private
+            if (req.getString("status").equalsIgnoreCase(TeachRequestStatus.ACCEPT.getName()) &&
+                    schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName())
+            ) {
+                schedule.put("can_request", true);
+                update.append("can_request", true);
+            }
+
+            if (req.getString("status").equalsIgnoreCase(TeachRequestStatus.ACCEPT.getName())) {
+                Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
+                createNotifAndSendSMS(
+                        advisor,
+                        getSolarDate(schedule.getLong("start_at")) + "__" + name,
+                        "cancelRequest"
+                );
+                userRepository.updateOne(advisor.getObjectId("_id"), set("events", advisor.get("events")));
+            }
+
+            req.put("status", TeachRequestStatus.CANCEL.getName());
+            teachScheduleRepository.updateOne(
+                    scheduleId, new BasicDBObject("$set", update)
+            );
+
+            return JSON_OK;
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
         }
     }
 
@@ -114,17 +169,94 @@ public class StudentTeachController {
         return null;
     }
 
-    public static String getMySchedules(ObjectId userId) {
+    public static String myScheduleRequests(
+            ObjectId userId, String activeMode,
+            String statusMode, String scheduleActiveMode
+    ) {
+        try {
+            List<Document> myRequests = teachScheduleRepository.find(
+                    buildMyScheduleRequestsFilters(userId, activeMode, statusMode, scheduleActiveMode),
+                    null
+            );
+
+            JSONArray jsonArray = new JSONArray();
+            Set<ObjectId> teachersId = new HashSet<>();
+
+            for (Document request : myRequests)
+                teachersId.add(request.getObjectId("user_id"));
+
+            List<Document> teachers = userRepository.findByIds(new ArrayList<>(teachersId), false,
+                    new BasicDBObject("first_name", 1).append("last_name", 1)
+            );
+
+            for (Document schedule : myRequests) {
+                Document teacher = teachers
+                        .stream()
+                        .filter(teacherIter -> teacherIter.getObjectId("_id").equals(schedule.getObjectId("user_id")))
+                        .findFirst().get();
+
+                Document req = schedule.getList("requests", Document.class)
+                        .stream().filter(reqIter -> reqIter.getObjectId("_id").equals(userId))
+                        .findFirst().get();
+
+                JSONObject jsonObject = new JSONObject()
+                        .put("id", schedule.getObjectId("_id").toString())
+                        .put("teacher", teacher.getString("first_name") + " " + teacher.getString("last_name"))
+                        .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                        .put("length", schedule.get("length"))
+                        .put("price", schedule.get("price"))
+                        .put("teachMode", schedule.get("teach_mode"))
+                        .put("createdAt", getSolarDate(req.getLong("created_at")))
+                        .put("status", req.getString("status"))
+                        .put("expireAt", req.containsKey("expire_at") ? getSolarDate(req.getLong("expire_at")) : "")
+                        .put("answerAt", req.containsKey("answer_at") ? getSolarDate(req.getLong("answer_at")) : "");
+
+                jsonArray.put(jsonObject);
+            }
+
+            return generateSuccessMsg("data", jsonArray);
+        } catch (InvalidFieldsException e) {
+            return generateErr(e.getMessage());
+        }
+    }
+
+    public static String getMySchedules(ObjectId userId, String activeMode) {
+
+        if (activeMode != null && !EnumValidatorImp.isValid(activeMode, ActiveMode.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        List<Bson> filters = new ArrayList<>() {{
+            add(eq("students._id", userId));
+        }};
+        if (activeMode != null) {
+            if (activeMode.equalsIgnoreCase(ActiveMode.ACTIVE.getName()))
+                filters.add(gt("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC));
+            else
+                filters.add(lt("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC));
+        }
 
         List<Document> schedules = teachScheduleRepository.find(
-                eq("students._id", userId),
-                null
+                and(filters), null
+        );
+
+        Set<ObjectId> teachersId = new HashSet<>();
+
+        for (Document schedule : schedules)
+            teachersId.add(schedule.getObjectId("user_id"));
+
+        List<Document> teachers = userRepository.findByIds(new ArrayList<>(teachersId), false,
+                new BasicDBObject("first_name", 1).append("last_name", 1)
+                        .append("teach_rate", 1).append("pic", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
         for (Document schedule : schedules) {
-            jsonArray.put(
-                    publicConvertSchedule(schedule)
+            jsonArray.put(convertMySchedule(
+                    schedule,
+                    teachers.stream()
+                            .filter(teacher -> teacher.getObjectId("_id").equals(schedule.getObjectId("user_id")))
+                            .findFirst().get()
+                    )
             );
         }
 
@@ -143,6 +275,8 @@ public class StudentTeachController {
                 null
         );
 
+        schedules.sort(Comparator.comparing(o -> o.getLong("start_at")));
+
         JSONArray jsonArray = new JSONArray();
         for (Document schedule : schedules) {
             jsonArray.put(
@@ -153,7 +287,6 @@ public class StudentTeachController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-
     public static String payForSchedule(
             Document user, ObjectId scheduleId,
             String offCode
@@ -162,47 +295,14 @@ public class StudentTeachController {
 
         try {
             Document schedule = getSchedule(
-                    userId, scheduleId, false
+                    userId, scheduleId, false, true
             );
-
-            if (!schedule.containsKey("requests"))
-                return JSON_NOT_VALID_ID;
-
-            Document request = Utility.searchInDocumentsKeyVal(
-                    schedule.getList("requests", Document.class), "_id", userId
-            );
-
-            if (request == null)
-                return JSON_NOT_VALID_ID;
-
-            if (request.getString("status").equalsIgnoreCase("reject"))
-                return generateErr("درخواست شما رد شده است");
-
-            if (request.getString("status").equalsIgnoreCase("pending"))
-                return generateErr("درخواست شما در حال بررسی می باشد");
-
-            if (schedule.containsKey("students") &&
-                    searchInDocumentsKeyValIdx(
-                            schedule.getList("students", Document.class),
-                            "_id", userId
-                    ) != -1
-            )
-                return generateErr("شما قبلا در این جلسه ثبت نام شده اید");
 
             int price = schedule.getInteger("price");
 
-
             double offAmount = 0;
             double shouldPayDouble = price * 1.0;
-            Document offDoc;
-
-            try {
-                offDoc = findOff(
-                        offCode, userId
-                );
-            } catch (Exception x) {
-                return generateErr(x.getMessage());
-            }
+            Document offDoc = findOff(offCode, userId);
 
             if (offDoc != null) {
                 offAmount +=
@@ -213,11 +313,19 @@ public class StudentTeachController {
                 shouldPayDouble = Math.max(price - offAmount, 0);
             }
 
+            Document request = null;
+            if (schedule.containsKey("requests")) {
+                request = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        schedule.getList("requests", Document.class), "_id", userId
+                );
+            }
+
+            boolean isPrivate = schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName());
+
             int shouldPay = (int) shouldPayDouble;
-            if (schedule.getString("teach_mode").equalsIgnoreCase(
-                    TeachMode.SEMI_PRIVATE.getName()
-            ))
-                shouldPay -= request.getInteger("wallet_paid") + request.getInteger("paid");
+            if (!isPrivate && request != null)
+                shouldPay -= (Integer) request.getOrDefault("wallet_paid", 0) +
+                        (Integer) request.getOrDefault("paid", 0);
 
             double money = ((Number) user.get("money")).doubleValue();
             long curr = System.currentTimeMillis();
@@ -239,12 +347,42 @@ public class StudentTeachController {
 
                 students.add(new Document("_id", userId)
                         .append("created_at", curr)
-                        .append("paid", 0)
-                        .append("wallet_paid", shouldPay > 100 ? shouldPay : 0)
                 );
-                teachScheduleRepository.updateOne(scheduleId,
-                        set("students", students)
+
+                List<Document> requests = schedule.containsKey("requests")
+                        ? schedule.getList("requests", Document.class)
+                        : new ArrayList<>();
+
+                if (request != null)
+                    request.put("status", "paid");
+                else {
+                    request = new Document("_id", userId)
+                            .append("created_at", System.currentTimeMillis())
+                            .append("status", "paid")
+                            .append("expire_at", curr + SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC);
+
+                    requests.add(request);
+                    schedule.put("requests", requests);
+                }
+
+                schedule.put("students", students);
+
+                BasicDBObject update = new BasicDBObject("students", students)
+                        .append("requests", requests);
+
+                if (isPrivate) {
+                    schedule.put("can_request", false);
+                    update.append("can_request", false);
+                }
+
+                Document advisor = userRepository.findById(schedule.getObjectId("_id"));
+                createNotifAndSendSMS(
+                        advisor,
+                        user.getString("first_name") + " " + user.getString("last_name"),
+                        "finalizeTeach"
                 );
+
+                teachScheduleRepository.updateOne(scheduleId, new BasicDBObject("$set", update));
 
                 if (offDoc != null)
                     logForOffCodeUsage(offDoc, userId, OffCodeSections.CLASSES.getName(), scheduleId);
@@ -277,6 +415,7 @@ public class StudentTeachController {
                 doc.append("off_code", offDoc.getObjectId("_id"));
                 doc.append("off_amount", (int) offAmount);
             }
+            // todo: set can request false for auto requests and create a request
 
             return goToPayment((int) (shouldPay - money), doc);
 
@@ -287,7 +426,7 @@ public class StudentTeachController {
 
     public static String getMySchedule(ObjectId userId, ObjectId scheduleId) {
         try {
-            Document schedule = getSchedule(userId, scheduleId, true);
+            Document schedule = getSchedule(userId, scheduleId, true, false);
             //todo: complete
             return null;
         } catch (Exception x) {
@@ -298,7 +437,7 @@ public class StudentTeachController {
     //todo: rate to teacher not schedule
     public static String rate(ObjectId userId, ObjectId scheduleId, int userRate) {
         try {
-            Document schedule = getSchedule(userId, scheduleId, true);
+            Document schedule = getSchedule(userId, scheduleId, true, false);
             int ratesCount = (int) schedule.getOrDefault("rates_count", 0);
             double rate = (double) schedule.getOrDefault("rate", 0);
             double rateSum = rate * ratesCount;
