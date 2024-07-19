@@ -708,7 +708,7 @@ public class Utility {
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);
         prop.put("mail.smtp.starttls.enable", "false");
-        prop.put("mail.smtp.host", "mail.irysc.com");
+        prop.put("mail.smtp.host", "mail1.limoo.host");
         prop.put("mail.smtp.port", "587");
 
         try {
