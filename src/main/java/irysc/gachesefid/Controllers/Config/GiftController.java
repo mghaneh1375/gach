@@ -49,7 +49,7 @@ public class GiftController {
             return "آزمون پای تخته";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.GACH_EXAM.getName()))
-            return "آزمون های آیریسک";
+            return "آزمون\u200Cهای آیریسک";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.SCHOOL_QUIZ.getName()))
             return "آزمون مدرسه ای";
@@ -61,7 +61,7 @@ public class GiftController {
             return "تمرین";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.BANK_EXAM.getName()))
-            return "آزمون های شخصی ساز";
+            return "آزمون\u200Cهای شخصی ساز";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.BOOK.getName()))
             return "خرید کتاب";
@@ -70,10 +70,10 @@ public class GiftController {
             return "کلاس ها و همایش ها";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.CONTENT.getName()))
-            return "بسته های آموزشی";
+            return "بسته\u200Cهای آموزشی";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.RAVAN_EXAM.getName()))
-            return "آزمون های روان شناسی";
+            return "آزمون\u200Cهای روان شناسی";
 
         if (useFor.equalsIgnoreCase(OffCodeSections.COUNSELING.getName()))
             return "مشاوره";

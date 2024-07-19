@@ -9,7 +9,10 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
+import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,7 @@ import javax.validation.constraints.Min;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 @Controller
@@ -28,7 +32,7 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 public class StudentTeachAPIRoutes extends Router {
 
 
-    @PutMapping(value = "submitRequest/{scheduleId}")
+    @PostMapping(value = "submitRequest/{scheduleId}")
     @ResponseBody
     public String submitRequest(
             HttpServletRequest request,
@@ -36,6 +40,34 @@ public class StudentTeachAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
         return StudentTeachController.submitRequest(
                 getStudentUser(request), scheduleId
+        );
+    }
+
+    @PutMapping(value = "cancelRequest/{scheduleId}")
+    @ResponseBody
+    public String cancelRequest(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId
+    ) throws NotAccessException, NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        Document user = getStudentUser(request);
+        return StudentTeachController.cancelRequest(
+                user.getObjectId("_id"),
+                user.getString("first_name") + " " + user.getString("last_name"),
+                scheduleId
+        );
+    }
+
+    @GetMapping(value = "myScheduleRequests")
+    @ResponseBody
+    public String myScheduleRequests(
+            HttpServletRequest request,
+            @RequestParam(value = "activeMode", required = false) String activeMode,
+            @RequestParam(value = "statusMode", required = false) String statusMode,
+            @RequestParam(value = "scheduleActiveMode", required = false) String scheduleActiveMode
+    ) throws NotAccessException, NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentTeachController.myScheduleRequests(
+                getStudentUser(request).getObjectId("_id"),
+                activeMode, statusMode, scheduleActiveMode
         );
     }
 
@@ -49,12 +81,30 @@ public class StudentTeachAPIRoutes extends Router {
         return StudentTeachController.getSchedules(teacherId);
     }
 
+    @PostMapping(value = "payForSchedule/{scheduleId}")
+    @ResponseBody
+    public String payForSchedule(HttpServletRequest request,
+                                 @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {}, paramsType = {},
+                                         optionals = {"code"}, optionalsType = {String.class}
+                                 ) String json
+    ) throws NotAccessException, NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject = json != null && !json.isEmpty() ? convertPersian(new JSONObject(json)) : new JSONObject();
+        return StudentTeachController.payForSchedule(
+                getStudentUser(request), scheduleId,
+                jsonObject.has("code") ? jsonObject.getString("code") : null
+        );
+    }
+
     @GetMapping(value = "getMySchedules")
     @ResponseBody
-    public String getMySchedules(HttpServletRequest request
+    public String getMySchedules(
+            HttpServletRequest request,
+            @RequestParam(value = "activeMode", required = false) String activeMode
     ) throws NotAccessException, NotCompleteAccountException, UnAuthException, NotActivateAccountException {
         return StudentTeachController.getMySchedules(
-                getStudentUser(request).getObjectId("_id")
+                getStudentUser(request).getObjectId("_id"), activeMode
         );
     }
 
@@ -94,7 +144,7 @@ public class StudentTeachAPIRoutes extends Router {
 
     @GetMapping(value = "getAllReportTags")
     @ResponseBody
-    public String getAllReportTags(){
+    public String getAllReportTags() {
         return TeachTagReportController.getAllReportTags(
                 TeachReportTagMode.USER.getName(), false
         );

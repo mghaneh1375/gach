@@ -617,7 +617,7 @@ public class StudentAdviceController {
 
             Document advisor = userRepository.findById(advisorId);
             if (advisor != null) {
-                AdvisorController.createNotifForAdvisor(advisor, studentName, "karbargDone");
+                createNotifAndSendSMS(advisor, studentName, "karbargDone");
             }
 
         }

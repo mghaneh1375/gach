@@ -130,7 +130,7 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
 
             if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
-                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+                return generateErr("این متد تنها برای آزمون\u200Cهای PDF ای قابل فراحوانی می باشد");
 
             String base = db instanceof SchoolQuizRepository ?
                     SchoolQuizRepository.FOLDER : IRYSCQuizRepository.FOLDER;
@@ -153,7 +153,7 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
 
             if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
-                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+                return generateErr("این متد تنها برای آزمون\u200Cهای PDF ای قابل فراحوانی می باشد");
 
             String base = db instanceof SchoolQuizRepository ?
                     SchoolQuizRepository.FOLDER : IRYSCQuizRepository.FOLDER;
@@ -431,7 +431,7 @@ public class QuizController {
             Document quiz = hasAccess(db, userId, quizId);
 
             if (!(boolean) quiz.getOrDefault("pdf_quiz", false))
-                return generateErr("این متد تنها برای آزمون های PDF ای قابل فراحوانی می باشد");
+                return generateErr("این متد تنها برای آزمون\u200Cهای PDF ای قابل فراحوانی می باشد");
 
             Document questions = quiz.get("questions", Document.class);
 
@@ -613,7 +613,7 @@ public class QuizController {
 
             JSONObject jsonObject1 = new JSONObject()
                     .put("id", quiz.getObjectId("_id").toString())
-                    .put("name", quiz.getString("title") + " در آزمون های آیریسک")
+                    .put("name", quiz.getString("title") + " در آزمون\u200Cهای آیریسک")
                     .put("mode", "irysc");
 
             all.put(jsonObject1);
@@ -627,7 +627,7 @@ public class QuizController {
 
                 JSONObject jsonObject1 = new JSONObject()
                         .put("id", quiz.getObjectId("_id").toString())
-                        .put("name", quiz.getString("title") + " در آزمون های باز")
+                        .put("name", quiz.getString("title") + " در آزمون\u200Cهای باز")
                         .put("mode", "open");
 
                 all.put(jsonObject1);

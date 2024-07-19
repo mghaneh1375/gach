@@ -145,7 +145,6 @@ public class UserAPIRoutes extends Router {
     public String fixQuiz() throws ParseException {
 
         if (1 == 1) {
-            sendMailWithAttach("test___mghaneh1375@gmail.com", "<figure><img src='https://statics.irysc.com/ck/1704958395409.jpg'></figure>", "محمد قانع", null);
             return "";
         }
 

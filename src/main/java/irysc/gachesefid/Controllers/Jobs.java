@@ -8,10 +8,12 @@ import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
@@ -19,9 +21,11 @@ import java.io.File;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
+import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
 
@@ -37,6 +41,7 @@ public class Jobs implements Runnable {
 
         timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
         timer.schedule(new RemoveExpiredMeetings(), 0, ONE_DAY_MIL_SEC * 7);
+        timer.schedule(new RejectExpiredTeachRequests(), 1000 * 60, ONE_HOUR_MIL_SEC);
 
         timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
 
@@ -60,20 +65,20 @@ public class Jobs implements Runnable {
 
             List<WriteModel<Document>> writes = new ArrayList<>();
 
-            for(Document user : users) {
+            for (Document user : users) {
 
                 List<Document> notifs = user.getList("events", Document.class);
                 List<Document> newList = new ArrayList<>();
 
-                for(Document notif : notifs) {
+                for (Document notif : notifs) {
 
-                    if(notif.getLong("created_at") < lastMonth)
+                    if (notif.getLong("created_at") < lastMonth)
                         continue;
 
                     newList.add(notif);
                 }
 
-                if(newList.size() < notifs.size()) {
+                if (newList.size() < notifs.size()) {
 
                     user.put("events", newList);
                     writes.add(new UpdateOneModel<>(
@@ -86,8 +91,53 @@ public class Jobs implements Runnable {
                 }
             }
 
-            if(writes.size() > 0)
+            if (writes.size() > 0)
                 userRepository.bulkWrite(writes);
+        }
+    }
+
+    private static class RejectExpiredTeachRequests extends TimerTask {
+        @Override
+        public void run() {
+            long curr = System.currentTimeMillis();
+            List<Document> docs = teachScheduleRepository.find(
+                    elemMatch("requests", and(
+                            lt("expire_at", curr),
+                            or(
+                                    eq("status", "pending"),
+                                    eq("status", "accept")
+                            )
+                    )), new BasicDBObject("requests", 1).append("start_at", 1)
+                            .append("teach_mode", 1).append("max_cap", 1)
+                            .append("can_request", 1)
+            );
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+            for (Document doc : docs) {
+                doc.getList("requests", Document.class).removeIf(request ->
+                        (
+                                request.getString("status").equalsIgnoreCase("pending") ||
+                                        request.getString("status").equalsIgnoreCase("accept")
+                        ) && request.getLong("expire_at") < curr
+                );
+
+                BasicDBObject update = new BasicDBObject("requests", doc.getList("requests", Document.class));
+                if (!doc.getBoolean("can_request")) {
+                    int maxCap = (Integer) doc.getOrDefault("max_cap", 1);
+                    if (doc.getList("requests", Document.class).size() < maxCap)
+                        update.append("can_request", true);
+                }
+
+                writes.add(new UpdateOneModel<>(
+                        eq("_id", doc.getObjectId("_id")),
+                        new BasicDBObject("$set", update)
+                ));
+            }
+
+            if(writes.size() > 0) {
+                teachScheduleRepository.bulkWrite(writes);
+                docs.forEach(doc -> teachScheduleRepository.clearFromCache(doc.getObjectId("_id")));
+            }
         }
     }
 
@@ -103,8 +153,8 @@ public class Jobs implements Runnable {
                     new BasicDBObject("room_id", 1)
             );
 
-            for(Document doc : docs)
-                irysc.gachesefid.Controllers.Advisor.Utility.deleteMeeting(doc.getInteger("room_id"));
+            for (Document doc : docs)
+                deleteMeeting(doc.getInteger("room_id"));
 
         }
     }
@@ -127,11 +177,11 @@ public class Jobs implements Runnable {
                     ), new BasicDBObject("students", 1).append("title", 1)
             );
 
-            for(Document quiz : quizzes) {
+            for (Document quiz : quizzes) {
 
                 ObjectId quizId = quiz.getObjectId("_id");
 
-                for(Document student : quiz.getList("students", Document.class)) {
+                for (Document student : quiz.getList("students", Document.class)) {
 
                     ObjectId userId = student.getObjectId("_id");
 
@@ -140,7 +190,7 @@ public class Jobs implements Runnable {
                     if (user == null || !user.containsKey("mail"))
                         continue;
 
-                    if(mailQueueRepository.exist(and(
+                    if (mailQueueRepository.exist(and(
                             eq("mode", "quizReminder"),
                             eq("quiz_id", quizId),
                             eq("user_id", userId)
@@ -240,7 +290,7 @@ public class Jobs implements Runnable {
 
             List<WriteModel<Document>> writes = new ArrayList<>();
 
-            for(ObjectId sId : subjectFilterHashMap.keySet()) {
+            for (ObjectId sId : subjectFilterHashMap.keySet()) {
 
                 subjects.get(idx).put("q_no", subjectFilterHashMap.get(sId).total());
                 subjects.get(idx).put("q_no_easy", subjectFilterHashMap.get(sId).easy());
@@ -275,7 +325,7 @@ public class Jobs implements Runnable {
 
             List<WriteModel<Document>> writes = new ArrayList<>();
 
-            for(int i = 0; i < tags.length(); i++) {
+            for (int i = 0; i < tags.length(); i++) {
 
                 String tag = tags.getString(i);
 
@@ -283,7 +333,7 @@ public class Jobs implements Runnable {
                         eq("tag", tag), null
                 );
 
-                if(questionTag == null)
+                if (questionTag == null)
                     continue;
 
                 ArrayList<Document> docs = questionRepository.find(
@@ -293,7 +343,7 @@ public class Jobs implements Runnable {
 
                 int easy = 0, mid = 0, hard = 0;
 
-                for(Document doc : docs) {
+                for (Document doc : docs) {
                     switch (doc.getString("level")) {
                         case "easy":
                             easy++;
@@ -336,7 +386,7 @@ public class Jobs implements Runnable {
 
             List<WriteModel<Document>> writes = new ArrayList<>();
 
-            for(int i = 0; i < authors.length(); i++) {
+            for (int i = 0; i < authors.length(); i++) {
 
                 String author = authors.getString(i);
 
@@ -344,7 +394,7 @@ public class Jobs implements Runnable {
                         eq("name", author), null
                 );
 
-                if(authorDoc == null)
+                if (authorDoc == null)
                     continue;
 
                 ArrayList<Document> docs = questionRepository.find(
@@ -354,7 +404,7 @@ public class Jobs implements Runnable {
 
                 int easy = 0, mid = 0, hard = 0;
 
-                for(Document doc : docs) {
+                for (Document doc : docs) {
                     switch (doc.getString("level")) {
                         case "easy":
                             easy++;
@@ -392,14 +442,14 @@ public class Jobs implements Runnable {
 
             File ckFolder = new File(
                     DEV_MODE ? FileUtils.uploadDir_dev + "ck" :
-                    FileUtils.uploadDir + "ck"
+                            FileUtils.uploadDir + "ck"
             );
 
             if (!ckFolder.exists() || !ckFolder.isDirectory())
                 return;
 
             File[] allFiles = ckFolder.listFiles();
-            if(allFiles == null || allFiles.length == 0)
+            if (allFiles == null || allFiles.length == 0)
                 return;
 
             ArrayList<Document> quizzes = iryscQuizRepository.find(
@@ -409,24 +459,24 @@ public class Jobs implements Runnable {
                     ), new BasicDBObject("desc", 1).append("desc_after", 1)
             );
 
-            for(File f : allFiles) {
+            for (File f : allFiles) {
 
-                if(f.isDirectory() || f.getName().startsWith("."))
+                if (f.isDirectory() || f.getName().startsWith("."))
                     continue;
 
                 boolean find = false;
 
-                for(Document quiz : quizzes) {
-                    if(
+                for (Document quiz : quizzes) {
+                    if (
                             (quiz.containsKey("desc") && quiz.getString("desc").contains(f.getName())) ||
-                            (quiz.containsKey("desc_after") && quiz.getString("desc_after").contains(f.getName()))
+                                    (quiz.containsKey("desc_after") && quiz.getString("desc_after").contains(f.getName()))
                     ) {
                         find = true;
                         break;
                     }
                 }
 
-                if(!find)
+                if (!find)
                     f.delete();
             }
 
@@ -442,7 +492,7 @@ public class Jobs implements Runnable {
             ArrayList<Document> mails =
                     mailQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
 
-            if(mails.size() == 0)
+            if (mails.size() == 0)
                 return;
 
             long yesterday = System.currentTimeMillis() - 86400000;
@@ -450,18 +500,18 @@ public class Jobs implements Runnable {
             int limit = Math.min(mails.size(), 30);
             ArrayList<ObjectId> ids = new ArrayList<>();
 
-            for(int i = 0; i < limit; i++) {
+            for (int i = 0; i < limit; i++) {
 
                 try {
                     Document mail = mails.get(i);
 
-                    if(!mail.containsKey("mail") ||
+                    if (!mail.containsKey("mail") ||
                             mail.getString("mail") == null) {
                         ids.add(mail.getObjectId("_id"));
                         continue;
                     }
 
-                    if(Utility.sendMailWithAttach(
+                    if (Utility.sendMailWithAttach(
                             mail.containsKey("title") ?
                                     mail.getString("title") + "___" + mail.getString("mail") :
                                     mail.getString("mail"),
@@ -469,28 +519,27 @@ public class Jobs implements Runnable {
                             (String) mail.getOrDefault("name", ""),
                             (String) mail.getOrDefault("attach", "")
                     )) {
-                        if(
+                        if (
                                 !mail.getString("mode").equalsIgnoreCase("quizReminder") ||
                                         mail.getLong("created_at") < yesterday
                         )
                             ids.add(mail.getObjectId("_id"));
-                        else if(mail.getString("mode").equalsIgnoreCase("quizReminder")) {
+                        else if (mail.getString("mode").equalsIgnoreCase("quizReminder")) {
                             mail.put("status", "success");
                             mailQueueRepository.replaceOne(mail.getObjectId("_id"), mail);
                         }
 
-                    }
-                    else {
+                    } else {
                         mail.put("status", "failed");
                         mailQueueRepository.replaceOne(mail.getObjectId("_id"), mail);
                     }
 
                     Thread.sleep(1000);
+                } catch (Exception ignore) {
                 }
-                catch (Exception ignore) {}
             }
 
-            if(ids.size() > 0)
+            if (ids.size() > 0)
                 mailQueueRepository.deleteMany(in("_id", ids));
         }
     }
@@ -503,7 +552,7 @@ public class Jobs implements Runnable {
             ArrayList<Document> allSms =
                     smsQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
 
-            if(allSms.size() == 0)
+            if (allSms.size() == 0)
                 return;
 
             HashMap<ObjectId, ArrayList<String>> receivers = new HashMap<>();
@@ -514,23 +563,23 @@ public class Jobs implements Runnable {
 
             int sent = 0;
 
-            for(Document sms : allSms) {
+            for (Document sms : allSms) {
 
-                if(!PhoneValidator.isValid(sms.getString("phone"))) {
+                if (!PhoneValidator.isValid(sms.getString("phone"))) {
                     shouldRemove.add(sms.getObjectId("_id"));
                     continue;
                 }
 
                 ObjectId notifId = sms.getObjectId("notif_id");
 
-                if(sms.getString("msg").contains("newNotif")) {
+                if (sms.getString("msg").contains("newNotif")) {
 
                     String name = sms.getString("msg").split("__")[1];
                     sendSMSWithTemplate(sms.getString("phone"), 815, new PairValue("name", name));
 
                     sent++;
 
-                    if(sent >= 30) {
+                    if (sent >= 30) {
                         sent = 0;
                         try {
                             Thread.sleep(20000);
@@ -540,9 +589,7 @@ public class Jobs implements Runnable {
                     }
 
                     shouldRemove.add(sms.getObjectId("_id"));
-                }
-
-                else {
+                } else {
 
                     if (!messages.containsKey(notifId)) {
                         messages.put(notifId, sms.getString("msg"));
@@ -553,12 +600,11 @@ public class Jobs implements Runnable {
                         receivers.get(notifId).add(sms.getString("phone"));
                     }
 
-                    if(!ids.containsKey(notifId)) {
+                    if (!ids.containsKey(notifId)) {
                         ids.put(notifId, new ArrayList<>() {{
                             add(sms.getObjectId("_id"));
                         }});
-                    }
-                    else {
+                    } else {
                         ids.get(notifId).add(sms.getObjectId("_id"));
                     }
 
@@ -566,7 +612,7 @@ public class Jobs implements Runnable {
 
             }
 
-            if(sent > 0) {
+            if (sent > 0) {
                 try {
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
@@ -574,7 +620,7 @@ public class Jobs implements Runnable {
                 }
             }
 
-            for(ObjectId key : messages.keySet()) {
+            for (ObjectId key : messages.keySet()) {
 
                 int reminder = ids.get(key).size();
                 int limit;
@@ -614,7 +660,7 @@ public class Jobs implements Runnable {
 
             }
 
-            if(shouldRemove.size() > 0) {
+            if (shouldRemove.size() > 0) {
                 smsQueueRepository.deleteMany(
                         in("_id", shouldRemove)
                 );
@@ -632,21 +678,21 @@ public class Jobs implements Runnable {
                     eq("section", OffCodeSections.CONTENT.getName())
             ), new BasicDBObject("products", 1).append("user_id", 1).append("amount", 1));
 
-            for(Document transaction : transactions) {
+            for (Document transaction : transactions) {
 
                 ObjectId contentId = transaction.getObjectId("products");
                 ObjectId userId = transaction.getObjectId("user_id");
 
                 Document content = contentRepository.findById(contentId);
-                if(content == null)
+                if (content == null)
                     continue;
 
                 List<Document> students = content.getList("users", Document.class);
-                if(Utility.searchInDocumentsKeyValIdx(students, "_id", userId) == -1) {
+                if (Utility.searchInDocumentsKeyValIdx(students, "_id", userId) == -1) {
 
                     Document user = userRepository.findById(userId);
 
-                    if(user != null)
+                    if (user != null)
                         StudentContentController.registry(
                                 contentId, userId,
                                 transaction.getInteger("amount"),

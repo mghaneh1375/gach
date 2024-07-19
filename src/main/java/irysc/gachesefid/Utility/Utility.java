@@ -544,7 +544,7 @@ public class Utility {
         Properties prop = new Properties();
         prop.put("mail.smtp.auth", true);
         prop.put("mail.smtp.starttls.enable", "false");
-        prop.put("mail.smtp.host", "mail.irysc.com");
+        prop.put("mail.smtp.host", "mail1.limoo.host");
         prop.put("mail.smtp.port", "587");
 
         try {
@@ -650,7 +650,7 @@ public class Utility {
                         + "</p>";
             } else if (mode.equalsIgnoreCase("karname")) {
                 String[] splited = msg.split("_");
-                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون " + splited[0] + " در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ های تشریحی را هم بررسی کنی</p>";
+                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون " + splited[0] + " در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ\u200Cهای تشریحی را هم بررسی کنی</p>";
                 html += "<p>" +
                         "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
                         "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
@@ -1570,5 +1570,115 @@ public class Utility {
         }
 
         return offDoc;
+    }
+
+    public static void createNotifAndSendSMS(Document wantedUser, String studentName, String mode) {
+
+        String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
+
+        if (wantedUser.containsKey("phone"))
+            sendSMSWithTemplate(wantedUser.getString("phone"), 815,
+                    new PairValue("name", wantedUserName)
+            );
+
+        long curr = System.currentTimeMillis();
+
+        String title;
+        String msg = "<p>" +  "سلام " + wantedUserName + "<br/>";
+
+        switch (mode) {
+            case "finalize":
+                title = "پرداخت و نهایی سازی مشاور توسط دانش آموز";
+                msg +=  "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
+                break;
+            case "finalizeTeach":
+                title = "پرداخت کلاس " + studentName + " انجام شد.";
+                msg += "سلام " + wantedUserName + "<br/>" + "پرداخت هزینۀ کلاس در زمان " + getSolarDate(System.currentTimeMillis()) + " توسط " + studentName + " انجام شده." + "<br/>" + "لطفاً در روز انتخاب شده، لینک کلاس را " + "<a href='" + SERVER + "" + "'>از اینجا</a>" + " بسازید.";
+                break;
+            case "acceptTeach":
+                title = "درخواست کلاس با استاد " + studentName + " تایید شد";
+                msg += "سلام " + wantedUserName + "<br/>" + "درخواست کلاس شما توسط استاد " + studentName + " تایید شد." + "با دنبال کردن لینک زیر، هزینۀ کلاس را پرداخت کنید:" + "<br/><br/>" + "<a href='" + SERVER + "myScheduleRequests'>" + "لینک پرداخت" + "</a>";
+                break;
+            case "rejectTeach":
+                title = "درخواست کلاس با استاد " + studentName + " رد شد";
+                msg += "سلام " + wantedUserName + "<br/>" + "استاد " + studentName + " درخواست برگزاری کلاس شما را تأیید نکرد. برای این زمان می\u200Cتوانی کلاس\u200Cهای دیگر اساتید را بررسی کنی یا زمان دیگری را برای برگزاری کلاس انتخاب کنی." + "<br/>" + "همچنین از این لینک (ارسال پیغام به پشتیبانی) می\u200Cتوانی دلیل رد درخواست کلاس را پیگیری کنی." + "<br/><br/>" + "<a href='" + SERVER + "ticket'>" + "درخواست پشتیبانی" + "</a>";
+                break;
+            case "newTeachRequest":
+                title = "درخواست کلاس توسط " + studentName;
+                String[] tmp = studentName.split("__");
+                msg += "سلام " + wantedUserName + "<br/>" + "دانش آموز " + tmp[1] + " برای کلاس " + tmp[0] + " درخواست داده است." + "<br/>" + "از " + "<a href='" + SERVER + "myTeachRequests" + "'>این لینک</a>" + " می\u200Cتوانید درخواست را تأیید کنید.";
+                break;
+            case "cancelRequest":
+                String[] splited = studentName.split("__");
+                title = "کلاس " + splited[0] + " لغو شد!";
+                msg += "سلام " + wantedUserName + "<br/>" + "دانش آموز " + splited[1] + " از درخواست کلاس منصرف شد. زمان شما در گچ\u200Cسفید آزاد شده و دانش\u200Cآموزان دیگر می\u200Cتوانند آن را انتخاب کنند.";
+                break;
+            case "request":
+                title = "درخواست مشاوره";
+                msg += "دانش آموز " + studentName + " از شما درخواست کرده تا یک ماه مشاور ایشان باشید." + "<br/>" + "از پیشخوان بخش مشاوره سوابق ایشان را بررسی کرده و در صورت موافقت، تایید کنید." + "<br/>" + "شاد باشید";
+                break;
+            case "acceptRequest":
+                title = "تایید دانش آموز توسط مشاور";
+                msg += "درخواست شما برای مشاوره، توسط " + studentName + " پذیرفته شد." + "<br/>" + "با نهایی کردن پرداخت، فرایند مشاوره آغاز می\u200Cشود.";
+                break;
+            case "rejectRequest":
+                title = "رد دانش آموز توسط مشاور";
+                msg += "درخواست شما برای مشاوره، توسط " + studentName + " رد شد.";
+                break;
+            case "createRoom":
+                title = "ایجاد اتاق جلسه";
+                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                break;
+            case "createTeachRoom":
+                title = "ایجاد اتاق جلسه";
+                msg += "یک جلسه\u200Cی تدریس آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                break;
+            case "advisorQuiz":
+                title = "تعریف آزمون توسط مشاور";
+                msg += "یک آزمون ویژه توسط مشاور برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مشاور -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "schoolQuiz":
+                title = "تعریف آزمون توسط مدرسه";
+                msg += "یک آزمون ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "hw":
+                title = "تعریف تمرین توسط مدرسه";
+                msg += "یک تمرین ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> تمرین ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
+                break;
+            case "karbarg":
+            case "karbargDone":
+                if(mode.equals("karbarg"))
+                    title = "به روزرسانی برنامه توسط مشاور";
+                else
+                    title = "به روزرسانی برنامه توسط دانش\u200Cآموز";
+                msg += "برنامه هفتگی توسط " + studentName + " به\u200Cروزرسانی شد." + "<br/>" + "شاد باشید :)";
+                break;
+            default:
+                title = "";
+                msg = "";
+        }
+
+        msg += "</p>";
+
+        ObjectId notifId = new ObjectId();
+        Document notif = new Document("_id", notifId)
+                .append("users_count", 1)
+                .append("title", title)
+                .append("text", msg)
+                .append("send_via", "site")
+                .append("created_at", curr)
+                .append("users", new ArrayList<ObjectId>() {{
+                    add(wantedUser.getObjectId("_id"));
+                }});
+
+        List<Document> events = (List<Document>) wantedUser.getOrDefault("events", new ArrayList<Document>());
+        events.add(
+                new Document("created_at", curr)
+                        .append("notif_id", notifId)
+                        .append("seen", false)
+        );
+
+        wantedUser.put("events", events);
+        notifRepository.insertOne(notif);
     }
 }

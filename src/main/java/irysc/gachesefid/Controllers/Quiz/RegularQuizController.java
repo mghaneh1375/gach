@@ -560,7 +560,7 @@ public class RegularQuizController extends QuizAbstract {
 
             Document student = userRepository.findById(studentId);
             if(student != null) {
-                AdvisorController.createNotifForAdvisor(student, null,
+                createNotifAndSendSMS(student, null,
                         quiz.containsKey("pay_by_student") ? "advisorQuiz" : "schoolQuiz"
                 );
             }
@@ -587,13 +587,10 @@ public class RegularQuizController extends QuizAbstract {
             hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
 
             Document student = userRepository.findById(studentId);
-            if(student != null) {
-                AdvisorController.createNotifForAdvisor(student, null, "hw");
-            }
+            if(student != null)
+                createNotifAndSendSMS(student, null, "hw");
 
-
-        } catch (Exception ignore) {
-        }
+        } catch (Exception ignore) {}
 
         return true;
     }

@@ -720,7 +720,7 @@ public class QuestionController extends Utilities {
 
         return generateSuccessMsg(
                 "excepts",
-                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
+                "بجز ردیف\u200Cهای زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
                 new PairValue("errs", errs)
         );
     }
@@ -849,7 +849,7 @@ public class QuestionController extends Utilities {
 
         return generateSuccessMsg(
                 "excepts",
-                "بجز ردیف های زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
+                "بجز ردیف\u200Cهای زیر سایرین به درستی به سامانه اضافه گردیدند. " + excepts,
                 new PairValue("errs", errs)
         );
     }

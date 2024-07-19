@@ -2,9 +2,13 @@ package irysc.gachesefid.Controllers.Teaching;
 
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Models.ActiveMode;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.TeachMode;
+import irysc.gachesefid.Models.TeachRequestStatus;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -14,15 +18,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
+import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class Utility {
 
     public static Document getSchedule(
             ObjectId userId, ObjectId scheduleId,
-            boolean checkStrongAccess
+            boolean checkStrongAccess, boolean checkRegistryAccess
 
     ) throws InvalidFieldsException {
 
@@ -43,6 +50,47 @@ public class Utility {
 
             if (idx == -1)
                 throw new InvalidFieldsException("access denied");
+        }
+
+        if (checkRegistryAccess) {
+
+            boolean isSemiPrivate =
+                    schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName());
+
+            if (isSemiPrivate && (
+                    !schedule.containsKey("students") ||
+                            schedule.getList("students", Document.class).size() < schedule.getInteger("min_cap")
+            ))
+                throw new InvalidFieldsException("هنوز تعداد نفرات جلسه مدتظر برای پرداخت نهایی به حدنصاب نرسیده است");
+
+            if (schedule.containsKey("students") &&
+                    searchInDocumentsKeyValIdx(
+                            schedule.getList("students", Document.class),
+                            "_id", userId
+                    ) != -1
+            )
+                throw new InvalidFieldsException("شما قبلا در این جلسه ثبت نام شده اید");
+
+            boolean needForRegistryConfirmation = schedule.getBoolean("need_registry_confirmation");
+
+            if (needForRegistryConfirmation) {
+
+                if (!schedule.containsKey("requests"))
+                    throw new InvalidFieldsException("access denied");
+
+                Document request = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                        schedule.getList("requests", Document.class), "_id", userId
+                );
+
+                if (request == null)
+                    throw new InvalidFieldsException("access denied");
+
+                if (request.getString("status").equalsIgnoreCase("reject"))
+                    throw new InvalidFieldsException("درخواست شما رد شده است");
+
+                if (request.getString("status").equalsIgnoreCase("pending"))
+                    throw new InvalidFieldsException("درخواست شما در حال بررسی می باشد");
+            }
         }
 
         return schedule;
@@ -78,12 +126,12 @@ public class Utility {
         if (teacher.containsKey("teach_tags"))
             jsonObject.put("tags", teacher.getList("teach_tags", String.class));
 
-        if(teacher.containsKey("form_list")) {
+        if (teacher.containsKey("form_list")) {
             Document form = searchInDocumentsKeyVal(
                     teacher.getList("form_list", Document.class),
                     "role", "advisor"
             );
-            if(form != null) {
+            if (form != null) {
                 jsonObject.put("form", new JSONObject()
                         .put("workSchools", form.getString("work_schools"))
                 );
@@ -162,26 +210,41 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertScheduleToJSONDigest(
+    static JSONObject convertScheduleToJSONDigestForTeacher(
             Document schedule, boolean isUserNeed,
-            List<Document> users
+            List<Document> users, boolean isForUpdate
     ) {
         JSONObject jsonObject = new JSONObject()
                 .put("title", schedule.getOrDefault("title", ""))
                 .put("teachMode", schedule.getString("teach_mode"))
                 .put("price", schedule.get("price"))
-                .put("canRequest", schedule.get("can_request"))
                 .put("visibility", schedule.get("visibility"))
                 .put("length", schedule.get("length"))
-                .put("startAt", getSolarDate(schedule.getLong("start_at")))
-                .put("createdAt", getSolarDate(schedule.getLong("created_at")))
+                .put("needRegistryConfirmation", schedule.getOrDefault("need_registry_confirmation", true))
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
-                .put("maxCap", schedule.getOrDefault("max_cap", 1))
-                .put("requestsCount", schedule.containsKey("requests") ?
-                        schedule.getList("requests", Document.class).size() : 0)
-                .put("studentsCount", schedule.containsKey("students") ?
-                        schedule.getList("students", Document.class).size() : 0)
-                .put("id", schedule.getObjectId("_id").toString());
+                .put("maxCap", schedule.getOrDefault("max_cap", 1));
+
+        if (!isForUpdate) {
+            long curr = System.currentTimeMillis();
+            boolean isInTeachPeriod = curr - ONE_DAY_MIL_SEC < schedule.getLong("start_at") &&
+                    schedule.getLong("start_at") < curr + ONE_DAY_MIL_SEC;
+
+            jsonObject.put("createdAt", getSolarDate(schedule.getLong("created_at")))
+                    .put("requestsCount", schedule.containsKey("requests") ?
+                            schedule.getList("requests", Document.class).size() : 0)
+                    .put("studentsCount", schedule.containsKey("students") ?
+                            schedule.getList("students", Document.class).size() : 0)
+                    .put("id", schedule.getObjectId("_id").toString())
+                    .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                    .put("skyRoomUrl", isInTeachPeriod ? schedule.getOrDefault("sky_room_url", "") : "")
+                    .put("canBuildSkyRoom",
+                            !schedule.containsKey("sky_room_url") &&
+                                    schedule.containsKey("students") &&
+                                    schedule.getList("students", Document.class).size() > 0 && isInTeachPeriod
+
+                    );
+        } else
+            jsonObject.put("startAt", schedule.getLong("start_at"));
 
         if (isUserNeed) {
             users.stream()
@@ -204,6 +267,7 @@ public class Utility {
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1))
                 .put("description", schedule.getOrDefault("description", 1))
+                .put("needRegistryConfirmation", schedule.getOrDefault("need_registry_confirmation", true))
                 .put("id", schedule.getObjectId("_id").toString());
 
         if (Objects.equals(
@@ -218,14 +282,20 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject publicConvertSchedule(Document schedule) {
+    static JSONObject convertMySchedule(Document schedule, Document teacher) {
         return new JSONObject()
                 .put("title", schedule.getOrDefault("title", ""))
                 .put("teachMode", schedule.getString("teach_mode"))
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
-                .put("id", schedule.getObjectId("_id").toString());
+                .put("id", schedule.getObjectId("_id").toString())
+                .put("skyRoomUrl", schedule.getOrDefault("sky_room_url", ""))
+                .put("teacher", new JSONObject()
+                        .put("name", teacher.getString("first_name") + " " + teacher.getString("last_name"))
+                        .put("teachRate", teacher.getOrDefault("teach_rate", 0))
+                        .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"))
+                );
     }
 
     static Document createTransactionDoc(
@@ -302,5 +372,87 @@ public class Utility {
         teachScheduleRepository.replaceOneWithoutClearCache(
                 scheduleId, schedule
         );
+    }
+
+    static Bson buildMyScheduleRequestsFilters(
+            ObjectId userId, String activeMode,
+            String statusMode, String scheduleActiveMode
+    ) throws InvalidFieldsException {
+        List<Bson> requestFilter = new ArrayList<>() {{
+            add(eq("_id", userId));
+        }};
+        Bson scheduleFilter = null;
+
+        if (scheduleActiveMode != null) {
+            if (!EnumValidatorImp.isValid(scheduleActiveMode, ActiveMode.class))
+                throw new InvalidFieldsException("params is not valid");
+
+            if (scheduleActiveMode.equalsIgnoreCase("active"))
+                scheduleFilter = gt("start_at", System.currentTimeMillis());
+            else
+                scheduleFilter = lt("start_at", System.currentTimeMillis());
+        }
+
+        if (activeMode != null) {
+            if (!EnumValidatorImp.isValid(activeMode, ActiveMode.class))
+                throw new InvalidFieldsException("params is not valid");
+
+            if (activeMode.equalsIgnoreCase("active"))
+                requestFilter.add(gt("expire_at", System.currentTimeMillis()));
+            else
+                requestFilter.add(lt("expire_at", System.currentTimeMillis()));
+        }
+
+        if (activeMode != null) {
+            if (!EnumValidatorImp.isValid(activeMode, ActiveMode.class))
+                throw new InvalidFieldsException("params is not valid");
+
+            if (activeMode.equalsIgnoreCase("active"))
+                requestFilter.add(gt("expire_at", System.currentTimeMillis()));
+            else
+                requestFilter.add(lt("expire_at", System.currentTimeMillis()));
+        }
+
+        if (statusMode != null) {
+            if (!EnumValidatorImp.isValid(statusMode, TeachRequestStatus.class))
+                throw new InvalidFieldsException("params is not valid");
+
+            requestFilter.add(eq("status", statusMode.toLowerCase()));
+        }
+
+        List<Bson> filters = new ArrayList<>() {{
+            add(elemMatch("requests", and(requestFilter)));
+        }};
+        if (scheduleFilter != null)
+            filters.add(scheduleFilter);
+
+        return and(filters);
+    }
+
+    static Document getScheduleForCreateSkyRoom(ObjectId scheduleId, ObjectId userId) throws InvalidFieldsException {
+
+        Document schedule = teachScheduleRepository.findById(scheduleId);
+        if (schedule == null)
+            throw new InvalidFieldsException("not valid id");
+
+        if (!schedule.getObjectId("user_id").equals(userId))
+            throw new InvalidFieldsException("not access");
+
+        if (schedule.containsKey("sky_room_url"))
+            throw new InvalidFieldsException("یکبار برای این جلسه لینک اتاق جلسه ساخته شده است و امکان ساخت مجدد آن وجود ندارد");
+
+        if (!schedule.containsKey("students") ||
+                schedule.getList("students", Document.class).size() == 0
+        )
+            throw new InvalidFieldsException("این جلسه دانش آموزی ندارد و امکان ساخت لینک اتاق جلسه وجود ندارد");
+
+        long curr = System.currentTimeMillis();
+        if (
+                (curr < schedule.getLong("start_at") - ONE_DAY_MIL_SEC) ||
+                        (curr > schedule.getLong("start_at") + ONE_DAY_MIL_SEC)
+        )
+            throw new InvalidFieldsException("ساخت لینک جلسه در بازه یک روز قبل و یا بعد از زمان شروع جلسه امکان پذیر است");
+
+        return schedule;
     }
 }
