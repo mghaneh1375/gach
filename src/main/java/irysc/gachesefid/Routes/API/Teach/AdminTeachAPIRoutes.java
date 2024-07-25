@@ -89,6 +89,7 @@ public class AdminTeachAPIRoutes extends Router {
     @ResponseBody
     public String getTeachReports(
             HttpServletRequest request,
+            @RequestParam(required = false, name = "teachId") ObjectId teachId,
             @RequestParam(required = false, name = "teacherId") ObjectId teacherId,
             @RequestParam(required = false, name = "from") Long from,
             @RequestParam(required = false, name = "to") Long to,
@@ -100,7 +101,7 @@ public class AdminTeachAPIRoutes extends Router {
         return TeachController.getTeachReports(
                 from, to, showJustUnSeen,
                 teacherId, justSendFromStudent,
-                justSendFromTeacher
+                justSendFromTeacher, teachId
         );
     }
 

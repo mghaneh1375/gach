@@ -108,12 +108,14 @@ public class ManageUserAPIRoutes extends Router {
                                 @RequestParam(value = "gradeId", required = false) ObjectId gradeId,
                                 @RequestParam(value = "branchId", required = false) ObjectId branchId,
                                 @RequestParam(value = "mail", required = false) String mail,
-                                @RequestParam(value = "NID", required = false) String NID
+                                @RequestParam(value = "NID", required = false) String NID,
+                                @RequestParam(value = "additionalLevel", required = false) String additionalLevel
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getEditorPrivilegeUserVoid(request);
         return ManageUserController.fetchTinyUser(
                 level, name, lastname,
-                phone, mail, NID, gradeId, branchId
+                phone, mail, NID, gradeId, branchId,
+                additionalLevel
         );
     }
 

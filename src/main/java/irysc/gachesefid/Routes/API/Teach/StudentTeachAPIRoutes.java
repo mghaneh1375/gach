@@ -110,17 +110,17 @@ public class StudentTeachAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "rateToTeacher/{teacherId}")
-    @ResponseBody
-    public String rateToTeacher(
-            HttpServletRequest request,
-            @PathVariable @ObjectIdConstraint ObjectId teacherId,
-            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return StudentTeachController.rateToTeacher(
-                getStudentUser(request).getObjectId("_id"), teacherId, rate
-        );
-    }
+//    @PutMapping(value = "rateToTeacher/{teacherId}")
+//    @ResponseBody
+//    public String rateToTeacher(
+//            HttpServletRequest request,
+//            @PathVariable @ObjectIdConstraint ObjectId teacherId,
+//            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
+//    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+//        return StudentTeachController.rateToTeacher(
+//                getStudentUser(request).getObjectId("_id"), teacherId, rate
+//        );
+//    }
 
     @PutMapping(value = "rateToSchedule/{scheduleId}")
     @ResponseBody

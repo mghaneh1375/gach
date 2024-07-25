@@ -402,20 +402,21 @@ public class StudentTeachController {
         }
     }
 
-    public static String rateToTeacher(ObjectId userId, ObjectId advisorId, int rate) {
+    private static void rateToTeacher(ObjectId userId, ObjectId advisorId, int rate) {
 
         Document advisor = userRepository.findById(advisorId);
         if (advisor == null)
-            return JSON_NOT_VALID_ID;
+            return;
+//            return JSON_NOT_VALID_ID;
 
         long curr = System.currentTimeMillis();
 
-        if (!teachScheduleRepository.exist(and(
-                eq("user_id", advisorId),
-                eq("students._id", userId),
-                lt("start_at", curr)
-        )))
-            return JSON_NOT_ACCESS;
+//        if (!teachScheduleRepository.exist(and(
+//                eq("user_id", advisorId),
+//                eq("students._id", userId),
+//                lt("start_at", curr)
+//        )))
+//            return JSON_NOT_ACCESS;
 
         Document teachRate = teachRateRepository.findOne(and(
                 eq("student_id", userId),
@@ -459,7 +460,7 @@ public class StudentTeachController {
                 )
         );
 
-        return generateSuccessMsg("rate", newRate);
+//        return generateSuccessMsg("rate", newRate);
     }
 
     public static String rateToSchedule(ObjectId userId, ObjectId scheduleId, int userRate) {
@@ -475,7 +476,9 @@ public class StudentTeachController {
                     scheduleId, set("students", students)
             );
 
+            new Thread(() -> rateToTeacher(userId, schedule.getObjectId("user_id"), userRate)).start();
             return JSON_OK;
+
         } catch (Exception x) {
             return generateErr(x.getMessage());
         }

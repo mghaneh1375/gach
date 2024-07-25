@@ -9,6 +9,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -144,9 +145,10 @@ public class TeacherAPIRoutes extends Router {
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getAdvisorUser(request);
         return TeachController.getScheduleStudents(
-                getAdvisorUser(request).getObjectId("_id"),
-                scheduleId
+                Authorization.isAdmin(user.getList("accesses", String.class)) ?
+                        null : user.getObjectId("_id"), scheduleId
         );
     }
 

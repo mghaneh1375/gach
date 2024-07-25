@@ -591,8 +591,8 @@ public class UserController {
                 .put("mail", user.getOrDefault("mail", ""))
                 .put("sex", user.getOrDefault("sex", ""))
                 .put("phone", user.getOrDefault("phone", ""))
-                .put("wantToTeach", user.containsKey("teach"));
-
+                .put("wantToTeach", user.containsKey("teach"))
+                .put("wantToAdvice", user.containsKey("advice"));
 //        jsonObject.put("birthDay", user.containsKey("birth_day") ? getSolarJustDate(user.getLong("birth_day")) : "");
         jsonObject.put("birthDay", user.getOrDefault("birth_day", ""));
 
@@ -1152,7 +1152,10 @@ public class UserController {
     public static String setAboutMe(Document user, JSONObject jsonObject) {
 
         String teachBio = null;
+        String adviceBio = null;
+
         boolean wantToTeach = jsonObject.getBoolean("wantToTeach");
+        boolean wantToAdvice = jsonObject.getBoolean("wantToAdvice");
 
         if (wantToTeach && jsonObject.has("teachAboutMe")) {
             teachBio = jsonObject.getString("teachAboutMe");
@@ -1163,10 +1166,14 @@ public class UserController {
         if (wantToTeach && jsonObject.has("teachVideoLink") && !isValidURL(jsonObject.getString("teachVideoLink")))
             return generateErr("لینک ویدیو معتبر نمی باشد");
 
-        String adviceBio = jsonObject.getString("adviceAboutMe");
+        if (wantToAdvice && jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
+            return generateErr("لینک ویدیو معتبر نمی باشد");
 
-        if (adviceBio.length() > 500)
-            return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
+        if(wantToAdvice && jsonObject.has("adviceAboutMe")) {
+            adviceBio = jsonObject.getString("adviceAboutMe");
+            if (adviceBio.length() > 500)
+                return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
+        }
 
         Integer defaultTeachPrice = null;
 
@@ -1181,8 +1188,18 @@ public class UserController {
                 return generateErr("حداکثر مبلغ حق التدریس " + config.getInteger("max_teach_price") + " می باشد");
         }
 
-        if (jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
-            return generateErr("لینک ویدیو معتبر نمی باشد");
+        if(wantToAdvice) {
+            if(adviceBio != null)
+                user.put("advice_bio", adviceBio);
+            if (jsonObject.has("adviceVideoLink"))
+                user.put("advice_video_link", jsonObject.getString("adviceVideoLink"));
+            user.put("advice", true);
+        }
+        else {
+            user.remove("advice_bio");
+            user.remove("advice_video_link");
+            user.remove("advice");
+        }
 
         if (wantToTeach) {
             if (teachBio != null)
@@ -1198,10 +1215,6 @@ public class UserController {
             user.remove("default_teach_price");
             user.remove("teach");
         }
-
-        user.put("advice_bio", adviceBio);
-        if (jsonObject.has("adviceVideoLink"))
-            user.put("advice_video_link", jsonObject.getString("adviceVideoLink"));
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;

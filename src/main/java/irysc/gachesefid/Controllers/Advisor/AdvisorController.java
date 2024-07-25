@@ -216,7 +216,7 @@ public class AdvisorController {
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس\u200Cهای تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
-        if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
+        if (data.has("videoLink") && !isValidURL(data.getString("videoLink")))
             return generateErr("لینک وارد شده نامعتبر است");
 
         Document newDoc = new Document("advisor_id", advisorId)
@@ -238,7 +238,7 @@ public class AdvisorController {
         if (data.has("maxChat"))
             newDoc.append("max_chat", data.getInt("maxChat"));
 
-        if(data.has("videoLink"))
+        if (data.has("videoLink"))
             newDoc.append("video_link", data.getString("videoLink"));
 
         advisorFinanceOfferRepository.insertOne(newDoc);
@@ -263,7 +263,7 @@ public class AdvisorController {
         if (config.getInteger("max_video_call_per_month") < data.getInt("videoCalls"))
             return generateErr("تعداد تماس\u200Cهای تصویر می تواند حداکثر  " + config.getInteger("max_video_call_per_month") + " باشد");
 
-        if(data.has("videoLink") && !isValidURL(data.getString("videoLink")))
+        if (data.has("videoLink") && !isValidURL(data.getString("videoLink")))
             return generateErr("لینک وارد شده نامعتبر است");
 
         doc.put("title", data.getString("title"));
@@ -291,7 +291,7 @@ public class AdvisorController {
         else
             doc.remove("max_chat");
 
-        if(data.has("videoLink"))
+        if (data.has("videoLink"))
             doc.put("video_link", data.getString("videoLink"));
         else
             doc.remove("video_link");
@@ -758,16 +758,16 @@ public class AdvisorController {
     ) {
 
         Document schedule = scheduleRepository.findById(scheduleId);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
-        if(!schedule.containsKey("advisors") ||
+        if (!schedule.containsKey("advisors") ||
                 !schedule.getList("advisors", ObjectId.class).contains(advisorId)
         )
             return JSON_NOT_ACCESS;
 
         Document student = userRepository.findById(schedule.getObjectId("user_id"));
-        if(student == null)
+        if (student == null)
             return JSON_NOT_UNKNOWN;
 
         createNotifAndSendSMS(student, advisorName, "karbarg");
@@ -824,7 +824,7 @@ public class AdvisorController {
         }
 
         Document user = userRepository.findById(req.getObjectId("user_id"));
-        if(user != null) {
+        if (user != null) {
             createNotifAndSendSMS(
                     user,
                     advisor.getString("first_name") + " " + advisor.getString("last_name"),
@@ -867,6 +867,7 @@ public class AdvisorController {
         ArrayList<Bson> filters = new ArrayList<>();
 
         filters.add(eq("accesses", Access.ADVISOR.getName()));
+        filters.add(exists("advice"));
 
         if (tag != null) {
             filters.add(exists("tags"));
@@ -914,22 +915,22 @@ public class AdvisorController {
 
         for (Document advisor : advisors) {
 
-            List<Document> plans;
+            List<Document> plans = advisorFinanceOfferRepository.find(
+                    eq("advisor_id", advisor.getObjectId("_id")),
+                    new BasicDBObject("price", 1)
+            );
+
+            if(plans.size() == 0)
+                continue;
 
             if (minPrice != null || maxPrice != null) {
+//                if (plans.size() == 0 && (
+//                        (minPrice != null && defaultPrice < minPrice) ||
+//                                (maxPrice != null && defaultPrice > maxPrice)
+//                ))
+//                    continue;
 
-                plans = advisorFinanceOfferRepository.find(
-                        eq("advisor_id", advisor.getObjectId("_id")),
-                        new BasicDBObject("price", 1)
-                );
-
-                if (plans.size() == 0 && (
-                        (minPrice != null && defaultPrice < minPrice) ||
-                                (maxPrice != null && defaultPrice > maxPrice)
-                ))
-                    continue;
-
-                else if (plans.size() > 0) {
+//                else if (plans.size() > 0) {
                     boolean passFilter = false;
 
                     for (Document plan : plans) {
@@ -948,7 +949,7 @@ public class AdvisorController {
 
                     if (!passFilter)
                         continue;
-                }
+//                }
 
             }
 
@@ -1318,7 +1319,7 @@ public class AdvisorController {
 
             grade = branchRepository.findOne(eq("lessons._id", lessonId), null);
 
-            if(grade == null)
+            if (grade == null)
                 return JSON_NOT_VALID;
         }
 
@@ -1456,22 +1457,22 @@ public class AdvisorController {
             return generateErr("لطفا " + tag.getString("number_label") + " را وارد نمایید");
 
         Document schedule = scheduleRepository.findOne(eq("days.items._id", itemId), null);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
         schedule = scheduleRepository.findById(schedule.getObjectId("_id"));
 
         Document item = null;
 
-        for(Document day : schedule.getList("days", Document.class)) {
+        for (Document day : schedule.getList("days", Document.class)) {
             item = searchInDocumentsKeyVal(day.getList("items", Document.class), "_id", itemId);
             if (item != null) break;
         }
 
-        if(item == null)
+        if (item == null)
             return JSON_NOT_UNKNOWN;
 
-        if(!item.getObjectId("advisor_id").equals(advisorId))
+        if (!item.getObjectId("advisor_id").equals(advisorId))
             return JSON_NOT_ACCESS;
 
         item.put("tag", tag.getString("label"));

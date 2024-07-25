@@ -70,7 +70,8 @@ public class ManageUserController {
     public static String fetchTinyUser(String level, String name,
                                        String lastname, String phone,
                                        String mail, String NID,
-                                       ObjectId gradeId, ObjectId branchId
+                                       ObjectId gradeId, ObjectId branchId,
+                                       String additionalLevel
     ) {
 
         ArrayList<Bson> filters = new ArrayList<>();
@@ -85,6 +86,11 @@ public class ManageUserController {
 
             if(!level.equalsIgnoreCase("all"))
                 filters.add(eq("accesses", level));
+
+            if(additionalLevel != null && additionalLevel.equals("teach"))
+                filters.add(eq("teach", true));
+            else if(additionalLevel != null && additionalLevel.equals("advice"))
+                filters.add(eq("advice", true));
         }
 
         if (NID != null)

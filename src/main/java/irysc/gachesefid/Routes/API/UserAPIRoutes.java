@@ -434,18 +434,20 @@ public class UserAPIRoutes extends Router {
     public String aboutMe(HttpServletRequest request,
                           @RequestBody @StrongJSONConstraint(
                                   params = {
-                                          "adviceAboutMe", "wantToTeach"
+                                          "wantToAdvice", "wantToTeach"
                                   },
                                   paramsType = {
-                                          String.class, Boolean.class
+                                          Boolean.class, Boolean.class
                                   },
                                   optionals = {
                                           "teachVideoLink", "adviceVideoLink",
-                                          "defaultTeachPrice", "teachAboutMe"
+                                          "defaultTeachPrice", "teachAboutMe",
+                                          "adviceAboutMe"
                                   },
                                   optionalsType = {
                                           String.class, String.class,
-                                          Positive.class, String.class
+                                          Positive.class, String.class,
+                                          String.class
                                   }
                           ) @NotBlank String json
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
