@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Teaching;
 
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -101,6 +102,9 @@ public class TeachTagReportController {
 
         List<Bson> filters = new ArrayList<>();
         filters.add(exists("deleted_at", false));
+        if(!isAdmin)
+            filters.add(eq("visibility", true));
+
         if (mode != null) {
             if (!EnumValidatorImp.isValid(mode, TeachReportTagMode.class))
                 return JSON_NOT_VALID_PARAMS;
@@ -108,31 +112,31 @@ public class TeachTagReportController {
         }
 
         ArrayList<Document> tags = teachTagReportRepository.find(
-                and(filters), null
+                and(filters), null, Sorts.ascending("priority")
         );
         JSONArray jsonArray = new JSONArray();
 
         for (Document tag : tags) {
             JSONObject jsonObject = new JSONObject()
                     .put("id", tag.getObjectId("_id").toString())
-                    .put("label", tag.getString("label"))
-                    .put("priority", tag.getInteger("priority"))
-                    .put("visibility", tag.getBoolean("visibility"))
-                    .put("mode", tag.getString("mode"));
+                    .put("label", tag.getString("label"));
 
             if (isAdmin) {
                 jsonObject
-                        .put(
-                                "reportsCount",
-                                teachReportRepository.count(
-                                        eq("tag_id", tag.getObjectId("_id"))
-                                )
-                        )
+//                        .put(
+//                                "reportsCount",
+//                                teachReportRepository.count(
+//                                        eq("tag_ids", tag.getObjectId("_id"))
+//                                )
+//                        )
+                        .put("priority", tag.getInteger("priority"))
+                        .put("visibility", tag.getBoolean("visibility"))
+                        .put("mode", tag.getString("mode"))
                         .put(
                                 "unseenReportsCount",
                                 teachReportRepository.count(
                                         and(
-                                                eq("tag_id", tag.getObjectId("_id")),
+                                                eq("tag_ids", tag.getObjectId("_id")),
                                                 eq("seen", false)
                                         )
                                 )

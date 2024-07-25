@@ -92,6 +92,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static TarazRepository tarazRepository;
     public static TeachScheduleRepository teachScheduleRepository;
     public static TeachReportRepository teachReportRepository;
+    public static TeachRateRepository teachRateRepository;
     public static TeachTagReportRepository teachTagReportRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
@@ -167,6 +168,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             transactionRepository = new TransactionRepository();
             teachScheduleRepository = new TeachScheduleRepository();
             teachReportRepository = new TeachReportRepository();
+            teachRateRepository = new TeachRateRepository();
             teachTagReportRepository = new TeachTagReportRepository();
             userGiftRepository = new UserGiftRepository();
             userRepository = new UserRepository();

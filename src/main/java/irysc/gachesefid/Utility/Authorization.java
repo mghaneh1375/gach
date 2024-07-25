@@ -7,8 +7,7 @@ import org.bson.types.ObjectId;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 
 public class Authorization {
 
@@ -132,7 +131,8 @@ public class Authorization {
             return applicator.getList("students", ObjectId.class).contains(studentId);
 
         if(isAdvisor(applicator.getList("accesses", String.class))) {
-            return Utility.searchInDocumentsKeyValIdx(
+
+            boolean hasAccess = Utility.searchInDocumentsKeyValIdx(
                     applicator.getList("students", Document.class), "_id", studentId
             ) > -1 || advisorRequestsRepository.count(
                     and(
@@ -141,6 +141,28 @@ public class Authorization {
                             eq("answer", "pending")
                     )
             ) > 0;
+
+            if(hasAccess)
+                return true;
+
+            if(applicator.containsKey("teach")) {
+                return teachScheduleRepository.exist(
+                        and(
+                                eq("user_id", applicatorId),
+                                gt("start_at", System.currentTimeMillis() + StaticValues.ONE_DAY_MIL_SEC),
+                                elemMatch("requests", and(
+                                        eq("_id", studentId),
+                                        or(
+                                                eq("status", "pending"),
+                                                eq("status", "accept"),
+                                                eq("status", "paid")
+                                        )
+                                ))
+                        )
+                );
+            }
+
+            return false;
         }
 
         return false;

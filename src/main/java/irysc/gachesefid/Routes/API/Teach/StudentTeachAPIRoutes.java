@@ -12,6 +12,7 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
@@ -108,14 +110,26 @@ public class StudentTeachAPIRoutes extends Router {
         );
     }
 
-    @PutMapping(value = "rate/{scheduleId}")
+    @PutMapping(value = "rateToTeacher/{teacherId}")
     @ResponseBody
-    public String rate(
+    public String rateToTeacher(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId teacherId,
+            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        return StudentTeachController.rateToTeacher(
+                getStudentUser(request).getObjectId("_id"), teacherId, rate
+        );
+    }
+
+    @PutMapping(value = "rateToSchedule/{scheduleId}")
+    @ResponseBody
+    public String rateToSchedule(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId,
             @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
     ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return StudentTeachController.rate(
+        return StudentTeachController.rateToSchedule(
                 getStudentUser(request).getObjectId("_id"), scheduleId, rate
         );
     }
@@ -141,6 +155,50 @@ public class StudentTeachAPIRoutes extends Router {
                 gradeId, branchId, lessonId
         );
     }
+
+    @GetMapping(value = "getMyRate/{teacherId}")
+    @ResponseBody
+    public String getMyRate(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId teacherId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentTeachController.getMyRate(
+                getUser(request).getObjectId("_id"), teacherId
+        );
+    }
+
+    @GetMapping(value = "getMyTeachScheduleReportProblems/{scheduleId}")
+    @ResponseBody
+    public String getMyTeachScheduleReportProblems(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return StudentTeachController.getMyTeachScheduleReportProblems(
+                getUser(request).getObjectId("_id"), scheduleId
+        );
+    }
+
+    @PutMapping(value = "setMyTeachScheduleReportProblems/{scheduleId}")
+    @ResponseBody
+    public String setMyTeachScheduleReportProblems(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {}, paramsType = {},
+                    optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
+            ) String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject;
+        if(jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
+        else jsonObject = new JSONObject(jsonStr);
+
+        return StudentTeachController.setMyTeachScheduleReportProblems(
+                getUser(request).getObjectId("_id"), scheduleId,
+                jsonObject.has("tagIds") ? jsonObject.getJSONArray("tagIds") : null,
+                jsonObject.has("desc") ? jsonObject.getString("desc") : null
+        );
+    }
+
 
     @GetMapping(value = "getAllReportTags")
     @ResponseBody

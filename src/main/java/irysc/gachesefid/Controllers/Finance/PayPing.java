@@ -9,6 +9,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.ExchangeMode;
 import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Models.TeachMode;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -24,6 +25,7 @@ import java.util.Random;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
+import static irysc.gachesefid.Controllers.Teaching.Utility.register;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -36,13 +38,13 @@ public class PayPing {
                                   double amount,
                                   String mode) {
 
-        if(amount <= 0)
+        if (amount <= 0)
             return JSON_NOT_VALID_PARAMS;
 
         String numberD = String.valueOf(amount);
         numberD = numberD.substring(numberD.indexOf(".") + 1);
 
-        if(numberD.length() > 1)
+        if (numberD.length() > 1)
             return generateErr("تنها تا یک رقم اعشار می توانید عدد خود را وارد نمایید.");
 
         Document config = getConfig();
@@ -53,22 +55,22 @@ public class PayPing {
 
         double exchangeCoef =
                 mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) ?
-                        ((Number)config.get("coin_rate_coef")).doubleValue() :
-                        10000.0 / ((Number)config.get("coin_rate_coef")).doubleValue();
+                        ((Number) config.get("coin_rate_coef")).doubleValue() :
+                        10000.0 / ((Number) config.get("coin_rate_coef")).doubleValue();
 
-        if(
+        if (
                 mode.equalsIgnoreCase(ExchangeMode.COIN_TO_MONEY.getName()) &&
                         coin < amount
         )
             return generateErr("مقدار انتخاب شده بیش از حد مجاز است.");
 
-        if(
+        if (
                 mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName()) &&
                         money < amount
         )
             return generateErr("مقدار انتخاب شده بیش از حد مجاز است.");
 
-        if(
+        if (
                 mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
         )
             amount /= 10000.0;
@@ -77,7 +79,7 @@ public class PayPing {
 
         BasicDBObject update = new BasicDBObject();
 
-        if(
+        if (
                 mode.equalsIgnoreCase(ExchangeMode.MONEY_TO_COIN.getName())
         )
             update.append("money", Math.round((money - amount * 10000) * 100.0) / 100.0)
@@ -120,10 +122,10 @@ public class PayPing {
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
 
-        if(user != null) {
-            if(transaction.getString("section").equalsIgnoreCase("charge")) {
+        if (user != null) {
+            if (transaction.getString("section").equalsIgnoreCase("charge")) {
 
-                if(user.containsKey("mail")) {
+                if (user.containsKey("mail")) {
                     new Thread(() -> sendMail(
                             user.getString("mail"),
                             SERVER + "recp/" + transaction.getObjectId("_id").toString(),
@@ -133,24 +135,23 @@ public class PayPing {
                 }
 
                 user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
-            }
-            else {
-                user.put("money", (double)0);
+            } else {
+                user.put("money", (double) 0);
             }
 
             userRepository.replaceOneWithoutClearCache(
                     user.getObjectId("_id"), user
             );
 
-            if(transaction.containsKey("products")) {
+            if (transaction.containsKey("products")) {
 
-                if(transaction.get("products") instanceof ObjectId &&
+                if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
                 ) {
 
                     Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
 
-                    if(request != null && studentId.equals(request.getObjectId("user_id"))) {
+                    if (request != null && studentId.equals(request.getObjectId("user_id"))) {
                         request.put("paid", transaction.getInteger("amount"));
                         request.put("paid_at", System.currentTimeMillis());
                         advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
@@ -159,20 +160,54 @@ public class PayPing {
                     }
                 }
 
-                if(transaction.get("products") instanceof ObjectId &&
+                if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.SCHOOL_QUIZ.getName())
                 ) {
 
                     Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
 
-                    if(quiz != null) {
+                    if (quiz != null) {
                         quiz.put("status", "finish");
                         schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                     }
                 }
 
+                if (transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals(OffCodeSections.CLASSES.getName())
+                ) {
 
-                if(transaction.get("products") instanceof ObjectId &&
+                    Document schedule = teachScheduleRepository.findById(transaction.getObjectId("products"));
+
+                    if (schedule != null && schedule.containsKey("students")) {
+                        Document studentRequest = searchInDocumentsKeyVal(
+                                schedule.getList("requests", Document.class),
+                                "_id", user.getObjectId("_id")
+                        );
+
+                        new Thread(() -> {
+                            Document advisor = userRepository.findById(schedule.getObjectId("_id"));
+                            createNotifAndSendSMS(
+                                    advisor,
+                                    user.getString("first_name") + " " + user.getString("last_name"),
+                                    "finalizeTeach"
+                            );
+                        }).start();
+
+                        teachScheduleRepository.updateOne(
+                                transaction.getObjectId("products"),
+                                new BasicDBObject(
+                                        "$set",
+                                        register(
+                                                schedule, user.getObjectId("_id"),
+                                                System.currentTimeMillis(), studentRequest,
+                                                schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName())
+                                        )
+                                )
+                        );
+                    }
+                }
+
+                if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(AllKindQuiz.ONLINESTANDING.getName())
                 ) {
                     new OnlineStandingController().registry(studentId,
@@ -186,20 +221,20 @@ public class PayPing {
                 }
 
 
-                if(transaction.get("products") instanceof ObjectId &&
+                if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.COUNSELING_QUIZ.getName())
                 ) {
 
                     Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
 
-                    if(quiz != null) {
+                    if (quiz != null) {
 
                         Document studentDoc = searchInDocumentsKeyVal(
                                 quiz.getList("students", Document.class),
                                 "_id", studentId
                         );
 
-                        if(studentDoc != null) {
+                        if (studentDoc != null) {
                             studentDoc.put("pay_at", System.currentTimeMillis());
                             studentDoc.put("paid", transaction.getInteger("amount"));
                             schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
@@ -209,19 +244,19 @@ public class PayPing {
                 }
 
 
-                if(transaction.containsKey("package_id")) {
+                if (transaction.containsKey("package_id")) {
                     Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
-                    if(thePackage != null) {
-                        thePackage.put("buyers", (int)thePackage.getOrDefault("buyers", 0) + 1);
+                    if (thePackage != null) {
+                        thePackage.put("buyers", (int) thePackage.getOrDefault("buyers", 0) + 1);
                         packageRepository.replaceOne(thePackage.getObjectId("_id"), thePackage);
                     }
                 }
 
-                if(transaction.get("products") instanceof ObjectId &&
+                if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
                 ) {
                     Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
-                    if(quiz != null) {
+                    if (quiz != null) {
                         quiz.put("status", "paid");
 
                         PairValue p = irysc.gachesefid.Controllers.Quiz.Utility.getAnswersByteArrWithNeededTime(
@@ -234,7 +269,7 @@ public class PayPing {
 
                         customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
 
-                        if(user.containsKey("mail")) {
+                        if (user.containsKey("mail")) {
                             new Thread(() -> sendMail(
                                     user.getString("mail"),
                                     SERVER + "recp/" + transaction.getObjectId("_id").toString(),
@@ -244,22 +279,20 @@ public class PayPing {
                         }
 
                     }
-                }
-                else if(transaction.get("products") instanceof ObjectId &&
+                } else if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
                 ) {
                     Document content = contentRepository.findById(transaction.getObjectId("products"));
-                    if(content != null) {
+                    if (content != null) {
                         StudentContentController.registry(
                                 content.getObjectId("_id"),
-                                studentId, ((Number)transaction.get("amount")).intValue(),
+                                studentId, ((Number) transaction.get("amount")).intValue(),
                                 user.getOrDefault("phone", "").toString(),
                                 user.getOrDefault("mail", "").toString()
                         );
                     }
 
-                }
-                else if(transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
+                } else if (transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
                     if (!transaction.containsKey("student_ids")) {
 
@@ -267,17 +300,17 @@ public class PayPing {
                         List<ObjectId> openQuizIds = new ArrayList<>();
                         List<ObjectId> escapeQuizIds = new ArrayList<>();
 
-                        for(ObjectId id : products) {
+                        for (ObjectId id : products) {
 
-                            if(iryscQuizRepository.findById(id) != null)
+                            if (iryscQuizRepository.findById(id) != null)
                                 iryscQuizIds.add(id);
-                            else if(openQuizRepository.findById(id) != null)
+                            else if (openQuizRepository.findById(id) != null)
                                 openQuizIds.add(id);
-                            else if(escapeQuizRepository.findById(id) != null)
+                            else if (escapeQuizRepository.findById(id) != null)
                                 escapeQuizIds.add(id);
                         }
 
-                        if(iryscQuizIds.size() > 0) {
+                        if (iryscQuizIds.size() > 0) {
 
                             new RegularQuizController()
                                     .registry(studentId,
@@ -300,7 +333,7 @@ public class PayPing {
                                     );
                         }
 
-                        if(openQuizIds.size() > 0)
+                        if (openQuizIds.size() > 0)
                             new OpenQuiz()
                                     .registry(studentId,
                                             user.getString("phone"),
@@ -311,7 +344,7 @@ public class PayPing {
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
 
-                        if(escapeQuizIds.size() > 0)
+                        if (escapeQuizIds.size() > 0)
                             new EscapeQuizController()
                                     .registry(studentId,
                                             user.getString("phone"),
@@ -321,8 +354,7 @@ public class PayPing {
                                             transaction.getObjectId("_id"),
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
-                    }
-                    else {
+                    } else {
                         new RegularQuizController()
                                 .registry(transaction.getList("student_ids", ObjectId.class),
                                         user.getString("phone"),
@@ -332,9 +364,7 @@ public class PayPing {
 
                         // todo: group registration for tashrihi
                     }
-                }
-
-                else if(transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {
+                } else if (transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
 
                     new OpenQuiz()
@@ -349,23 +379,22 @@ public class PayPing {
 
                 }
 
-                if(transaction.containsKey("off_code") &&
+                if (transaction.containsKey("off_code") &&
                         transaction.get("off_code") != null) {
                     Document off = offcodeRepository.findById(
                             transaction.getObjectId("off_code")
                     );
-                    if(off != null) {
+                    if (off != null) {
 
                         BasicDBObject update;
 
-                        if(off.containsKey("is_public") &&
+                        if (off.containsKey("is_public") &&
                                 off.getBoolean("is_public")
                         ) {
                             List<ObjectId> students = off.getList("students", ObjectId.class);
                             students.add(studentId);
                             update = new BasicDBObject("students", students);
-                        }
-                        else
+                        } else
                             update = new BasicDBObject("used", true)
                                     .append("used_at", System.currentTimeMillis())
                                     .append("used_section", transaction.getString("section"))
@@ -395,15 +424,15 @@ public class PayPing {
 
         Document transaction = null;
 
-        if(refId != null) {
+        if (refId != null) {
             transaction = transactionRepository.findOne(
                     eq("ref_id", refId), null
             );
 
-            if(transaction == null)
+            if (transaction == null)
                 return null;
 
-            if(transaction.getObjectId("user_id").toString().equals("635bff221f3dac4e5d0da698")) {
+            if (transaction.getObjectId("user_id").toString().equals("635bff221f3dac4e5d0da698")) {
 
                 transaction.put("sale_ref_id", saleRefId);
                 transaction.put("status", "success");
@@ -438,19 +467,18 @@ public class PayPing {
 
                     res = execPHP("settle.php", transaction.get("order_id").toString() + " " + saleOrderId + " " + saleRefId);
                     transactionRepository.replaceOne(transaction.getObjectId("_id"), transaction);
+                } catch (Exception ignore) {
                 }
-                catch (Exception ignore) {}
 
                 completePay(transaction);
 
 //                System.out.println(res);
-                return new String[] {
+                return new String[]{
                         refId, transaction.getString("section"),
                         transaction.getObjectId("_id").toString()
                 };
-            }
-            else if(res.startsWith("43"))
-                return new String[] {
+            } else if (res.startsWith("43"))
+                return new String[]{
                         refId, transaction.getString("section"),
                         transaction.getObjectId("_id").toString()
                 };

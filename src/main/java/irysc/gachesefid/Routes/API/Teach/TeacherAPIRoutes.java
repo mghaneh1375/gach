@@ -1,9 +1,10 @@
 package irysc.gachesefid.Routes.API.Teach;
 
-import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
 import irysc.gachesefid.Controllers.Teaching.TeachController;
+import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Models.TeachReportTagMode;
@@ -13,6 +14,7 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -209,6 +211,28 @@ public class TeacherAPIRoutes extends Router {
     public String getAllReportTags() {
         return TeachTagReportController.getAllReportTags(
                 TeachReportTagMode.TEACHER.getName(), false
+        );
+    }
+
+
+    @PutMapping(value = "setTeachScheduleReportProblems/{scheduleId}")
+    @ResponseBody
+    public String setTeachScheduleReportProblems(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {}, paramsType = {},
+                    optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
+            ) String jsonStr
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        JSONObject jsonObject;
+        if(jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
+        else jsonObject = new JSONObject(jsonStr);
+
+        return TeachController.setTeachScheduleReportProblems(
+                getUser(request).getObjectId("_id"), scheduleId,
+                jsonObject.has("tagIds") ? jsonObject.getJSONArray("tagIds") : null,
+                jsonObject.has("desc") ? jsonObject.getString("desc") : null
         );
     }
 }

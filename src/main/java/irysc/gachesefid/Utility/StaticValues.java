@@ -101,7 +101,8 @@ public class StaticValues {
                     .append("teach_rate_count", 1).append("teach_tags", 1)
                     .append("teach_bio", 1).append("teach_video_link", 1)
                     .append("pic", 1).append("teaches", 1)
-                    .append("form_list", 1)
+                    .append("form_list", 1).append("teach_branches", 1)
+                    .append("teach_lessons", 1).append("teach_grades", 1)
             ;
 
     public final static BasicDBObject QUIZ_DIGEST =
@@ -200,6 +201,7 @@ public class StaticValues {
             .append("grade", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
+    public static final BasicDBObject JUST_NAME = new BasicDBObject("first_name", true).append("last_name", true);
 
     public static final String JSON_OK = new JSONObject().put("status", "ok").toString();
     public static final String JSON_NOT_VALID_TOKEN = new JSONObject().put("status", "nok").put("msg", "token is not valid").toString();

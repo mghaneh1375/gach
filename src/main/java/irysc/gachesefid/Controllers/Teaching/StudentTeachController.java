@@ -185,9 +185,7 @@ public class StudentTeachController {
             for (Document request : myRequests)
                 teachersId.add(request.getObjectId("user_id"));
 
-            List<Document> teachers = userRepository.findByIds(new ArrayList<>(teachersId), false,
-                    new BasicDBObject("first_name", 1).append("last_name", 1)
-            );
+            List<Document> teachers = userRepository.findByIds(new ArrayList<>(teachersId), false, JUST_NAME);
 
             for (Document schedule : myRequests) {
                 Document teacher = teachers
@@ -251,11 +249,17 @@ public class StudentTeachController {
 
         JSONArray jsonArray = new JSONArray();
         for (Document schedule : schedules) {
-            jsonArray.put(convertMySchedule(
-                    schedule,
-                    teachers.stream()
-                            .filter(teacher -> teacher.getObjectId("_id").equals(schedule.getObjectId("user_id")))
-                            .findFirst().get()
+            Document stdDoc = schedule.getList("students", Document.class)
+                    .stream()
+                    .filter(student -> student.get("_id").equals(userId))
+                    .findFirst().get();
+            jsonArray.put(
+                    convertMySchedule(
+                            schedule,
+                            teachers.stream()
+                                    .filter(teacher -> teacher.getObjectId("_id").equals(schedule.getObjectId("user_id")))
+                                    .findFirst().get(),
+                            (Integer) stdDoc.getOrDefault("rate", 0)
                     )
             );
         }
@@ -341,48 +345,22 @@ public class StudentTeachController {
                         )
                 );
 
-                List<Document> students = schedule.containsKey("students") ?
-                        schedule.getList("students", Document.class) :
-                        new ArrayList<>();
+                new Thread(() -> {
+                    Document advisor = userRepository.findById(schedule.getObjectId("_id"));
+                    createNotifAndSendSMS(
+                            advisor,
+                            user.getString("first_name") + " " + user.getString("last_name"),
+                            "finalizeTeach"
+                    );
+                }).start();
 
-                students.add(new Document("_id", userId)
-                        .append("created_at", curr)
+                teachScheduleRepository.updateOne(
+                        scheduleId,
+                        new BasicDBObject(
+                                "$set",
+                                register(schedule, userId, curr, request, isPrivate)
+                        )
                 );
-
-                List<Document> requests = schedule.containsKey("requests")
-                        ? schedule.getList("requests", Document.class)
-                        : new ArrayList<>();
-
-                if (request != null)
-                    request.put("status", "paid");
-                else {
-                    request = new Document("_id", userId)
-                            .append("created_at", System.currentTimeMillis())
-                            .append("status", "paid")
-                            .append("expire_at", curr + SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC);
-
-                    requests.add(request);
-                    schedule.put("requests", requests);
-                }
-
-                schedule.put("students", students);
-
-                BasicDBObject update = new BasicDBObject("students", students)
-                        .append("requests", requests);
-
-                if (isPrivate) {
-                    schedule.put("can_request", false);
-                    update.append("can_request", false);
-                }
-
-                Document advisor = userRepository.findById(schedule.getObjectId("_id"));
-                createNotifAndSendSMS(
-                        advisor,
-                        user.getString("first_name") + " " + user.getString("last_name"),
-                        "finalizeTeach"
-                );
-
-                teachScheduleRepository.updateOne(scheduleId, new BasicDBObject("$set", update));
 
                 if (offDoc != null)
                     logForOffCodeUsage(offDoc, userId, OffCodeSections.CLASSES.getName(), scheduleId);
@@ -424,40 +402,77 @@ public class StudentTeachController {
         }
     }
 
-    public static String getMySchedule(ObjectId userId, ObjectId scheduleId) {
-        try {
-            Document schedule = getSchedule(userId, scheduleId, true, false);
-            //todo: complete
-            return null;
-        } catch (Exception x) {
-            return generateErr(x.getMessage());
-        }
+    public static String rateToTeacher(ObjectId userId, ObjectId advisorId, int rate) {
+
+        Document advisor = userRepository.findById(advisorId);
+        if (advisor == null)
+            return JSON_NOT_VALID_ID;
+
+        long curr = System.currentTimeMillis();
+
+        if (!teachScheduleRepository.exist(and(
+                eq("user_id", advisorId),
+                eq("students._id", userId),
+                lt("start_at", curr)
+        )))
+            return JSON_NOT_ACCESS;
+
+        Document teachRate = teachRateRepository.findOne(and(
+                eq("student_id", userId),
+                eq("teacher_id", advisorId)
+        ), null);
+
+        double oldTotalRate = (double) advisor.getOrDefault("teach_rate", (double) 0);
+        int rateCount = (int) advisor.getOrDefault("teach_rate_count", 0);
+        oldTotalRate *= rateCount;
+        oldTotalRate += rate;
+        boolean isNew = false;
+
+        if (teachRate == null) {
+            teachRate = new Document("student_id", userId)
+                    .append("teacher_id", advisorId);
+            rateCount++;
+            isNew = true;
+        } else
+            oldTotalRate -= teachRate.getInteger("rate");
+
+        teachRate
+                .append("rate_at", curr)
+                .append("rate", rate);
+
+        if (isNew)
+            teachRateRepository.insertOne(teachRate);
+        else
+            teachRateRepository.replaceOne(
+                    teachRate.getObjectId("_id"), teachRate
+            );
+
+        double newRate = Math.round(oldTotalRate / rateCount * 100.0) / 100.0;
+        advisor.put("teach_rate", newRate);
+        advisor.put("teach_rate_count", rateCount);
+
+        userRepository.updateOne(
+                advisorId,
+                new BasicDBObject("$set",
+                        new BasicDBObject("teach_rate", newRate)
+                                .append("teach_rate_count", rateCount)
+                )
+        );
+
+        return generateSuccessMsg("rate", newRate);
     }
 
-    //todo: rate to teacher not schedule
-    public static String rate(ObjectId userId, ObjectId scheduleId, int userRate) {
+    public static String rateToSchedule(ObjectId userId, ObjectId scheduleId, int userRate) {
         try {
             Document schedule = getSchedule(userId, scheduleId, true, false);
-            int ratesCount = (int) schedule.getOrDefault("rates_count", 0);
-            double rate = (double) schedule.getOrDefault("rate", 0);
-            double rateSum = rate * ratesCount;
 
             List<Document> students = schedule.getList("students", Document.class);
             Document studentDoc = searchInDocumentsKeyVal(students, "_id", userId);
-            if (studentDoc.containsKey("rate")) {
-                rateSum -= studentDoc.getInteger("rate");
-                rateSum += userRate;
-            } else {
-                rateSum += userRate;
-                ratesCount++;
-            }
-
-            rate = rateSum / ratesCount;
-            schedule.put("rate", rate);
-            schedule.put("rates_count", ratesCount);
             studentDoc.put("rate", userRate);
-            teachScheduleRepository.replaceOneWithoutClearCache(
-                    scheduleId, schedule
+            studentDoc.put("rate_at", System.currentTimeMillis());
+
+            teachScheduleRepository.updateOne(
+                    scheduleId, set("students", students)
             );
 
             return JSON_OK;
@@ -551,8 +566,8 @@ public class StudentTeachController {
                 tag == null && minRate == null && maxRate == null;
 
         int minAgeFilter = -1, maxAgeFilter = -1;
-        HashMap<ObjectId, Document> branches = new HashMap<>();
-        HashMap<ObjectId, String> grades = new HashMap<>();
+        HashMap<ObjectId, String> branches = new HashMap<>();
+        HashMap<ObjectId, Document> grades = new HashMap<>();
 
         for (Document teacher : teachers) {
 
@@ -603,5 +618,126 @@ public class StudentTeachController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String setMyTeachScheduleReportProblems(
+            final ObjectId userId, final ObjectId scheduleId,
+            final JSONArray tagIds, final String desc
+    ) {
+
+        List<Object> tagOIdsList = null;
+
+        if(tagIds != null && tagIds.length() > 0) {
+            Set<ObjectId> tagOIds = new HashSet<>();
+            try {
+                for (int i = 0; i < tagIds.length(); i++) {
+                    if (!ObjectId.isValid(tagIds.getString(i)))
+                        return JSON_NOT_VALID_PARAMS;
+                    tagOIds.add(new ObjectId(tagIds.getString(i)));
+                }
+            } catch (Exception ex) {
+                return JSON_NOT_VALID_PARAMS;
+            }
+
+            tagOIdsList = new ArrayList<>(tagOIds);
+            if (teachTagReportRepository.findByIds(tagOIdsList, false, JUST_ID) == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
+
+        if(tagOIdsList == null)
+            tagOIdsList = new ArrayList<>();
+
+        Document myTeachReport = teachReportRepository.findOne(
+                and(
+                        eq("send_from", "student"),
+                        eq("student_id", userId),
+                        eq("schedule_id", scheduleId)
+                ), null
+        );
+
+        boolean isFirstReport = false;
+
+        if(myTeachReport == null) {
+            isFirstReport = true;
+            Document schedule = teachScheduleRepository.findById(scheduleId);
+            long curr = System.currentTimeMillis();
+
+            if(schedule == null || !schedule.containsKey("students") ||
+                    schedule.getLong("start_at") > curr ||
+                    schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr ||
+                    searchInDocumentsKeyValIdx(
+                            schedule.getList("students", Document.class), "_id", userId
+                    ) == -1
+            )
+                return JSON_NOT_ACCESS;
+
+            myTeachReport = new Document("student_id", userId)
+                    .append("schedule_id", scheduleId)
+                    .append("send_from", "student")
+                    .append("seen", false)
+                    .append("teacher_id", schedule.getObjectId("user_id"))
+                    .append("created_at", System.currentTimeMillis());
+        }
+        else if(desc == null)
+            myTeachReport.remove("desc");
+
+        myTeachReport.put("tag_ids", tagOIdsList);
+        if(desc != null)
+            myTeachReport.put("desc", desc);
+
+        if(isFirstReport)
+            teachReportRepository.insertOne(myTeachReport);
+        else
+            teachReportRepository.replaceOne(
+                    myTeachReport.getObjectId("_id"),
+                    myTeachReport
+            );
+
+        return JSON_OK;
+    }
+
+    public static String getMyTeachScheduleReportProblems(
+            ObjectId userId, ObjectId scheduleId
+    ) {
+        Document myTeachReport = teachReportRepository.findOne(
+                and(
+                        eq("student_id", userId),
+                        eq("schedule_id", scheduleId)
+                ), new BasicDBObject("tag_ids", 1).append("desc", 1)
+        );
+
+        if(myTeachReport == null)
+            return generateSuccessMsg("data", new JSONArray());
+
+        List<Document> tags = teachTagReportRepository.findByIds(
+                myTeachReport.getList("tag_ids", Object.class),
+                false, null
+        );
+
+        if(tags == null)
+            return JSON_NOT_UNKNOWN;
+
+        JSONArray jsonArray = new JSONArray();
+        for (Document tag : tags)
+            jsonArray.put(tag.getString("label"));
+
+        return generateSuccessMsg("data",
+                new JSONObject()
+                        .put("tags", jsonArray)
+                        .put("desc", myTeachReport.getOrDefault("desc", ""))
+        );
+    }
+
+    public static String getMyRate(ObjectId userId, ObjectId teacherId) {
+        Document myRate = teachRateRepository.findOne(
+                and(
+                        eq("student_id", userId),
+                        eq("teacher_id", teacherId)
+                ), new BasicDBObject("rate", 1)
+        );
+
+        if (myRate != null)
+            return generateSuccessMsg("data", myRate.getInteger("rate"));
+
+        return generateSuccessMsg("data", 0);
+    }
 
 }

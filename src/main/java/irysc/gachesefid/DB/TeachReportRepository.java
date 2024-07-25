@@ -6,8 +6,7 @@ public class TeachReportRepository extends Common {
 
     @Override
     void init() {
-        table = "teach_report";
-        documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
+        documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection("teach_report");
     }
 
     public TeachReportRepository() {

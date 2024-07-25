@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Teaching;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.ActiveMode;
@@ -10,19 +11,13 @@ import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Filters.and;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class Utility {
@@ -110,8 +105,8 @@ public class Utility {
 
     static JSONObject convertTeacherToJSONDigest(
             ObjectId stdId, Document teacher,
-            HashMap<ObjectId, Document> branches,
-            HashMap<ObjectId, String> grades
+            HashMap<ObjectId, String> branches,
+            HashMap<ObjectId, Document> grades
     ) {
 
         JSONObject jsonObject = new JSONObject()
@@ -149,61 +144,66 @@ public class Utility {
         }
 
         if (teacher.containsKey("teach_branches")) {
-            JSONArray branchesJSON = new JSONArray();
-            JSONArray lessonsJSON = new JSONArray();
+            Set<String> branchesJSON = new HashSet<>();
+
+            for (ObjectId itr : teacher.getList("teach_branches", ObjectId.class)) {
+                if (branches.containsKey(itr))
+                    branchesJSON.add(branches.get(itr));
+                else {
+                    Document branch = gradeRepository.findById(itr);
+                    if (branch != null) {
+                        branches.put(itr, branch.getString("name"));
+                        branchesJSON.add(branch.getString("name"));
+                    }
+                }
+            }
+            if (branchesJSON.size() > 0)
+                jsonObject.put("branches", branchesJSON);
+        }
+
+        if (teacher.containsKey("teach_grades")) {
+            Set<String> gradesJSON = new HashSet<>();
+            Set<String> lessonsJSON = new HashSet<>();
 
             List<ObjectId> lessons = null;
             if (teacher.containsKey("teach_lessons"))
                 lessons = teacher.getList("teach_lessons", ObjectId.class);
 
-            for (ObjectId itr : teacher.getList("teach_branches", ObjectId.class)) {
-                Document branch;
-                if (branches.containsKey(itr)) {
-                    branch = branches.get(itr);
-                    branchesJSON.put(branch.getString("name"));
+            for (ObjectId itr : teacher.getList("teach_grades", ObjectId.class)) {
+                Document grade;
+
+                if (grades.containsKey(itr)) {
+                    grade = grades.get(itr);
+                    gradesJSON.add(grade.getString("name"));
                 } else {
-                    branch = branchRepository.findById(itr);
-                    if (branch != null) {
-                        branches.put(itr, branch);
-                        branchesJSON.put(branch.getString("name"));
+                    grade = branchRepository.findById(itr);
+                    if (grade != null) {
+                        grades.put(itr, grade);
+                        gradesJSON.add(grade.getString("name"));
                     }
                 }
 
-                if (lessons != null && branch != null) {
+                if (lessons != null && grade != null) {
 
-                    List<Document> branchLessons =
-                            branch.getList("lessons", Document.class);
+                    List<Document> gradeLessons =
+                            grade.getList("lessons", Document.class);
 
                     for (ObjectId lessonId : lessons) {
 
                         Document wantedLesson = searchInDocumentsKeyVal(
-                                branchLessons, "_id", lessonId
+                                gradeLessons, "_id", lessonId
                         );
 
                         if (wantedLesson != null)
-                            lessonsJSON.put(wantedLesson.getString("name"));
-                    }
-                }
-            }
-            if (branchesJSON.length() > 0)
-                jsonObject.put("branches", branchesJSON);
-        }
-
-        if (teacher.containsKey("teach_grades")) {
-            JSONArray gradesJSON = new JSONArray();
-            for (ObjectId itr : teacher.getList("teach_grades", ObjectId.class)) {
-                if (grades.containsKey(itr))
-                    gradesJSON.put(grades.get(itr));
-                else {
-                    Document grade = gradeRepository.findById(itr);
-                    if (grade != null) {
-                        grades.put(itr, grade.getString("name"));
-                        gradesJSON.put(grade.getString("name"));
+                            lessonsJSON.add(wantedLesson.getString("name"));
                     }
                 }
             }
 
-            if (gradesJSON.length() > 0)
+            if (lessonsJSON.size() > 0)
+                jsonObject.put("lessons", lessonsJSON);
+
+            if (gradesJSON.size() > 0)
                 jsonObject.put("grades", gradesJSON);
         }
 
@@ -282,13 +282,19 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertMySchedule(Document schedule, Document teacher) {
+    static JSONObject convertMySchedule(Document schedule, Document teacher, int rate) {
+        long curr = System.currentTimeMillis();
         return new JSONObject()
                 .put("title", schedule.getOrDefault("title", ""))
                 .put("teachMode", schedule.getString("teach_mode"))
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
+                .put("rate", rate)
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                .put("canRate",
+                        schedule.getLong("start_at") < curr &&
+                                curr < schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC
+                )
                 .put("id", schedule.getObjectId("_id").toString())
                 .put("skyRoomUrl", schedule.getOrDefault("sky_room_url", ""))
                 .put("teacher", new JSONObject()
@@ -427,6 +433,49 @@ public class Utility {
             filters.add(scheduleFilter);
 
         return and(filters);
+    }
+
+    public static Bson register(
+            Document schedule, ObjectId userId,
+            long curr, Document request,
+            boolean isPrivate
+    ) {
+
+        List<Document> students = schedule.containsKey("students") ?
+                schedule.getList("students", Document.class) :
+                new ArrayList<>();
+
+        students.add(new Document("_id", userId)
+                .append("created_at", curr)
+        );
+
+        List<Document> requests = schedule.containsKey("requests")
+                ? schedule.getList("requests", Document.class)
+                : new ArrayList<>();
+
+        if (request != null)
+            request.put("status", "paid");
+        else {
+            request = new Document("_id", userId)
+                    .append("created_at", System.currentTimeMillis())
+                    .append("status", "paid")
+                    .append("expire_at", curr + SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC);
+
+            requests.add(request);
+            schedule.put("requests", requests);
+        }
+
+        schedule.put("students", students);
+
+        BasicDBObject update = new BasicDBObject("students", students)
+                .append("requests", requests);
+
+        if (isPrivate) {
+            schedule.put("can_request", false);
+            update.append("can_request", false);
+        }
+
+        return update;
     }
 
     static Document getScheduleForCreateSkyRoom(ObjectId scheduleId, ObjectId userId) throws InvalidFieldsException {

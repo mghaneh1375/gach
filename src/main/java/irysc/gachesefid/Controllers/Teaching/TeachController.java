@@ -65,6 +65,120 @@ public class TeachController {
         );
     }
 
+    public static String getTeachReports(
+            Long from, Long to, Boolean showJustUnSeen,
+            ObjectId teacherId, Boolean justSendFromStudent,
+            Boolean justSendFromTeacher
+    ) {
+        List<Bson> filters = new ArrayList<>();
+
+        if(showJustUnSeen != null && showJustUnSeen)
+            filters.add(eq("seen", false));
+
+        if(justSendFromStudent != null && justSendFromStudent)
+            filters.add(eq("send_from", "student"));
+
+        if(justSendFromTeacher != null && justSendFromTeacher)
+            filters.add(eq("send_from", "teacher"));
+
+        if(teacherId != null)
+            filters.add(eq("teacher_id", teacherId));
+
+        if(from != null)
+            filters.add(gte("created_at", from));
+
+        if(to != null)
+            filters.add(lte("created_at", to));
+
+        List<Document> reports =
+                teachReportRepository.find(filters.size() == 0 ? null : and(filters), null);
+
+        Set<ObjectId> userIds = new HashSet<>();
+        Set<ObjectId> scheduleIds = new HashSet<>();
+
+        for (Document report : reports) {
+            userIds.add(report.getObjectId("student_id"));
+            userIds.add(report.getObjectId("teacher_id"));
+            scheduleIds.add(report.getObjectId("schedule_id"));
+        }
+
+        List<Document> users = userRepository.findByIds(new ArrayList<>(userIds), false, JUST_NAME);
+        if(users == null)
+            return generateErr(JSON_NOT_UNKNOWN);
+
+        List<Document> schedules = teachScheduleRepository.findByIds(new ArrayList<>(scheduleIds), false, new BasicDBObject("start_at", 1));
+        if(schedules == null)
+            return generateErr(JSON_NOT_UNKNOWN);
+
+        List<Document> tags = teachTagReportRepository.find(null, new BasicDBObject("label", 1));
+        HashMap<ObjectId, String> tagsHashMap = new HashMap<>();
+        for(Document tag : tags)
+            tagsHashMap.put(tag.getObjectId("_id"), tag.getString("label"));
+
+        JSONArray jsonArray = new JSONArray();
+        for (Document report : reports) {
+
+            List<String> reportTags = null;
+            if(report.containsKey("tag_ids")) {
+                reportTags = report.getList("tag_ids", ObjectId.class)
+                        .stream().map(tagsHashMap::get)
+                        .collect(Collectors.toList());
+            }
+
+            jsonArray.put(
+                    new JSONObject()
+                            .put("id", report.getObjectId("_id").toString())
+                            .put("student", users
+                                    .stream()
+                                    .filter(user -> user.getObjectId("_id").equals(report.getObjectId("student_id")))
+                                    .map(user -> user.getString("first_name") + " " + user.getString("last_name"))
+                                    .findFirst().get()
+                            )
+                            .put("teacher", users
+                                    .stream()
+                                    .filter(user -> user.getObjectId("_id").equals(report.getObjectId("teacher_id")))
+                                    .map(user -> user.getString("first_name") + " " + user.getString("last_name"))
+                                    .findFirst().get()
+                            )
+                            .put("startAt", schedules
+                                    .stream()
+                                    .filter(schedule -> schedule.getObjectId("_id").equals(report.getObjectId("schedule_id")))
+                                    .map(schedule -> getSolarDate(schedule.getLong("start_at")))
+                                    .findFirst().get()
+                            )
+                            .put("tags", reportTags)
+                            .put("desc", report.getOrDefault("desc", ""))
+                            .put("seen", report.getBoolean("seen"))
+                            .put("sendFrom", report.getString("send_from"))
+                            .put("createdAt", getSolarDate(report.getLong("created_at")))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String setTeachReportAsSeen(ObjectId id) {
+        teachReportRepository.updateOne(eq("_id", id), set("seen", true));
+        return JSON_OK;
+    }
+
+    public static String getAllTeachersDigest() {
+
+        JSONArray jsonArray = new JSONArray();
+        userRepository.find(and(
+                exists("teach", true),
+                eq("teach", true)
+        ), JUST_NAME)
+                .forEach(document ->
+                        jsonArray.put(
+                                new JSONObject().put("id", document.getObjectId("_id").toString())
+                                        .put("name", document.getString("first_name") + " " + document.getString("last_name"))
+                        )
+                );
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
 
     // ######################## ADVISOR SECTION ######################
 
@@ -567,10 +681,7 @@ public class TeachController {
             for (Document schedule : schedules)
                 userIds.add(schedule.getObjectId("user_id"));
 
-            users = userRepository.findByIds(userIds, true,
-                    new BasicDBObject("first_name", 1).append("last_name", 1)
-                            .append("_id", 1)
-            );
+            users = userRepository.findByIds(userIds, true, JUST_NAME);
         }
 
         JSONArray jsonArray = new JSONArray();
@@ -615,7 +726,7 @@ public class TeachController {
         for (Document student : schedule.getList("students", Document.class))
             usersId.add(student.getObjectId("_id"));
 
-        List<Document> users = userRepository.findByIds(usersId, true, USER_PUBLIC_INFO);
+        List<Document> users = userRepository.findByIds(usersId, false, USER_PUBLIC_INFO);
         if (users == null)
             return JSON_NOT_UNKNOWN;
 
@@ -624,7 +735,11 @@ public class TeachController {
             users.stream()
                     .filter(user -> user.getObjectId("_id").equals(student.getObjectId("_id")))
                     .findFirst().ifPresent(user -> {
-                        JSONObject tmp = new JSONObject();
+                        JSONObject tmp = new JSONObject()
+                                .put("rate", student.getOrDefault("rate", 0))
+                                .put("rateAt", student.containsKey("rate_at") ? getSolarDate(student.getLong("rate_at")) : "")
+                                .put("createdAt", student.containsKey("created_at") ? getSolarDate(student.getLong("created_at")) : "")
+                                ;
                         fillJSONWithUserPublicInfo(tmp, user);
                         students.put(tmp);
                     });
@@ -633,4 +748,75 @@ public class TeachController {
         return generateSuccessMsg("data", students);
     }
 
+    public static String setTeachScheduleReportProblems(
+            final ObjectId userId, final ObjectId scheduleId,
+            final JSONArray tagIds, final String desc
+    ) {
+
+        List<Object> tagOIdsList = null;
+
+        if(tagIds != null && tagIds.length() > 0) {
+            Set<ObjectId> tagOIds = new HashSet<>();
+            try {
+                for (int i = 0; i < tagIds.length(); i++) {
+                    if (!ObjectId.isValid(tagIds.getString(i)))
+                        return JSON_NOT_VALID_PARAMS;
+                    tagOIds.add(new ObjectId(tagIds.getString(i)));
+                }
+            } catch (Exception ex) {
+                return JSON_NOT_VALID_PARAMS;
+            }
+
+            tagOIdsList = new ArrayList<>(tagOIds);
+            if (teachTagReportRepository.findByIds(tagOIdsList, false, JUST_ID) == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
+
+        if(tagOIdsList == null)
+            tagOIdsList = new ArrayList<>();
+
+        Document myTeachReport = teachReportRepository.findOne(
+                and(
+                        eq("send_from", "teacher"),
+                        eq("teacher_id", userId),
+                        eq("schedule_id", scheduleId)
+                ), null
+        );
+
+        boolean isFirstReport = false;
+
+        if(myTeachReport == null) {
+            isFirstReport = true;
+            Document schedule = teachScheduleRepository.findById(scheduleId);
+            long curr = System.currentTimeMillis();
+            if(!schedule.getObjectId("user_id").equals(userId) ||
+                    schedule.getLong("start_at") > curr ||
+                    schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr
+            )
+                return JSON_NOT_ACCESS;
+
+            myTeachReport = new Document("student_id", userId)
+                    .append("send_from", "teacher")
+                    .append("seen", false)
+                    .append("schedule_id", scheduleId)
+                    .append("teacher_id", schedule.getObjectId("user_id"))
+                    .append("created_at", curr);
+        }
+        else if(desc == null)
+            myTeachReport.remove("desc");
+
+        myTeachReport.put("tag_ids", tagOIdsList);
+        if(desc != null)
+            myTeachReport.put("desc", desc);
+
+        if(isFirstReport)
+            teachReportRepository.insertOne(myTeachReport);
+        else
+            teachReportRepository.replaceOne(
+                    myTeachReport.getObjectId("_id"),
+                    myTeachReport
+            );
+
+        return JSON_OK;
+    }
 }

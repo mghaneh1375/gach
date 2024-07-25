@@ -35,15 +35,12 @@ public class AdminTeachAPIRoutes extends Router {
             @RequestParam(required = false, value = "userId") ObjectId userId,
             @RequestParam(required = false, value = "from") Long from,
             @RequestParam(required = false, value = "to") Long to,
-            @RequestParam(required = false, value = "justHasStudents") Boolean justHasStudents,
-            @RequestParam(required = false, value = "justHasRequests") Boolean justHasRequests,
             @RequestParam(required = false, value = "teachMode") String teachMode,
             @RequestParam(required = false, value = "activeMode") String activeMode
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
         return TeachController.getSchedules(
-                userId, from, to, activeMode,
-                justHasStudents, justHasRequests, teachMode
+                userId, from, to, activeMode, true, null, teachMode
         );
     }
 
@@ -67,6 +64,44 @@ public class AdminTeachAPIRoutes extends Router {
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
         return TeachController.getAdvisorIRYSCPercent(advisorId);
+    }
+
+    @GetMapping(value = "getAllTeachersDigest")
+    @ResponseBody
+    public String getAllTeachersDigest(
+            HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return TeachController.getAllTeachersDigest();
+    }
+
+    @PutMapping(value = "setTeachReportAsSeen/{id}")
+    @ResponseBody
+    public String setTeachReportAsSeen(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return TeachController.setTeachReportAsSeen(id);
+    }
+
+    @GetMapping(value = "getTeachReports")
+    @ResponseBody
+    public String getTeachReports(
+            HttpServletRequest request,
+            @RequestParam(required = false, name = "teacherId") ObjectId teacherId,
+            @RequestParam(required = false, name = "from") Long from,
+            @RequestParam(required = false, name = "to") Long to,
+            @RequestParam(required = false, name = "showJustUnSeen") Boolean showJustUnSeen,
+            @RequestParam(required = false, name = "justSendFromStudent") Boolean justSendFromStudent,
+            @RequestParam(required = false, name = "justSendFromTeacher") Boolean justSendFromTeacher
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return TeachController.getTeachReports(
+                from, to, showJustUnSeen,
+                teacherId, justSendFromStudent,
+                justSendFromTeacher
+        );
     }
 
     @GetMapping(value = "getAllReportTags")
