@@ -39,9 +39,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -622,23 +622,29 @@ public class StudentQuizAPIRoutes extends Router {
                                @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId,
                                @RequestBody @StrongJSONConstraint(
-                                       params = {"answers"},
-                                       paramsType = {JSONArray.class}
+                                       params = {}, paramsType = {},
+                                       optionals = {"answers"}, optionalsType = {JSONArray.class}
                                ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+
+        JSONObject jsonObject = jsonStr == null || jsonStr.isEmpty() ?
+                new JSONObject() : new JSONObject(jsonStr);
+
+        if(!jsonObject.has("answers") || jsonObject.getJSONArray("answers").length() == 0)
+            return JSON_OK;
 
         Document user = getUser(request);
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.storeCustomAnswers(
                     quizId, user.getObjectId("_id"),
-                    new JSONObject(jsonStr).getJSONArray("answers")
+                    jsonObject.getJSONArray("answers")
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return StudentContentController.storeAnswers(
                     quizId, user.getObjectId("_id"),
-                    new JSONObject(jsonStr).getJSONArray("answers")
+                    jsonObject.getJSONArray("answers")
             );
 
         return StudentQuizController.storeAnswers(
@@ -646,8 +652,8 @@ public class StudentQuizAPIRoutes extends Router {
                         iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                 openQuizRepository : schoolQuizRepository,
-                quizId,
-                user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("answers")
+                quizId, user.getObjectId("_id"),
+                jsonObject.getJSONArray("answers")
         );
     }
 

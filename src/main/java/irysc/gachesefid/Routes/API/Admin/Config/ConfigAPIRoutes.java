@@ -86,7 +86,7 @@ public class ConfigAPIRoutes extends Router {
                                          "createShopOffVisibility", "maxTeachCap",
                                          "iryscTeachPercent", "iryscAdvicePercent",
                                          "minTeachPrice", "maxTeachPrice",
-                                         "prePayAmount"
+                                         "prePayAmount", "minAmountForSettlement"
                                  },
                                  optionalsType = {
                                          Number.class, Positive.class, Positive.class,
@@ -110,7 +110,8 @@ public class ConfigAPIRoutes extends Router {
                                          Positive.class, Positive.class,
                                          Positive.class, Positive.class, Boolean.class,
                                          Positive.class, Positive.class, Positive.class,
-                                         Positive.class, Positive.class, Positive.class
+                                         Positive.class, Positive.class, Positive.class,
+                                         Positive.class
                                  }
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

@@ -237,4 +237,53 @@ public class TeacherAPIRoutes extends Router {
                 jsonObject.has("desc") ? jsonObject.getString("desc") : null
         );
     }
+
+    @GetMapping(value = "getMyTransactions")
+    @ResponseBody
+    public String getMyTransactions(
+            HttpServletRequest request,
+            @RequestParam(value = "needCanRequestSettlement") boolean needCanRequestSettlement,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "justSettlements") Boolean justSettlements
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return TeachController.getMyTransactions(
+                getUser(request).getObjectId("_id"),
+                from, to, justSettlements, needCanRequestSettlement
+        );
+    }
+
+    @PostMapping(value = "settlementRequest")
+    @ResponseBody
+    public String settlementRequest(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.settlementRequest(
+                getAdvisorUser(request).getObjectId("_id")
+        );
+    }
+
+    @DeleteMapping(value = "cancelSettlementRequest")
+    @ResponseBody
+    public String cancelSettlementRequest(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.cancelSettlementRequest(
+                getAdvisorUser(request).getObjectId("_id")
+        );
+    }
+
+    @GetMapping(value = "getMySettledRequests")
+    @ResponseBody
+    public String getMySettledRequests(
+            HttpServletRequest request,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "createdFrom", required = false) Long createdFrom,
+            @RequestParam(value = "createdTo", required = false) Long createdTo,
+            @RequestParam(value = "answerFrom", required = false) Long answerFrom,
+            @RequestParam(value = "answerTo", required = false) Long answerTo
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.getMySettledRequests(
+                getAdvisorUser(request).getObjectId("_id"),
+                status, createdFrom, createdTo, answerFrom, answerTo
+        );
+    }
 }

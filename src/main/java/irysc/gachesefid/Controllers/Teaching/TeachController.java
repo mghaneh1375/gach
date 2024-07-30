@@ -4,6 +4,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Models.ActiveMode;
+import irysc.gachesefid.Models.SettledStatus;
 import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Models.TeachRequestStatus;
 import irysc.gachesefid.Utility.Utility;
@@ -72,7 +73,7 @@ public class TeachController {
     ) {
         List<Bson> filters = new ArrayList<>();
 
-        if(teachId != null)
+        if (teachId != null)
             filters.add(eq("schedule_id", teachId));
 
         if (showJustUnSeen != null && showJustUnSeen)
@@ -182,6 +183,93 @@ public class TeachController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String getTransactions(
+            ObjectId teacherId,
+            Long from, Long to,
+            Boolean justSettlements
+    ) {
+        List<Bson> filters = new ArrayList<>() {{
+            add(exists("students.0"));
+            add(lt("start_at", System.currentTimeMillis()));
+        }};
+
+        if(teacherId != null)
+            filters.add(eq("user_id", teacherId));
+
+        if (from != null)
+            filters.add(gte("start_at", from));
+
+        if (to != null)
+            filters.add(lte("start_at", to));
+
+        if (justSettlements != null)
+            filters.add(exists("settled_at", justSettlements));
+
+        List<Document> schedules = teachScheduleRepository.find(and(filters),
+                new BasicDBObject("settled_at", 1).append("start_at", 1)
+                        .append("price", 1).append("students", 1)
+                        .append("teach_mode", 1).append("created_at", 1)
+                        .append("title", 1).append("irysc_percent", 1)
+                        .append("length", 1).append("user_id", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        double totalPrice = 0;
+        double totalSettled = 0;
+
+        Set<ObjectId> userIds = new HashSet<>();
+        for(Document schedule : schedules)
+            userIds.add(schedule.getObjectId("user_id"));
+
+        List<Document> users = userRepository.findByIds(new ArrayList<>(userIds), false, JUST_NAME);
+        if(users == null) return JSON_NOT_UNKNOWN;
+
+        for (Document schedule : schedules) {
+
+            String teacher = users
+                    .stream()
+                    .filter(e -> e.getObjectId("_id").equals(schedule.getObjectId("user_id")))
+                    .findFirst().map(e -> e.getString("first_name") + " " + e.getString("last_name"))
+                    .get();
+
+            int studentsCount = schedule.getList("students", Document.class).size();
+
+            double p =
+                    (
+                            studentsCount * schedule.getInteger("price") *
+                                    (100.0 - schedule.getInteger("irysc_percent"))
+                    ) / 100.0;
+
+            totalPrice += p;
+            if (schedule.containsKey("settled_at"))
+                totalSettled += p;
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("username", teacher)
+                    .put("teachMode", schedule.getString("teach_mode"))
+                    .put("title", schedule.getOrDefault("title", ""))
+                    .put("price", schedule.getInteger("price"))
+                    .put("teacherShare", p)
+                    .put("iryscPercent", schedule.getInteger("irysc_percent"))
+                    .put("length", schedule.getInteger("length"))
+                    .put("studentsCount", studentsCount)
+                    .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                    .put("createdAt", getSolarDate(schedule.getLong("created_at")));
+
+            if (schedule.containsKey("settled_at"))
+                jsonObject
+                        .put("settledAt", getSolarDate(schedule.getLong("settled_at")));
+
+            jsonArray.put(jsonObject);
+        }
+
+        JSONObject result = new JSONObject()
+                .put("data", jsonArray)
+                .put("totalPrice", totalPrice)
+                .put("totalSettled", totalSettled);
+
+        return generateSuccessMsg("data", result);
+    }
 
     // ######################## ADVISOR SECTION ######################
 
@@ -211,12 +299,21 @@ public class TeachController {
                 return generateErr("حداکثر تعداد نفرات در هر جلسه نباید بیشتر از " + config.getInteger("max_teach_cap") + " باشد");
         }
 
+        int iryscTeachPercent;
+        if (user.containsKey("irysc_teach_percent"))
+            iryscTeachPercent = user.getInteger("irysc_teach_percent");
+        else {
+            Document config = getConfig();
+            iryscTeachPercent = config.getInteger("irysc_teach_percent");
+        }
+
         ObjectId userId = user.getObjectId("_id");
         Document newDoc = new Document("_id", new ObjectId())
                 .append("user_id", userId)
                 .append("start_at", jsonObject.getLong("start"))
                 .append("length", jsonObject.getInt("length"))
                 .append("created_at", System.currentTimeMillis())
+                .append("irysc_percent", iryscTeachPercent)
                 .append("visibility", jsonObject.getBoolean("visibility"))
                 .append("price", jsonObject.has("price") ? jsonObject.getInt("price") : defaultPrice)
                 .append("teach_mode", jsonObject.getString("teachMode"))
@@ -821,5 +918,226 @@ public class TeachController {
             );
 
         return JSON_OK;
+    }
+
+    private static Double canRequestSettlement(
+            Integer minAmountForSettlement, ObjectId userId
+    ) {
+        List<Bson> filters = new ArrayList<>() {{
+            add(eq("user_id", userId));
+            add(exists("students.0"));
+            add(exists("settled_at", false));
+            add(lt("start_at", System.currentTimeMillis()));
+        }};
+
+        List<Document> schedules = teachScheduleRepository.find(and(filters),
+                new BasicDBObject("price", 1).append("irysc_percent", 1)
+                        .append("students", 1)
+        );
+
+        double total = 0;
+
+        for (Document schedule : schedules) {
+            int studentsCount = schedule.getList("students", Document.class).size();
+
+            total +=
+                    (
+                            studentsCount * schedule.getInteger("price") *
+                                    (100.0 - schedule.getInteger("irysc_percent"))
+                    ) / 100.0;
+        }
+
+        return total > 0 && total >= minAmountForSettlement ? total : 0;
+    }
+
+    public static String getMyTransactions(
+            ObjectId userId,
+            Long from, Long to,
+            Boolean justSettlements,
+            boolean needCanRequestSettlement
+    ) {
+
+        List<Bson> filters = new ArrayList<>() {{
+            add(eq("user_id", userId));
+            add(exists("students.0"));
+            add(lt("start_at", System.currentTimeMillis()));
+        }};
+
+        if (from != null)
+            filters.add(gte("start_at", from));
+
+        if (to != null)
+            filters.add(lte("start_at", to));
+
+        if (justSettlements != null)
+            filters.add(exists("settled_at", justSettlements));
+
+        List<Document> schedules = teachScheduleRepository.find(and(filters),
+                new BasicDBObject("settled_at", 1).append("start_at", 1)
+                        .append("price", 1).append("students", 1)
+                        .append("teach_mode", 1).append("created_at", 1)
+                        .append("title", 1).append("irysc_percent", 1)
+                        .append("length", 1)
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        double totalPrice = 0;
+        double totalSettled = 0;
+
+        for (Document schedule : schedules) {
+            int studentsCount = schedule.getList("students", Document.class).size();
+
+            double p =
+                    (
+                            studentsCount * schedule.getInteger("price") *
+                                    (100.0 - schedule.getInteger("irysc_percent"))
+                    ) / 100.0;
+
+            totalPrice += p;
+            if (schedule.containsKey("settled_at"))
+                totalSettled += p;
+
+            JSONObject jsonObject = new JSONObject()
+                    .put("teachMode", schedule.getString("teach_mode"))
+                    .put("title", schedule.getOrDefault("title", ""))
+                    .put("price", schedule.getInteger("price"))
+                    .put("teacherShare", p)
+                    .put("iryscPercent", schedule.getInteger("irysc_percent"))
+                    .put("length", schedule.getInteger("length"))
+                    .put("studentsCount", studentsCount)
+                    .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                    .put("createdAt", getSolarDate(schedule.getLong("created_at")));
+
+            if (schedule.containsKey("settled_at"))
+                jsonObject
+                        .put("settledAt", getSolarDate(schedule.getLong("settled_at")));
+
+            jsonArray.put(jsonObject);
+        }
+
+        JSONObject result = new JSONObject()
+                .put("data", jsonArray)
+                .put("totalPrice", totalPrice)
+                .put("totalSettled", totalSettled);
+
+        if (needCanRequestSettlement) {
+
+            if (settlementRequestRepository.exist(
+                    and(
+                            eq("user_id", userId),
+                            eq("status", "pending")
+                    )
+            ))
+                result.put("canRequestSettlement", false);
+            else {
+                Document config = getConfig();
+                Integer minAmountForSettlement = (Integer) config.getOrDefault("min_amount_for_settlement", 0);
+                boolean canRequestSettlement;
+
+                if (from == null && to == null &&
+                        (justSettlements == null || !justSettlements)
+                ) {
+                    canRequestSettlement = totalPrice - totalSettled > 0 &&
+                            totalPrice - totalSettled >= minAmountForSettlement;
+                    result.put("canRequestSettlement", canRequestSettlement);
+                    if (canRequestSettlement)
+                        result.put("settlementAmount", totalPrice);
+                } else {
+                    canRequestSettlement = canRequestSettlement(
+                            minAmountForSettlement, userId
+                    ) > 0;
+                    result.put("canRequestSettlement", canRequestSettlement);
+                    if (canRequestSettlement)
+                        result.put("settlementAmount", totalPrice);
+                }
+            }
+        }
+
+        return generateSuccessMsg("data", result);
+    }
+
+    public static String settlementRequest(ObjectId userId) {
+
+        if (settlementRequestRepository.exist(
+                and(
+                        eq("user_id", userId),
+                        eq("status", "pending")
+                )
+        ))
+            return JSON_NOT_ACCESS;
+
+        Document config = getConfig();
+        Integer minAmountForSettlement = (Integer) config.getOrDefault("min_amount_for_settlement", 0);
+        double amount = canRequestSettlement(minAmountForSettlement, userId);
+
+        if (amount == 0)
+            return JSON_NOT_ACCESS;
+
+        settlementRequestRepository.insertOne(
+                new Document("section", "class")
+                        .append("user_id", userId)
+                        .append("created_at", System.currentTimeMillis())
+                        .append("status", "pending")
+                        .append("amount", amount)
+        );
+
+        return JSON_OK;
+    }
+
+    public static String cancelSettlementRequest(ObjectId userId) {
+        settlementRequestRepository.deleteOne(and(
+                eq("user_id", userId),
+                eq("status", "pending")
+        ));
+        return JSON_OK;
+    }
+
+    public static String getMySettledRequests(
+            ObjectId userId, String status,
+            Long createdFrom, Long createdTo,
+            Long answerFrom, Long answerTo
+    ) {
+        List<Bson> filters = new ArrayList<>() {{
+            add(eq("user_id", userId));
+        }};
+
+        if (status != null) {
+            if (!EnumValidatorImp.isValid(status, SettledStatus.class))
+                return JSON_NOT_VALID_PARAMS;
+            filters.add(eq("status", status));
+        }
+
+        if (createdFrom != null)
+            filters.add(gte("created_at", createdFrom));
+
+        if (createdTo != null)
+            filters.add(lte("created_at", createdTo));
+
+        if (answerFrom != null || answerTo != null)
+            filters.add(exists("answer_at"));
+
+        if (answerFrom != null)
+            filters.add(gte("answer_at", answerFrom));
+
+        if (answerTo != null)
+            filters.add(lte("answer_at", answerTo));
+
+        List<Document> requests = settlementRequestRepository.find(
+                and(filters), null
+        );
+
+        JSONArray jsonArray = new JSONArray();
+        for (Document request : requests) {
+            jsonArray.put(new JSONObject()
+                    .put("id", request.getObjectId("_id").toString())
+                    .put("status", request.getString("status"))
+                    .put("amount", request.get("amount"))
+                    .put("desc", request.getOrDefault("desc", ""))
+                    .put("createdAt", getSolarDate(request.getLong("created_at")))
+                    .put("answerAt", request.containsKey("answer_at") ? getSolarDate(request.getLong("answer_at")) : "")
+                    .put("paidAt", request.containsKey("paid_at") ? getSolarDate(request.getLong("paid_at")) : ""));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 }

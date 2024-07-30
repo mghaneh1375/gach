@@ -75,6 +75,19 @@ public class AdminTeachAPIRoutes extends Router {
         return TeachController.getAllTeachersDigest();
     }
 
+    @GetMapping(value = "getTransactions")
+    @ResponseBody
+    public String getTransactions(
+            HttpServletRequest request,
+            @RequestParam(required = false, value = "teacherId") ObjectId teacherId,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "justSettlements") Boolean justSettlements
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return TeachController.getTransactions(teacherId, from, to, justSettlements);
+    }
+
     @PutMapping(value = "setTeachReportAsSeen/{id}")
     @ResponseBody
     public String setTeachReportAsSeen(

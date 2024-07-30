@@ -936,8 +936,8 @@ public class Utility {
         if (!uploadableList.get(idx))
             throw new InvalidFieldsException("not access");
 
-        if (file.getSize() > MAX_FILE_SIZE)
-            throw new InvalidFieldsException("حداکثر سایز قابل بارگذاری در این قسمت 2MB می باشد.");
+        if (file.getSize() > ONE_MB * 5)
+            throw new InvalidFieldsException("حداکثر سایز قابل بارگذاری در این قسمت 5MB می باشد.");
 
         String fileType = FileUtils.uploadImageFile(file);
         if (fileType == null)
