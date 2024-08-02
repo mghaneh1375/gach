@@ -22,7 +22,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
 @Controller
-@RequestMapping(path = "/api/comment/user")
+@RequestMapping(path = "/api/comment/public")
 @Validated
 public class CommentAPIRoutes extends Router {
 
@@ -65,7 +65,8 @@ public class CommentAPIRoutes extends Router {
     ) {
         return CommentController.getComments(
                 refId, section, pageIndex,
-                null, false
+                null, false,
+                null, null, null
         );
     }
 
@@ -76,7 +77,8 @@ public class CommentAPIRoutes extends Router {
             @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section
     ) {
         return CommentController.getCommentsCount(
-                refId, section, null, false
+                refId, section, null,
+                false, null, null, null
         );
     }
 

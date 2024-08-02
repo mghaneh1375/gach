@@ -3,7 +3,6 @@ package irysc.gachesefid.Routes.API.Admin;
 import irysc.gachesefid.Controllers.CommentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Routes.Router;
@@ -23,45 +22,62 @@ import javax.validation.constraints.Min;
 @Validated
 public class AdminCommentAPIRoutes extends Router {
 
-    @PostMapping(value = "setCommentStatus/{commentId}")
+    @PutMapping(value = "setCommentStatus/{commentId}")
     @ResponseBody
     public String setCommentStatus(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId commentId,
             @RequestParam(value = "status") Boolean status
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return CommentController.setCommentStatus(
-                getUser(request).getObjectId("_id"), commentId, status
+                getEditorPrivilegeUser(request).getObjectId("_id"), commentId, status
         );
     }
 
-    @GetMapping(value = "getComments/{refId}/{section}/{pageIndex}")
+    @PutMapping(value = "toggleTopStatus/{commentId}")
+    @ResponseBody
+    public String toggleTopStatus(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId commentId
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getEditorPrivilegeUserVoid(request);
+        return CommentController.toggleTopStatus(commentId);
+    }
+
+    @GetMapping(value = "getComments")
     @ResponseBody
     public String getComments(
             HttpServletRequest request,
-            @PathVariable @ObjectIdConstraint ObjectId refId,
-            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section,
-            @PathVariable @Min(0) @Max(1000) Integer pageIndex,
-            @RequestParam(required = false, value = "status") String status
+            @RequestParam(required = false, value = "refId") ObjectId refId,
+            @RequestParam(required = false, value = "section") String section,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "status") String status,
+            @RequestParam(required = false, value = "justTop") Boolean justTop,
+            @RequestParam(value = "pageIndex") @Min(0) @Max(1000) Integer pageIndex
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return CommentController.getComments(
                 refId, section, pageIndex,
-                status, true
+                status, true, from, to, justTop
         );
     }
 
-    @GetMapping(value = "getCommentsCount/{refId}/{section}")
+    @GetMapping(value = "getCommentsCount")
     @ResponseBody
     public String getCommentsCount(
             HttpServletRequest request,
-            @PathVariable @ObjectIdConstraint ObjectId refId,
-            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section,
-            @RequestParam(required = false, value = "status") String status
+            @RequestParam(required = false, value = "refId") ObjectId refId,
+            @RequestParam(required = false, value = "section") String section,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "status") String status,
+            @RequestParam(required = false, value = "justTop") Boolean justTop
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return CommentController.getCommentsCount(
-                refId, section, status, true
+                refId, section, status, true,
+                from, to, justTop
         );
     }
 

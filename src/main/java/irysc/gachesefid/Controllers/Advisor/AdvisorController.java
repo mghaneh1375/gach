@@ -920,19 +920,18 @@ public class AdvisorController {
                     new BasicDBObject("price", 1)
             );
 
-            if(plans.size() == 0)
-                continue;
+//            if(plans.size() == 0)
+//                continue;
 
             if (minPrice != null || maxPrice != null) {
-//                if (plans.size() == 0 && (
-//                        (minPrice != null && defaultPrice < minPrice) ||
-//                                (maxPrice != null && defaultPrice > maxPrice)
-//                ))
-//                    continue;
+                if (plans.size() == 0 && (
+                        (minPrice != null && defaultPrice < minPrice) ||
+                                (maxPrice != null && defaultPrice > maxPrice)
+                ))
+                    continue;
 
-//                else if (plans.size() > 0) {
+                else if (plans.size() > 0) {
                     boolean passFilter = false;
-
                     for (Document plan : plans) {
 
                         int p = (int) plan.getOrDefault("price", defaultPrice);
@@ -949,7 +948,7 @@ public class AdvisorController {
 
                     if (!passFilter)
                         continue;
-//                }
+                }
 
             }
 

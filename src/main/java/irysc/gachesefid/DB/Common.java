@@ -106,21 +106,10 @@ public abstract class Common extends Repository {
         return result;
     }
 
-    public ArrayList<Document> findLimited(Bson filter, Bson project, int skip, int limit) {
+    public ArrayList<Document> findLimited(Bson filter, Bson project, Bson orderBy, int skip, int limit) {
 
-        FindIterable<Document> cursor;
-
-        if (project == null) {
-            if (filter == null)
-                cursor = documentMongoCollection.find().skip(skip).limit(limit);
-            else
-                cursor = documentMongoCollection.find(filter).skip(skip).limit(limit);
-        } else {
-            if (filter == null)
-                cursor = documentMongoCollection.find().projection(project).skip(skip).limit(limit);
-            else
-                cursor = documentMongoCollection.find(filter).projection(project).skip(skip).limit(limit);
-        }
+        FindIterable<Document>
+                cursor = documentMongoCollection.find(filter).sort(orderBy).projection(project).skip(skip).limit(limit);
 
         ArrayList<Document> result = new ArrayList<>();
 
