@@ -1331,6 +1331,11 @@ public class UserController {
 
         if (isStudent) {
 
+            if((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
+                    !jsonObject.getString("lastName").equals(user.getString("last_name"))
+            ) && user.containsKey("change_name"))
+                return generateErr("شما یکبار نام خود را تغییر داده اید و برای تغییر مجدد آن باید از طریق پشتیبانی اقدام فرمایید");
+
             List<Document> branchesDoc = null;
 
             if (jsonObject.has("branches")) {
@@ -1426,8 +1431,13 @@ public class UserController {
 
         }
 
-        user.put("first_name", jsonObject.getString("firstName"));
-        user.put("last_name", jsonObject.getString("lastName"));
+        if(!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
+                !jsonObject.getString("lastName").equals(user.getString("last_name"))
+        ) {
+            user.put("first_name", jsonObject.getString("firstName"));
+            user.put("last_name", jsonObject.getString("lastName"));
+            user.put("change_name", true);
+        }
 
         user.put("city", new Document("_id", city.getObjectId("_id"))
                 .append("name", city.getString("name"))
