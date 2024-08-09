@@ -1,8 +1,8 @@
 package irysc.gachesefid.Exception;
 
-public class InvalidFieldsException extends Exception {
+public class InvalidFieldsException extends RuntimeException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -552136747506374233L;
 
     private final String message;
 

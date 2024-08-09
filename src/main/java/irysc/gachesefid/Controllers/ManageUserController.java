@@ -6,7 +6,6 @@ import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.*;
-import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Excel;
 import irysc.gachesefid.Utility.FileUtils;
@@ -19,7 +18,6 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -126,9 +124,7 @@ public class ManageUserController {
         );
 
         try {
-
             JSONArray jsonArray = new JSONArray();
-
             for (Document user : docs) {
 
                 StringBuilder branchBuilder = new StringBuilder();
@@ -171,6 +167,11 @@ public class ManageUserController {
                         )
                         .put("branch", branch);
 
+                if(user.getList("accesses", String.class).contains(Access.ADVISOR.getName())) {
+                    jsonObject.put("teachPriority", user.getOrDefault("teach_priority", 1000));
+                    jsonObject.put("advisorPriority", user.getOrDefault("advisor_priority", 1000));
+                }
+
                 jsonArray.put(jsonObject);
             }
 
@@ -178,6 +179,26 @@ public class ManageUserController {
         } catch (Exception x) {
             return generateSuccessMsg("user", "");
         }
+    }
+
+    public static String setPriority(ObjectId userId, JSONObject jsonObject) {
+
+        Document user = userRepository.findById(userId);
+        if (user == null)
+            return JSON_NOT_VALID_ID;
+
+        user.put("advisor_priority", jsonObject.getInt("advisorPriority"));
+        user.put("teach_priority", jsonObject.getInt("teachPriority"));
+
+        userRepository.updateOne(
+                eq("_id", user.getObjectId("_id")),
+                new BasicDBObject("$set",
+                        new BasicDBObject("advisor_priority", user.getInteger("advisor_priority"))
+                                .append("teach_priority", user.getInteger("teach_priority"))
+                )
+        );
+
+        return JSON_OK;
     }
 
     public static String setCoins(ObjectId userId, int newCoins) {

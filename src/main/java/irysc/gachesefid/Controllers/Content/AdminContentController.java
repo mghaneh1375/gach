@@ -14,15 +14,14 @@ import static com.mongodb.client.model.Filters.exists;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
+import static irysc.gachesefid.Utility.StaticValues.JUST_TITLE;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdminContentController {
 
     public static String fetchContentDigests() {
 
-        ArrayList<Document> docs = contentRepository.find(null,
-                new BasicDBObject("_id", 1).append("title", 1)
-        );
+        ArrayList<Document> docs = contentRepository.find(null, JUST_TITLE);
 
         JSONArray jsonArray = new JSONArray();
         for(Document doc : docs) {

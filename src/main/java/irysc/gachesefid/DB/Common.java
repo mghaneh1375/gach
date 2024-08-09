@@ -220,6 +220,7 @@ public abstract class Common extends Repository {
         return null;
     }
 
+    synchronized
     public String insertOneWithReturn(Document document) {
         documentMongoCollection.insertOne(document);
         return Utility.generateSuccessMsg(
@@ -227,23 +228,28 @@ public abstract class Common extends Repository {
         );
     }
 
+    synchronized
     public ObjectId insertOneWithReturnId(Document document) {
         documentMongoCollection.insertOne(document);
         return document.getObjectId("_id");
     }
 
+    synchronized
     public void insertOne(Document newDoc) {
         documentMongoCollection.insertOne(newDoc);
     }
 
+    synchronized
     public void updateOne(ObjectId objectId, Bson update) {
         documentMongoCollection.updateOne(eq("_id", objectId), update);
     }
 
+    synchronized
     public void updateOne(Bson filter, Bson update) {
         documentMongoCollection.updateOne(filter, update);
     }
 
+    synchronized
     public void updateOne(Bson filter, Bson update, UpdateOptions options) {
         documentMongoCollection.updateOne(filter, update, options);
     }
@@ -252,6 +258,7 @@ public abstract class Common extends Repository {
         documentMongoCollection.updateMany(filter, update);
     }
 
+    synchronized
     public void replaceOne(Bson filter, Document newDoc) {
         documentMongoCollection.replaceOne(filter, newDoc);
         removeFromCache(table, newDoc.getObjectId("_id"));
@@ -260,6 +267,7 @@ public abstract class Common extends Repository {
             removeFromCache(table, secKey);
     }
 
+    synchronized
     public void replaceOne(ObjectId id, Document newDoc) {
 
         documentMongoCollection.replaceOne(eq("_id", id), newDoc);
@@ -275,6 +283,7 @@ public abstract class Common extends Repository {
 
     abstract void init();
 
+    synchronized
     public void deleteOne(Bson filter) {
 
         Document deleted = documentMongoCollection.findOneAndDelete(filter);
@@ -283,6 +292,7 @@ public abstract class Common extends Repository {
             removeFromCache(table, deleted.getObjectId("_id"));
     }
 
+    synchronized
     public void deleteOne(ObjectId id) {
 
         Document deleted = documentMongoCollection.findOneAndDelete(

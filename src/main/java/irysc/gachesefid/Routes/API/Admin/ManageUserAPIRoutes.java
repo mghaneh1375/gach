@@ -13,6 +13,7 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Digit;
+import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -46,6 +47,20 @@ public class ManageUserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
+    @PutMapping(value = "setPriority/{userId}")
+    @ResponseBody
+    public String setPriority(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId userId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"advisorPriority", "teachPriority"},
+                    paramsType = {Positive.class, Positive.class}
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ManageUserController.setPriority(userId, new JSONObject(jsonStr));
+    }
+
     @PutMapping(path = "/setCoins/{userId}/{newCoins}")
     @ResponseBody
     public String setCoins(HttpServletRequest request,
@@ -70,10 +85,10 @@ public class ManageUserAPIRoutes extends Router {
     @DeleteMapping(value = "/removeUsers")
     @ResponseBody
     public String removeUsers(HttpServletRequest request,
-                               @RequestBody @StrongJSONConstraint(
-                                       params = {"items"},
-                                       paramsType = {JSONArray.class}
-                               ) String jsonStr)
+                              @RequestBody @StrongJSONConstraint(
+                                      params = {"items"},
+                                      paramsType = {JSONArray.class}
+                              ) String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
         getAdminPrivilegeUserVoid(request);
         return ManageUserController.deleteStudents(new JSONObject(jsonStr).getJSONArray("items"));
@@ -279,14 +294,14 @@ public class ManageUserAPIRoutes extends Router {
     @DeleteMapping(value = "/removeStudents")
     @ResponseBody
     public String removeStudents(HttpServletRequest request,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {
-                                                "items"
-                                        },
-                                        paramsType = {
-                                                JSONArray.class
-                                        }
-                                ) @NotBlank String jsonStr
+                                 @RequestBody @StrongJSONConstraint(
+                                         params = {
+                                                 "items"
+                                         },
+                                         paramsType = {
+                                                 JSONArray.class
+                                         }
+                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getSchoolUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
@@ -294,8 +309,8 @@ public class ManageUserAPIRoutes extends Router {
 
         ObjectId id = user.getObjectId("_id");
 
-        if(!isAdmin && !isAgent) {
-            if(!user.containsKey("form_list"))
+        if (!isAdmin && !isAgent) {
+            if (!user.containsKey("form_list"))
                 return JSON_NOT_ACCESS;
 
             Document form = searchInDocumentsKeyVal(
@@ -303,7 +318,7 @@ public class ManageUserAPIRoutes extends Router {
                     "role", "school"
             );
 
-            if(form == null || !form.containsKey("school_id"))
+            if (form == null || !form.containsKey("school_id"))
                 return JSON_NOT_ACCESS;
 
             id = form.getObjectId("school_id");
@@ -473,7 +488,7 @@ public class ManageUserAPIRoutes extends Router {
         } else
             school = user;
 
-        if(!isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class)))
+        if (!isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class)))
             return ManageUserController.getMyStudents(pluckIds((List<Document>) school.getOrDefault("students", new ArrayList<Document>())));
 
         return ManageUserController.getMyStudents((List<ObjectId>) school.getOrDefault("students", new ArrayList<ObjectId>()));

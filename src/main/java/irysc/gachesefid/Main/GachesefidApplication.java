@@ -75,6 +75,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static OnlineStandQuizRepository onlineStandQuizRepository;
     public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
+    public static PayLinkRepository payLinkRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
     public static QuestionReportRepository questionReportRepository;
@@ -94,10 +95,12 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static TeachScheduleRepository teachScheduleRepository;
     public static TeachReportRepository teachReportRepository;
     public static TeachRateRepository teachRateRepository;
+    public static StdRateRepository stdRateRepository;
     public static TeachTagReportRepository teachTagReportRepository;
     public static TicketRepository ticketRepository;
     public static TransactionRepository transactionRepository;
     public static UserGiftRepository userGiftRepository;
+
     public static UserRepository userRepository;
     public static MailRepository mailRepository;
     public static MailQueueRepository mailQueueRepository;
@@ -150,6 +153,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             onlineStandQuizRepository = new OnlineStandQuizRepository();
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
+            payLinkRepository = new PayLinkRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();
             questionTagRepository = new QuestionTagRepository();
@@ -171,6 +175,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             teachScheduleRepository = new TeachScheduleRepository();
             teachReportRepository = new TeachReportRepository();
             teachRateRepository = new TeachRateRepository();
+            stdRateRepository = new StdRateRepository();
             teachTagReportRepository = new TeachTagReportRepository();
             userGiftRepository = new UserGiftRepository();
             userRepository = new UserRepository();

@@ -5,6 +5,7 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.*;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.ExchangeMode;
@@ -25,6 +26,7 @@ import java.util.Random;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
+import static irysc.gachesefid.Controllers.Teaching.Utility.completePrePayForSemiPrivateSchedule;
 import static irysc.gachesefid.Controllers.Teaching.Utility.register;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -148,14 +150,11 @@ public class PayPing {
                 if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
                 ) {
-
                     Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
-
                     if (request != null && studentId.equals(request.getObjectId("user_id"))) {
                         request.put("paid", transaction.getInteger("amount"));
                         request.put("paid_at", System.currentTimeMillis());
                         advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
-
                         AdvisorController.setAdvisor(user, userRepository.findById(request.getObjectId("advisor_id")));
                     }
                 }
@@ -185,7 +184,7 @@ public class PayPing {
                         );
 
                         new Thread(() -> {
-                            Document advisor = userRepository.findById(schedule.getObjectId("_id"));
+                            Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
                             createNotifAndSendSMS(
                                     advisor,
                                     user.getString("first_name") + " " + user.getString("last_name"),
@@ -204,6 +203,19 @@ public class PayPing {
                                         )
                                 )
                         );
+                    }
+                }
+
+                if (transaction.get("products") instanceof ObjectId &&
+                        transaction.getString("section").equals("prePay")
+                ) {
+                    try {
+                        Number n = (Number) transaction.get("account_money");
+                        completePrePayForSemiPrivateSchedule(
+                                transaction.getObjectId("products"), null, user,
+                                (int) (n.doubleValue() + transaction.getInteger("amount"))
+                        );
+                    } catch (InvalidFieldsException ignore) {
                     }
                 }
 
@@ -404,8 +416,6 @@ public class PayPing {
                                 off.getObjectId("_id"),
                                 new BasicDBObject("$set", update)
                         );
-
-
                     }
                 }
 

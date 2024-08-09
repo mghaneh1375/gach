@@ -20,8 +20,7 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Controllers.Teaching.Utility.convertScheduleToJSONDigestForTeacher;
-import static irysc.gachesefid.Controllers.Teaching.Utility.getScheduleForCreateSkyRoom;
+import static irysc.gachesefid.Controllers.Teaching.Utility.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.SkyRoomUtils.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -193,7 +192,7 @@ public class TeachController {
             add(lt("start_at", System.currentTimeMillis()));
         }};
 
-        if(teacherId != null)
+        if (teacherId != null)
             filters.add(eq("user_id", teacherId));
 
         if (from != null)
@@ -218,11 +217,11 @@ public class TeachController {
         double totalSettled = 0;
 
         Set<ObjectId> userIds = new HashSet<>();
-        for(Document schedule : schedules)
+        for (Document schedule : schedules)
             userIds.add(schedule.getObjectId("user_id"));
 
         List<Document> users = userRepository.findByIds(new ArrayList<>(userIds), false, JUST_NAME);
-        if(users == null) return JSON_NOT_UNKNOWN;
+        if (users == null) return JSON_NOT_UNKNOWN;
 
         for (Document schedule : schedules) {
 
@@ -825,7 +824,7 @@ public class TeachController {
         for (Document student : schedule.getList("students", Document.class))
             usersId.add(student.getObjectId("_id"));
 
-        List<Document> users = userRepository.findByIds(usersId, false, USER_PUBLIC_INFO);
+        List<Document> users = userRepository.findByIds(usersId, false, USER_TEACH_INFO);
         if (users == null)
             return JSON_NOT_UNKNOWN;
 
@@ -835,22 +834,29 @@ public class TeachController {
                     .filter(user -> user.getObjectId("_id").equals(student.getObjectId("_id")))
                     .findFirst().ifPresent(user -> {
                         JSONObject tmp = new JSONObject()
-                                .put("createdAt", student.containsKey("created_at") ? getSolarDate(student.getLong("created_at")) : "");
+                                .put("createdAt", student.containsKey("created_at") ? getSolarDate(student.getLong("created_at")) : "")
+                                .put("teacherToStdRate", student.getOrDefault("teacher_to_std_rate", 0))
+                                .put("teacherToStdRateAt", student.containsKey("teacher_to_std_rate_at") ? getSolarDate(student.getLong("teacher_to_std_rate_at")) : "");
                         if (userId == null) {
                             tmp
                                     .put("rate", student.getOrDefault("rate", 0))
                                     .put("rateAt", student.containsKey("rate_at") ? getSolarDate(student.getLong("rate_at")) : "");
                         }
                         fillJSONWithUserPublicInfo(tmp, user);
+                        tmp.getJSONObject("student").put("teachRate", user.getOrDefault("teach_rate", 0));
                         students.put(tmp);
                     });
         }
 
-        return generateSuccessMsg("data", students);
+        return generateSuccessMsg("data", new JSONObject()
+                .put("students", students)
+                .put("canRate", schedule.getLong("start_at") <= System.currentTimeMillis())
+        );
     }
 
     public static String setTeachScheduleReportProblems(
             final ObjectId userId, final ObjectId scheduleId,
+            final ObjectId studentId,
             final JSONArray tagIds, final String desc
     ) {
 
@@ -896,11 +902,11 @@ public class TeachController {
             )
                 return JSON_NOT_ACCESS;
 
-            myTeachReport = new Document("student_id", userId)
+            myTeachReport = new Document("student_id", studentId)
                     .append("send_from", "teacher")
                     .append("seen", false)
                     .append("schedule_id", scheduleId)
-                    .append("teacher_id", schedule.getObjectId("user_id"))
+                    .append("teacher_id", userId)
                     .append("created_at", curr);
         } else if (desc == null)
             myTeachReport.remove("desc");
@@ -1140,4 +1146,83 @@ public class TeachController {
 
         return generateSuccessMsg("data", jsonArray);
     }
+
+    private static void rateToStudent(ObjectId studentId, ObjectId advisorId, int rate) {
+
+        Document student = userRepository.findById(studentId);
+        if (student == null)
+            return;
+
+        long curr = System.currentTimeMillis();
+        Document stdRate = stdRateRepository.findOne(and(
+                eq("student_id", studentId),
+                eq("teacher_id", advisorId)
+        ), null);
+
+        double oldTotalRate = (double) student.getOrDefault("teach_rate", (double) 0);
+        int rateCount = (int) student.getOrDefault("teach_rate_count", 0);
+        oldTotalRate *= rateCount;
+        oldTotalRate += rate;
+        boolean isNew = false;
+
+        if (stdRate == null) {
+            stdRate = new Document("student_id", studentId)
+                    .append("teacher_id", advisorId);
+            rateCount++;
+            isNew = true;
+        } else
+            oldTotalRate -= stdRate.getInteger("rate");
+
+        stdRate
+                .append("rate_at", curr)
+                .append("rate", rate);
+
+        if (isNew)
+            stdRateRepository.insertOne(stdRate);
+        else
+            stdRateRepository.replaceOne(
+                    stdRate.getObjectId("_id"), stdRate
+            );
+
+        double newRate = Math.round(oldTotalRate / rateCount * 100.0) / 100.0;
+        student.put("teach_rate", newRate);
+        student.put("teach_rate_count", rateCount);
+
+        userRepository.updateOne(
+                studentId,
+                new BasicDBObject("$set",
+                        new BasicDBObject("teach_rate", newRate)
+                                .append("teach_rate_count", rateCount)
+                )
+        );
+    }
+
+    public static String rateToSchedule(
+            ObjectId userId, ObjectId scheduleId,
+            ObjectId studentId, int userRate
+    ) {
+        try {
+            Document schedule = teachScheduleRepository.findById(scheduleId);
+            if (schedule == null)
+                return JSON_NOT_VALID_ID;
+
+            if (!schedule.getObjectId("user_id").equals(userId))
+                return JSON_NOT_ACCESS;
+
+            List<Document> students = schedule.getList("students", Document.class);
+            Document studentDoc = searchInDocumentsKeyVal(students, "_id", studentId);
+            studentDoc.put("teacher_to_std_rate", userRate);
+            studentDoc.put("teacher_to_std_rate_at", System.currentTimeMillis());
+
+            teachScheduleRepository.updateOne(
+                    scheduleId, set("students", students)
+            );
+
+            new Thread(() -> rateToStudent(studentId, schedule.getObjectId("user_id"), userRate)).start();
+            return JSON_OK;
+        } catch (Exception x) {
+            return generateErr(x.getMessage());
+        }
+    }
+
 }

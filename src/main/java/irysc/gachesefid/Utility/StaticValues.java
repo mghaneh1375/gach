@@ -38,6 +38,7 @@ public class StaticValues {
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC_LONG = 1000 * SMS_RESEND_SEC * 3;
 
+    public final static long PAY_SEMI_PRIVATE_CLASS_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 24;
     public final static long PAY_SCHEDULE_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
     public final static long SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
 
@@ -55,7 +56,6 @@ public class StaticValues {
 
     public final static boolean LOCAL = true;
     public final static boolean DEV_MODE = false;
-
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";
@@ -80,7 +80,7 @@ public class StaticValues {
                     .append("rate_count", 1).append("tags", 1)
                     .append("students", 1).append("form_list", 1)
                     .append("advice_bio", 1).append("advice_video_link", 1)
-                    .append("pic", 1)
+                    .append("pic", 1).append("advisor_priority", 1)
             ;
 
     public final static BasicDBObject SCHEDULE_DIGEST_FOR_TEACHER =
@@ -103,6 +103,7 @@ public class StaticValues {
                     .append("pic", 1).append("teaches", 1)
                     .append("form_list", 1).append("teach_branches", 1)
                     .append("teach_lessons", 1).append("teach_grades", 1)
+                    .append("teach_priority", 1)
             ;
 
     public final static BasicDBObject QUIZ_DIGEST =
@@ -183,6 +184,15 @@ public class StaticValues {
             .append("rank", 1)
             .append("pic", 1);
 
+    public final static BasicDBObject USER_TEACH_INFO = new BasicDBObject("_id", 1)
+            .append("first_name", 1)
+            .append("last_name", 1)
+            .append("school", 1)
+            .append("grade", 1)
+            .append("branches", 1)
+            .append("rank", 1)
+            .append("pic", 1)
+            .append("teach_rate", 1);
     public final static BasicDBObject USER_MANAGEMENT_INFO_DIGEST = new BasicDBObject("_id", 1)
             .append("first_name", 1)
             .append("last_name", 1)
@@ -198,10 +208,13 @@ public class StaticValues {
             .append("city", 1)
             .append("branches", 1)
             .append("created_at", 1)
-            .append("grade", 1);
+            .append("grade", 1)
+            .append("teach_priority", 1)
+            .append("advisor_priority", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
     public static final BasicDBObject JUST_NAME = new BasicDBObject("first_name", true).append("last_name", true);
+    public static final BasicDBObject JUST_TITLE = new BasicDBObject("title", true);
 
     public static final String JSON_OK = new JSONObject().put("status", "ok").toString();
     public static final String JSON_NOT_VALID_TOKEN = new JSONObject().put("status", "nok").put("msg", "token is not valid").toString();

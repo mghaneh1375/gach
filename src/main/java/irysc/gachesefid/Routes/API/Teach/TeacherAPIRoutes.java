@@ -1,5 +1,6 @@
 package irysc.gachesefid.Routes.API.Teach;
 
+import irysc.gachesefid.Controllers.Teaching.StudentTeachController;
 import irysc.gachesefid.Controllers.Teaching.TeachController;
 import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -22,6 +23,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.Utility.convertPersian;
@@ -216,23 +219,34 @@ public class TeacherAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getMyTeachScheduleReportProblems/{scheduleId}")
+    @ResponseBody
+    public String getMyTeachScheduleReportProblems(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        return StudentTeachController.getMyTeachScheduleReportProblems(
+                getAdvisorUser(request).getObjectId("_id"), scheduleId, false
+        );
+    }
 
-    @PutMapping(value = "setTeachScheduleReportProblems/{scheduleId}")
+    @PutMapping(value = "setTeachScheduleReportProblems/{scheduleId}/{studentId}")
     @ResponseBody
     public String setTeachScheduleReportProblems(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+            @PathVariable @ObjectIdConstraint ObjectId studentId,
             @RequestBody @StrongJSONConstraint(
                     params = {}, paramsType = {},
                     optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
             ) String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         JSONObject jsonObject;
         if(jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
         else jsonObject = new JSONObject(jsonStr);
 
         return TeachController.setTeachScheduleReportProblems(
-                getUser(request).getObjectId("_id"), scheduleId,
+                getAdvisorUser(request).getObjectId("_id"), scheduleId, studentId,
                 jsonObject.has("tagIds") ? jsonObject.getJSONArray("tagIds") : null,
                 jsonObject.has("desc") ? jsonObject.getString("desc") : null
         );
@@ -284,6 +298,20 @@ public class TeacherAPIRoutes extends Router {
         return TeachController.getMySettledRequests(
                 getAdvisorUser(request).getObjectId("_id"),
                 status, createdFrom, createdTo, answerFrom, answerTo
+        );
+    }
+
+    @PutMapping(value = "rateToSchedule/{scheduleId}/{studentId}")
+    @ResponseBody
+    public String rateToSchedule(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+            @PathVariable @ObjectIdConstraint ObjectId studentId,
+            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.rateToSchedule(
+                getAdvisorUser(request).getObjectId("_id"), scheduleId,
+                studentId, rate
         );
     }
 }

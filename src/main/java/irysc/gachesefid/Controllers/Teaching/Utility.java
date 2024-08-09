@@ -1,6 +1,8 @@
 package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.ActiveMode;
@@ -14,8 +16,10 @@ import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -49,13 +53,13 @@ public class Utility {
 
         if (checkRegistryAccess) {
 
+            if(!schedule.getBoolean("can_request"))
+                throw new InvalidFieldsException("ظرفیت کلاس پر شده است");
+
             boolean isSemiPrivate =
                     schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName());
 
-            if (isSemiPrivate && (
-                    !schedule.containsKey("students") ||
-                            schedule.getList("students", Document.class).size() < schedule.getInteger("min_cap")
-            ))
+            if (isSemiPrivate && !schedule.containsKey("send_finalize_pay_sms"))
                 throw new InvalidFieldsException("هنوز تعداد نفرات جلسه مدتظر برای پرداخت نهایی به حدنصاب نرسیده است");
 
             if (schedule.containsKey("students") &&
@@ -66,9 +70,7 @@ public class Utility {
             )
                 throw new InvalidFieldsException("شما قبلا در این جلسه ثبت نام شده اید");
 
-            boolean needForRegistryConfirmation = schedule.getBoolean("need_registry_confirmation");
-
-            if (needForRegistryConfirmation) {
+            if (schedule.getBoolean("need_registry_confirmation")) {
 
                 if (!schedule.containsKey("requests"))
                     throw new InvalidFieldsException("access denied");
@@ -266,7 +268,7 @@ public class Utility {
                 .put("startAt", getSolarDate(schedule.getLong("start_at")))
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1))
-                .put("description", schedule.getOrDefault("description", 1))
+                .put("description", schedule.getOrDefault("description", ""))
                 .put("needRegistryConfirmation", schedule.getOrDefault("need_registry_confirmation", true))
                 .put("id", schedule.getObjectId("_id").toString());
 
@@ -276,7 +278,12 @@ public class Utility {
         )) {
             jsonObject
                     .put("requestsCount", schedule.containsKey("requests") ?
-                            schedule.getList("requests", Document.class).size() : 0);
+                            schedule.getList("requests", Document.class).size() : 0)
+                    .put("shouldPrePay", !(Boolean) schedule.getOrDefault("send_finalize_pay_sms", false));
+            if(!(Boolean) schedule.getOrDefault("send_finalize_pay_sms", false))
+                jsonObject.put("prePayAmount",
+                        Math.min(getConfig().getInteger("pre_pay_amount"), schedule.getInteger("price"))
+                );
         }
 
         return jsonObject;
@@ -298,6 +305,7 @@ public class Utility {
                 .put("id", schedule.getObjectId("_id").toString())
                 .put("skyRoomUrl", schedule.getOrDefault("sky_room_url", ""))
                 .put("teacher", new JSONObject()
+                        .put("id", teacher.getObjectId("_id").toString())
                         .put("name", teacher.getString("first_name") + " " + teacher.getString("last_name"))
                         .put("teachRate", teacher.getOrDefault("teach_rate", 0))
                         .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"))
@@ -339,31 +347,36 @@ public class Utility {
                 .append("products", scheduleId);
     }
 
-    static void completePrePayForSemiPrivateSchedule(
+    public static void completePrePayForSemiPrivateSchedule(
             ObjectId scheduleId, Document schedule,
-            ObjectId userId, int paid, int paidFromWallet
+            Document user, int paid
     ) {
 
-        if (schedule == null && scheduleId != null)
+        if(schedule != null)
+            scheduleId = schedule.getObjectId("_id");
+        else
             schedule = scheduleRepository.findById(scheduleId);
 
-        Document newReqDoc = new Document("_id", userId)
-                .append("created_at", System.currentTimeMillis())
+        long curr = System.currentTimeMillis();
+        Document newReqDoc = new Document("_id", user.getObjectId("_id"))
+                .append("created_at", curr)
                 .append("paid", paid)
-                .append("wallet_paid", paidFromWallet)
                 .append("status", "accept");
 
-        List<Document> requests = schedule.getList("requests", Document.class);
+        List<Document> requests = schedule.containsKey("requests")
+                ? schedule.getList("requests", Document.class)
+                : new ArrayList<>();
+
         requests.add(newReqDoc);
 
         int maxCap = schedule.getInteger("max_cap");
         int minCap = schedule.getInteger("min_cap");
-        int acceptStatusCount = 0;
+        schedule.put("requests", requests);
 
-        for (Document req : schedule.getList("requests", Document.class)) {
-            if (req.getString("status").equalsIgnoreCase("pending"))
-                acceptStatusCount++;
-        }
+        long acceptStatusCount = schedule.getList("requests", Document.class)
+                .stream()
+                .filter(req -> req.getString("status").equalsIgnoreCase("accept"))
+                .count();
 
         if (acceptStatusCount >= maxCap)
             schedule.put("can_request", false);
@@ -371,13 +384,62 @@ public class Utility {
         if (acceptStatusCount >= minCap) {
             if (!schedule.containsKey("send_finalize_pay_sms")) {
                 schedule.put("send_finalize_pay_sms", true);
-                // todo: send sms
+                long expireAt = curr + PAY_SEMI_PRIVATE_CLASS_EXPIRATION_MSEC;
+                schedule.getList("requests", Document.class).forEach(req -> req.put("expire_at", expireAt));
+                final Document finalSchedule = schedule;
+                new Thread(() -> sendCapNotifs(finalSchedule)).start();
             }
         }
 
         teachScheduleRepository.replaceOneWithoutClearCache(
                 scheduleId, schedule
         );
+    }
+
+    private static void sendCapNotifs(Document schedule) {
+        List<Document> allStudents = userRepository.findByIds(
+                schedule.getList("requests", Document.class)
+                        .stream().map(req -> req.getObjectId("_id")).collect(Collectors.toList()),
+                false, new BasicDBObject("events", 1)
+                        .append("first_name", 1).append("last_name", 1)
+                        .append("phone", 1).append("_id", 1)
+        );
+        if(allStudents != null) {
+            Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
+            StringBuilder sb = new StringBuilder(advisor.getString("first_name"))
+                    .append(" ")
+                    .append(advisor.getString("last_name"))
+                    .append("__")
+                    .append(getSolarDate(schedule.getLong("start_at")))
+                    .append("__")
+                    .append(SERVER)
+//                    .append("pay?code=")
+                    .append("myScheduleRequests");
+
+//            List<WriteModel<Document>> writes = new ArrayList<>();
+//            final long expireAt = System.currentTimeMillis() + PAY_SEMI_PRIVATE_CLASS_EXPIRATION_MSEC;
+
+            allStudents.forEach(std -> {
+//                final String code = randomString(20);
+//                writes.add(new InsertOneModel<>(
+//                                new Document("code", code)
+//                                        .append("section", "teach")
+//                                        .append("ref_id", schedule.getObjectId("_id"))
+//                                        .append("user_id", std.getObjectId("_id"))
+//                                        .append("status", "wait_for_pay")
+//                                        .append("expire_at", expireAt)
+//                        )
+//                );
+//                createNotifAndSendSMS(std, sb + code, "teachMinCap");
+                createNotifAndSendSMS(std, sb.toString(), "teachMinCap");
+                userRepository.updateOne(
+                        std.getObjectId("_id"),
+                        set("events", std.get("events"))
+                );
+            });
+
+//            payLinkRepository.bulkWrite(writes);
+        }
     }
 
     static Bson buildMyScheduleRequestsFilters(
@@ -466,11 +528,12 @@ public class Utility {
         }
 
         schedule.put("students", students);
+        schedule.put("requests", requests);
 
         BasicDBObject update = new BasicDBObject("students", students)
                 .append("requests", requests);
 
-        if (isPrivate) {
+        if (isPrivate || schedule.getInteger("max_cap") >= students.size()) {
             schedule.put("can_request", false);
             update.append("can_request", false);
         }

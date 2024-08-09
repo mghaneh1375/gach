@@ -33,6 +33,7 @@ public class StudentTeachController {
         try {
             Document schedule = getSchedule(userId, scheduleId, false, false);
 
+            // درخواست برای کلاسهای نیمه خصوصی اصلا توی این سرویس نمی آیند
             if (!schedule.getBoolean("can_request") ||
                     !schedule.getBoolean("need_registry_confirmation")
             )
@@ -134,14 +135,49 @@ public class StudentTeachController {
         }
     }
 
-    private static String prePayForSemiPrivateSchedule(
-            Document schedule, Document user
+    public static String prePayForSemiPrivateSchedule(
+            ObjectId scheduleId, Document user,
+            String offCode
     ) {
+
+        Document schedule = teachScheduleRepository.findById(scheduleId);
+        if (schedule == null ||
+                !schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()))
+            return JSON_NOT_VALID_ID;
+
+        if (!schedule.getBoolean("can_request"))
+            return generateErr("ظرفیت این کلاس پر می باشد");
+
+        if (schedule.containsKey("send_finalize_pay_sms")) {
+            if (schedule.containsKey("students") &&
+                    searchInDocumentsKeyValIdx(
+                            schedule.getList("students", Document.class),
+                            "_id", user.getObjectId("_id")
+                    ) != -1
+            )
+                return generateErr("شما قبلا در این جلسه ثبت نام شده اید");
+
+            return payForSchedule(user, schedule, null, offCode);
+        }
+
+        if (schedule.containsKey("requests") &&
+                searchInDocumentsKeyValIdx(
+                        schedule.getList("requests", Document.class),
+                        "_id", user.getObjectId("_id")
+                ) != -1
+        )
+            return generateErr("شما قبلا مبلغ ودیعه این جلسه را پرداخت کرده اید");
+
         double money = ((Number) user.get("money")).doubleValue();
-        Document config = getConfig();
-        int prePayAmount = config.getInteger("pre_pay_amount");
+        int prePayAmount =
+                Math.min(getConfig().getInteger("pre_pay_amount"), schedule.getInteger("price"));
 
         if (prePayAmount - money <= 100) {
+
+            completePrePayForSemiPrivateSchedule(
+                    null, schedule, user, prePayAmount
+            );
+
             money = irysc.gachesefid.Controllers.Teaching.Utility.payFromWallet(
                     prePayAmount, money, user.getObjectId("_id")
             );
@@ -149,13 +185,8 @@ public class StudentTeachController {
             ObjectId tId = transactionRepository.insertOneWithReturnId(
                     createPrePayTransactionDoc(
                             prePayAmount, user.getObjectId("_id"),
-                            schedule.getObjectId("_id")
+                            scheduleId
                     )
-            );
-
-            completePrePayForSemiPrivateSchedule(
-                    null, schedule, user.getObjectId("_id"),
-                    0, prePayAmount
             );
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
@@ -165,8 +196,23 @@ public class StudentTeachController {
             );
         }
 
-        //todo: complete
-        return null;
+        long orderId = Math.abs(new Random().nextLong());
+        while (transactionRepository.exist(
+                eq("order_id", orderId)
+        ))
+            orderId = Math.abs(new Random().nextLong());
+
+        Document doc =
+                new Document("user_id", user.getObjectId("_id"))
+                        .append("account_money", money)
+                        .append("amount", (int) (prePayAmount - money))
+                        .append("created_at", System.currentTimeMillis())
+                        .append("status", "init")
+                        .append("order_id", orderId)
+                        .append("products", scheduleId)
+                        .append("section", "prePay");
+
+        return goToPayment((int) (prePayAmount - money), doc);
     }
 
     public static String myScheduleRequests(
@@ -205,7 +251,10 @@ public class StudentTeachController {
                         .put("price", schedule.get("price"))
                         .put("teachMode", schedule.get("teach_mode"))
                         .put("createdAt", getSolarDate(req.getLong("created_at")))
-                        .put("status", req.getString("status"))
+                        .put("status", schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) ?
+                                schedule.containsKey("send_finalize_pay_sms") ? "waitForPaySemiPrivate" : "waitForCap"
+                                : req.getString("status"))
+                        .put("prePaid", req.getOrDefault("paid", 0))
                         .put("expireAt", req.containsKey("expire_at") ? getSolarDate(req.getLong("expire_at")) : "")
                         .put("answerAt", req.containsKey("answer_at") ? getSolarDate(req.getLong("answer_at")) : "");
 
@@ -292,17 +341,21 @@ public class StudentTeachController {
     }
 
     public static String payForSchedule(
-            Document user, ObjectId scheduleId,
-            String offCode
+            Document user, Document schedule,
+            ObjectId scheduleId, String offCode
     ) {
         ObjectId userId = user.getObjectId("_id");
 
         try {
-            Document schedule = getSchedule(
-                    userId, scheduleId, false, true
-            );
+            if (schedule == null)
+                schedule = getSchedule(
+                        userId, scheduleId, false, true
+                );
+            else
+                scheduleId = schedule.getObjectId("_id");
 
             int price = schedule.getInteger("price");
+            boolean isPrivate = schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName());
 
             double offAmount = 0;
             double shouldPayDouble = price * 1.0;
@@ -324,12 +377,9 @@ public class StudentTeachController {
                 );
             }
 
-            boolean isPrivate = schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName());
-
             int shouldPay = (int) shouldPayDouble;
             if (!isPrivate && request != null)
-                shouldPay -= (Integer) request.getOrDefault("wallet_paid", 0) +
-                        (Integer) request.getOrDefault("paid", 0);
+                shouldPay -= (Integer) request.getOrDefault("paid", 0);
 
             double money = ((Number) user.get("money")).doubleValue();
             long curr = System.currentTimeMillis();
@@ -345,8 +395,9 @@ public class StudentTeachController {
                         )
                 );
 
+                final Document finalSchedule = schedule;
                 new Thread(() -> {
-                    Document advisor = userRepository.findById(schedule.getObjectId("_id"));
+                    Document advisor = userRepository.findById(finalSchedule.getObjectId("user_id"));
                     createNotifAndSendSMS(
                             advisor,
                             user.getString("first_name") + " " + user.getString("last_name"),
@@ -396,7 +447,6 @@ public class StudentTeachController {
             // todo: set can request false for auto requests and create a request
 
             return goToPayment((int) (shouldPay - money), doc);
-
         } catch (Exception x) {
             return generateErr(x.getMessage());
         }
@@ -584,6 +634,7 @@ public class StudentTeachController {
                 jsonObject.put("age", age);
             }
 
+            jsonObject.put("teachPriority", teacher.getOrDefault("teach_priority", 1000));
             docs.add(jsonObject);
 
             if (isAllFiltersOff) {
@@ -603,6 +654,9 @@ public class StudentTeachController {
         docs.sort((o1, o2) -> {
             int a = o1.has(sortKey) ? o1.getInt(sortKey) : -1;
             int b = o2.has(sortKey) ? o2.getInt(sortKey) : -1;
+            if (b == a)
+                return o1.getInt("teachPriority") - o2.getInt("teachPriority");
+
             return b - a;
         });
 
@@ -628,7 +682,7 @@ public class StudentTeachController {
 
         List<Object> tagOIdsList = null;
 
-        if(tagIds != null && tagIds.length() > 0) {
+        if (tagIds != null && tagIds.length() > 0) {
             Set<ObjectId> tagOIds = new HashSet<>();
             try {
                 for (int i = 0; i < tagIds.length(); i++) {
@@ -645,7 +699,7 @@ public class StudentTeachController {
                 return JSON_NOT_VALID_PARAMS;
         }
 
-        if(tagOIdsList == null)
+        if (tagOIdsList == null)
             tagOIdsList = new ArrayList<>();
 
         Document myTeachReport = teachReportRepository.findOne(
@@ -658,12 +712,12 @@ public class StudentTeachController {
 
         boolean isFirstReport = false;
 
-        if(myTeachReport == null) {
+        if (myTeachReport == null) {
             isFirstReport = true;
             Document schedule = teachScheduleRepository.findById(scheduleId);
             long curr = System.currentTimeMillis();
 
-            if(schedule == null || !schedule.containsKey("students") ||
+            if (schedule == null || !schedule.containsKey("students") ||
                     schedule.getLong("start_at") > curr ||
                     schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr ||
                     searchInDocumentsKeyValIdx(
@@ -678,15 +732,14 @@ public class StudentTeachController {
                     .append("seen", false)
                     .append("teacher_id", schedule.getObjectId("user_id"))
                     .append("created_at", System.currentTimeMillis());
-        }
-        else if(desc == null)
+        } else if (desc == null)
             myTeachReport.remove("desc");
 
         myTeachReport.put("tag_ids", tagOIdsList);
-        if(desc != null)
+        if (desc != null)
             myTeachReport.put("desc", desc);
 
-        if(isFirstReport)
+        if (isFirstReport)
             teachReportRepository.insertOne(myTeachReport);
         else
             teachReportRepository.replaceOne(
@@ -698,24 +751,30 @@ public class StudentTeachController {
     }
 
     public static String getMyTeachScheduleReportProblems(
-            ObjectId userId, ObjectId scheduleId
+            ObjectId userId, ObjectId scheduleId, boolean isForStudent
     ) {
         Document myTeachReport = teachReportRepository.findOne(
                 and(
-                        eq("student_id", userId),
-                        eq("schedule_id", scheduleId)
+                        isForStudent
+                                ? eq("student_id", userId)
+                                : eq("teacher_id", userId),
+                        eq("schedule_id", scheduleId),
+                        eq("send_from", isForStudent ? "student" : "teacher")
                 ), new BasicDBObject("tag_ids", 1).append("desc", 1)
         );
 
-        if(myTeachReport == null)
-            return generateSuccessMsg("data", new JSONArray());
+        if (myTeachReport == null)
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("tags", new JSONArray())
+                    .put("desc", "")
+            );
 
         List<Document> tags = teachTagReportRepository.findByIds(
                 myTeachReport.getList("tag_ids", Object.class),
                 false, null
         );
 
-        if(tags == null)
+        if (tags == null)
             return JSON_NOT_UNKNOWN;
 
         JSONArray jsonArray = new JSONArray();

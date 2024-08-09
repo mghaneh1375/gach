@@ -953,6 +953,7 @@ public class AdvisorController {
             }
 
             JSONObject jsonObject = convertToJSONDigest(null, advisor);
+            jsonObject.put("advisorPriority", advisor.getOrDefault("advisor_priority", 1000));
 
             int age = -1;
             if (advisor.containsKey("birth_day")) {
@@ -1000,7 +1001,7 @@ public class AdvisorController {
         docs.sort((o1, o2) -> {
             int a = o1.has(sortKey) ? o1.getInt(sortKey) : -1;
             int b = o2.has(sortKey) ? o2.getInt(sortKey) : -1;
-
+            if(a == b) return o1.getInt("advisorPriority") - o2.getInt("advisorPriority");
             return b - a;
         });
 

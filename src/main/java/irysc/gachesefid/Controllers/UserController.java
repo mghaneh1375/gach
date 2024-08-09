@@ -12,7 +12,6 @@ import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.*;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.PhoneValidator;
-import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.Binary;
@@ -1889,57 +1888,49 @@ public class UserController {
         )
             return JSON_NOT_VALID_PARAMS;
 
-        List<Document> foundBranches =
-                gradeRepository.findByIds(tmpBranchesId, true);
+        if(tmpBranchesId != null) {
+            if (gradeRepository.findByIds(tmpBranchesId, true) == null)
+                return JSON_NOT_VALID_PARAMS;
+        }
 
-        if(foundBranches == null)
-            return JSON_NOT_VALID_PARAMS;
+        if(tmpGradesId != null) {
+            List<Document> foundGrades =
+                    branchRepository.findByIds(tmpGradesId, true);
 
-        List<Document> foundGrades =
-                branchRepository.findByIds(tmpGradesId, true);
+            if (foundGrades == null)
+                return JSON_NOT_VALID_PARAMS;
 
-        if(foundGrades == null)
-            return JSON_NOT_VALID_PARAMS;
+            if (tmpLessonsId != null) {
+                List<ObjectId> allIds = new ArrayList<>();
+                for (Document grade : foundGrades) {
+                    allIds.addAll(
+                            grade.getList("lessons", Document.class).stream()
+                                    .map(document -> document.getObjectId("_id"))
+                                    .collect(Collectors.toList())
+                    );
+                }
 
-        if(tmpLessonsId != null) {
-            List<ObjectId> allIds = new ArrayList<>();
-            for(Document grade : foundGrades) {
-                allIds.addAll(
-                        grade.getList("lessons", Document.class).stream()
-                                .map(document -> document.getObjectId("_id"))
-                                .collect(Collectors.toList())
-                );
+                for (ObjectId id : tmpLessonsId)
+                    if (!allIds.contains(id)) return JSON_NOT_VALID_PARAMS;
             }
-
-            for(ObjectId id : tmpLessonsId)
-                if(!allIds.contains(id)) return JSON_NOT_VALID_PARAMS;
         }
 
         BasicDBObject updateQuery = new BasicDBObject();
 
         if(tmpBranchesId != null) {
-            List<ObjectId> branches = user.containsKey("teach_branches") ?
-                    user.getList("teach_branches", ObjectId.class) :
-                    new ArrayList<>();
-            branches.addAll(tmpBranchesId);
+            List<ObjectId> branches = new ArrayList<>(tmpBranchesId);
             updateQuery.append("teach_branches", branches);
             user.put("teach_branches", branches);
         }
 
         if(tmpLessonsId != null) {
-            List<ObjectId> lessons = user.containsKey("teach_lessons") ?
-                    user.getList("teach_lessons", ObjectId.class) :
-                    new ArrayList<>();
-            lessons.addAll(tmpLessonsId);
+            List<ObjectId> lessons = new ArrayList<>(tmpLessonsId);
             updateQuery.append("teach_lessons", lessons);
             user.put("teach_lessons", lessons);
         }
 
         if(tmpGradesId != null) {
-            List<ObjectId> grades = user.containsKey("teach_grades") ?
-                    user.getList("teach_grades", ObjectId.class) :
-                    new ArrayList<>();
-            grades.addAll(tmpGradesId);
+            List<ObjectId> grades = new ArrayList<>(tmpGradesId);
             updateQuery.append("teach_grades", grades);
             user.put("teach_grades", grades);
         }

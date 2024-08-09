@@ -70,6 +70,14 @@ public class CommentAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getTopComments/{section}")
+    @ResponseBody
+    public String getTopComments(
+            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section
+    ) {
+        return CommentController.getTopComments(section);
+    }
+
     @GetMapping(value = "getCommentsCount/{refId}/{section}")
     @ResponseBody
     public String getCommentsCount(
@@ -82,21 +90,18 @@ public class CommentAPIRoutes extends Router {
         );
     }
 
-    @GetMapping(value = "getMyComments/{pageIndex}")
+    @GetMapping(value = "getMyComments")
     @ResponseBody
     public String getMyComments(
             HttpServletRequest request,
-            @PathVariable @Min(0) @Max(1000) Integer pageIndex
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "status") String status,
+            @RequestParam(required = false, value = "section") String section
     ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
         return CommentController.getMyComments(
-                getUser(request).getObjectId("_id"), pageIndex
+                getUser(request).getObjectId("_id"),
+                section, from, to, status
         );
-    }
-
-    @GetMapping(value = "getMyCommentsCount")
-    @ResponseBody
-    public String getMyCommentsCount(HttpServletRequest request
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return CommentController.getMyCommentsCount(getUser(request).getObjectId("_id"));
     }
 }

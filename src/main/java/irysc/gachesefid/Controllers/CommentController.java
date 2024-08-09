@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -12,7 +13,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
@@ -25,8 +28,8 @@ import static irysc.gachesefid.Utility.Utility.*;
 public class CommentController {
 
     private static final Integer MAX_COMMENT_PER_USER = 5;
-    private static final Integer PAGE_SIZE = 20;
-    private static final Integer ADMIN_PAGE_SIZE = 2;
+    private static final Integer PAGE_SIZE = 10;
+    private static final Integer ADMIN_PAGE_SIZE = 20;
 
     public static String writeComment(
             ObjectId userId, ObjectId refId,
@@ -120,7 +123,7 @@ public class CommentController {
         if (!comment.getString("status").equals("accept"))
             return generateErr("لطفا ابتدا این نظر را تایید نمایید");
 
-        if (comment.containsKey("is_top")) {
+        if (!comment.containsKey("is_top")) {
             comment.put("is_top", true);
             commentRepository.updateOne(commentId, set("is_top", true));
         } else {
@@ -178,8 +181,19 @@ public class CommentController {
                 );
 
         JSONArray jsonArray = new JSONArray();
+        List<Document> comments = new ArrayList<>();
+        for (Document doc : docs)
+            comments.add(doc);
 
-        for (Document doc : docs) {
+        List<Document> users = null;
+        List<Document> contents = null;
+        if(isForAdmin) {
+            PairValue p = findRefs(comments);
+            users = (List<Document>) p.getKey();
+            contents = (List<Document>) p.getValue();
+        }
+
+        for (Document doc : comments) {
             try {
                 Document student = doc.get("student", Document.class);
                 JSONObject jsonObject = new JSONObject()
@@ -194,13 +208,19 @@ public class CommentController {
                             .put("isTop", doc.getOrDefault("is_top", false))
                             .put("considerAt", doc.containsKey("consider_at") ? getSolarDate(doc.getLong("consider_at")) : "");
 
-                    if (doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
-                            doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())
+                    if ((doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
+                            doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())) && users != null
                     ) {
-                        Document ref = userRepository.findById(doc.getObjectId("ref_id"));
-                        if (ref != null)
-                            jsonObject.put("ref", ref.getString("first_name") + " " + ref.getString("last_name"));
-                    }
+                        users.stream().filter(user -> user.getObjectId("_id")
+                                        .equals(doc.getObjectId("ref_id")))
+                                .findFirst().ifPresent(user ->
+                                        jsonObject.put("ref", user.getString("first_name") + " " + user.getString("last_name")));
+                    } else if (doc.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()) && contents != null)
+                        contents.stream().filter(content -> content.getObjectId("_id")
+                                .equals(doc.getObjectId("ref_id"))
+                        ).findFirst().ifPresent(content ->
+                                jsonObject.put("ref", content.getString("title"))
+                        );
                 }
 
                 jsonArray.put(jsonObject);
@@ -211,10 +231,68 @@ public class CommentController {
         JSONObject jsonObject = new JSONObject()
                 .put("comments", jsonArray);
 
-        if(!isForAdmin)
+        if (!isForAdmin)
             jsonObject.put("hasNextPage", commentRepository.count(filters.size() == 0 ? null : and(filters)) > pageIndex * PAGE_SIZE);
 
         return generateSuccessMsg("data", jsonObject);
+    }
+
+    public static String getTopComments(String section) {
+
+        List<Bson> filters = new ArrayList<>();
+
+        if (!EnumValidatorImp.isValid(section, CommentSection.class))
+            return JSON_NOT_VALID_PARAMS;
+
+        filters.add(eq("section", section));
+        filters.add(exists("is_top"));
+        filters.add(eq("status", "accept"));
+
+        AggregateIterable<Document> docs =
+                commentRepository.findWithJoinUser(
+                        "user_id", "student",
+                        match(and(filters)), null,
+                        Sorts.descending("created_at"),
+                        null, null
+                );
+
+        JSONArray jsonArray = new JSONArray();
+        List<Document> comments = new ArrayList<>();
+        for (Document doc : docs)
+            comments.add(doc);
+
+        PairValue p = findRefs(comments);
+        List<Document> users = (List<Document>) p.getKey();
+        List<Document> contents = (List<Document>) p.getValue();
+
+        for (Document doc : comments) {
+            try {
+                Document student = doc.get("student", Document.class);
+                JSONObject jsonObject = new JSONObject()
+                        .put("comment", doc.getString("comment"))
+                        .put("createdAt", getSolarDate(doc.getLong("created_at")));
+
+                fillJSONWithUserPublicInfo(jsonObject, student);
+
+                if ((doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
+                        doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())) && users != null
+                ) {
+                    users.stream().filter(user -> user.getObjectId("_id")
+                                    .equals(doc.getObjectId("ref_id")))
+                            .findFirst().ifPresent(user ->
+                                    jsonObject.put("ref", user.getString("first_name") + " " + user.getString("last_name")));
+                } else if (doc.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()) && contents != null)
+                    contents.stream().filter(content -> content.getObjectId("_id")
+                            .equals(doc.getObjectId("ref_id"))
+                    ).findFirst().ifPresent(content ->
+                            jsonObject.put("ref", content.getString("title"))
+                    );
+
+                jsonArray.put(jsonObject);
+            } catch (Exception ignore) {}
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 
     public static String getCommentsCount(
@@ -259,32 +337,99 @@ public class CommentController {
         return generateSuccessMsg("data", jsonObject);
     }
 
-    public static String getMyComments(ObjectId userId, Integer pageIndex) {
+    private static PairValue findRefs(List<Document> comments) {
 
-        List<Document> comments = commentRepository.findLimited(
-                eq("user_id", userId), null,
-                Sorts.descending("created_at"),
-                PAGE_SIZE * (pageIndex - 1), PAGE_SIZE
+        Set<ObjectId> userIds = new HashSet<>();
+        Set<ObjectId> contentIds = new HashSet<>();
+
+        for (Document doc : comments) {
+            if (doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
+                    doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())
+            )
+                userIds.add(doc.getObjectId("ref_id"));
+            else if (doc.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()))
+                contentIds.add(doc.getObjectId("ref_id"));
+        }
+
+        List<Document> users = null;
+        List<Document> contents = null;
+
+        if (userIds.size() > 0)
+            users = userRepository.findByIds(new ArrayList<>(userIds), false, JUST_NAME);
+
+        if (contentIds.size() > 0)
+            contents = contentRepository.findByIds(new ArrayList<>(contentIds), false, JUST_TITLE);
+
+        return new PairValue(users, contents);
+    }
+
+    public static String getMyComments(ObjectId userId,
+                                       String commentSection,
+                                       Long from, Long to,
+                                       String status
+    ) {
+
+        List<Bson> filters = new ArrayList<>() {{
+            add(eq("user_id", userId));
+        }};
+        if (from != null)
+            filters.add(gt("created_at", from));
+
+        if (to != null)
+            filters.add(lt("created_at", to));
+
+        if (status != null) {
+            if (!status.equalsIgnoreCase("pending") &&
+                    !status.equalsIgnoreCase("accept") &&
+                    !status.equalsIgnoreCase("reject")
+            )
+                return JSON_NOT_VALID_PARAMS;
+
+            filters.add(eq("status", status));
+        }
+
+        if (commentSection != null) {
+            if (!EnumValidatorImp.isValid(commentSection, CommentSection.class))
+                return JSON_NOT_VALID_PARAMS;
+
+            filters.add(eq("section", commentSection));
+        }
+
+        List<Document> comments = commentRepository.find(
+                and(filters), null,
+                Sorts.descending("created_at")
         );
 
         JSONArray jsonArray = new JSONArray();
+        PairValue p = findRefs(comments);
+
+        List<Document> users = (List<Document>) p.getKey();
+        List<Document> contents = (List<Document>) p.getValue();
 
         for (Document doc : comments) {
             try {
                 JSONObject jsonObject = new JSONObject()
+                        .put("id", doc.getObjectId("_id").toString())
                         .put("comment", doc.getString("comment"))
                         .put("createdAt", getSolarDate(doc.getLong("created_at")))
+                        .put("considerAt", doc.containsKey("consider_at") ? getSolarDate(doc.getLong("consider_at")) : "")
                         .put("status", doc.getString("status"))
                         .put("section", doc.getString("section"))
                         .put("refId", doc.getObjectId("ref_id"));
 
-                if (doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
-                        doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())
+                if ((doc.getString("section").equalsIgnoreCase(CommentSection.TEACH.getName()) ||
+                        doc.getString("section").equalsIgnoreCase(CommentSection.ADVISOR.getName())) && users != null
                 ) {
-                    Document ref = userRepository.findById(doc.getObjectId("ref_id"));
-                    if (ref != null)
-                        jsonObject.put("ref", ref.getString("first_name") + " " + ref.getString("last_name"));
-                }
+                    users.stream().filter(user -> user.getObjectId("_id")
+                                    .equals(doc.getObjectId("ref_id")))
+                            .findFirst().ifPresent(user ->
+                                    jsonObject.put("ref", user.getString("first_name") + " " + user.getString("last_name")));
+                } else if (doc.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()) && contents != null)
+                    contents.stream().filter(content -> content.getObjectId("_id")
+                            .equals(doc.getObjectId("ref_id"))
+                    ).findFirst().ifPresent(content ->
+                            jsonObject.put("ref", content.getString("title"))
+                    );
 
                 jsonArray.put(jsonObject);
             } catch (Exception ignore) {
@@ -292,10 +437,6 @@ public class CommentController {
         }
 
         return generateSuccessMsg("data", jsonArray);
-    }
-
-    public static String getMyCommentsCount(ObjectId userId) {
-        return generateSuccessMsg("count", commentRepository.count(eq("user_id", userId)));
     }
 
 }
