@@ -466,13 +466,10 @@ public class ManageUserController {
         JSONArray data = new JSONArray();
 
         for (Document itr : studentsInfo) {
-
             if(itr == null)
                 continue;
 
-            JSONObject jsonObject = new JSONObject();
-            Utility.fillJSONWithUser(jsonObject, itr);
-            data.put(jsonObject.getJSONObject("student"));
+            data.put(Utility.fillJSONWithUser(itr));
         }
 
         return generateSuccessMsg("data", data);

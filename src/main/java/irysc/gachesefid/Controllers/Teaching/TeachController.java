@@ -659,7 +659,7 @@ public class TeachController {
             }
         }
 
-        List<Document> users = userRepository.findByIds(usersId, true, USER_PUBLIC_INFO);
+        List<Document> users = userRepository.findByIds(usersId, true, USER_TEACH_INFO);
         if (users == null)
             return JSON_NOT_UNKNOWN;
 
@@ -717,9 +717,12 @@ public class TeachController {
                         )
                         .put("answerAt", request.containsKey("answer_at") ? getSolarDate(request.getLong("answer_at")) : "")
                         .put("expireAt", request.containsKey("expire_at") ? getSolarDate(request.getLong("expire_at")) : "")
-                        .put("status", request.getString("status"));
+                        .put("status", schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) ?
+                                schedule.containsKey("send_finalize_pay_sms") ? "waitForPaySemiPrivate" : "waitForCap"
+                                : request.getString("status"));
 
                 Utility.fillJSONWithUserPublicInfo(jsonObject, user);
+                jsonObject.getJSONObject("student").put("teachRate", user.getOrDefault("teach_rate", 0));
                 requestsJSON.put(jsonObject);
             }
 

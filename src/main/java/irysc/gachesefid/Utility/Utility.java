@@ -1325,6 +1325,20 @@ public class Utility {
         jsonObject.put("student", jsonObject1);
     }
 
+    public static JSONObject fillJSONWithUser(Document user) {
+        //todo: customize with common user info
+        JSONObject jsonObject1 = new JSONObject()
+                .put("id", user.getObjectId("_id").toString())
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("phone", user.getOrDefault("phone", ""))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                .put("NID", user.getString("NID"));
+
+        fillJSONWithUserCommonInfo(jsonObject1, user);
+        return jsonObject1;
+    }
+
     public static void fillJSONWithUserPublicInfo(JSONObject jsonObject, Document user) {
 
         //todo: customize with common user info
