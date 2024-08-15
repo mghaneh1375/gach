@@ -474,7 +474,9 @@ public class TashrihiQuizController extends QuizAbstract {
                         continue;
 
                     JSONObject jsonObject = new JSONObject()
-                            .put("allMarked", std.getOrDefault("all_marked", false))
+                            .put("allMarked", std.getList("answers", Document.class).size() == 0 ?
+                                    true : std.getOrDefault("all_marked", false)
+                            )
                             .put("totalMark", std.getOrDefault("total_mark", 0));
 
                     Utility.fillJSONWithUser(jsonObject, user);
@@ -1003,7 +1005,6 @@ public class TashrihiQuizController extends QuizAbstract {
                 return Utility.generateErr("آزمون موردنظر هنوز به اتمام نرسیده است.");
 
             List<Document> students = quiz.getList("students", Document.class);
-
             int stdIdx = searchInDocumentsKeyValIdx(students, "_id", studentId);
 
             if (stdIdx == -1)
@@ -1013,7 +1014,6 @@ public class TashrihiQuizController extends QuizAbstract {
                 return Utility.generateErr("دانش آموز موردنظر در این آزمون غایب بوده است.");
 
             List<Document> studentAnswers = students.get(stdIdx).getList("answers", Document.class);
-
             int answerIdx = searchInDocumentsKeyValIdx(studentAnswers, "question_id", questionId);
             if (answerIdx == -1)
                 return JSON_NOT_VALID_ID;
