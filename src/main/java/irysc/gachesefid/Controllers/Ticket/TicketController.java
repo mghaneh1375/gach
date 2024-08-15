@@ -129,7 +129,7 @@ public class TicketController {
                                 .append("chats", 1).append("ref_id", 1).append("additional", 1)
                                 .append("advisor_id", 1)
                         ),
-                        Sorts.descending("send_date"), null, null
+                        Sorts.descending("send_date"), null, null, project(USER_DIGEST.append("accesses", 1))
                 );
 
         JSONArray jsonArray = new JSONArray();
@@ -265,7 +265,8 @@ public class TicketController {
             AggregateIterable<Document> docs =
                     ticketRepository.findWithJoinUser(
                             "user_id", "student",
-                            match(filter), null, null, null, null
+                            match(filter), null, null,
+                            null, null, project(USER_DIGEST)
                     );
 
             if (!docs.iterator().hasNext())

@@ -189,6 +189,7 @@ public class Utilities {
                 throw new InvalidFieldsException("unknown exception");
 
             Utility.fillJSONWithUser(result, student);
+            result.getJSONObject("student").put("accesses", student.get("accesses"));
         }
 
         if (isFinisherNeeded && request.containsKey("finisher")) {

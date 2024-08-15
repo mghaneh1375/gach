@@ -318,7 +318,8 @@ public abstract class Common extends Repository {
     public AggregateIterable<Document> findWithJoinUser(
             String userKey, String finalUserKey,
             Bson match, Bson project,
-            Bson sortFilter, Integer skip, Integer limit
+            Bson sortFilter, Integer skip, Integer limit,
+            Bson userProject
     ) {
 
         List<Bson> filters = new ArrayList<>();
@@ -331,7 +332,7 @@ public abstract class Common extends Repository {
             filters.add(lookup("user",
                     Collections.singletonList(new Variable<>("myId", "$" + userKey)), Arrays.asList(
                             match(expr(new Document("$eq", Arrays.asList("$_id", "$$myId")))),
-                            project(USER_DIGEST)
+                            userProject
                     ), finalUserKey));
 
             filters.add(unwind("$" + finalUserKey, new UnwindOptions().preserveNullAndEmptyArrays(true)));

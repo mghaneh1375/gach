@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.mongodb.client.model.Aggregates.match;
+import static com.mongodb.client.model.Aggregates.project;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static com.mongodb.client.model.Updates.unset;
@@ -177,7 +178,7 @@ public class CommentController {
                         filters.size() > 0 ? match(filters.size() == 1 ? filters.get(0) : and(filters)) : null, null,
                         Sorts.descending("created_at"),
                         (pageIndex - 1) * (isForAdmin ? ADMIN_PAGE_SIZE : PAGE_SIZE),
-                        isForAdmin ? ADMIN_PAGE_SIZE : PAGE_SIZE
+                        isForAdmin ? ADMIN_PAGE_SIZE : PAGE_SIZE, project(USER_DIGEST)
                 );
 
         JSONArray jsonArray = new JSONArray();
@@ -253,7 +254,7 @@ public class CommentController {
                         "user_id", "student",
                         match(and(filters)), null,
                         Sorts.descending("created_at"),
-                        null, null
+                        null, null, project(USER_DIGEST)
                 );
 
         JSONArray jsonArray = new JSONArray();

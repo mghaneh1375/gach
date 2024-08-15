@@ -93,8 +93,8 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "hasOpenRequest")
     @ResponseBody
     public String hasOpenRequest(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        Document user = getStudentUser(request);
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+        Document user = getUser(request);
         return AdvisorController.hasOpenRequest(
                 user.getObjectId("_id"),
                 (Number) user.get("money")
