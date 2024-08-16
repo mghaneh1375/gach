@@ -8,20 +8,19 @@ import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.set;
+import static com.mongodb.client.model.Updates.inc;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
@@ -45,6 +44,7 @@ public class Jobs implements Runnable {
 
         timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
 
+        timer.schedule(new InactiveExpiredAdvice(), 0, ONE_DAY_MIL_SEC);
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
@@ -53,7 +53,108 @@ public class Jobs implements Runnable {
     //todo remove redundant transactions
     //todo remove redundant school questions
 
-    class RemoveExpiredNotifs extends TimerTask {
+    private static class InactiveExpiredAdvice extends TimerTask {
+        @Override
+        public void run() {
+
+            userRepository.updateMany(exists("check_advice_status_again"), inc("check_advice_status_again", -1));
+
+            List<Document> users = userRepository.find(and(
+                    exists("my_advisors.0"),
+                    or(
+                            exists("check_advice_status_again", false),
+                            lte("check_advice_status_again", 2)
+                    )
+            ), new BasicDBObject("my_advisors", 1));
+
+            long curr = System.currentTimeMillis();
+            List<WriteModel<Document>> writes = new ArrayList<>();
+            HashMap<ObjectId, List<ObjectId>> expiredStudents = null;
+            Set<ObjectId> shouldClearFromCache = new HashSet<>();
+
+            for (Document user : users) {
+                int minReminder = 32;
+                List<ObjectId> expiredAdvisors = null;
+
+                for (ObjectId advisorId : user.getList("my_advisors", ObjectId.class)) {
+                    Document adviceRequest = advisorRequestsRepository.findOne(and(
+                            eq("user_id", user.getObjectId("_id")),
+                            eq("advisor_id", advisorId),
+                            eq("answer", "accept"),
+                            exists("paid_at")
+                    ), new BasicDBObject("paid_at", 1), Sorts.descending("paid_at"));
+
+                    if (adviceRequest == null)
+                        continue;
+
+                    int r = (int) ((curr - adviceRequest.getLong("paid_at")) / ONE_DAY_MIL_SEC);
+                    if (r > 31) {
+                        if (expiredAdvisors == null) expiredAdvisors = new ArrayList<>();
+                        expiredAdvisors.add(advisorId);
+
+                        if (expiredStudents == null)
+                            expiredStudents = new HashMap<>();
+
+                        if (!expiredStudents.containsKey(advisorId))
+                            expiredStudents.put(advisorId, new ArrayList<>() {{
+                                add(user.getObjectId("_id"));
+                            }});
+                        else
+                            expiredStudents.get(advisorId).add(user.getObjectId("_id"));
+                    } else
+                        minReminder = Math.min(minReminder, r);
+                }
+
+                Document updateQuery = new Document();
+                if (minReminder < 32)
+                    updateQuery.append("check_advice_status_again", minReminder);
+
+                if (expiredAdvisors != null) {
+                    List<ObjectId> finalExpiredAdvisors = expiredAdvisors;
+                    updateQuery.append("my_advisors", user.getList("my_advisors", ObjectId.class)
+                            .stream().filter(objectId -> !finalExpiredAdvisors.contains(objectId)).collect(Collectors.toList())
+                    );
+                }
+
+                shouldClearFromCache.add(user.getObjectId("_id"));
+                writes.add(new UpdateOneModel<>(
+                        eq("_id", user.getObjectId("_id")),
+                        new BasicDBObject("$set", updateQuery)
+                ));
+            }
+
+            if (expiredStudents != null) {
+                List<Document> advisors = userRepository.find(
+                        in("_id", expiredStudents.keySet().toArray()),
+                        new BasicDBObject("students", 1)
+                );
+                for (ObjectId advisorId : expiredStudents.keySet()) {
+                    final List<ObjectId> excludeList = expiredStudents.get(advisorId);
+                    advisors.stream().filter(advisor -> advisor.getObjectId("_id").equals(advisorId))
+                            .findFirst().ifPresent(advisor -> {
+                                shouldClearFromCache.add(advisorId);
+                                writes.add(new UpdateOneModel<>(
+                                        eq("_id", advisorId),
+                                        new BasicDBObject("$set",
+                                                new BasicDBObject("students",
+                                                        advisor.getList("students", Document.class)
+                                                                .stream().filter(std -> !excludeList.contains(std.getObjectId("_id")))
+                                                                .collect(Collectors.toList())
+                                                )
+                                        )
+                                ));
+                            });
+                }
+            }
+
+            if(writes.size() > 0) {
+                userRepository.bulkWrite(writes);
+                userRepository.clearBatchFromCache(new ArrayList<>(shouldClearFromCache));
+            }
+        }
+    }
+
+    private static class RemoveExpiredNotifs extends TimerTask {
 
         public void run() {
 
@@ -134,7 +235,7 @@ public class Jobs implements Runnable {
                 ));
             }
 
-            if(writes.size() > 0) {
+            if (writes.size() > 0) {
                 teachScheduleRepository.bulkWrite(writes);
                 docs.forEach(doc -> teachScheduleRepository.clearFromCache(doc.getObjectId("_id")));
             }
