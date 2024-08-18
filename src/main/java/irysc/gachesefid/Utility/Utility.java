@@ -33,7 +33,6 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -1586,15 +1585,8 @@ public class Utility {
         return offDoc;
     }
 
-    public static void createNotifAndSendSMS(Document wantedUser, String studentName, String mode) {
-
+    private static Document doCreateNotif(Document wantedUser, String studentName, String mode) {
         String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
-
-        if (wantedUser.containsKey("phone"))
-            sendSMSWithTemplate(wantedUser.getString("phone"), 815,
-                    new PairValue("name", wantedUserName)
-            );
-
         long curr = System.currentTimeMillis();
 
         String title;
@@ -1643,6 +1635,10 @@ public class Utility {
             case "rejectRequest":
                 title = "رد دانش آموز توسط مشاور";
                 msg += "درخواست شما برای مشاوره، توسط " + studentName + " رد شد.";
+                break;
+            case "cancelAdvisorRequest":
+                title = "انصراف درخواست مشاوره توسط دانش آموز";
+                msg += "درخواست مشاوره، توسط " + studentName + " لغو شد.";
                 break;
             case "createRoom":
                 title = "ایجاد اتاق جلسه";
@@ -1698,6 +1694,22 @@ public class Utility {
         );
 
         wantedUser.put("events", events);
-        notifRepository.insertOne(notif);
+        return notif;
+    }
+
+    public static void createNotifAndSendSMS(Document wantedUser, String studentName, String mode) {
+
+        String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
+
+        if (wantedUser.containsKey("phone"))
+            sendSMSWithTemplate(wantedUser.getString("phone"), 815,
+                    new PairValue("name", wantedUserName)
+            );
+
+        notifRepository.insertOne(doCreateNotif(wantedUser, studentName, mode));
+    }
+
+    public static void createJustNotif(Document wantedUser, String studentName, String mode) {
+        notifRepository.insertOne(doCreateNotif(wantedUser, studentName, mode));
     }
 }

@@ -106,7 +106,12 @@ public class StudentAdviceRoutes extends Router {
     public String cancelRequest(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId reqId
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return StudentAdviceController.cancelRequest(getStudentUser(request).getObjectId("_id"), reqId);
+        Document user = getStudentUser(request);
+        return StudentAdviceController.cancelRequest(
+                user.getObjectId("_id"),
+                user.getString("first_name") + " " + user.getString("last_name"),
+                reqId
+        );
     }
 
     @DeleteMapping(value = "cancel/{advisorId}")

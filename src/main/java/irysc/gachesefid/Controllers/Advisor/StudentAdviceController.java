@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Random;
 
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.AdvisorController.returnRequests;
 import static irysc.gachesefid.Controllers.Advisor.AdvisorController.setAdvisor;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
@@ -163,7 +164,7 @@ public class StudentAdviceController {
 
     }
 
-    public static String cancelRequest(ObjectId userId, ObjectId reqId) {
+    public static String cancelRequest(ObjectId userId, String username, ObjectId reqId) {
 
         Document doc = advisorRequestsRepository.findOneAndDelete(
                 and(
@@ -181,6 +182,10 @@ public class StudentAdviceController {
 
         if (doc == null)
             return generateErr("شما مجاز به حذف این درخواست نیستید");
+
+        Document advisor = userRepository.findById(doc.getObjectId("advisor_id"));
+        createJustNotif(advisor, username, "cancelAdvisorRequest");
+        userRepository.updateOne(doc.getObjectId("advisor_id"), set("events", advisor.get("events")));
 
         return JSON_OK;
     }

@@ -31,14 +31,45 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class NotifController {
 
+    private final static String[] systemNotifs = new String[]{
+            "پرداخت و نهایی سازی مشاور توسط دانش آموز",
+            "افزایش اعتبار",
+            "درخواست مشاوره",
+            "ایجاد اتاق جلسه",
+            "تایید دانش آموز توسط مشاور",
+            "رد دانش آموز توسط مشاور",
+            "تعریف آزمون توسط مشاور",
+            "تعریف آزمون توسط مدرسه",
+            "تعریف تمرین توسط مدرسه",
+            "به روزرسانی برنامه توسط مشاور",
+    };
+
     public static String getAll(String sendVia, Long from, Long to) {
 
         ArrayList<Bson> filter = new ArrayList<>();
         filter.add(eq("send_via", sendVia));
+        filter.add(or(
+                        gt("users_count", 1),
+                        nin("title", systemNotifs)
+                )
+        );
+
+        if(from != null)
+            filter.add(gte("created_at", from));
+
+        if(to != null)
+            filter.add(lte("created_at", to));
+
         ArrayList<Document> docs = notifRepository.find(and(filter), null, Sorts.descending("created_at"));
 
         JSONArray jsonArray = new JSONArray();
         for (Document doc : docs) {
+            if(
+                    doc.containsKey("پرداخت کلاس") || doc.containsKey("درخواست کلاس با استاد") ||
+                            doc.containsKey("به روزرسانی برنامه توسط") || doc.containsKey("کلاس شما با استاد") ||
+                            doc.containsKey("لغو شد!")
+            )
+                continue;
             jsonArray.put(new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("usersCount", doc.getOrDefault("users_count", 0))
