@@ -495,12 +495,15 @@ public class AdminReportController {
 
     private static String getTashrihiQuizAnswerSheet(Document quiz, Document student) {
 
-        if (!quiz.containsKey("cropped"))
+        boolean isQRNeeded = (boolean)quiz.getOrDefault("is_q_r_needed", true);
+
+        //todo: check
+        if (isQRNeeded && !quiz.containsKey("cropped"))
             return generateErr("برش پاسخ برگها هنوز صورت نگرفته است.");
 
-        Document studentDoc = null;
+        Document studentDoc;
 
-        if (student != null) {
+        if (student != null && isQRNeeded) {
             studentDoc = userRepository.findById(student.getObjectId("_id"));
             if (studentDoc == null)
                 return JSON_NOT_UNKNOWN;
@@ -692,6 +695,10 @@ public class AdminReportController {
             if (student == null)
                 return JSON_NOT_ACCESS;
 
+            if (doc.getOrDefault("mode", KindQuiz.REGULAR.getName()).toString()
+                    .equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+                return getTashrihiQuizAnswerSheet(doc, student);
+
             Document questions = doc.get("questions", Document.class);
 
             List<Number> marks = questions.getList("marks", Number.class);
@@ -701,7 +708,7 @@ public class AdminReportController {
             ArrayList<PairValue> pairValues = null;
 
             if(!isPDFQuiz)
-                pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new byte[0])).getData());
+                pairValues = Utility.getAnswers(((Binary) questions.getOrDefault("answers", new Binary(new byte[0]))).getData());
 
             List<Binary> questionStats = null;
             if (doc.containsKey("question_stat")) {
@@ -722,7 +729,7 @@ public class AdminReportController {
             else
                 fillWithAnswerSheetData(answersJsonArray, questionStats, pairValues, marks);
 
-            ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new byte[0])).getData());
+            ArrayList<PairValue> stdAnswers = Utility.getAnswers(((Binary) student.getOrDefault("answers", new Binary(new byte[0]))).getData());
 
             if(isPDFQuiz) {
                 for (int i = 0; i < doc.getInteger("q_no"); i++) {

@@ -451,7 +451,7 @@ public class UserAPIRoutes extends Router {
                                   }
                           ) @NotBlank String json
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return UserController.setAboutMe(getAdvisorUser(request), new JSONObject(json));
+        return UserController.setAboutMe(getAdvisorUser(request), convertPersian(new JSONObject(json)));
     }
 
     @GetMapping(value = "getMyFields")

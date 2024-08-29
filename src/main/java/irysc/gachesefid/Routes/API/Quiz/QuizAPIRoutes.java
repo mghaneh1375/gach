@@ -1611,17 +1611,13 @@ public class QuizAPIRoutes extends Router {
                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                               @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
-
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-
         return QuizController.createTaraz(
                 mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
                 isAdmin ? null : user.getObjectId("_id"), quizId
         );
-
     }
 
 

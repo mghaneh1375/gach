@@ -1421,21 +1421,22 @@ public class TashrihiQuizController extends QuizAbstract {
         }
 
         private void doCorrectStudents() {
-
-            int idx = 0;
             for (Document question : questionsList) {
                 for (TashrihiQuestionStat aStudentsStat : studentsStat)
-                    aStudentsStat.doCorrect(question, idx);
-                idx++;
+                    aStudentsStat.doCorrect(question);
             }
         }
 
         private void calcSubjectMarkSum() {
             for (TashrihiQuestionStat itr : subjectsStat) {
                 for (TashrihiQuestionStat aStudentsStat : studentsStat) {
-                    itr.marks.add(
-                            (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
-                    );
+                    if (!aStudentsStat.subjectMark.containsKey(itr.id) ||
+                            aStudentsStat.subjectMark.get(itr.id) == null)
+                        itr.marks.add(0.0);
+                    else
+                        itr.marks.add(
+                                (aStudentsStat.subjectMark.get(itr.id) / aStudentsStat.subjectTotalMark.get(itr.id)) * 100.0
+                        );
                 }
             }
         }
@@ -1443,9 +1444,13 @@ public class TashrihiQuizController extends QuizAbstract {
         private void calcLessonMarkSum() {
             for (TashrihiQuestionStat itr : lessonsStat) {
                 for (TashrihiQuestionStat aStudentsStat : studentsStat) {
-                    itr.marks.add(
-                            (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
-                    );
+                    if (!aStudentsStat.lessonMark.containsKey(itr.id) ||
+                            aStudentsStat.lessonMark.get(itr.id) == null)
+                        itr.marks.add(0.0);
+                    else
+                        itr.marks.add(
+                                (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
+                        );
                 }
             }
         }

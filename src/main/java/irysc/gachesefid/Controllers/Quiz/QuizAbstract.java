@@ -156,24 +156,16 @@ public abstract class QuizAbstract {
             marks = new ArrayList<>();
         }
 
-        void doCorrect(Document question, int idx) {
+        void doCorrect(Document question) {
 
-            double mark = 0.0;
             double qMark = question.getDouble("mark");
             totalMark += qMark;
-
-            if (studentAnswers.size() <= idx)
-                return;
 
             Document ans = Utility.searchInDocumentsKeyVal(
                     studentAnswers, "question_id", question.getObjectId("_id")
             );
 
-            if (ans != null && ans.containsKey("mark"))
-                mark += ans.getDouble("mark");
-            else
-                return;
-
+            double mark = (ans != null && ans.containsKey("mark")) ? ans.getDouble("mark") : 0.0;
             marks.add(mark);
 
             ObjectId subjectId = question.getObjectId("subject_id");
@@ -245,8 +237,10 @@ public abstract class QuizAbstract {
 
             double percent =
                     isForSubject ?
-                            subjectMark.get(oId) / subjectTotalMark.get(oId) :
-                            lessonMark.get(oId) / lessonTotalMark.get(oId);
+                            subjectMark.containsKey(oId) ?
+                            subjectMark.get(oId) / subjectTotalMark.get(oId) : 0 :
+                            lessonMark.containsKey(oId) ?
+                            lessonMark.get(oId) / lessonTotalMark.get(oId) : 0;
 
             percent *= 100;
 
@@ -302,17 +296,25 @@ public abstract class QuizAbstract {
                 out[5] = (byte) ((int) subjectStateRanking.get(oId));
                 out[6] = (byte) ((int) subjectCityRanking.get(oId));
                 out[7] = (byte) ((int) subjectSchoolRanking.get(oId));
-                out[12] = (byte) ((int) subjectTotalQuestions.get(oId));
+                out[12] = (byte) (subjectTotalQuestions.containsKey(oId) ? (int) subjectTotalQuestions.get(oId) : 0);
             } else {
                 out[4] = (byte) ((int) lessonCountryRanking.get(oId));
                 out[5] = (byte) ((int) lessonStateRanking.get(oId));
                 out[6] = (byte) ((int) lessonCityRanking.get(oId));
                 out[7] = (byte) ((int) lessonSchoolRanking.get(oId));
-                out[12] = (byte) ((int) lessonTotalQuestions.get(oId));
+                out[12] = (byte) (lessonTotalQuestions.containsKey(oId) ? (int) lessonTotalQuestions.get(oId) : 0);
             }
 
-            fillByteArrWithDouble(isForSubject ? subjectMark.get(oId) : lessonMark.get(oId), out, 8);
-            fillByteArrWithDouble(isForSubject ? subjectTotalMark.get(oId) : lessonTotalMark.get(oId), out, 10);
+            fillByteArrWithDouble(isForSubject ?
+                    subjectMark.containsKey(oId) ? subjectMark.get(oId) : 0 :
+                    lessonMark.containsKey(oId) ? lessonMark.get(oId) : 0,
+                    out, 8
+            );
+            fillByteArrWithDouble(isForSubject ?
+                    subjectTotalMark.containsKey(oId) ? subjectTotalMark.get(oId) : 0 :
+                    lessonTotalMark.containsKey(oId) ? lessonTotalMark.get(oId) : 0,
+                    out, 10
+            );
 
             return out;
         }

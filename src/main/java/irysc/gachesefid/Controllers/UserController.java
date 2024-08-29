@@ -861,7 +861,9 @@ public class UserController {
 
     public static boolean setPic(MultipartFile file, Document user) {
 
-        if (user.containsKey("pic") && user.getString("pic") != null)
+        if (user.containsKey("pic") && user.getString("pic") != null &&
+                !user.containsKey("avatar_id")
+        )
             new Thread(() -> FileUtils.removeFile(user.getString("pic"), UserRepository.FOLDER)).start();
 
         String filename = FileUtils.uploadFile(file, UserRepository.FOLDER);
