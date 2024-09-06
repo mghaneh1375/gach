@@ -85,7 +85,7 @@ public class PointController {
     ) {
 
         Document point = pointRepository.findBySecKey(action.getName());
-        if(point == null) return;
+        if(point == null || 1 == 1) return;
 
         if(userPointRepository.exist(
                 and(
