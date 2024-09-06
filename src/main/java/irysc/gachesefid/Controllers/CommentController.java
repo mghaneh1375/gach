@@ -2,7 +2,9 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Utility.StaticValues;
 import irysc.gachesefid.Validator.EnumValidatorImp;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Aggregates.project;
@@ -112,6 +115,13 @@ public class CommentController {
         comment.put("consider_at", System.currentTimeMillis());
         commentRepository.replaceOneWithoutClearCache(commentId, comment);
 
+        if (status) {
+            new Thread(() -> {
+                // todo: check badge
+                PointController.addPointForAction(comment.getObjectId("user_id"), Action.COMMENT, comment.getObjectId("_id"), null);
+            }).start();
+        }
+
         return JSON_OK;
     }
 
@@ -188,7 +198,7 @@ public class CommentController {
 
         List<Document> users = null;
         List<Document> contents = null;
-        if(isForAdmin) {
+        if (isForAdmin) {
             PairValue p = findRefs(comments);
             users = (List<Document>) p.getKey();
             contents = (List<Document>) p.getValue();
@@ -290,7 +300,8 @@ public class CommentController {
                     );
 
                 jsonArray.put(jsonObject);
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -362,6 +373,22 @@ public class CommentController {
             contents = contentRepository.findByIds(new ArrayList<>(contentIds), false, JUST_TITLE);
 
         return new PairValue(users, contents);
+    }
+
+    private static List<Document> findJustContentsRef(List<Document> comments) {
+
+        List<Object> contentIds = comments.stream().filter(document ->
+                        document.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName())
+                )
+                .map(document -> document.getObjectId("ref_id"))
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<Document> contents = null;
+        if (contentIds.size() > 0)
+            contents = contentRepository.findByIds(contentIds, false, JUST_TITLE);
+
+        return contents;
     }
 
     public static String getMyComments(ObjectId userId,
@@ -440,4 +467,146 @@ public class CommentController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String getCommentsAboutMe(
+            ObjectId userId,
+            String commentSection,
+            Long from, Long to
+    ) {
+        List<ObjectId> refIds = new ArrayList<>() {{
+            add(userId);
+        }};
+        if (commentSection == null ||
+                commentSection.equalsIgnoreCase(CommentSection.CONTENT.getName())
+        ) {
+            refIds.addAll(
+                    contentRepository.find(
+                                    eq("teacher_ids", userId), JUST_ID
+                            ).stream()
+                            .map(document -> document.getObjectId("_id"))
+                            .collect(Collectors.toList())
+            );
+        }
+        List<Bson> filters = new ArrayList<>() {{
+            add(in("ref_id", refIds));
+            add(eq("status", "accept"));
+        }};
+
+        if (from != null)
+            filters.add(gt("created_at", from));
+        if (to != null)
+            filters.add(lt("created_at", to));
+        if (commentSection != null)
+            filters.add(eq("section", commentSection));
+
+        List<Document> comments = commentRepository.find(and(filters), null);
+        List<Document> contents = findJustContentsRef(comments);
+
+        JSONArray jsonArray = new JSONArray();
+        comments.forEach(comment -> {
+            JSONObject jsonObject =
+                    new JSONObject()
+                            .put("id", comment.getObjectId("_id").toString())
+                            .put("comment", comment.getString("comment"))
+                            .put("marked", comment.getOrDefault("marked", false))
+                            .put("createdAt", getSolarDate(comment.getLong("created_at")))
+                            .put("section", comment.getString("section"));
+
+            if (comment.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()) && contents != null)
+                contents.stream().filter(content -> content.getObjectId("_id")
+                        .equals(comment.getObjectId("ref_id"))
+                ).findFirst().ifPresent(content ->
+                        jsonObject.put("ref", content.getString("title"))
+                );
+
+            jsonArray.put(jsonObject);
+        });
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String toggleCommentMarkedStatus(
+            ObjectId userId, ObjectId commentId
+    ) {
+        Document comment = commentRepository.findById(commentId);
+        if (comment == null)
+            return JSON_NOT_VALID_ID;
+
+        if ((comment.getString("section").equalsIgnoreCase(
+                CommentSection.ADVISOR.getName()
+        ) || comment.getString("section").equalsIgnoreCase(
+                CommentSection.TEACH.getName()
+        )) && !comment.getObjectId("ref_id").equals(userId))
+            return JSON_NOT_ACCESS;
+
+        if (comment.getString("section").equalsIgnoreCase(
+                CommentSection.CONTENT.getName()
+        )) {
+            if (!contentRepository.exist(
+                    and(
+                            eq("_id", comment.getObjectId("ref_id")),
+                            eq("teacher_ids", userId)
+                    )
+            ))
+                return JSON_NOT_ACCESS;
+        }
+
+        comment.put("marked", !(boolean) comment.getOrDefault("marked", false));
+        commentRepository.updateOne(eq("_id", commentId), set("marked", comment.getBoolean("marked")));
+
+        return JSON_OK;
+    }
+
+    public static String getTeacherMarkedComments(ObjectId userId) {
+        List<ObjectId> refIds = new ArrayList<>() {{
+            add(userId);
+        }};
+        refIds.addAll(
+                contentRepository.find(
+                                eq("teacher_ids", userId), JUST_ID
+                        )
+                        .stream()
+                        .map(document -> document.getObjectId("_id"))
+                        .collect(Collectors.toList())
+        );
+
+
+        AggregateIterable<Document> docs =
+                commentRepository.findWithJoinUser(
+                        "user_id", "student",
+                        match(and(
+                                in("ref_id", refIds),
+                                eq("status", "accept"),
+                                exists("marked"),
+                                eq("marked", true)
+                        )), null,
+                        Sorts.descending("created_at"),
+                        null, null, project(USER_DIGEST)
+                );
+
+        List<Document> comments = new ArrayList<>();
+        for(Document doc : docs)
+            comments.add(doc);
+
+        List<Document> contents = findJustContentsRef(comments);
+        JSONArray jsonArray = new JSONArray();
+        comments.forEach(comment -> {
+            Document student = comment.get("student", Document.class);
+            JSONObject jsonObject =
+                    new JSONObject()
+                            .put("comment", comment.getString("comment"))
+                            .put("createdAt", getSolarDate(comment.getLong("created_at")))
+                            .put("section", comment.getString("section"));
+            fillJSONWithUserPublicInfo(jsonObject, student);
+            if (comment.getString("section").equalsIgnoreCase(CommentSection.CONTENT.getName()) && contents != null)
+                contents.stream().filter(content -> content.getObjectId("_id")
+                        .equals(comment.getObjectId("ref_id"))
+                ).findFirst().ifPresent(content ->
+                        jsonObject.put("ref", content.getString("title"))
+                );
+
+            jsonArray.put(jsonObject);
+        });
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 }

@@ -3,6 +3,8 @@ package irysc.gachesefid.Controllers.Content;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
@@ -19,9 +21,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
@@ -33,34 +37,67 @@ import static irysc.gachesefid.Utility.Utility.*;
 public class StudentContentController {
 
     public static String changeTeacherName(JSONObject jsonObject) {
-
         String oldName = jsonObject.getString("oldName");
         String newName = jsonObject.getString("newName");
+        String nid = jsonObject.has("NID") ? jsonObject.getString("NID") : null;
+        if(nid != null && !irysc.gachesefid.Utility.Utility.validationNationalCode(nid))
+            return generateErr("کد ملی وارد شده معتبر نمی باشد");
 
         List<Document> docs = contentRepository.find(
                 regex("teacher", Pattern.compile(Pattern.quote(oldName))),
-                new BasicDBObject("teacher", 1)
+                new BasicDBObject("teacher", 1).append("nids", 1)
         );
+        List<WriteModel<Document>> writes = new ArrayList<>();
+        List<Object> ids = new ArrayList<>();
 
         for (Document doc : docs) {
-
-            List<String> newList = new ArrayList<>();
             String[] splited = doc.getString("teacher").split("__");
 
+            if(!doc.containsKey("nids")) {
+                StringBuilder sb = new StringBuilder();
+                for(int i = 0; i < splited.length; i++) {
+                    if(i == 0)
+                        sb.append("*");
+                    else
+                        sb.append("__").append("*");
+                }
+                doc.put("nids", sb.toString());
+            }
+            String[] nidSplited = doc.getString("nids").split("__");
+
+            List<String> newList = new ArrayList<>();
+            List<String> nids = new ArrayList<>();
+            int idx = 0;
+
             for (String itr : splited) {
-
-                if (itr.equals(oldName))
+                if (itr.equals(oldName)) {
                     newList.add(newName);
-                else
+                    nids.add(nid == null ? "*" : nid);
+                }
+                else {
                     newList.add(itr);
-
+                    nids.add(nidSplited[idx]);
+                }
+                idx++;
             }
 
-            Document d = contentRepository.findById(doc.getObjectId("_id"));
-            d.put("teacher", String.join("__", newList));
-            contentRepository.replaceOneWithoutClearCache(doc.getObjectId("_id"), d);
+            List<ObjectId> teacherIds = userRepository.find(in("NID",
+                            nids.stream().filter(s -> !s.equals("*")).distinct().collect(Collectors.toList())),
+                    JUST_ID
+            ).stream().map(document -> document.getObjectId("_id")).collect(Collectors.toList());
+
+            writes.add(new UpdateOneModel<>(
+                    eq("_id", doc.getObjectId("_id")),
+                    new BasicDBObject("$set", new BasicDBObject("teacher", String.join("__", newList))
+                            .append("nids", String.join("__", nids))
+                            .append("teacher_ids", teacherIds)
+                    )
+            ));
+            ids.add(doc.getObjectId("_id"));
         }
 
+        contentRepository.bulkWrite(writes);
+        contentRepository.clearBatchFromCache(ids);
         return JSON_OK;
     }
 
@@ -89,6 +126,37 @@ public class StudentContentController {
 
     public static String distinctTeachers() {
         return generateSuccessMsg("data", findDistinctTeachers());
+    }
+
+    public static String distinctTeachersForAdmin() {
+        List<Document> contents = contentRepository.find(null, new BasicDBObject("teacher", 1)
+                .append("nids", 1)
+        );
+
+        List<String> distinctTeachers = new ArrayList<>();
+        List<String> distinctNIDS = new ArrayList<>();
+
+        contents.forEach(content -> {
+            String[] splited = content.getString("teacher").split("__");
+            String[] nidSplited = content.getOrDefault("nids", "").toString().split("__");
+
+            for(int i = 0; i < splited.length; i++) {
+                if(distinctTeachers.contains(splited[i]))
+                    continue;
+                distinctTeachers.add(splited[i]);
+                distinctNIDS.add(nidSplited.length > i && !nidSplited[i].equals("*") ? nidSplited[i] : "");
+            }
+        });
+
+        JSONArray jsonArray = new JSONArray();
+        for (int i = 0; i < distinctTeachers.size(); i++) {
+            jsonArray.put(new JSONObject()
+                    .put("teacher", distinctTeachers.get(i))
+                    .put("nid", distinctNIDS.get(i))
+            );
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 
     public static String teacherPackages(String teacher) {
@@ -241,13 +309,11 @@ public class StudentContentController {
         List<String> distincts = new ArrayList<>();
 
         for (int i = 0; i < jsonArray.length(); i++) {
-
             String[] splited = jsonArray.getString(i).split("__");
             for (String itr : splited) {
                 if (!distincts.contains(itr))
                     distincts.add(itr);
             }
-
         }
 
         return distincts;
@@ -926,6 +992,22 @@ public class StudentContentController {
             irysc.gachesefid.Utility.Utility.fillJSONWithUser(jsonObject, user);
             data.put(jsonObject);
         }
+
+        return generateSuccessMsg("data", data);
+    }
+
+    public static String getTeacherContents(ObjectId teacherId) {
+
+        JSONArray data = new JSONArray();
+        contentRepository.find(
+                and(
+                        eq("teacher_ids", teacherId),
+                        eq("visibility", true)
+                ),
+                CONTENT_DIGEST,
+                Sorts.ascending("priority")
+        ).forEach(doc ->
+                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false)));
 
         return generateSuccessMsg("data", data);
     }

@@ -22,13 +22,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Controllers.Teaching.Utility.addTeacherLessonAndGradeToJSON;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -1170,7 +1170,7 @@ public class UserController {
         if (wantToAdvice && jsonObject.has("adviceVideoLink") && !isValidURL(jsonObject.getString("adviceVideoLink")))
             return generateErr("لینک ویدیو معتبر نمی باشد");
 
-        if(wantToAdvice && jsonObject.has("adviceAboutMe")) {
+        if (wantToAdvice && jsonObject.has("adviceAboutMe")) {
             adviceBio = jsonObject.getString("adviceAboutMe");
             if (adviceBio.length() > 500)
                 return generateErr("متن درباره من می تواند حداکثر ۵۰۰ کاراکتر باشد");
@@ -1189,14 +1189,13 @@ public class UserController {
                 return generateErr("حداکثر مبلغ حق التدریس " + config.getInteger("max_teach_price") + " می باشد");
         }
 
-        if(wantToAdvice) {
-            if(adviceBio != null)
+        if (wantToAdvice) {
+            if (adviceBio != null)
                 user.put("advice_bio", adviceBio);
             if (jsonObject.has("adviceVideoLink"))
                 user.put("advice_video_link", jsonObject.getString("adviceVideoLink"));
             user.put("advice", true);
-        }
-        else {
+        } else {
             user.remove("advice_bio");
             user.remove("advice_video_link");
             user.remove("advice");
@@ -1333,7 +1332,7 @@ public class UserController {
 
         if (isStudent) {
 
-            if((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
+            if ((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
                     !jsonObject.getString("lastName").equals(user.getString("last_name"))
             ) && user.containsKey("change_name"))
                 return generateErr("شما یکبار نام خود را تغییر داده اید و برای تغییر مجدد آن باید از طریق پشتیبانی اقدام فرمایید");
@@ -1433,7 +1432,7 @@ public class UserController {
 
         }
 
-        if(!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
+        if (!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
                 !jsonObject.getString("lastName").equals(user.getString("last_name"))
         ) {
             user.put("first_name", jsonObject.getString("firstName"));
@@ -1827,19 +1826,19 @@ public class UserController {
         JSONArray branches = new JSONArray();
         JSONArray grades = new JSONArray();
 
-        if(user.containsKey("teach_lessons")) {
+        if (user.containsKey("teach_lessons")) {
             user.getList("teach_lessons", ObjectId.class)
                     .stream().map(ObjectId::toString)
                     .forEach(lessons::put);
         }
 
-        if(user.containsKey("teach_grades")) {
+        if (user.containsKey("teach_grades")) {
             user.getList("teach_grades", ObjectId.class)
                     .stream().map(ObjectId::toString)
                     .forEach(grades::put);
         }
 
-        if(user.containsKey("teach_branches")) {
+        if (user.containsKey("teach_branches")) {
             user.getList("teach_branches", ObjectId.class)
                     .stream().map(ObjectId::toString)
                     .forEach(branches::put);
@@ -1867,7 +1866,7 @@ public class UserController {
         List<ObjectId> tmpBranchesId = null;
         List<ObjectId> tmpGradesId = null;
 
-        if(lessonsId != null) {
+        if (lessonsId != null) {
             tmpLessonsId = new ArrayList<>();
             for (int i = 0; i < lessonsId.length(); i++) {
                 if (!ObjectId.isValid(lessonsId.getString(i)))
@@ -1876,7 +1875,7 @@ public class UserController {
             }
         }
 
-        if(gradesId != null) {
+        if (gradesId != null) {
             tmpGradesId = new ArrayList<>();
             for (int i = 0; i < gradesId.length(); i++) {
                 if (!ObjectId.isValid(gradesId.getString(i)))
@@ -1885,7 +1884,7 @@ public class UserController {
             }
         }
 
-        if(branchesId != null) {
+        if (branchesId != null) {
             tmpBranchesId = new ArrayList<>();
             for (int i = 0; i < branchesId.length(); i++) {
                 if (!ObjectId.isValid(branchesId.getString(i)))
@@ -1894,18 +1893,18 @@ public class UserController {
             }
         }
 
-        if(
+        if (
                 tmpLessonsId == null && tmpBranchesId == null &&
                         tmpGradesId == null
         )
             return JSON_NOT_VALID_PARAMS;
 
-        if(tmpBranchesId != null) {
+        if (tmpBranchesId != null) {
             if (gradeRepository.findByIds(tmpBranchesId, true) == null)
                 return JSON_NOT_VALID_PARAMS;
         }
 
-        if(tmpGradesId != null) {
+        if (tmpGradesId != null) {
             List<Document> foundGrades =
                     branchRepository.findByIds(tmpGradesId, true);
 
@@ -1929,19 +1928,19 @@ public class UserController {
 
         BasicDBObject updateQuery = new BasicDBObject();
 
-        if(tmpBranchesId != null) {
+        if (tmpBranchesId != null) {
             List<ObjectId> branches = new ArrayList<>(tmpBranchesId);
             updateQuery.append("teach_branches", branches);
             user.put("teach_branches", branches);
         }
 
-        if(tmpLessonsId != null) {
+        if (tmpLessonsId != null) {
             List<ObjectId> lessons = new ArrayList<>(tmpLessonsId);
             updateQuery.append("teach_lessons", lessons);
             user.put("teach_lessons", lessons);
         }
 
-        if(tmpGradesId != null) {
+        if (tmpGradesId != null) {
             List<ObjectId> grades = new ArrayList<>(tmpGradesId);
             updateQuery.append("teach_grades", grades);
             user.put("teach_grades", grades);
@@ -1951,5 +1950,123 @@ public class UserController {
                 new BasicDBObject("$set", updateQuery)
         );
         return JSON_OK;
+    }
+
+    public static String getTeacherProfile(ObjectId teacherId) {
+        Document user = userRepository.findById(teacherId);
+        if (user == null)
+            return JSON_NOT_VALID_ID;
+
+        long curr = System.currentTimeMillis();
+        ObjectId userId = user.getObjectId("_id");
+        String str1 = user.getOrDefault("advice_bio", "").toString();
+        String str2 = user.getOrDefault("teach_bio", "").toString();
+        List<ObjectId> contentIds = contentRepository.find(eq("teacher_ids", userId), JUST_ID)
+                .stream().map(document -> document.getObjectId("_id"))
+                .collect(Collectors.toList());
+
+        JSONObject jsonObject = new JSONObject()
+                .put("bio", str1.length() > str2.length() ? str1 : str2)
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("id", user.getObjectId("_id").toString())
+                .put("teaches", user.getOrDefault("teaches", 0))
+                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                .put("totalContents", contentIds.size());
+
+        contentIds.add(userId);
+        jsonObject
+                .put("totalComments",
+                        commentRepository.count(and(
+                                        in("ref_id", contentIds),
+                                        eq("status", "accept"),
+                                        exists("marked"),
+                                        eq("marked", true)
+                                )
+                        ));
+
+        if (jsonObject.getInt("totalContents") > 0) {
+            jsonObject.put("totalContentUsers",
+                    contentRepository.getTeacherContentsBuyersSize(userId)
+            );
+        }
+
+        if (user.containsKey("birth_day")) {
+            int age = (int) ((curr - user.getLong("birth_day")) / ONE_DAY_MIL_SEC * 365);
+            jsonObject.put("age", age);
+        }
+        Set<String> tags = new HashSet<>();
+
+        if ((boolean) user.getOrDefault("teach", false)) {
+            if (user.containsKey("teach_tags"))
+                tags.addAll(user.getList("teach_tags", String.class));
+
+            addTeacherLessonAndGradeToJSON(
+                    user, jsonObject,
+                    new HashMap<>(), new HashMap<>()
+            );
+
+            jsonObject
+                    .put("hasAvailableTeachSchedule",
+                            teachScheduleRepository.exist(
+                                    and(
+                                            eq("user_id", userId),
+                                            eq("can_request", true),
+                                            gt("start_at", curr),
+                                            eq("visibility", true)
+                                    )
+                            )
+                    )
+                    .put("teachVideoLink", user.getOrDefault("teach_video_link", ""))
+                    .put("teachRate", user.getOrDefault("teach_rate", 0))
+                    .put("totalTeachStudents",
+                            teachScheduleRepository.getStudentsSize(userId)
+                    );
+        }
+
+        if ((boolean) user.getOrDefault("advice", false)) {
+            if (user.containsKey("tags"))
+                tags.addAll(user.getList("tags", String.class));
+            jsonObject
+                    .put("adviceVideoLink", user.getOrDefault("video_link", ""))
+                    .put("adviceRate", user.getOrDefault("rate", 0))
+                    .put("quizCount", schoolQuizRepository.count(
+                            and(
+                                    eq("created_by", user),
+                                    eq("status", "finish")
+                            )
+                    ))
+                    .put("totalAdviceStudents",
+                            advisorRequestsRepository.count(
+                                    and(
+                                            eq("advisor_id", user),
+                                            eq("answer", "accept")
+                                    )
+                            )
+                    )
+                    .put("totalCurrentAdviceStudents",
+                            advisorRequestsRepository.count(
+                                    and(
+                                            eq("advisor_id", user),
+                                            eq("answer", "accept"),
+                                            gt("paid_at", curr - ONE_DAY_MIL_SEC * 30)
+                                    )
+                            )
+                    );
+        }
+
+        if (user.containsKey("form_list")) {
+            Document form = searchInDocumentsKeyVal(
+                    user.getList("form_list", Document.class),
+                    "role", "advisor"
+            );
+            if (form != null) {
+                jsonObject.put("form", new JSONObject()
+                        .put("workSchools", form.getString("work_schools"))
+                );
+            }
+        }
+
+        jsonObject.put("tags", tags);
+        return generateSuccessMsg("data", jsonObject);
     }
 }

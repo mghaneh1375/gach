@@ -104,4 +104,39 @@ public class CommentAPIRoutes extends Router {
                 section, from, to, status
         );
     }
+
+    @GetMapping(value = "getCommentsAboutMe")
+    @ResponseBody
+    public String getCommentsAboutMe(
+            HttpServletRequest request,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to,
+            @RequestParam(required = false, value = "section") String section
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return CommentController.getCommentsAboutMe(
+                getUser(request).getObjectId("_id"),
+                section, from, to
+        );
+    }
+
+    @PutMapping(value = "toggleCommentMarkedStatus/{id}")
+    @ResponseBody
+    public String toggleCommentMarkedStatus(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        return CommentController.toggleCommentMarkedStatus(
+                getUser(request).getObjectId("_id"), id
+        );
+    }
+
+    @GetMapping(value = "getTeacherMarkedComments/{teacherId}")
+    @ResponseBody
+    public String getTeacherMarkedComments(
+            @PathVariable @ObjectIdConstraint ObjectId teacherId
+    ) {
+        return CommentController.getTeacherMarkedComments(
+                teacherId
+        );
+    }
 }

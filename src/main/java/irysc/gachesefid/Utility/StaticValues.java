@@ -51,6 +51,7 @@ public class StaticValues {
 
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
+    public final static int MAX_DAILY_ADV_FILE_SIZE = ONE_MB * 25;
 
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
@@ -214,6 +215,7 @@ public class StaticValues {
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
     public static final BasicDBObject JUST_NAME = new BasicDBObject("first_name", true).append("last_name", true);
+    public static final BasicDBObject JUST_NAME_ = new BasicDBObject("name", true);
     public static final BasicDBObject JUST_TITLE = new BasicDBObject("title", true);
 
     public static final String JSON_OK = new JSONObject().put("status", "ok").toString();

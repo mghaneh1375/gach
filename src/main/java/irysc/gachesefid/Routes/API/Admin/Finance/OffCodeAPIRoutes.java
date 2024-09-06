@@ -15,6 +15,7 @@ import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,14 +25,15 @@ import javax.validation.constraints.NotBlank;
 
 import static com.mongodb.client.model.Filters.ne;
 import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
-import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 @RestController
 @RequestMapping(path = "/api/admin/off")
 @Validated
 public class OffCodeAPIRoutes extends Router {
 
+    @Value("${front_ip}")
+    private String frontIP;
     @PostMapping(value = "storeFromShop")
     @ResponseBody
     public String storeFromShop(HttpServletRequest request,
@@ -47,9 +49,11 @@ public class OffCodeAPIRoutes extends Router {
                                                 Object.class
                                         }
                                 ) @NotBlank String jsonStr) {
+        if (!HttpReqRespUtils.getClientIpAddressIfServletRequestExist(request).equals(frontIP))
+            return JSON_NOT_ACCESS;
+
         return OffCodeController.storeFromShop(
-                Utility.convertPersian(new JSONObject(jsonStr)),
-                HttpReqRespUtils.getClientIpAddressIfServletRequestExist(request)
+                Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
 

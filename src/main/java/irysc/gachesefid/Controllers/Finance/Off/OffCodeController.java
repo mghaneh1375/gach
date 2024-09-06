@@ -138,12 +138,9 @@ public class OffCodeController {
         return generateErr("خطا در برقراری ارتیاط");
     }
 
-    public static String storeFromShop(JSONObject jsonObject, String ip) {
+    public static String storeFromShop(JSONObject jsonObject) {
 
         if (!jsonObject.getString("token").equals(token))
-            return JSON_NOT_ACCESS;
-
-        if (!ip.equals("31.41.35.5"))
             return JSON_NOT_ACCESS;
 
         Document config = getConfig();

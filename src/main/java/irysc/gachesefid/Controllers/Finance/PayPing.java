@@ -4,13 +4,11 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
-import irysc.gachesefid.Models.AllKindQuiz;
-import irysc.gachesefid.Models.ExchangeMode;
-import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Models.TeachMode;
+import irysc.gachesefid.Models.*;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -150,6 +148,10 @@ public class PayPing {
                 if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
                 ) {
+                    new Thread(() -> {
+                        // todo: check badge
+                        PointController.addPointForAction(studentId, Action.SET_ADVISOR, transaction.getObjectId("products"), null);
+                    }).start();
                     Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
                     if (request != null && studentId.equals(request.getObjectId("user_id"))) {
                         request.put("paid", transaction.getInteger("amount"));
@@ -174,6 +176,10 @@ public class PayPing {
                 if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.CLASSES.getName())
                 ) {
+                    new Thread(() -> {
+                        // todo: check badge
+                        PointController.addPointForAction(studentId, Action.GET_TEACH_CLASS, transaction.getObjectId("products"), null);
+                    }).start();
 
                     Document schedule = teachScheduleRepository.findById(transaction.getObjectId("products"));
 
@@ -267,6 +273,10 @@ public class PayPing {
                 if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
                 ) {
+                    new Thread(() -> {
+                        // todo: check badge
+                        PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                    }).start();
                     Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
                     if (quiz != null) {
                         quiz.put("status", "paid");
@@ -294,6 +304,10 @@ public class PayPing {
                 } else if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
                 ) {
+                    new Thread(() -> {
+                        // todo: check badge
+                        PointController.addPointForAction(studentId, Action.BUY_CONTENT, transaction.getObjectId("products"), null);
+                    }).start();
                     Document content = contentRepository.findById(transaction.getObjectId("products"));
                     if (content != null) {
                         StudentContentController.registry(

@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
@@ -396,6 +397,7 @@ public class StudentTeachController {
                 );
 
                 final Document finalSchedule = schedule;
+                ObjectId finalScheduleId = scheduleId;
                 new Thread(() -> {
                     Document advisor = userRepository.findById(finalSchedule.getObjectId("user_id"));
                     createNotifAndSendSMS(
@@ -403,7 +405,11 @@ public class StudentTeachController {
                             user.getString("first_name") + " " + user.getString("last_name"),
                             "finalizeTeach"
                     );
+                    // todo: check badge
+                    PointController.addPointForAction(userId, Action.GET_TEACH_CLASS, finalScheduleId, null);
                 }).start();
+
+                //todo: check for user update
 
                 teachScheduleRepository.updateOne(
                         scheduleId,
@@ -457,7 +463,6 @@ public class StudentTeachController {
         Document advisor = userRepository.findById(advisorId);
         if (advisor == null)
             return;
-//            return JSON_NOT_VALID_ID;
 
         long curr = System.currentTimeMillis();
 

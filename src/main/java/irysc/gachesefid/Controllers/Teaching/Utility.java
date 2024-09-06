@@ -53,7 +53,7 @@ public class Utility {
 
         if (checkRegistryAccess) {
 
-            if(!schedule.getBoolean("can_request"))
+            if (!schedule.getBoolean("can_request"))
                 throw new InvalidFieldsException("ظرفیت کلاس پر شده است");
 
             boolean isSemiPrivate =
@@ -105,45 +105,11 @@ public class Utility {
         return newUserMoney;
     }
 
-    static JSONObject convertTeacherToJSONDigest(
-            ObjectId stdId, Document teacher,
+    public static void addTeacherLessonAndGradeToJSON(
+            Document teacher, JSONObject jsonObject,
             HashMap<ObjectId, String> branches,
             HashMap<ObjectId, Document> grades
     ) {
-
-        JSONObject jsonObject = new JSONObject()
-                .put("name", teacher.getString("first_name") + " " + teacher.getString("last_name"))
-                .put("rate", teacher.getOrDefault("teach_rate", 0))
-                .put("bio", teacher.getString("teach_bio"))
-                .put("videoLink", teacher.getOrDefault("teach_video_link", ""))
-                .put("id", teacher.getObjectId("_id").toString())
-                .put("teaches", teacher.getOrDefault("teaches", 0))
-                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"));
-
-        if (teacher.containsKey("teach_tags"))
-            jsonObject.put("tags", teacher.getList("teach_tags", String.class));
-
-        if (teacher.containsKey("form_list")) {
-            Document form = searchInDocumentsKeyVal(
-                    teacher.getList("form_list", Document.class),
-                    "role", "advisor"
-            );
-            if (form != null) {
-                jsonObject.put("form", new JSONObject()
-                        .put("workSchools", form.getString("work_schools"))
-                );
-            }
-        }
-        if (stdId != null) {
-            List<Document> rates = (List<Document>) teacher.getOrDefault("teach_rates", new ArrayList<>());
-
-            Document stdRate = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
-                    rates, "_id", stdId
-            );
-
-            if (stdRate != null)
-                jsonObject.put("myRate", stdRate.getInteger("rate"));
-        }
 
         if (teacher.containsKey("teach_branches")) {
             Set<String> branchesJSON = new HashSet<>();
@@ -208,7 +174,49 @@ public class Utility {
             if (gradesJSON.size() > 0)
                 jsonObject.put("grades", gradesJSON);
         }
+    }
 
+    static JSONObject convertTeacherToJSONDigest(
+            ObjectId stdId, Document teacher,
+            HashMap<ObjectId, String> branches,
+            HashMap<ObjectId, Document> grades
+    ) {
+
+        JSONObject jsonObject = new JSONObject()
+                .put("name", teacher.getString("first_name") + " " + teacher.getString("last_name"))
+                .put("rate", teacher.getOrDefault("teach_rate", 0))
+                .put("bio", teacher.getString("teach_bio"))
+                .put("videoLink", teacher.getOrDefault("teach_video_link", ""))
+                .put("id", teacher.getObjectId("_id").toString())
+                .put("teaches", teacher.getOrDefault("teaches", 0))
+                .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"));
+
+        if (teacher.containsKey("teach_tags"))
+            jsonObject.put("tags", teacher.getList("teach_tags", String.class));
+
+        if (teacher.containsKey("form_list")) {
+            Document form = searchInDocumentsKeyVal(
+                    teacher.getList("form_list", Document.class),
+                    "role", "advisor"
+            );
+            if (form != null) {
+                jsonObject.put("form", new JSONObject()
+                        .put("workSchools", form.getString("work_schools"))
+                );
+            }
+        }
+        if (stdId != null) {
+            List<Document> rates = (List<Document>) teacher.getOrDefault("teach_rates", new ArrayList<>());
+
+            Document stdRate = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
+                    rates, "_id", stdId
+            );
+
+            if (stdRate != null)
+                jsonObject.put("myRate", stdRate.getInteger("rate"));
+        }
+
+        addTeacherLessonAndGradeToJSON(teacher, jsonObject, branches, grades);
         return jsonObject;
     }
 
@@ -280,7 +288,7 @@ public class Utility {
                     .put("requestsCount", schedule.containsKey("requests") ?
                             schedule.getList("requests", Document.class).size() : 0)
                     .put("shouldPrePay", !(Boolean) schedule.getOrDefault("send_finalize_pay_sms", false));
-            if(!(Boolean) schedule.getOrDefault("send_finalize_pay_sms", false))
+            if (!(Boolean) schedule.getOrDefault("send_finalize_pay_sms", false))
                 jsonObject.put("prePayAmount",
                         Math.min(getConfig().getInteger("pre_pay_amount"), schedule.getInteger("price"))
                 );
@@ -352,7 +360,7 @@ public class Utility {
             Document user, int paid
     ) {
 
-        if(schedule != null)
+        if (schedule != null)
             scheduleId = schedule.getObjectId("_id");
         else
             schedule = scheduleRepository.findById(scheduleId);
@@ -404,7 +412,7 @@ public class Utility {
                         .append("first_name", 1).append("last_name", 1)
                         .append("phone", 1).append("_id", 1)
         );
-        if(allStudents != null) {
+        if (allStudents != null) {
             Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
             StringBuilder sb = new StringBuilder(advisor.getString("first_name"))
                     .append(" ")

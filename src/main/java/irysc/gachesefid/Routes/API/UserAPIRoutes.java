@@ -965,4 +965,14 @@ public class UserAPIRoutes extends Router {
 //        return PayPing.myTransaction(getStudentUser(request).getObjectId("_id"), referenceId);
 //    }
 
+
+    @GetMapping(value = "getTeacherProfile/{teacherId}")
+    @ResponseBody
+    public String getTeacherProfile(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId teacherId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        getUser(request);
+        return UserController.getTeacherProfile(teacherId);
+    }
 }

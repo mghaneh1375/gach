@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
+import static irysc.gachesefid.Utility.Utility.convertPersian;
+
 @Controller
 @RequestMapping(path = "/api/package_content/public")
 @Validated
@@ -139,6 +141,15 @@ public class StudentContentAPIRoutes extends Router {
         return StudentContentController.teacherPackages(teacher);
     }
 
+    @GetMapping(value = "getTeacherContents/{teacherId}")
+    @ResponseBody
+    public String getTeacherContents(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId teacherId
+    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+        getUser(request);
+        return StudentContentController.getTeacherContents(teacherId);
+    }
 
     @GetMapping(value = "rates/{id}")
     @ResponseBody
@@ -167,6 +178,14 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String distinctTeachers() {
         return StudentContentController.distinctTeachers();
+    }
+
+    @GetMapping(value = "distinctTeachersForAdmin")
+    @ResponseBody
+    public String distinctTeachersForAdmin(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return StudentContentController.distinctTeachersForAdmin();
     }
 
     @PostMapping(value = "getTeacherBio")
@@ -200,10 +219,16 @@ public class StudentContentAPIRoutes extends Router {
                                             },
                                             paramsType = {
                                                     String.class, String.class
+                                            },
+                                            optionals = {
+                                                    "NID"
+                                            },
+                                            optionalsType = {
+                                                    String.class
                                             }
                                     ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return StudentContentController.changeTeacherName(new JSONObject(jsonStr));
+        return StudentContentController.changeTeacherName(convertPersian(new JSONObject(jsonStr)));
     }
 }

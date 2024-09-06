@@ -5,8 +5,10 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
@@ -21,11 +23,13 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.inc;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.getToday;
 import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
 
 public class Jobs implements Runnable {
@@ -45,6 +49,8 @@ public class Jobs implements Runnable {
         timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
 
         timer.schedule(new InactiveExpiredAdvice(), 0, ONE_DAY_MIL_SEC);
+//        timer.schedule(new BirthDayPoint(), 0, ONE_HOUR_MIL_SEC * 12);
+//        timer.schedule(new DailyPoint(), 0, ONE_MIN_MSEC * 30);
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
@@ -147,9 +153,74 @@ public class Jobs implements Runnable {
                 }
             }
 
-            if(writes.size() > 0) {
+            if (writes.size() > 0) {
                 userRepository.bulkWrite(writes);
                 userRepository.clearBatchFromCache(new ArrayList<>(shouldClearFromCache));
+            }
+        }
+    }
+
+    private static class BirthDayPoint extends TimerTask {
+        @Override
+        public void run() {
+
+            Document point = pointRepository.findBySecKey(Action.BIRTH_DAY.getName());
+            if(point == null || point.getInteger("point") == 0)
+                return;
+
+            long curr = System.currentTimeMillis();
+            List<Document> users = userRepository.find(
+                    and(
+                            exists("birth_day"),
+                            or(
+                                    exists("last_birth_day_point", false),
+                                    lt("last_birth_day_point", curr - ONE_DAY_MIL_SEC * 360)
+                            )
+                    ), new BasicDBObject("birth_day", 1)
+            );
+
+            Date currDate = new Date();
+            int currDay = currDate.getDate();
+            int currMonth = currDate.getMonth();
+            List<ObjectId> wantedUsers = new ArrayList<>();
+
+            users.forEach(user -> {
+                Date d = new Date(user.getLong("birth_day"));
+                if (d.getDate() == currDay && d.getMonth() == currMonth)
+                    wantedUsers.add(user.getObjectId("_id"));
+            });
+
+            if (wantedUsers.size() > 0) {
+                userRepository.updateMany(in("_id", wantedUsers), set("last_birth_day_point", curr));
+                new Thread(() ->
+                        wantedUsers.forEach(objectId -> PointController.addPointForAction(objectId, Action.BIRTH_DAY, currDate.getYear(), null))
+                ).start();
+            }
+        }
+    }
+
+    private static class DailyPoint extends TimerTask {
+        @Override
+        public void run() {
+
+            Document point = pointRepository.findBySecKey(Action.DAILY_POINT.getName());
+            if(point == null || point.getInteger("point") == 0)
+                return;
+
+            long curr = System.currentTimeMillis();
+            List<ObjectId> users = userRepository.findLimited(
+                    or(
+                            exists("last_daily_point", false),
+                            lt("last_daily_point", curr - ONE_HOUR_MIL_SEC * 24)
+                    ), JUST_ID, Sorts.ascending("created_at"), 0, 100
+            ).stream().map(document -> document.getObjectId("_id")).collect(Collectors.toList());
+
+            if (users.size() > 0) {
+                int today = getToday();
+                userRepository.updateMany(in("_id", users), set("last_daily_point", curr));
+                new Thread(() ->
+                        users.forEach(objectId -> PointController.addPointForAction(objectId, Action.DAILY_POINT, today, null))
+                ).start();
             }
         }
     }

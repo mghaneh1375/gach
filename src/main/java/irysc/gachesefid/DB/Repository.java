@@ -4,6 +4,7 @@ import irysc.gachesefid.Utility.Cache;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -57,7 +58,7 @@ public class Repository {
     }
 
 
-    static void removeBatchFromCache(String section, ArrayList<Object> ids) {
+    static void removeBatchFromCache(String section, List<Object> ids) {
 
         if (!generalCached.containsKey(section))
             return;
