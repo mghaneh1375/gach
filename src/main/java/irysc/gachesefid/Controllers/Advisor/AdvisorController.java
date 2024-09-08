@@ -320,7 +320,6 @@ public class AdvisorController {
                 (docs.size() == 0 || accessorId.equals(docs.get(0).getObjectId("advisor_id")));
 
         if (docs.size() > 0) {
-
             for (Document doc : docs) {
                 jsonArray.put(convertFinanceOfferToJSONObject(
                         doc, fullAccess)
@@ -329,7 +328,6 @@ public class AdvisorController {
 
             if (fullAccess) {
                 Document config = getConfig();
-
                 return generateSuccessMsg("data", new JSONObject()
                         .put("data", jsonArray)
                         .put("maxVideoCalls", config.getInteger("max_video_call_per_month"))
@@ -339,9 +337,7 @@ public class AdvisorController {
         }
 
         if (docs.size() == 0 && fullAccess) {
-
             Document config = getConfig();
-
             return generateSuccessMsg("data", new JSONObject()
                     .put("data", jsonArray)
                     .put("maxVideoCalls", config.getInteger("max_video_call_per_month"))
@@ -350,9 +346,7 @@ public class AdvisorController {
         }
 
         if (docs.size() == 0 && accessorId == null) {
-
             Document config = getConfig();
-
             jsonArray.put(convertFinanceOfferToJSONObject(
                             new Document("price", config.getInteger("min_advice_price"))
                                     .append("video_calls", config.getInteger("max_video_call_per_month"))
@@ -361,7 +355,9 @@ public class AdvisorController {
             );
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        return generateSuccessMsg("data", new JSONObject()
+                .put("data", jsonArray)
+        );
     }
 
     public static String requestMeeting(ObjectId advisorId,

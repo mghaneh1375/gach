@@ -1961,7 +1961,10 @@ public class UserController {
         ObjectId userId = user.getObjectId("_id");
         String str1 = user.getOrDefault("advice_bio", "").toString();
         String str2 = user.getOrDefault("teach_bio", "").toString();
-        List<ObjectId> contentIds = contentRepository.find(eq("teacher_ids", userId), JUST_ID)
+        List<ObjectId> contentIds = contentRepository.find(and(
+                        eq("teacher_ids", userId),
+                        eq("visibility", true)
+                ), JUST_ID)
                 .stream().map(document -> document.getObjectId("_id"))
                 .collect(Collectors.toList());
 
@@ -1991,7 +1994,7 @@ public class UserController {
         }
 
         if (user.containsKey("birth_day")) {
-            int age = (int) ((curr - user.getLong("birth_day")) / ONE_DAY_MIL_SEC * 365);
+            int age = (int) ((curr - user.getLong("birth_day")) / (ONE_DAY_MIL_SEC * 365));
             jsonObject.put("age", age);
         }
         Set<String> tags = new HashSet<>();

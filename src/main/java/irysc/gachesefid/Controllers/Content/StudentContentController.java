@@ -1007,7 +1007,8 @@ public class StudentContentController {
                 CONTENT_DIGEST,
                 Sorts.ascending("priority")
         ).forEach(doc ->
-                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false)));
+                data.put(irysc.gachesefid.Controllers.Content.Utility.convertDigest(doc, false))
+        );
 
         return generateSuccessMsg("data", data);
     }
