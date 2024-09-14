@@ -14,8 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Main.GachesefidApplication.badgeRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userBadgeRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
@@ -84,6 +83,87 @@ public class BadgeController {
 
         badgeRepository.insertOne(newDoc);
         return generateSuccessMsg("data", Utility.convertToJSON(newDoc, true));
+    }
+
+    public static String update(
+            ObjectId badgeId,
+            MultipartFile locked,
+            MultipartFile unlocked,
+            JSONObject jsonObject
+    ) {
+        if (locked != null || unlocked != null) {
+            if ((locked != null && locked.getSize() > StaticValues.ONE_MB) ||
+                    (unlocked != null && unlocked.getSize() > StaticValues.ONE_MB)
+            )
+                return generateErr("حجم تصاویر باید کمتر از 1MB باشد");
+
+            if (locked != null) {
+                if (FileUtils.uploadImageFile(locked) == null)
+                    return generateErr("فرمت فایل تصویر قفل معتبر نمی باشد");
+            }
+
+            if (unlocked != null) {
+                if (FileUtils.uploadImageFile(unlocked) == null)
+                    return generateErr("فرمت فایل تصویر مدال معتبر نمی باشد");
+            }
+        }
+
+        Document badge = badgeRepository.findById(badgeId);
+        if (badge == null)
+            return JSON_NOT_VALID_ID;
+
+        List<Document> actionsPoints = new ArrayList<>();
+
+        try {
+            JSONArray actions = jsonObject.getJSONArray("actions");
+            if (actions.length() == 0)
+                return generateErr("لطفا متریک های کسب مدال را مشخص نمایید");
+            for (int i = 0; i < actions.length(); i++) {
+                JSONObject jsonObject1 = actions.getJSONObject(i);
+                String action = jsonObject1.getString("action");
+                if (jsonObject1.getInt("count") < 1)
+                    return JSON_NOT_VALID_PARAMS;
+
+                actionsPoints.add(
+                        new Document("action", Action.valueOf(action.toUpperCase()).getName())
+                                .append("count", jsonObject1.getInt("count"))
+                );
+            }
+        } catch (Exception x) {
+            return JSON_NOT_VALID_PARAMS;
+        }
+
+        String lockedFilename = null;
+        if (locked != null) {
+            lockedFilename = FileUtils.uploadFile(locked, FOLDER);
+            if (lockedFilename == null)
+                return JSON_UNKNOWN_UPLOAD_FILE;
+        }
+
+        String unlockedFilename = null;
+        if (unlocked != null) {
+            unlockedFilename = FileUtils.uploadFile(unlocked, FOLDER);
+            if (unlockedFilename == null) {
+                FileUtils.removeFile(lockedFilename, FOLDER);
+                return JSON_UNKNOWN_UPLOAD_FILE;
+            }
+        }
+
+        if (lockedFilename != null) {
+            FileUtils.removeFile(badge.getString("locked_img"), FOLDER);
+            badge.put("locked_img", lockedFilename);
+        }
+        if (unlockedFilename != null) {
+            FileUtils.removeFile(badge.getString("unlocked_img"), FOLDER);
+            badge.put("unlocked_img", unlockedFilename);
+        }
+
+        badge.put("name", jsonObject.getString("name"));
+        badge.put("actions", actionsPoints);
+        badge.put("priority", jsonObject.getInt("priority"));
+
+        badgeRepository.replaceOneWithoutClearCache(badgeId, badge);
+        return generateSuccessMsg("data", Utility.convertToJSON(badge, true));
     }
 
     public static String remove(ObjectId badgeId) {

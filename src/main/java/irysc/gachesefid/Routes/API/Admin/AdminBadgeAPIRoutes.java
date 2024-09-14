@@ -53,6 +53,31 @@ public class AdminBadgeAPIRoutes extends Router {
         return BadgeController.add(locked, unlocked, convertPersian(new JSONObject(jsonStr)));
     }
 
+    @PutMapping(
+            value = "update/{id}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @ResponseBody
+    public String update(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestPart(name = "locked", required = false) MultipartFile locked,
+            @RequestPart(name = "unlocked", required = false) MultipartFile unlocked,
+            @RequestPart(name = "json") @StrongJSONConstraint(
+                    params = {
+                            "name", "actions",
+                            "priority"
+                    },
+                    paramsType = {
+                            String.class, JSONArray.class,
+                            Positive.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return BadgeController.update(id, locked, unlocked, convertPersian(new JSONObject(jsonStr)));
+    }
+
     @DeleteMapping(value = "remove/{id}")
     @ResponseBody
     public String remove(
