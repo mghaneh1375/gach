@@ -80,12 +80,14 @@ public class LevelController {
     public static void checkForUpgrade(ObjectId userId, int point) {
 
         BasicDBObject updateQuery = null;
+        boolean isNew = false;
         Document userLevel = userLevelRepository.findBySecKey(userId);
+
         if(userLevel == null) {
             userLevel = new Document("user_id", userId)
                     .append("levels", new ArrayList<>())
                     .append("point", point);
-            updateQuery = new BasicDBObject("point", point);
+            isNew = true;
         }
         else if(userLevel.getInteger("point") != point) {
             point += userLevel.getInteger("point");
@@ -125,7 +127,9 @@ public class LevelController {
             }
         }
 
-        if(updateQuery != null)
+        if(isNew)
+            userLevelRepository.insertOne(userLevel);
+        else if(updateQuery != null)
             userLevelRepository.updateOne(userId, new BasicDBObject("$set", updateQuery));
     }
 }
