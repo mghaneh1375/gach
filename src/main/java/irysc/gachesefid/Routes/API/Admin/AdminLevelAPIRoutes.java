@@ -55,7 +55,7 @@ public class AdminLevelAPIRoutes extends Router {
                     },
                     paramsType = {
                             String.class, Positive.class,
-                            Positive.class, Double.class
+                            Positive.class, Number.class
                     }
             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
