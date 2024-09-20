@@ -1,5 +1,7 @@
 package irysc.gachesefid.Controllers.Exchange;
 
+import irysc.gachesefid.Models.OffCodeSections;
+import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -18,8 +20,11 @@ public class ExchangeController {
             newDoc.append("section", "money")
                     .append("reward_amount", jsonObject.getInt("money"));
         else {
-            if (!jsonObject.has("section"))
+            if (!jsonObject.has("section") ||
+                    !EnumValidatorImp.isValid(jsonObject.getString("section"), OffCodeSections.class)
+            )
                 return JSON_NOT_VALID_PARAMS;
+
             newDoc
                     .append("section", jsonObject.getString("section"))
                     .append("reward_amount", jsonObject.getInt("offCodeAmount"))

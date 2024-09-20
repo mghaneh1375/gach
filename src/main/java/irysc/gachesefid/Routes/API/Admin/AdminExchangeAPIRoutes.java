@@ -6,6 +6,8 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -21,6 +23,15 @@ import javax.validation.constraints.NotBlank;
 @RequestMapping(path = "/api/exchange/admin")
 @Validated
 public class AdminExchangeAPIRoutes extends Router {
+
+    @GetMapping(value = "getAll")
+    @ResponseBody
+    public String getAll(
+            HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return ExchangeController.getAll();
+    }
 
     @PostMapping(value = "store")
     @ResponseBody
@@ -38,13 +49,15 @@ public class AdminExchangeAPIRoutes extends Router {
                             "offCodeAmount", "isPercent"
                     },
                     optionalsType = {
-                            OffCodeSections.class, Integer.class,
-                            Integer.class, Boolean.class
+                            OffCodeSections.class, Positive.class,
+                            Positive.class, Boolean.class
                     }
             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return ExchangeController.store(new JSONObject(jsonStr));
+        return ExchangeController.store(
+                Utility.convertPersian(new JSONObject(jsonStr))
+        );
     }
 
     @DeleteMapping(value = "remove/{id}")
