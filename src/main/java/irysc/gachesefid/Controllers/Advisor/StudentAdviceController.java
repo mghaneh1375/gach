@@ -2,8 +2,10 @@ package irysc.gachesefid.Controllers.Advisor;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import irysc.gachesefid.Utility.Authorization;
@@ -239,15 +241,17 @@ public class StudentAdviceController {
         }
 
         if (shouldPay - userMoney <= 100) {
-
             double newUserMoney = userMoney;
-
             Document student = userRepository.findById(userId);
 
             if (shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, userMoney);
                 student.put("money", newUserMoney);
             }
+            new Thread(() -> {
+                // todo: check badge
+                PointController.addPointForAction(userId, Action.SET_ADVISOR, doc.getObjectId("_id"), null);
+            }).start();
 
             Document transaction = new Document("user_id", userId)
                     .append("amount", 0)
@@ -449,8 +453,7 @@ public class StudentAdviceController {
         return JSON_OK;
     }
 
-    public static String myLifeStyle(ObjectId userId) {
-
+    public static String myLifeStyle(ObjectId userId, boolean isOwner) {
         Document schedule = lifeScheduleRepository.findBySecKey(userId);
 
         if (schedule == null) {
@@ -463,12 +466,11 @@ public class StudentAdviceController {
                 add(new Document("day", 5).append("items", new ArrayList<>()));
                 add(new Document("day", 6).append("items", new ArrayList<>()));
             }}).append("user_id", userId).append("created_at", System.currentTimeMillis());
-
             lifeScheduleRepository.insertOne(schedule);
         }
 
         return generateSuccessMsg("data", new JSONObject()
-                .put("days", convertLifeScheduleToJSON(schedule))
+                .put("days", convertLifeScheduleToJSON(schedule, isOwner))
                 .put("exams", schedule.getList("exams", String.class))
         );
     }

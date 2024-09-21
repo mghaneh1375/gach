@@ -144,7 +144,10 @@ public class StudentAdviceRoutes extends Router {
                               @PathVariable(required = false) String studentId
     ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         Document result = getUserWithAdvisorAccess(request, true, studentId);
-        return StudentAdviceController.myLifeStyle(result.get("user", Document.class).getObjectId("_id"));
+        return StudentAdviceController.myLifeStyle(
+                result.get("user", Document.class).getObjectId("_id"),
+                studentId == null
+        );
     }
 
     @PutMapping(value = "setMyExamInLifeStyle")

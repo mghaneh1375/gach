@@ -1,10 +1,6 @@
 package irysc.gachesefid.Controllers.Advisor;
 
 
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -164,12 +160,10 @@ public class Utility {
 
     }
 
-    static JSONArray convertLifeScheduleToJSON(Document schedule) {
-
+    static JSONArray convertLifeScheduleToJSON(Document schedule, boolean isOwner) {
         JSONArray jsonArray = new JSONArray();
 
         for (Document day : schedule.getList("days", Document.class)) {
-
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("label", schedule.getString("label"))
                     .put("day", getWeekDay(day.getInteger("day")));
@@ -180,6 +174,7 @@ public class Utility {
                 JSONObject jsonObject1 = new JSONObject()
                         .put("tag", item.getString("tag"))
                         .put("id", item.getObjectId("_id").toString())
+                        .put("owner", isOwner)
                         .put("duration", item.get("duration"));
 
                 if(item.containsKey("start_at"))
