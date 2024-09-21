@@ -118,7 +118,9 @@ public class CommentController {
         if (status) {
             new Thread(() -> {
                 // todo: check badge
-                PointController.addPointForAction(comment.getObjectId("user_id"), Action.COMMENT, comment.getObjectId("_id"), null);
+                PointController.addPointForAction(
+                        comment.getObjectId("user_id"), Action.COMMENT, comment.getObjectId("_id"), null
+                );
             }).start();
         }
 

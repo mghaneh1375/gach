@@ -552,7 +552,7 @@ public class OnlineStandingController extends QuizAbstract {
             return JSON_NOT_ACCESS;
 
         JSONObject output = new OnlineStandingController().convertDocToJSON(
-                quiz, true, false,true, true
+                quiz, true, false, true, true
         );
 
         List<Document> students = quiz.getList("students", Document.class);
@@ -560,7 +560,7 @@ public class OnlineStandingController extends QuizAbstract {
         List<Number> marks = questions.getList("marks", Number.class);
         double totalMark = 0;
 
-        for(Number mark : marks)
+        for (Number mark : marks)
             totalMark += mark.doubleValue();
 
         List<JSONObject> teams = new ArrayList<>();
@@ -580,27 +580,27 @@ public class OnlineStandingController extends QuizAbstract {
             JSONArray allAnswers = new JSONArray();
             int solved = 0;
 
-            if(student.containsKey("answers")) {
+            if (student.containsKey("answers")) {
 
-                for(Document ans : (List<Document>) student.get("answers")) {
+                for (Document ans : (List<Document>) student.get("answers")) {
 
-                    if(ans == null) {
+                    if (ans == null) {
                         answers.put(new JSONObject());
                         continue;
                     }
 
-                    if(isAdmin) {
+                    if (isAdmin) {
                         if (ans.get("ans") != null)
                             allAnswers.put(ans.get("ans"));
                         else
                             allAnswers.put("");
                     }
 
-                    if(ans.get("ans") != null && ans.containsKey("mark") &&
-                            ((Number)ans.get("mark")).doubleValue() > 0) {
+                    if (ans.get("ans") != null && ans.containsKey("mark") &&
+                            ((Number) ans.get("mark")).doubleValue() > 0) {
 
                         solved++;
-                        double m = ((Number)ans.get("mark")).doubleValue();
+                        double m = ((Number) ans.get("mark")).doubleValue();
                         double p = (m / totalMark) * ((quiz.getLong("end") - ans.getLong("answer_at")) / duration) * 1000;
 
                         answers.put(new JSONObject()
@@ -608,16 +608,14 @@ public class OnlineStandingController extends QuizAbstract {
                                 .put("time", (ans.getLong("answer_at") - start) / 1000)
                                 .put("point", String.format("%.2f", p))
                         );
-                    }
-                    else {
+                    } else {
                         answers.put(new JSONObject());
                     }
                 }
-            }
-            else {
+            } else {
                 for (Number mark : marks) {
 
-                    if(isAdmin)
+                    if (isAdmin)
                         allAnswers.put("");
 
                     answers.put(new JSONObject());
@@ -629,7 +627,7 @@ public class OnlineStandingController extends QuizAbstract {
                     .put("marks", marks)
                     .put("solved", solved);
 
-            if(isAdmin)
+            if (isAdmin)
                 jsonObjectTeam.put("allAnswers", allAnswers);
 
             teams.add(jsonObjectTeam);
@@ -663,12 +661,11 @@ public class OnlineStandingController extends QuizAbstract {
 
             return question.getDouble("answer") - telorance < stdAns &&
                     question.getDouble("answer") + telorance > stdAns ? qMark : 0;
-        }
-        else if (type.equalsIgnoreCase(
+        } else if (type.equalsIgnoreCase(
                 QuestionType.MULTI_SENTENCE.getName()
         )) {
             PairValue p = getStdMarkInMultiSentenceQuestion(answer.toString(), studentAnswer.toString(), qMark);
-            return ((Number)p.getKey()).doubleValue();
+            return ((Number) p.getKey()).doubleValue();
         }
 
 
@@ -694,8 +691,8 @@ public class OnlineStandingController extends QuizAbstract {
             return JSON_NOT_UNKNOWN;
 
         List<Document> stdAnswers = (List<Document>) student.getOrDefault("answers", new ArrayList<>());
-        if(stdAnswers.size() > idx && stdAnswers.get(idx) != null)
-            return generateSuccessMsg("msg","تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد",
+        if (stdAnswers.size() > idx && stdAnswers.get(idx) != null)
+            return generateSuccessMsg("msg", "تنها یکبار فرصت پاسخدهی به هر سوال وجود دارد",
                     new PairValue("ans", stdAnswers.get(idx).get("ans"))
             );
 
@@ -719,8 +716,7 @@ public class OnlineStandingController extends QuizAbstract {
             } else if (type.equalsIgnoreCase(QuestionType.SHORT_ANSWER.getName())) {
                 Double.parseDouble(stdAns.toString());
                 questionAnswer = p.getValue();
-            }
-            else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
+            } else if (type.equalsIgnoreCase(QuestionType.MULTI_SENTENCE.getName())) {
 
                 if (p.getValue().toString().length() != stdAns.toString().length())
                     return JSON_NOT_VALID_PARAMS;
@@ -734,7 +730,7 @@ public class OnlineStandingController extends QuizAbstract {
             return generateErr("پاسخ موردنظر معتبر نمی باشد");
         }
 
-        if(questionAnswer == null)
+        if (questionAnswer == null)
             return JSON_NOT_UNKNOWN;
 
         double stdMark = doCorrect(marks.get(idx).doubleValue(), type, stdAns, questionId, questionAnswer);
@@ -747,7 +743,7 @@ public class OnlineStandingController extends QuizAbstract {
         long curr = System.currentTimeMillis();
         Document d = new Document("answer_at", curr).append("ans", stdAns).append("user_id", studentId);
 
-        if(stdMark > 0) {
+        if (stdMark > 0) {
             int point = (int) student.getOrDefault("point", 0);
             double totalMark = 0;
             for (Number n : marks)
@@ -782,8 +778,7 @@ public class OnlineStandingController extends QuizAbstract {
                 return result;
 
             return generateSuccessMsg("reminder", a.reminder);
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             x.printStackTrace();
             return generateErr(x.getMessage());
         }
@@ -801,7 +796,7 @@ public class OnlineStandingController extends QuizAbstract {
             List<Document> students = doc.getList("students", Document.class);
             Document stdDoc = null;
 
-            if(isStudent) {
+            if (isStudent) {
 
                 for (Document student : students) {
 
@@ -859,8 +854,11 @@ public class OnlineStandingController extends QuizAbstract {
     }
 
     @Override
-    public List<Document> registry(ObjectId studentId, String phoneAndMail, String quizIdAndTeamStr, List<ObjectId> members,
-                                   int paid, ObjectId transactionId, String stdName) {
+    public List<Document> registry(
+            ObjectId studentId, String phoneAndMail, String quizIdAndTeamStr,
+            List<ObjectId> members, int paid, ObjectId transactionId,
+            String stdName
+    ) {
 
         ArrayList<Document> added = new ArrayList<>();
         String[] splited = quizIdAndTeamStr.split("__");

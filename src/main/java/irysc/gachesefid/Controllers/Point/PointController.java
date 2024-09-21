@@ -83,9 +83,18 @@ public class PointController {
             ObjectId userId, Action action,
             Object ref, Object additional
     ) {
+//        if(1 == 1) return;
+        int p;
 
-        Document point = pointRepository.findBySecKey(action.getName());
-        if(point == null || 1 == 1) return;
+        if(action.equals(Action.TEACHER_RATE)) {
+            p = (int) additional;
+            additional = null;
+        }
+        else {
+            Document point = pointRepository.findBySecKey(action.getName());
+            if (point == null) return;
+            p = point.getInteger("point");
+        }
 
         if(userPointRepository.exist(
                 and(
@@ -101,10 +110,9 @@ public class PointController {
                         .append("action", action.getName())
                         .append("additional", additional)
                         .append("ref", ref)
-                        .append("point", point.getInteger("point"))
+                        .append("point", p)
                         .append("created_at", System.currentTimeMillis())
         );
-
-        LevelController.checkForUpgrade(userId, point.getInteger("point"));
+        LevelController.checkForUpgrade(userId, p);
     }
 }

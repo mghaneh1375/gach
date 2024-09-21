@@ -5,6 +5,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
@@ -329,12 +330,12 @@ public class QuizController {
                 .put("item", doc.getString("name"))
                 .put("isOlympiad", isOlympiad);
 
-        if(selectedGrades.contains(doc.getObjectId("_id"))) {
+        if (selectedGrades.contains(doc.getObjectId("_id"))) {
 
             JSONArray lessonsJSON = new JSONArray();
             List<Document> lessons = doc.getList("lessons", Document.class);
 
-            if(lessons != null) {
+            if (lessons != null) {
 
                 for (Document lesson : lessons) {
 
@@ -378,6 +379,7 @@ public class QuizController {
         jsonArray.put(grade);
 
     }
+
     public static String getGradesAndBranches(Common db, ObjectId quizId, ObjectId userId) {
 
         try {
@@ -392,9 +394,9 @@ public class QuizController {
             List<ObjectId> selectedGrades = new ArrayList<>();
             List<ObjectId> selectedLessons = new ArrayList<>();
 
-            if(subjectIds.size() > 0) {
+            if (subjectIds.size() > 0) {
                 List<Document> subjects = subjectRepository.findByIds(subjectIds, true);
-                if(subjects != null) {
+                if (subjects != null) {
                     selectedGrades.addAll(subjects.stream()
                             .map(document -> document.get("grade", Document.class).getObjectId("_id"))
                             .collect(Collectors.toList())
@@ -2623,9 +2625,7 @@ public class QuizController {
     }
 
     public static String finalizeQuizResult(ObjectId quizId, Common db) {
-
         try {
-
             Document quiz = hasAccess(db, null, quizId);
             boolean isEscapeQuiz = db instanceof EscapeQuizRepository;
 
@@ -2634,13 +2634,10 @@ public class QuizController {
                     return generateErr("زمان آزمون هنوز تمام نشده است");
 
                 return EscapeQuizController.giveGifts(quiz);
-            } else {
-                if (!quiz.containsKey("report_status") ||
-                        !quiz.getString("report_status").equalsIgnoreCase("ready")
-                )
-                    return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
-            }
-
+            } else if (!quiz.containsKey("report_status") ||
+                    !quiz.getString("report_status").equalsIgnoreCase("ready")
+            )
+                return generateErr("ابتدا باید جدول تراز آزمون ساخته شود.");
 
             List<Binary> questionsStat = quiz.getList("question_stat", Binary.class);
             ArrayList<Document> questions = questionRepository.findByIds(
@@ -2651,7 +2648,6 @@ public class QuizController {
                 return JSON_NOT_UNKNOWN;
 
             Utilities.updateQuestionsStat(questions, questionsStat);
-
             Document config = getConfig();
 
             if (
@@ -2670,39 +2666,40 @@ public class QuizController {
 
                 if (rankingList.size() > 0)
                     giveQuizGiftToUser(rankingList.get(0).getObjectId("_id"), config, 1,
-                            date, quizName
+                            date, quizName, quizId
                     );
 
                 if (rankingList.size() > 1)
                     giveQuizGiftToUser(rankingList.get(1).getObjectId("_id"), config, 2,
-                            date, quizName
+                            date, quizName, quizId
                     );
 
                 if (rankingList.size() > 2)
                     giveQuizGiftToUser(rankingList.get(2).getObjectId("_id"), config, 3,
-                            date, quizName
+                            date, quizName, quizId
                     );
 
                 if (rankingList.size() > 3)
                     giveQuizGiftToUser(rankingList.get(3).getObjectId("_id"), config, 4,
-                            date, quizName
+                            date, quizName, quizId
                     );
 
                 if (rankingList.size() > 4)
                     giveQuizGiftToUser(rankingList.get(4).getObjectId("_id"), config, 5,
-                            date, quizName
+                            date, quizName, quizId
                     );
             }
-
-
             return JSON_OK;
         } catch (Exception x) {
             return generateErr(x.getMessage());
         }
     }
 
-    private static void giveQuizGiftToUser(ObjectId userId, Document config,
-                                           int rank, String data, String quizName) {
+    private static void giveQuizGiftToUser(
+            ObjectId userId, Document config,
+            int rank, String data, String quizName,
+            ObjectId quizId
+    ) {
 
         if (rank > 3 && !config.containsKey("forth_rank_cert_id"))
             return;
@@ -2725,9 +2722,11 @@ public class QuizController {
                 user.put("coin", ((Number) user.get("coin")).doubleValue() +
                         config.getDouble("quiz_coin"));
 
-            userRepository.replaceOne(
-                    userId, user
-            );
+            userRepository.replaceOneWithoutClearCache(userId, user);
+            new Thread(() -> {
+                // todo: check badge
+                PointController.addPointForAction(userId, Action.RANK_IN_QUIZ, quizId, null);
+            }).start();
         }
 
         JSONArray params = new JSONArray();

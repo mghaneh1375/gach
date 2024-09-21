@@ -5,7 +5,6 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Point.PointController;
-import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.*;
@@ -21,8 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
 import static irysc.gachesefid.Controllers.Teaching.Utility.completePrePayForSemiPrivateSchedule;
 import static irysc.gachesefid.Controllers.Teaching.Utility.register;
@@ -182,7 +182,6 @@ public class PayPing {
                     }).start();
 
                     Document schedule = teachScheduleRepository.findById(transaction.getObjectId("products"));
-
                     if (schedule != null && schedule.containsKey("students")) {
                         Document studentRequest = searchInDocumentsKeyVal(
                                 schedule.getList("requests", Document.class),
@@ -228,7 +227,7 @@ public class PayPing {
                 if (transaction.get("products") instanceof ObjectId &&
                         transaction.getString("section").equals(AllKindQuiz.ONLINESTANDING.getName())
                 ) {
-                    new OnlineStandingController().registry(studentId,
+                    onlineStandingController.registry(studentId,
                             user.getString("phone") + "__" + user.getString("mail"),
                             transaction.get("products").toString() + "__" + transaction.getString("team_name"),
                             transaction.getList("members", ObjectId.class),
@@ -236,6 +235,16 @@ public class PayPing {
                             transaction.getObjectId("_id"),
                             user.getString("first_name") + " " + user.getString("last_name")
                     );
+                    new Thread(() -> {
+                        transaction.getList("members", ObjectId.class).forEach(memberId -> {
+                            // todo: check badge
+                            PointController.addPointForAction(memberId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                        });
+                        if(!transaction.getList("members", ObjectId.class).contains(studentId)) {
+                            // todo: check badge
+                            PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                        }
+                    }).start();
                 }
 
 
@@ -266,7 +275,7 @@ public class PayPing {
                     Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
                     if (thePackage != null) {
                         thePackage.put("buyers", (int) thePackage.getOrDefault("buyers", 0) + 1);
-                        packageRepository.replaceOne(thePackage.getObjectId("_id"), thePackage);
+                        packageRepository.updateOne(thePackage.getObjectId("_id"), set("buyers", thePackage.get("buyers")));
                     }
                 }
 
@@ -321,13 +330,11 @@ public class PayPing {
                 } else if (transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
                     if (!transaction.containsKey("student_ids")) {
-
                         List<ObjectId> iryscQuizIds = new ArrayList<>();
                         List<ObjectId> openQuizIds = new ArrayList<>();
                         List<ObjectId> escapeQuizIds = new ArrayList<>();
 
                         for (ObjectId id : products) {
-
                             if (iryscQuizRepository.findById(id) != null)
                                 iryscQuizIds.add(id);
                             else if (openQuizRepository.findById(id) != null)
@@ -337,8 +344,7 @@ public class PayPing {
                         }
 
                         if (iryscQuizIds.size() > 0) {
-
-                            new RegularQuizController()
+                            regularQuizController
                                     .registry(studentId,
                                             user.getString("phone"),
                                             user.getString("mail"),
@@ -348,52 +354,60 @@ public class PayPing {
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
 
-                            new TashrihiQuizController()
-                                    .registry(studentId,
-                                            user.getString("phone"),
-                                            user.getString("mail"),
-                                            iryscQuizIds,
-                                            transaction.getInteger("amount"),
-                                            transaction.getObjectId("_id"),
-                                            user.getString("first_name") + " " + user.getString("last_name")
-                                    );
+                            tashrihiQuizController.registry(studentId,
+                                    user.getString("phone"),
+                                    user.getString("mail"),
+                                    iryscQuizIds,
+                                    transaction.getInteger("amount"),
+                                    transaction.getObjectId("_id"),
+                                    user.getString("first_name") + " " + user.getString("last_name")
+                            );
                         }
 
                         if (openQuizIds.size() > 0)
-                            new OpenQuiz()
-                                    .registry(studentId,
-                                            user.getString("phone"),
-                                            user.getString("mail"),
-                                            openQuizIds,
-                                            transaction.getInteger("amount"),
-                                            transaction.getObjectId("_id"),
-                                            user.getString("first_name") + " " + user.getString("last_name")
-                                    );
+                            openQuiz.registry(studentId,
+                                    user.getString("phone"),
+                                    user.getString("mail"),
+                                    openQuizIds,
+                                    transaction.getInteger("amount"),
+                                    transaction.getObjectId("_id"),
+                                    user.getString("first_name") + " " + user.getString("last_name")
+                            );
 
                         if (escapeQuizIds.size() > 0)
-                            new EscapeQuizController()
-                                    .registry(studentId,
-                                            user.getString("phone"),
-                                            user.getString("mail"),
-                                            escapeQuizIds,
-                                            transaction.getInteger("amount"),
-                                            transaction.getObjectId("_id"),
-                                            user.getString("first_name") + " " + user.getString("last_name")
-                                    );
+                            escapeQuizController.registry(studentId,
+                                    user.getString("phone"),
+                                    user.getString("mail"),
+                                    escapeQuizIds,
+                                    transaction.getInteger("amount"),
+                                    transaction.getObjectId("_id"),
+                                    user.getString("first_name") + " " + user.getString("last_name")
+                            );
+                        new Thread(() -> {
+                            products.forEach(productId ->
+                                    PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
+                            );
+                            // todo: check badge
+                        }).start();
                     } else {
-                        new RegularQuizController()
-                                .registry(transaction.getList("student_ids", ObjectId.class),
-                                        user.getString("phone"),
-                                        user.getString("mail"),
-                                        products,
-                                        transaction.getInteger("amount"));
-
+                        regularQuizController.registry(transaction.getList("student_ids", ObjectId.class),
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                products,
+                                transaction.getInteger("amount"));
                         // todo: group registration for tashrihi
+                        new Thread(() -> {
+                            transaction.getList("student_ids", ObjectId.class).forEach(stdId -> {
+                                // todo: check badge
+                                products.forEach(productId ->
+                                        PointController.addPointForAction(stdId, Action.BUY_EXAM, productId, null)
+                                );
+                            });
+                        }).start();
                     }
                 } else if (transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {
                     List<ObjectId> products = transaction.getList("products", ObjectId.class);
-
-                    new OpenQuiz()
+                    openQuiz
                             .registry(studentId,
                                     user.getString("phone"),
                                     user.getString("mail"),
@@ -402,6 +416,12 @@ public class PayPing {
                                     transaction.getObjectId("_id"),
                                     user.getString("first_name") + " " + user.getString("last_name")
                             );
+                    new Thread(() -> {
+                        // todo: check badge
+                        products.forEach(productId ->
+                                PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
+                        );
+                    }).start();
 
                 }
 

@@ -410,7 +410,6 @@ public class StudentTeachController {
                 }).start();
 
                 //todo: check for user update
-
                 teachScheduleRepository.updateOne(
                         scheduleId,
                         new BasicDBObject(

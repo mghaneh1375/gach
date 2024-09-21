@@ -10,11 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Level.Utility.returnFirstLevel;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Test.Utility.studentId;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
+import static irysc.gachesefid.Utility.Utility.createNotifAndSendSMS;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class LevelController {
@@ -89,47 +90,65 @@ public class LevelController {
                     .append("point", point);
             isNew = true;
         }
-        else if(userLevel.getInteger("point") != point) {
+        else {
             point += userLevel.getInteger("point");
             userLevel.put("point", point);
             updateQuery = new BasicDBObject("point", point);
         }
 
-        Document level = levelRepository.findOne(and(
-                lte("min_point", point),
-                gt("max_point", point)
-        ), null);
+        List<Document> levels = userLevel.containsKey("levels") ?
+                userLevel.getList("levels", Document.class) : new ArrayList<>();
 
-        if(level != null) {
-            List<Document> levels = userLevel.getList("levels", Document.class);
-            if (levels.size() == 0 ||
-                    !levels.get(levels.size() - 1).getObjectId("_id").equals(level.getObjectId("_id"))
-            ) {
-                levels.add(new Document("name", level.getString("name"))
-                        .append("min_point", level.getInteger("min_point"))
-                        .append("max_point", level.getInteger("max_point"))
-                        .append("_id", level.getObjectId("_id"))
+        boolean needCheckNewLevel = true;
+        Document nextLevel = null;
+
+        if(levels.size() > 0 &&
+                levels.get(levels.size() - 1).getInteger("max_point") > point)
+            needCheckNewLevel = false;
+
+        if(needCheckNewLevel) {
+            nextLevel = levelRepository.findOne(and(
+                    lte("min_point", point),
+                    gt("max_point", point)
+            ), null);
+
+            if(nextLevel == null || (
+                    levels.size() > 0 &&
+                            levels.get(levels.size() - 1).getObjectId("_id").equals(
+                                    nextLevel.getObjectId("_id")
+                            )
+                    )
+            )
+                nextLevel = null;
+        }
+
+        if(nextLevel != null) {
+            levels.add(new Document("name", nextLevel.getString("name"))
+                    .append("min_point", nextLevel.getInteger("min_point"))
+                    .append("max_point", nextLevel.getInteger("max_point"))
+                    .append("_id", nextLevel.getObjectId("_id"))
+            );
+            if(updateQuery == null)
+                updateQuery = new BasicDBObject("levels", levels);
+            else
+                updateQuery.append("levels", levels);
+
+            userLevel.put("levels", levels);
+            Document finalNextLevel = nextLevel;
+            new Thread(() -> {
+                Document user = userRepository.findById(userId);
+                createNotifAndSendSMS(user, finalNextLevel.getString("name"), "nextLevel");
+                double d = ((Number)user.get("coin")).doubleValue() +
+                        ((Number) finalNextLevel.get("coin")).doubleValue();
+                userRepository.updateOne(studentId, new BasicDBObject("$set",
+                        new BasicDBObject("events", user.get("events")))
+                            .append("coin", Math.round((d * 100.0)) / 100.0)
                 );
-                if(updateQuery == null)
-                    updateQuery = new BasicDBObject("levels", levels);
-                else
-                    updateQuery.append("levels", levels);
-
-                userLevel.put("levels", levels);
-                new Thread(() -> {
-                    Document user = userRepository.findById(userId);
-                    double d = ((Number)user.get("coin")).doubleValue() +
-                            ((Number)level.get("coin")).doubleValue();
-                    user.put("coin", Math.round((d * 100.0)) / 100.0);
-                    userRepository.updateOne(userId, set("coin", user.get("coin")));
-                    // todo : send notif
-                }).start();
-            }
+            }).start();
         }
 
         if(isNew)
             userLevelRepository.insertOne(userLevel);
-        else if(updateQuery != null)
-            userLevelRepository.updateOne(userId, new BasicDBObject("$set", updateQuery));
+        else userLevelRepository.updateOne(userId, new BasicDBObject("$set", updateQuery));
     }
 }

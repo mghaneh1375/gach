@@ -3,10 +3,8 @@ package irysc.gachesefid.Controllers.Teaching;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
-import irysc.gachesefid.Models.ActiveMode;
-import irysc.gachesefid.Models.SettledStatus;
-import irysc.gachesefid.Models.TeachMode;
-import irysc.gachesefid.Models.TeachRequestStatus;
+import irysc.gachesefid.Controllers.Point.PointController;
+import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
@@ -1150,7 +1148,10 @@ public class TeachController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-    private static void rateToStudent(ObjectId studentId, ObjectId advisorId, int rate) {
+    private static void rateToStudent(
+            ObjectId studentId, ObjectId advisorId,
+            int rate, ObjectId scheduleId
+    ) {
 
         Document student = userRepository.findById(studentId);
         if (student == null)
@@ -1198,6 +1199,12 @@ public class TeachController {
                                 .append("teach_rate_count", rateCount)
                 )
         );
+        if(rate >= 3) {
+            new Thread(() -> {
+                // todo: check badge
+                PointController.addPointForAction(studentId, Action.TEACHER_RATE, scheduleId, rate);
+            }).start();
+        }
     }
 
     public static String rateToSchedule(
@@ -1221,7 +1228,9 @@ public class TeachController {
                     scheduleId, set("students", students)
             );
 
-            new Thread(() -> rateToStudent(studentId, schedule.getObjectId("user_id"), userRate)).start();
+            new Thread(() -> rateToStudent(
+                    studentId, schedule.getObjectId("user_id"), userRate, scheduleId
+            )).start();
             return JSON_OK;
         } catch (Exception x) {
             return generateErr(x.getMessage());

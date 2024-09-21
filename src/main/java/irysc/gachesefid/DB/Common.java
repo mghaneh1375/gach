@@ -258,6 +258,11 @@ public abstract class Common extends Repository {
         documentMongoCollection.updateMany(filter, update);
     }
 
+    public void updateManyByIds(List<ObjectId> ids, Bson update) {
+        documentMongoCollection.updateMany(in("_id", ids), update);
+        removeBatchFromCacheByIds(table, ids);
+    }
+
     synchronized
     public void replaceOne(Bson filter, Document newDoc) {
         documentMongoCollection.replaceOne(filter, newDoc);

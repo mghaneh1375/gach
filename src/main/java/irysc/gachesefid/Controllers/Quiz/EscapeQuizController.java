@@ -606,8 +606,8 @@ public class EscapeQuizController extends QuizAbstract {
                     continue;
                 }
 
-                jsonObject.put("startAt", getSolarDate(std.getLong("start_at")))
-                        .put("finishAt", getSolarDate(std.getLong("finish_at")));
+                jsonObject.put("startAt", std.containsKey("start_at") && std.get("start_at") != null ? getSolarDate(std.getLong("start_at")) : "")
+                        .put("finishAt", std.containsKey("finish_at") && std.get("finish_at") != null ? getSolarDateWithSecond(std.getLong("finish_at")) : "");
 
                 if (std.containsKey("answers")) {
 
@@ -620,7 +620,6 @@ public class EscapeQuizController extends QuizAbstract {
                             continue;
 
                         Document answer = (Document) ans;
-
                         jsonArray1.put(new JSONObject()
                                 .put("tries", answer.get("tries"))
                                 .put("answerAt", answer.containsKey("answer_at") ?

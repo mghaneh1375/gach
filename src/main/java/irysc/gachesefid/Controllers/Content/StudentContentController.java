@@ -5,6 +5,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
@@ -12,6 +13,7 @@ import irysc.gachesefid.DB.ContentQuizRepository;
 import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
 import org.bson.Document;
@@ -40,7 +42,7 @@ public class StudentContentController {
         String oldName = jsonObject.getString("oldName");
         String newName = jsonObject.getString("newName");
         String nid = jsonObject.has("NID") ? jsonObject.getString("NID") : null;
-        if(nid != null && !irysc.gachesefid.Utility.Utility.validationNationalCode(nid))
+        if (nid != null && !irysc.gachesefid.Utility.Utility.validationNationalCode(nid))
             return generateErr("کد ملی وارد شده معتبر نمی باشد");
 
         List<Document> docs = contentRepository.find(
@@ -53,10 +55,10 @@ public class StudentContentController {
         for (Document doc : docs) {
             String[] splited = doc.getString("teacher").split("__");
 
-            if(!doc.containsKey("nids")) {
+            if (!doc.containsKey("nids")) {
                 StringBuilder sb = new StringBuilder();
-                for(int i = 0; i < splited.length; i++) {
-                    if(i == 0)
+                for (int i = 0; i < splited.length; i++) {
+                    if (i == 0)
                         sb.append("*");
                     else
                         sb.append("__").append("*");
@@ -73,8 +75,7 @@ public class StudentContentController {
                 if (itr.equals(oldName)) {
                     newList.add(newName);
                     nids.add(nid == null ? "*" : nid);
-                }
-                else {
+                } else {
                     newList.add(itr);
                     nids.add(nidSplited[idx]);
                 }
@@ -140,8 +141,8 @@ public class StudentContentController {
             String[] splited = content.getString("teacher").split("__");
             String[] nidSplited = content.getOrDefault("nids", "").toString().split("__");
 
-            for(int i = 0; i < splited.length; i++) {
-                if(distinctTeachers.contains(splited[i]))
+            for (int i = 0; i < splited.length; i++) {
+                if (distinctTeachers.contains(splited[i]))
                     continue;
                 distinctTeachers.add(splited[i]);
                 distinctNIDS.add(nidSplited.length > i && !nidSplited[i].equals("*") ? nidSplited[i] : "");
@@ -477,9 +478,7 @@ public class StudentContentController {
 
     public static Document registry(ObjectId contentId, ObjectId userId,
                                     double paid, String phone, String mail) {
-
         Document content = contentRepository.findById(contentId);
-
         if (content == null)
             return null;
 
@@ -510,12 +509,12 @@ public class StudentContentController {
         return tmp;
     }
 
-    public static String buy(ObjectId contentId, JSONObject data, ObjectId userId,
-                             double money, String phone, String mail
+    public static String buy(
+            ObjectId contentId, JSONObject data, ObjectId userId,
+            double money, String phone, String mail
     ) {
 
         Document content = contentRepository.findById(contentId);
-
         if (content == null)
             return JSON_NOT_VALID_ID;
 
@@ -531,15 +530,12 @@ public class StudentContentController {
         long curr = System.currentTimeMillis();
 
         if (data != null && data.has("off")) {
-
             off = validateOffCode(
                     data.getString("off"), userId, curr,
                     OffCodeSections.CONTENT.getName()
             );
-
             if (off == null)
                 return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
-
         }
 
         if (data == null || !data.has("off")) {
@@ -549,11 +545,8 @@ public class StudentContentController {
         }
 
         double shouldPayDouble = content.getInteger("price") * 1.0;
-
         if (content.containsKey("off")) {
-
             if (content.getLong("off_start") <= curr && content.getLong("off_expiration") >= curr) {
-
                 int val = content.getInteger("off");
                 String type = content.getString("off_type");
 
@@ -562,11 +555,9 @@ public class StudentContentController {
 
                 shouldPayDouble -= offAmount;
             }
-
         }
 
         double offAmount = 0;
-
         if (off != null) {
             offAmount +=
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
@@ -577,11 +568,8 @@ public class StudentContentController {
         }
 
         int shouldPay = (int) shouldPayDouble;
-
         if (shouldPay - money <= 100) {
-
             double newUserMoney = money;
-
             if (shouldPay > 100) {
                 newUserMoney -= Math.min(shouldPay, money);
                 Document user = userRepository.findById(userId);
@@ -603,11 +591,13 @@ public class StudentContentController {
             }
 
             transactionRepository.insertOne(doc);
-
             registry(contentId, userId, shouldPay, phone, mail);
+            new Thread(() -> {
+                // todo: check badge
+                PointController.addPointForAction(userId, Action.BUY_CONTENT, contentId, null);
+            }).start();
 
             if (off != null) {
-
                 BasicDBObject update;
 
                 if (off.containsKey("is_public") &&
@@ -628,7 +618,6 @@ public class StudentContentController {
                         new BasicDBObject("$set", update)
                 );
             }
-
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
                     "action", "success",

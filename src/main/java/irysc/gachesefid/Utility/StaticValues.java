@@ -2,10 +2,19 @@ package irysc.gachesefid.Utility;
 
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Quiz.*;
 import org.json.JSONObject;
 
 
 public class StaticValues {
+
+    public static final OnlineStandingController onlineStandingController =
+            new OnlineStandingController();
+    public static final EscapeQuizController escapeQuizController =
+            new EscapeQuizController();
+    public static final OpenQuiz openQuiz = new OpenQuiz();
+    public static final RegularQuizController regularQuizController = new RegularQuizController();
+    public static final TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
 
     public final static String STATICS_SERVER = "https://statics.irysc.com/";
     public final static String VIDEO_STATICS_SERVER = "https://v1.irysc.com/";

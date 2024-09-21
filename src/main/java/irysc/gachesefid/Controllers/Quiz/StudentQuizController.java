@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Quiz;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Config.GiftController;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Question.Utilities;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -1254,20 +1255,14 @@ public class StudentQuizController {
         );
 
 
-        if (quizzes.size() + openQuizzes.size() + escapeQuizzes.size() != quizIds.size())
-            return JSON_NOT_VALID_PARAMS;
-
-        if (studentIds != null && escapeQuizzes.size() > 0)
-            return JSON_NOT_VALID_PARAMS;
-
-        if (studentIds != null && openQuizzes.size() > 0)
-            return JSON_NOT_VALID_PARAMS;
-
-        if (packageId != null && openQuizzes.size() > 0)
+        if (quizzes.size() + openQuizzes.size() + escapeQuizzes.size() != quizIds.size() ||
+                (studentIds != null && escapeQuizzes.size() > 0) ||
+                (studentIds != null && openQuizzes.size() > 0) ||
+                (packageId != null && openQuizzes.size() > 0)
+        )
             return JSON_NOT_VALID_PARAMS;
 
         if (studentIds != null) {
-
             Document school = schoolRepository.findOne(eq("user_id", userId), JUST_ID);
             if (school == null)
                 return JSON_NOT_ACCESS;
@@ -1308,7 +1303,6 @@ public class StudentQuizController {
         long curr = System.currentTimeMillis();
 
         if (offcode != null) {
-
             off = validateOffCode(
                     offcode, userId, curr,
                     OffCodeSections.GACH_EXAM.getName()
@@ -1339,7 +1333,6 @@ public class StudentQuizController {
         try {
 
             for (int i = 0; i < members.length(); i++) {
-
                 JSONObject jsonObject = members.getJSONObject(i);
 
                 String NID = jsonObject.getString("NID");
@@ -1419,7 +1412,6 @@ public class StudentQuizController {
             Document finalOff = off;
             double finalOffAmount = offAmount;
             new Thread(() -> {
-
                 Document doc = new Document("user_id", userId)
                         .append("amount", 0)
                         .append("account_money", shouldPay)
@@ -1434,13 +1426,12 @@ public class StudentQuizController {
                 }
 
                 transactionRepository.insertOne(doc);
-                new OnlineStandingController()
+                onlineStandingController
                         .registry(userId, phone + "__" + mail, id + "__" + teamName,
                                 memberIds, 0, doc.getObjectId("_id"), name
                         );
 
                 if (finalOff != null) {
-
                     BasicDBObject update;
 
                     if (finalOff.containsKey("is_public") &&
@@ -1462,6 +1453,14 @@ public class StudentQuizController {
                     );
                 }
 
+                memberIds.forEach(memberId ->
+                        PointController.addPointForAction(memberId, Action.BUY_EXAM, id, null)
+                        // todo: check badge
+                );
+                if(!memberIds.contains(userId)) {
+                    PointController.addPointForAction(userId, Action.BUY_EXAM, id, null);
+                    // todo: check badge
+                }
             }).start();
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
@@ -1743,7 +1742,6 @@ public class StudentQuizController {
         allQuizzesIds.addAll(escapeQuizIds);
 
         if (shouldPay - money <= 100) {
-
             double newUserMoney = money;
 
             if (shouldPay > 100)
@@ -1753,7 +1751,6 @@ public class StudentQuizController {
             boolean finalUsePackageOff = usePackageOff;
             double finalOffAmount = offAmount;
             new Thread(() -> {
-
                 Document doc = new Document("user_id", studentId)
                         .append("amount", 0)
                         .append("account_money", shouldPay)
@@ -1828,6 +1825,9 @@ public class StudentQuizController {
                     );
                 }
 
+                allQuizzesIds.forEach(refId ->
+                        PointController.addPointForAction(studentId, Action.BUY_EXAM, refId, null));
+                // todo: check badge
             }).start();
 
             return irysc.gachesefid.Utility.Utility.generateSuccessMsg(

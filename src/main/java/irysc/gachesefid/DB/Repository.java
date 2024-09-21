@@ -2,6 +2,7 @@ package irysc.gachesefid.DB;
 
 import irysc.gachesefid.Utility.Cache;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,14 @@ public class Repository {
         cached.removeIf(itr -> ids.contains(itr.getKey()));
     }
 
+    static void removeBatchFromCacheByIds(String section, List<ObjectId> ids) {
+
+        if (!generalCached.containsKey(section))
+            return;
+
+        ArrayList<Cache> cached = generalCached.get(section);
+        cached.removeIf(itr -> ids.contains(itr.getKey()));
+    }
 
     static void addToCache(String section, Document doc, Object secKey, int limit, int expirationSec) {
 

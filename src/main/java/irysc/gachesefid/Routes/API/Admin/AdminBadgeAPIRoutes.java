@@ -93,6 +93,6 @@ public class AdminBadgeAPIRoutes extends Router {
     public String getAll(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return BadgeController.getAll(true);
+        return BadgeController.getAll(null);
     }
 }

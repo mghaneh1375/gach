@@ -29,8 +29,7 @@ import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.getToday;
-import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class Jobs implements Runnable {
 
@@ -49,8 +48,8 @@ public class Jobs implements Runnable {
         timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
 
         timer.schedule(new InactiveExpiredAdvice(), 0, ONE_DAY_MIL_SEC);
-//        timer.schedule(new BirthDayPoint(), 0, ONE_HOUR_MIL_SEC * 12);
-//        timer.schedule(new DailyPoint(), 0, ONE_MIN_MSEC * 30);
+        timer.schedule(new BirthDayPoint(), 0, ONE_HOUR_MIL_SEC * 12);
+        timer.schedule(new DailyPoint(), 0, ONE_MIN_MSEC * 30);
         timer.schedule(new SendMails(), 0, 300000);
         timer.schedule(new SendSMS(), 0, 300000);
         timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
@@ -191,10 +190,31 @@ public class Jobs implements Runnable {
             });
 
             if (wantedUsers.size() > 0) {
-                userRepository.updateMany(in("_id", wantedUsers), set("last_birth_day_point", curr));
-                new Thread(() ->
-                        wantedUsers.forEach(objectId -> PointController.addPointForAction(objectId, Action.BIRTH_DAY, currDate.getYear(), null))
-                ).start();
+                String msg = "<p>" + "سلام " + "<br/>";
+                msg += "امیدواریم سال\u200Cها چرخت به خوبی و بدون لنگ زدن بچرخه و هر سال برات پر از خاطرات خوب باشه. برای شیرین\u200Cتر شدن شروع امسالت، "
+                        + point.getInteger("point") + " امتیاز از آیریسک هدیه گرفتی!" + "<br/><br/>حالش رو ببر";
+
+                ObjectId notifId = new ObjectId();
+                Document notif = new Document("_id", notifId)
+                        .append("users_count", wantedUsers.size())
+                        .append("title", "تولدت مبارک")
+                        .append("text", msg)
+                        .append("send_via", "site")
+                        .append("created_at", curr)
+                        .append("users", new ArrayList<ObjectId>() {{
+                            addAll(wantedUsers);
+                        }});
+
+                userRepository.updateManyByIds(wantedUsers,
+                        new BasicDBObject("$push", new BasicDBObject("events",
+                                new Document("created_at", curr)
+                                        .append("notif_id", notifId)
+                                        .append("seen", false)
+                        )).append("$set", new BasicDBObject("last_birth_day_point", curr))
+                );
+
+                notifRepository.insertOne(notif);
+                new Thread(() -> wantedUsers.forEach(oId -> PointController.addPointForAction(oId, Action.BIRTH_DAY, currDate.getYear(), null))).start();
             }
         }
     }

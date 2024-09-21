@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -168,7 +169,7 @@ public class BadgeController {
 
     public static String remove(ObjectId badgeId) {
 
-        if (userBadgeRepository.exist(eq("badge_id", badgeId)))
+        if (userBadgeRepository.exist(eq("badges._id", badgeId)))
             return generateErr("دانش آموز/دانش آموزانی این مدال را کسب کرده اند و امکان حذف آن وجود ندارد");
 
         Document badge = badgeRepository.findOneAndDelete(eq("_id", badgeId));
@@ -180,15 +181,22 @@ public class BadgeController {
         return JSON_OK;
     }
 
-    public static String getAll(boolean isForAdmin) {
+    // ###################### PUBLIC SECTION ##################
+
+    public static String getAll(ObjectId userId) {
         List<Document> badges = badgeRepository.find(null, null, Sorts.ascending("priority"));
+        Document userBadges = userId == null ? null : userBadgeRepository.findBySecKey(userId);
+        List<ObjectId> userBadgesId = userBadges == null ? null :
+            userBadges.getList("badges", Document.class)
+                    .stream().map(document -> document.getObjectId("_id"))
+                    .collect(Collectors.toList());
+
         JSONArray jsonArray = new JSONArray();
         badges.forEach(badge ->
-                jsonArray.put(Utility.convertToJSON(badge, isForAdmin))
+                jsonArray.put(Utility.convertToJSON(badge, userId == null)
+                        .put("hasIt", userBadgesId != null && userBadgesId.contains(badge.getObjectId("_id")))
+                )
         );
         return generateSuccessMsg("data", jsonArray);
     }
-
-    // ###################### PUBLIC SECTION ##################
-
 }

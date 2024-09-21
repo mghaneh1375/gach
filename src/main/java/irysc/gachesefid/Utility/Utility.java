@@ -1110,6 +1110,17 @@ public class Utility {
         String[] splited = dateTime[0].split("-");
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
     }
+    public static String getSolarDateWithSecond(long time) {
+
+        if (time < 1610494635)
+            return "";
+
+        Date d = new Date(time);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm::ss");
+        String[] dateTime = simpleDateFormat.format(d).split(" ");
+        String[] splited = dateTime[0].split("-");
+        return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];
+    }
 
     public static String getMonthSolarDate(long time) {
 
@@ -1656,6 +1667,19 @@ public class Utility {
                 title = "تعریف آزمون توسط مدرسه";
                 msg += "یک آزمون ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
                 break;
+            case "nextLevel":
+                title = "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به " + studentName + " رسید.";
+                msg += "جایزه\u200Cهای این سطح رو از " + "<a href='https://www.irysc.com/%d8%b1%d8%a7%d9%87%d9%86%d9%85%d8%a7%db%8c-%da%af%da%86-%d8%b3%d9%81%db%8c%d8%af-%d8%a2%db%8c%d8%b1%db%8c%d8%b3%da%a9/%d8%a7%d9%85%d8%aa%db%8c%d8%a7%d8%b2-%d9%85%d8%af%d8%a7%d9%84-%da%af%da%86-%d8%b3%d9%81%db%8c%d8%af/'>اینجا</a> ببین.";
+                break;
+            case "badge":
+                String[] split = studentName.split("__");
+                title = "خیلی کِیف کردیم که مدال " + split[0] + " رو تونستی بگیری.";
+                msg += "خوشحال\u200Cتر می\u200Cشیم که بقیۀ مدال\u200Cهای اینجا و زندگی رو هم درو کنی." + "<br/>" + "برای اینکه تو هم خوشحال بشی، " + split[1] + " ایکس\u200Cپول به حسابت اضافه شد :)";
+                break;
+            case "birthday":
+                title = "تولدت مبارک!";
+                msg += "امیدواریم سال\u200Cها چرخت به خوبی و بدون لنگ زدن بچرخه و هر سال برات پر از خاطرات خوب باشه. برای شیرین\u200Cتر شدن شروع امسالت، " + studentName + "امتیاز از آیریسک هدیه گرفتی!" + "<br/><br/>" + "حالش رو ببر";
+                break;
             case "hw":
                 title = "تعریف تمرین توسط مدرسه";
                 msg += "یک تمرین ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> تمرین ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
@@ -1698,7 +1722,6 @@ public class Utility {
     }
 
     public static void createNotifAndSendSMS(Document wantedUser, String studentName, String mode) {
-
         String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
 
         if (wantedUser.containsKey("phone"))

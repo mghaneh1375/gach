@@ -29,23 +29,22 @@ public class Utility {
                     .put("userCount", userBadgeRepository.count(
                             eq("badges._id", badge.getObjectId("_id"))
                     ));
-
-            List<Document> actions =
-                    badge.getList("actions", Document.class);
-
-            JSONArray actionsJSON = new JSONArray();
-            actions.forEach(document -> {
-                Action actionEnum = Action.valueOf(document.getString("action").toUpperCase());
-                actionsJSON.put(new JSONObject()
-                        .put("action", actionEnum.getName())
-                        .put("actionFa", actionEnum.getFaTranslate())
-                        .put("count", document.get("count"))
-                );
-            });
-
-            jsonObject.put("actions", actionsJSON);
         }
 
+        List<Document> actions =
+                badge.getList("actions", Document.class);
+
+        JSONArray actionsJSON = new JSONArray();
+        actions.forEach(document -> {
+            Action actionEnum = Action.valueOf(document.getString("action").toUpperCase());
+            actionsJSON.put(new JSONObject()
+                    .put("action", actionEnum.getName())
+                    .put("actionFa", actionEnum.getFaTranslate())
+                    .put("count", document.get("count"))
+            );
+        });
+
+        jsonObject.put("actions", actionsJSON);
         return jsonObject;
     }
 
