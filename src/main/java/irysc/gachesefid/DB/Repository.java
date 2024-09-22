@@ -93,4 +93,9 @@ public class Repository {
             cached.add(new Cache(expirationSec, doc, doc.getObjectId("_id")));
     }
 
+    public static void removeExpiredItems() {
+        for(String key : generalCached.keySet()) {
+            generalCached.get(key).removeIf(cache -> !cache.checkExpiration());
+        }
+    }
 }

@@ -51,8 +51,8 @@ public class StaticValues {
     public final static long PAY_SCHEDULE_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
     public final static long SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
 
-    public final static int CLASS_LIMIT_CACHE_SIZE = 1000;
-    public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 7;
+    public final static int CLASS_LIMIT_CACHE_SIZE = 300;
+    public final static int CLASS_EXPIRATION_SEC = 60 * 60 * 24 * 2;
 
     public final static int MAX_TICKET_FILE_SIZE = 1024 * 1024 * 6;
 

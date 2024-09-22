@@ -7,6 +7,8 @@ import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
+import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
@@ -36,23 +38,24 @@ public class Jobs implements Runnable {
     @Override
     public void run() {
         Timer timer = new Timer();
-        timer.schedule(new TokenHandler(), 0, ONE_DAY_MIL_SEC); // 1 day
-        timer.schedule(new QuizReminder(), 0, 3600000); // 1 hour
+        timer.schedule(new TokenHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
+        timer.schedule(new QuizReminder(), ONE_MIN_MSEC * 12, ONE_HOUR_MIL_SEC); // 1 hour
         timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
-        timer.schedule(new RemoveRedundantCustomQuizzes(), 0, 86400000);
+        timer.schedule(new RemoveRedundantCustomQuizzes(), ONE_MIN_MSEC * 15, ONE_DAY_MIL_SEC);
 
-        timer.schedule(new RemoveExpiredNotifs(), 0, ONE_DAY_MIL_SEC * 7);
-        timer.schedule(new RemoveExpiredMeetings(), 0, ONE_DAY_MIL_SEC * 7);
-        timer.schedule(new RejectExpiredTeachRequests(), 1000 * 60, ONE_HOUR_MIL_SEC);
+        timer.schedule(new RemoveExpiredNotifs(), 300000, ONE_DAY_MIL_SEC * 7); // delay: 5 min
+        timer.schedule(new RemoveExpiredCaches(), ONE_DAY_MIL_SEC + ONE_HOUR_MIL_SEC, ONE_DAY_MIL_SEC);
+        timer.schedule(new RemoveExpiredMeetings(), 600000, ONE_DAY_MIL_SEC * 7); // delay: 10 min
+        timer.schedule(new RejectExpiredTeachRequests(), 60000, ONE_HOUR_MIL_SEC); // delay: 1 min
 
-        timer.schedule(new CheckContentBuys(), 0, ONE_HOUR_MIL_SEC);
+        timer.schedule(new CheckContentBuys(), 1200000, ONE_HOUR_MIL_SEC); // delay: 20 min
 
-        timer.schedule(new InactiveExpiredAdvice(), 0, ONE_DAY_MIL_SEC);
-        timer.schedule(new BirthDayPoint(), 0, ONE_HOUR_MIL_SEC * 12);
-        timer.schedule(new DailyPoint(), 0, ONE_MIN_MSEC * 30);
-        timer.schedule(new SendMails(), 0, 300000);
-        timer.schedule(new SendSMS(), 0, 300000);
-        timer.schedule(new CalcSubjectQuestions(), 0, 86400000);
+        timer.schedule(new InactiveExpiredAdvice(), ONE_MIN_MSEC * 7, ONE_DAY_MIL_SEC);
+        timer.schedule(new BirthDayPoint(), ONE_MIN_MSEC * 3, ONE_HOUR_MIL_SEC * 12);
+        timer.schedule(new DailyPoint(), ONE_MIN_MSEC * 4, ONE_MIN_MSEC * 30);
+        timer.schedule(new SendMails(), 0, ONE_MIN_MSEC * 5);
+        timer.schedule(new SendSMS(), 0, ONE_MIN_MSEC * 5);
+        timer.schedule(new CalcSubjectQuestions(), 1800000, ONE_DAY_MIL_SEC); // delay: 30 min
     }
 
     //todo remove redundant transactions
@@ -285,6 +288,12 @@ public class Jobs implements Runnable {
 
             if (writes.size() > 0)
                 userRepository.bulkWrite(writes);
+        }
+    }
+
+    private static class RemoveExpiredCaches extends TimerTask {
+        public void run() {
+            Repository.removeExpiredItems();
         }
     }
 
