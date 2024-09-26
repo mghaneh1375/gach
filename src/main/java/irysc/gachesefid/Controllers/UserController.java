@@ -23,7 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
@@ -1223,21 +1222,19 @@ public class UserController {
     public static String getMySummary(Document user) {
 
         long curr = System.currentTimeMillis();
-
         Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
         Document config = getConfig();
 
         double exchangeRate = ((Number) config.get("coin_rate_coef")).doubleValue();
         DecimalFormat decfor = new DecimalFormat("0.000");
 
-        double a = (10000.0 / exchangeRate);
-        String roundVal = decfor.format(a);
+//        double a = (10000.0 / exchangeRate);
+//        String roundVal = decfor.format(a);
 
         JSONObject jsonObject = new JSONObject()
                 .put("money", user.get("money"))
                 .put("coinToMoneyExchange", exchangeRate)
-//                .put("moneyToCoinExchange", config.get("money_rate_coef"))
-                .put("moneyToCoinExchange", roundVal)
+//                .put("moneyToCoinExchange", roundVal)
                 .put("rank", rank == null ? "" : rank.getInteger("rank"))
                 .put("branchRank", 1)
                 .put("gradeRank", rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
@@ -1270,13 +1267,10 @@ public class UserController {
                                 lt("end", curr)
                         )
                 ))
-                .put("coin", user.get("coin"));
-
-        int totalQuizzes = iryscQuizRepository.count(
-                in("students._id", user.getObjectId("_id"))
-        );
-
-        jsonObject.put("totalQuizzes", totalQuizzes);
+                .put("coin", user.get("coin"))
+                .put("totalQuizzes", iryscQuizRepository.count(
+                        in("students._id", user.getObjectId("_id"))
+                ));
 
         return generateSuccessMsg("data", jsonObject);
     }
@@ -1300,7 +1294,7 @@ public class UserController {
         return JSON_OK;
     }
 
-    public static String updateInfo(JSONObject jsonObject, Document user) {
+    public static String updateInfo(JSONObject jsonObject, Document user, boolean editorIsAdmin) {
 
         String NID = jsonObject.getString("NID");
         if (!Utility.validationNationalCode(NID))
@@ -1332,10 +1326,12 @@ public class UserController {
 
         if (isStudent) {
 
-            if ((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
-                    !jsonObject.getString("lastName").equals(user.getString("last_name"))
-            ) && user.containsKey("change_name"))
-                return generateErr("شما یکبار نام خود را تغییر داده اید و برای تغییر مجدد آن باید از طریق پشتیبانی اقدام فرمایید");
+            if(!editorIsAdmin) {
+                if ((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
+                        !jsonObject.getString("lastName").equals(user.getString("last_name"))
+                ) && user.containsKey("change_name"))
+                    return generateErr("شما یکبار نام خود را تغییر داده اید و برای تغییر مجدد آن باید از طریق پشتیبانی اقدام فرمایید");
+            }
 
             List<Document> branchesDoc = null;
 
