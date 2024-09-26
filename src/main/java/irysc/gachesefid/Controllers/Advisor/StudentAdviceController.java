@@ -265,7 +265,6 @@ public class StudentAdviceController {
                 transaction.append("off_code", off.getObjectId("_id"));
                 transaction.append("off_amount", (int) offAmount);
             }
-
             transactionRepository.insertOne(transaction);
 
             Document advisorRequest = advisorRequestsRepository.findById(doc.getObjectId("_id"));
@@ -274,13 +273,10 @@ public class StudentAdviceController {
             advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
 
             Document advisor = userRepository.findById(advisorId);
-
             setAdvisor(student, advisor);
 
             if (off != null) {
-
                 BasicDBObject update;
-
                 if (off.containsKey("is_public") &&
                         off.getBoolean("is_public")
                 ) {

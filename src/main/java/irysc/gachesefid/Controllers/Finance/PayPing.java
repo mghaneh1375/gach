@@ -76,7 +76,6 @@ public class PayPing {
             amount /= 10000.0;
 
         double finalVal = amount * exchangeCoef;
-
         BasicDBObject update = new BasicDBObject();
 
         if (
@@ -580,11 +579,9 @@ public class PayPing {
         filters.add(eq("status", "success"));
 
         ArrayList<Document> transactions = transactionRepository.find(and(filters), null, Sorts.descending("created_at"));
-
         JSONArray jsonArray = new JSONArray();
 
         for (Document transaction : transactions) {
-
             JSONObject jsonObject = new JSONObject()
                     .put("id", transaction.getObjectId("_id").toString())
                     .put("for", getTransactionTitle(transaction))
