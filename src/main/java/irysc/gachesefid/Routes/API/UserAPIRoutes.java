@@ -542,8 +542,10 @@ public class UserAPIRoutes extends Router {
                                      }
                              ) String json
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
-        return UserController.updateInfo(convertPersian(new JSONObject(json)),
-                (Document) getUserWithSchoolAccess(request, false, false, userId).get("user")
+        return UserController.updateInfo(
+                convertPersian(new JSONObject(json)),
+                (Document) getUserWithSchoolAccess(request, false, false, userId).get("user"),
+                userId != null
         );
     }
 
