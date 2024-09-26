@@ -6,7 +6,6 @@ import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -15,20 +14,27 @@ import static irysc.gachesefid.Main.GachesefidApplication.userBadgeRepository;
 
 public class Utility {
 
-    static JSONObject convertToJSON(Document badge, boolean isForAdmin) {
+    static JSONObject convertToJSON(Document badge, boolean isForAdmin, Boolean hasIt) {
         JSONObject jsonObject = new JSONObject()
                 .put("name", badge.getString("name"))
-                .put("lockedImg", StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("locked_img"))
-                .put("unlockedImg", StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("unlocked_img"));
+                .put("award", badge.getDouble("award"));
 
         if (isForAdmin) {
             jsonObject
                     .put("id", badge.getObjectId("_id").toString())
                     .put("priority", badge.getInteger("priority"))
+                    .put("lockedImg", StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("locked_img"))
+                    .put("unlockedImg", StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("unlocked_img"))
                     .put("createdAt", irysc.gachesefid.Utility.Utility.getSolarDate(badge.getLong("created_at")))
                     .put("userCount", userBadgeRepository.count(
                             eq("badges._id", badge.getObjectId("_id"))
                     ));
+        }
+        else {
+            jsonObject.put("img", hasIt
+                    ? StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("unlocked_img")
+                    : StaticValues.STATICS_SERVER + FOLDER + "/" + badge.getString("locked_img")
+            );
         }
 
         List<Document> actions =
