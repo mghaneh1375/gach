@@ -135,26 +135,26 @@ public class GeneralAPIRoutes extends Router {
     }
 
 
-    @PostMapping(value = "/exchange")
-    @ResponseBody
-    public String exchange(HttpServletRequest request,
-                           @RequestBody @StrongJSONConstraint(
-                                   params = {"amount", "mode"},
-                                   paramsType = {Number.class, ExchangeMode.class}
-                           ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-
-        Document user = getUser(request);
-        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
-
-        return PayPing.exchange(
-                user.getObjectId("_id"),
-                ((Number) user.get("money")).doubleValue(),
-                ((Number)user.get("coin")).doubleValue(),
-                jsonObject.getNumber("amount").doubleValue(),
-                jsonObject.getString("mode")
-        );
-    }
+//    @PostMapping(value = "/exchange")
+//    @ResponseBody
+//    public String exchange(HttpServletRequest request,
+//                           @RequestBody @StrongJSONConstraint(
+//                                   params = {"amount", "mode"},
+//                                   paramsType = {Number.class, ExchangeMode.class}
+//                           ) @NotBlank String jsonStr
+//    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+//
+//        Document user = getUser(request);
+//        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+//
+//        return PayPing.exchange(
+//                user.getObjectId("_id"),
+//                ((Number) user.get("money")).doubleValue(),
+//                ((Number)user.get("coin")).doubleValue(),
+//                jsonObject.getNumber("amount").doubleValue(),
+//                jsonObject.getString("mode")
+//        );
+//    }
 
 
     @PostMapping(value = "/callBackBank",
