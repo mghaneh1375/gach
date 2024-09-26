@@ -1,7 +1,6 @@
 package irysc.gachesefid.Controllers;
 
 import irysc.gachesefid.Exception.InvalidFieldsException;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.GiftTarget;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -14,7 +13,6 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 
 public class AlertController {
@@ -31,49 +29,6 @@ public class AlertController {
         }
 
         return Utility.generateSuccessMsg("data", jsonArray);
-    }
-
-    public static void store(ObjectId userId, String msg, boolean needSMS) {
-        alertsRepository.insertOne(
-                new Document("msg", msg).append("owner", userId).append("seen", false).append("created_at", System.currentTimeMillis())
-        );
-    }
-
-    public static void store(ObjectId userId, String msg, boolean needSMS, PairValue mail,
-                             String mailMsg, String username, String subject) {
-
-        alertsRepository.insertOne(
-                new Document("msg", msg)
-                        .append("owner", userId)
-                        .append("seen", false)
-                        .append("created_at", System.currentTimeMillis())
-        );
-
-//        if(mail != null)
-//            Utility.sendMail((String) mail.getValue(), mailMsg,
-//                subject, (String)mail.getKey(), username
-//            );
-
-    }
-
-    public static void storeClassRegistryAlert(ObjectId userId, String msg, boolean needSMS, PairValue mail,
-                             String mailMsg, String username, String term, String endRegistry, String price, String classId) {
-
-        alertsRepository.insertOne(
-                new Document("msg", msg).append("owner", userId).append("seen", false).append("created_at", System.currentTimeMillis())
-        );
-
-        if(mail != null)
-            Utility.sendClassRegistryMail((String) mail.getValue(), mailMsg,
-                    term, endRegistry, username, (String) mail.getKey(), price, classId
-            );
-
-    }
-
-    public static void storeAdmin(String msg, boolean needSMS, boolean sendMail) {
-        alertsRepository.insertOne(
-                new Document("msg", msg).append("owner", "admin").append("seen", false).append("created_at", System.currentTimeMillis())
-        );
     }
 
     private static ObjectId getGifts(ObjectId userId) throws InvalidFieldsException {
