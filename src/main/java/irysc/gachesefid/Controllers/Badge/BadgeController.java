@@ -31,6 +31,10 @@ public class BadgeController {
             MultipartFile unlocked,
             JSONObject jsonObject
     ) {
+
+        if(jsonObject.getNumber("award").doubleValue() < 0)
+            return generateErr("مقدار جایزه باید بزرگ تر از 0 باشد");
+
         if (locked.getSize() > StaticValues.ONE_MB ||
                 unlocked.getSize() > StaticValues.ONE_MB
         )
@@ -80,10 +84,11 @@ public class BadgeController {
                 .append("priority", jsonObject.getInt("priority"))
                 .append("locked_img", lockedFilename)
                 .append("unlocked_img", unlockedFilename)
+                .append("award", jsonObject.getNumber("award").doubleValue())
                 .append("created_at", System.currentTimeMillis());
 
         badgeRepository.insertOne(newDoc);
-        return generateSuccessMsg("data", Utility.convertToJSON(newDoc, true));
+        return generateSuccessMsg("data", Utility.convertToJSON(newDoc, true, null));
     }
 
     public static String update(
@@ -92,6 +97,10 @@ public class BadgeController {
             MultipartFile unlocked,
             JSONObject jsonObject
     ) {
+
+        if(jsonObject.getNumber("award").doubleValue() < 0)
+            return generateErr("مقدار جایزه باید بزرگ تر از 0 باشد");
+
         if (locked != null || unlocked != null) {
             if ((locked != null && locked.getSize() > StaticValues.ONE_MB) ||
                     (unlocked != null && unlocked.getSize() > StaticValues.ONE_MB)
@@ -159,12 +168,13 @@ public class BadgeController {
             badge.put("unlocked_img", unlockedFilename);
         }
 
+        badge.put("award", jsonObject.getNumber("award").doubleValue());
         badge.put("name", jsonObject.getString("name"));
         badge.put("actions", actionsPoints);
         badge.put("priority", jsonObject.getInt("priority"));
 
         badgeRepository.replaceOneWithoutClearCache(badgeId, badge);
-        return generateSuccessMsg("data", Utility.convertToJSON(badge, true));
+        return generateSuccessMsg("data", Utility.convertToJSON(badge, true, null));
     }
 
     public static String remove(ObjectId badgeId) {
@@ -192,11 +202,11 @@ public class BadgeController {
                     .collect(Collectors.toList());
 
         JSONArray jsonArray = new JSONArray();
-        badges.forEach(badge ->
-                jsonArray.put(Utility.convertToJSON(badge, userId == null)
-                        .put("hasIt", userBadgesId != null && userBadgesId.contains(badge.getObjectId("_id")))
-                )
-        );
+        badges.forEach(badge -> {
+            boolean hasIt = userBadgesId != null && userBadgesId.contains(badge.getObjectId("_id"));
+            jsonArray.put(Utility.convertToJSON(badge, userId == null, hasIt)
+                    .put("hasIt", hasIt));
+        });
         return generateSuccessMsg("data", jsonArray);
     }
 }

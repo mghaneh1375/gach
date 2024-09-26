@@ -40,11 +40,11 @@ public class AdminBadgeAPIRoutes extends Router {
             @RequestPart(name = "json") @StrongJSONConstraint(
                     params = {
                             "name", "actions",
-                            "priority"
+                            "priority", "award"
                     },
                     paramsType = {
                             String.class, JSONArray.class,
-                            Positive.class
+                            Positive.class, Number.class
                     }
             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -66,11 +66,11 @@ public class AdminBadgeAPIRoutes extends Router {
             @RequestPart(name = "json") @StrongJSONConstraint(
                     params = {
                             "name", "actions",
-                            "priority"
+                            "priority", "award"
                     },
                     paramsType = {
                             String.class, JSONArray.class,
-                            Positive.class
+                            Positive.class, Number.class
                     }
             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
