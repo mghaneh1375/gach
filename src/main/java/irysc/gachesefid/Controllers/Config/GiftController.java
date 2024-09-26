@@ -78,6 +78,9 @@ public class GiftController {
         if (useFor.equalsIgnoreCase(OffCodeSections.COUNSELING.getName()))
             return "مشاوره";
 
+        if (useFor.equalsIgnoreCase("prePay"))
+            return "پیش پرداخت تدریس گروهی";
+
         return "همه";
     }
 
