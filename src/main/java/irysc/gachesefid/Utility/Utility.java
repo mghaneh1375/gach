@@ -469,7 +469,8 @@ public class Utility {
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                if (str.charAt(0) == '0' ||
+                if ((str.charAt(0) == '0' &&
+                        (str.length() == 1 || str.charAt(1) != '.')) ||
                         key.equalsIgnoreCase("phone") ||
                         key.equalsIgnoreCase("tel") ||
                         key.equals("NID")
@@ -479,7 +480,12 @@ public class Utility {
                     try {
                         jsonObject.put(key, Integer.parseInt(str));
                     } catch (Exception x) {
-                        jsonObject.put(key, str);
+                        try {
+                            jsonObject.put(key, Double.parseDouble(str));
+                        }
+                        catch (Exception ignore) {
+                            jsonObject.put(key, str);
+                        }
                     }
                 }
             }
