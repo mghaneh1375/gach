@@ -33,9 +33,6 @@ import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
 @Configuration
 @EnableScheduling
 public class GachesefidApplication implements WebMvcConfigurer {
-
-    public static HashMap<String, String> passwords = new HashMap<>();
-
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
 
@@ -82,6 +79,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static PackageRepository packageRepository;
     public static PayLinkRepository payLinkRepository;
     public static PointRepository pointRepository;
+    public static ProfileConfigRepository profileConfigRepository;
     public static IRYSCQuizRepository iryscQuizRepository;
     public static QuestionRepository questionRepository;
     public static QuestionReportRepository questionReportRepository;
@@ -166,6 +164,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
             payLinkRepository = new PayLinkRepository();
+            profileConfigRepository = new ProfileConfigRepository();
             pointRepository = new PointRepository();
             iryscQuizRepository = new IRYSCQuizRepository();
             questionRepository = new QuestionRepository();

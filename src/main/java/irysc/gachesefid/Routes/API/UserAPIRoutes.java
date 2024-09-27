@@ -4,6 +4,8 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.UserController;
@@ -72,6 +74,57 @@ public class UserAPIRoutes extends Router {
         });
     }
 
+    @GetMapping(value = "updateLevels")
+    @ResponseBody
+    public String updateLevels() {
+        ArrayList<Document> userPoints = userPointRepository.find(null, null);
+        ArrayList<Document> userLevels = userLevelRepository.find(null, null);
+        List<WriteModel<Document>> writes = new ArrayList<>();
+
+        userPoints.stream().map(document -> document.getObjectId("user_id"))
+                .distinct().forEach(userId -> {
+                    int sum = userPoints
+                            .stream()
+                            .filter(document -> document.getObjectId("user_id").equals(userId))
+                            .mapToInt(document -> document.getInteger("point"))
+                            .sum();
+                    if(sum > 1) {
+                        userLevels
+                                .stream()
+                                .filter(document -> document.getObjectId("user_id").equals(userId))
+                                .findFirst()
+                                .ifPresent(userLevel -> {
+                                    Document updateQuery =  new Document("point", sum);
+                                    Document nextLevel = levelRepository.findOne(and(
+                                            lte("min_point", sum),
+                                            gt("max_point", sum),
+                                            ne("name", "برنزی")
+                                    ), null);
+                                    if(nextLevel != null) {
+                                        List<Document> levels = userLevel.getList("levels", Document.class);
+                                        levels.add(new Document("name", nextLevel.getString("name"))
+                                                .append("min_point", nextLevel.getInteger("min_point"))
+                                                .append("max_point", nextLevel.getInteger("max_point"))
+                                                .append("_id", nextLevel.getObjectId("_id"))
+                                        );
+                                        updateQuery.append("levels", levels);
+                                    }
+                                    userLevel.put("point", sum);
+                                    writes.add(
+                                            new UpdateOneModel<>(
+                                                    eq("_id", userLevel.getObjectId("_id")),
+                                                    new BasicDBObject("$set", updateQuery)
+                                    ));
+                                });
+
+                    }
+                });
+
+        if(writes.size() > 0)
+            userLevelRepository.bulkWrite(writes);
+
+        return JSON_OK;
+    }
 
     @GetMapping(value = "/gifts")
     @ResponseBody

@@ -1,13 +1,13 @@
 package irysc.gachesefid.Service;
 
 import irysc.gachesefid.Controllers.UserController;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Exception.CustomException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Role;
 import irysc.gachesefid.Security.JwtTokenProvider;
 import irysc.gachesefid.Utility.Cache;
 import irysc.gachesefid.Utility.Utility;
-import irysc.gachesefid.Models.Role;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +21,8 @@ import java.util.ArrayList;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.passwords;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
-import static irysc.gachesefid.Utility.StaticValues.TOKEN_EXPIRATION;
 
 @Service
 public class UserService {
@@ -137,10 +135,6 @@ public class UserService {
 
 //            if(checkPass)
 //                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
-
-            if(checkPass && !passwords.containsKey(username)) {
-                passwords.put(username, password);
-            }
 
             return Utility.generateSuccessMsg(
                     "token", token,

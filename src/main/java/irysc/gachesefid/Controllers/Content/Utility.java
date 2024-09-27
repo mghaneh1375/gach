@@ -51,7 +51,7 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convertDigest(Document doc, boolean isAdmin) {
+    public static JSONObject convertDigest(Document doc, boolean isAdmin) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("price", doc.get("price"))

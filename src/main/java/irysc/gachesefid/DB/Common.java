@@ -208,7 +208,6 @@ public abstract class Common extends Repository {
         FindIterable<Document> cursor = documentMongoCollection.find(eq(secKey, val));
 
         if (cursor.iterator().hasNext()) {
-
             Document doc = cursor.iterator().next();
 
             if (!table.isEmpty())

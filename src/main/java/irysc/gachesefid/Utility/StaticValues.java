@@ -185,13 +185,11 @@ public class StaticValues {
             .append("NID", 1)
             .append("pic", 1);
 
-    public final static BasicDBObject USER_PUBLIC_INFO = new BasicDBObject("_id", 1)
+    public final static BasicDBObject TEACHER_PUBLIC_INFO = new BasicDBObject("_id", 1)
             .append("first_name", 1)
             .append("last_name", 1)
-            .append("school", 1)
-            .append("grade", 1)
-            .append("branches", 1)
-            .append("rank", 1)
+            .append("rate", 1)
+            .append("teach_rate", 1)
             .append("pic", 1);
 
     public final static BasicDBObject USER_TEACH_INFO = new BasicDBObject("_id", 1)
@@ -223,6 +221,7 @@ public class StaticValues {
             .append("advisor_priority", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
+    public static final BasicDBObject JUST_USER_ID = new BasicDBObject("user_id", 1);
     public static final BasicDBObject JUST_NAME = new BasicDBObject("first_name", true).append("last_name", true);
     public static final BasicDBObject JUST_NAME_ = new BasicDBObject("name", true);
     public static final BasicDBObject JUST_TITLE = new BasicDBObject("title", true);

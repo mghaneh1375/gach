@@ -430,6 +430,12 @@ public class CommentController {
                 Sorts.descending("created_at")
         );
 
+        return generateSuccessMsg("data", returnCommentsJSONArr(comments));
+    }
+
+    public static JSONArray returnCommentsJSONArr(
+            List<Document> comments
+    ) {
         JSONArray jsonArray = new JSONArray();
         PairValue p = findRefs(comments);
 
@@ -466,7 +472,7 @@ public class CommentController {
             }
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        return jsonArray;
     }
 
     public static String getCommentsAboutMe(

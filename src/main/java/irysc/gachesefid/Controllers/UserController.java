@@ -1326,7 +1326,7 @@ public class UserController {
 
         if (isStudent) {
 
-            if(!editorIsAdmin) {
+            if (!editorIsAdmin) {
                 if ((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
                         !jsonObject.getString("lastName").equals(user.getString("last_name"))
                 ) && user.containsKey("change_name"))
@@ -1957,12 +1957,14 @@ public class UserController {
         ObjectId userId = user.getObjectId("_id");
         String str1 = user.getOrDefault("advice_bio", "").toString();
         String str2 = user.getOrDefault("teach_bio", "").toString();
-        List<ObjectId> contentIds = contentRepository.find(and(
-                        eq("teacher_ids", userId),
-                        eq("visibility", true)
-                ), JUST_ID)
-                .stream().map(document -> document.getObjectId("_id"))
-                .collect(Collectors.toList());
+        List<ObjectId> contentIds =
+                contentRepository.find(and(
+                                        eq("teacher_ids", userId),
+                                        eq("visibility", true)
+                                ), JUST_ID
+                        )
+                        .stream().map(document -> document.getObjectId("_id"))
+                        .collect(Collectors.toList());
 
         JSONObject jsonObject = new JSONObject()
                 .put("bio", str1.length() > str2.length() ? str1 : str2)

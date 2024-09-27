@@ -40,7 +40,7 @@ public class LevelController {
 
     public static String update(ObjectId levelId, JSONObject jsonObject) {
         Document level = levelRepository.findById(levelId);
-        if(level == null)
+        if (level == null)
             return JSON_NOT_VALID_ID;
 
         level.put("min_point", jsonObject.getInt("minPoint"));
@@ -60,11 +60,11 @@ public class LevelController {
 
     public static String getMyCurrLevel(ObjectId userId) {
         Document userLevel = userLevelRepository.findBySecKey(userId);
-        if(userLevel == null)
+        if (userLevel == null)
             return returnFirstLevel();
 
         List<Document> levels = userLevel.getList("levels", Document.class);
-        if(levels.size() == 0)
+        if (levels.size() == 0)
             return returnFirstLevel();
 
         Document currLevel = levels.get(levels.size() - 1);
@@ -84,13 +84,12 @@ public class LevelController {
         boolean isNew = false;
         Document userLevel = userLevelRepository.findBySecKey(userId);
 
-        if(userLevel == null) {
+        if (userLevel == null) {
             userLevel = new Document("user_id", userId)
                     .append("levels", new ArrayList<>())
                     .append("point", point);
             isNew = true;
-        }
-        else {
+        } else {
             point += userLevel.getInteger("point");
             userLevel.put("point", point);
             updateQuery = new BasicDBObject("point", point);
@@ -102,33 +101,33 @@ public class LevelController {
         boolean needCheckNewLevel = true;
         Document nextLevel = null;
 
-        if(levels.size() > 0 &&
+        if (levels.size() > 0 &&
                 levels.get(levels.size() - 1).getInteger("max_point") > point)
             needCheckNewLevel = false;
 
-        if(needCheckNewLevel) {
+        if (needCheckNewLevel) {
             nextLevel = levelRepository.findOne(and(
                     lte("min_point", point),
                     gt("max_point", point)
             ), null);
 
-            if(nextLevel == null || (
+            if (nextLevel == null || (
                     levels.size() > 0 &&
                             levels.get(levels.size() - 1).getObjectId("_id").equals(
                                     nextLevel.getObjectId("_id")
                             )
-                    )
+            )
             )
                 nextLevel = null;
         }
 
-        if(nextLevel != null) {
+        if (nextLevel != null) {
             levels.add(new Document("name", nextLevel.getString("name"))
                     .append("min_point", nextLevel.getInteger("min_point"))
                     .append("max_point", nextLevel.getInteger("max_point"))
                     .append("_id", nextLevel.getObjectId("_id"))
             );
-            if(updateQuery == null)
+            if (updateQuery == null)
                 updateQuery = new BasicDBObject("levels", levels);
             else
                 updateQuery.append("levels", levels);
@@ -138,17 +137,21 @@ public class LevelController {
             new Thread(() -> {
                 Document user = userRepository.findById(userId);
                 createNotifAndSendSMS(user, finalNextLevel.getString("name"), "nextLevel");
-                double d = ((Number)user.get("coin")).doubleValue() +
+                double d = ((Number) user.get("coin")).doubleValue() +
                         ((Number) finalNextLevel.get("coin")).doubleValue();
                 userRepository.updateOne(studentId, new BasicDBObject("$set",
                         new BasicDBObject("events", user.get("events")))
-                            .append("coin", Math.round((d * 100.0)) / 100.0)
+                        .append("coin", Math.round((d * 100.0)) / 100.0)
                 );
             }).start();
         }
 
-        if(isNew)
+        if (isNew)
             userLevelRepository.insertOne(userLevel);
-        else userLevelRepository.updateOne(userId, new BasicDBObject("$set", updateQuery));
+        else
+            userLevelRepository.updateOne(
+                    userLevel.getObjectId("_id"),
+                    new BasicDBObject("$set", updateQuery)
+            );
     }
 }
