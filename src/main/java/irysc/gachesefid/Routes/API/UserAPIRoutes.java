@@ -44,8 +44,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -57,11 +56,22 @@ import static irysc.gachesefid.Utility.Utility.*;
 @Validated
 public class UserAPIRoutes extends Router {
 
-
     @Autowired
     UserService userService;
 
     private static String token = "LYqPozxUPrpDVAxqBs7vXp1knTnEgEYUrnbpqKtggn1DHDQofCn=?aAdh6Mo/5I8qTcJSkAQppUCB/pzfD2G-0PNkl-R3Ub42BAv4QHFUlWgAfu6SwyRH!O3jUF426jw33EMCGJmYWSApEbCg?t4dRGowUX-ixRMUjqoCF/6s8IcyTQHtOYK9OD/xBGKjq/yzA/AEfz6xP3A7k-CBElUbTRU=3WyZaOjZnANV6EUE3PiK9g-5XKvos-qPP?Pcau=o8li6fDopR/L1ccV9SHlGEGxIMM7V5ZyKCKgxbc4J7lx0nyd0DCI?ddiWHXqAYbe2!oIZT-o4pEdJF2IVYj-jpyJI?VOwMrVR4P-4hrj2fyvW5fFhlgrpBVe6CpwGYdmcx7QxMyjwb5vAh!1tDM=jcVP/AL2a-JzbdtGhYCgkbxexHoZYFjV5goTGjTMXB?yQJrn!ABGC?BYV0B59NNi!0n/u/tbIqTant-FixPJ5otO4h6278ZHpiL9llIg9t0Rk3Sym=fnhEkE4GkfaM6jVTMaSC2iVc9jMg2ug2pXoK1NMaNA/LW77kiJTfrmnobzbPSK7fX84Klk7QtE53i-CdD=a=gB2NnWXKwqX7dic=S289OeaNlP705GZ9-6wvF!HvFTBtlyckzaAVXR2zjip7JLTvnwqrIWKd=P3Hs/!r3Rdmp7OTJgYw85Wq4dIX=Aa/lAc77n0wRyQ5AtaocYAYhstBoF2U96QTcUofNWOn1j6hJAUhboqd99L2dWykVtreRi7E7PYWNef1qrV/yUQbPKaNH4EKvppN03D3Rd1iCq1Kq8N=5ayyx=hOvrvqZ3EoT-x3RA-CY7m0i452xbKSP4nJLzT-/t!uB1/VlxDUoK8XdoGMZo0DMjUWbV8t5j9Kk/w7ta5vcPELszuqA-JkAnDlly?Tg=XBnbhJEyUTndjXrW3Y09BLn/hS7dcF2pU7Az6OleSnuMWGcBO2qPtwrUf2EgcwgPrqG4EwWzdx5IfeoKSbhC?BKi-mFcBV/bv!mnSZi7?BiLG?e1srXRJx?uY??lFXf3B2Lh-?R?d2BB7PV0x!UPgqwnRLCc8noaw0dqbrl6ab7U?Sl7CGlS2R4oeDIM=?jWBUL659cYQ/SdKJ-0xw9jWGWo?fx?qUzwbnrDgPvls2PdWot9ybfuuBJU7Kh2EgW?DbYBaU8MSfqnMLxTD1GKWVIGBFhCL-6n=oczCtLObrwz3j1g15ua2Igiuhf4s?LaRGtB1nFgD3q!5DRsye6IFK15PCS-TaQGFcNSXvh8woN4cOfSWhslDTKrlY5oiZN05qWu25?FI-2gWekEFKuZw3dMPIohxA2wlnx4ILk9Q6Y0iacefvPUm=zMHFot8jP5mFgZoLQRha-Q=6Xvl2ooUlqSdwMi83uoSfJgKAdMK2fa=NP?BT1vOdraDGZoXlQFmL4=2?FnN3Pa8iXVp/ZpNJ?DXnhGzsa624PkH5!HhsBS=YD?9qsX6y=XILOhuGrwub?sokmEVK0IKzd0AvHVpD1m96nlwXqO1KXmPjUodjBiZb/RQHH0?JzjydqV-AQmAdBWM-nel/In8wpRqkqsOHq!l5B6eNlCbqVjVB-?y8PHPorDL0?C1a9z0p7befPM?RaRD9Y127EWyqFgsrSzMJ-!chcC0CtKebR5uiopTQM=eI1jsiiXI5KNB7gIj95tGP=TcWy=HSr6mmfEhw1mUky-7!5m9ZUxYl9ghU6AvCQ!Yl?piMJZyYVVsrz07dELveO6pppGu0hEZ8qL-yfL2fGeR6MmCWdEsAkGg4cfTzQRp3?wfSAtziJ-49=U3XA7E?QS4hA?ZInmx!vTAFN?VvMDgg1LC9xzj8l2Dkzz?!=3TYHRLfAJVvgBBhS!WJkJSscQia-QEBAeKwe0347X6uwefT?0bo!9=iP0/vWgSF-DQ0=WgT/yARdniodePw!T-CAZlF1bfU/Z1O!RFJ2hunLYkdFWNyoepO?bFMCAV6h3hEhjSZkxtQy?fiV-BtX!Sh?-?jZBOa4Cecjj0eqaXehVB!G8WZEu";
+
+    @GetMapping(value = "/findNotExistAvatars")
+    @ResponseBody
+    public void findNotExistAvatars() {
+        avatarRepository.find(null, null).forEach(document -> {
+            userRepository.updateMany(and(
+                    exists("avatar_id", true),
+                    eq("avatar_id", document.getObjectId("_id"))
+            ), set("pic", document.getString("file")));
+        });
+    }
+
 
     @GetMapping(value = "/gifts")
     @ResponseBody
@@ -117,27 +127,6 @@ public class UserAPIRoutes extends Router {
         System.out.println(hits);
         System.out.println(miss);
 
-    }
-
-
-    @GetMapping(value = "/getMyCachedTokens")
-    @ResponseBody
-    public String getCachedTokens(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUser(request);
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (String p : passwords.keySet()) {
-
-            jsonArray.put(new JSONObject()
-                    .put("username", p)
-                    .put("password", passwords.get(p))
-            );
-        }
-
-        return generateSuccessMsg("data", jsonArray);
     }
 
     @GetMapping(value = "/fixQuiz")

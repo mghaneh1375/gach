@@ -12,11 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.avatarRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
@@ -106,9 +104,11 @@ public class AvatarController {
         FileUtils.removeFile(avatar.getString("file"), UserRepository.FOLDER);
         avatar.put("file", filename);
 
-        avatarRepository.updateOne(avatarId,
-                set("file", filename)
-        );
+        avatarRepository.updateOne(avatarId, set("file", filename));
+        userRepository.updateMany(and(
+                exists("avatar_id", true),
+                eq("avatar_id", avatarId)
+        ), set("pic", filename));
 
         return generateSuccessMsg("file", STATICS_SERVER + UserRepository.FOLDER + "/" + filename);
     }
