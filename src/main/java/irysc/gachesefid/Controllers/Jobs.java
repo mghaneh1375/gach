@@ -5,9 +5,9 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
+import irysc.gachesefid.Controllers.Level.LevelController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.StudentQuizController;
-import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
@@ -31,7 +31,7 @@ import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.*;
+import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
 
 public class Jobs implements Runnable {
 
@@ -239,10 +239,9 @@ public class Jobs implements Runnable {
             ).stream().map(document -> document.getObjectId("_id")).collect(Collectors.toList());
 
             if (users.size() > 0) {
-                int today = getToday();
                 userRepository.updateMany(in("_id", users), set("last_daily_point", curr));
                 new Thread(() ->
-                        users.forEach(objectId -> PointController.addPointForAction(objectId, Action.DAILY_POINT, today, null))
+                        users.forEach(objectId -> LevelController.checkForUpgrade(objectId, point.getInteger("point")))
                 ).start();
             }
         }

@@ -14,6 +14,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static irysc.gachesefid.Controllers.Config.GiftController.*;
 import static irysc.gachesefid.Controllers.Quiz.Utility.hasAccess;
@@ -585,55 +586,59 @@ public class EscapeQuizController extends QuizAbstract {
 
         JSONArray jsonArray = new JSONArray();
         List<Document> students = quiz.getList("students", Document.class);
+        List<Document> rankingUsers = userRepository.findByIds(quiz.getList("ranking", Document.class)
+                .stream().map(document -> document.getObjectId("user_id"))
+                .collect(Collectors.toList()), false, JUST_NAME
+        );
+
+        if (rankingUsers == null)
+            return JSON_NOT_UNKNOWN;
 
         for (Document rank : quiz.getList("ranking", Document.class)) {
+            rankingUsers
+                    .stream().filter(document -> document.getObjectId("_id").equals(rank.getObjectId("user_id")))
+                    .findFirst().ifPresent(user -> {
+                        JSONObject jsonObject = new JSONObject()
+                                .put("userId", user.getObjectId("_id").toString())
+                                .put("user", user.getString("first_name") + " " + user.getString("last_name"))
+                                .put("rank", rank.get("rank"))
+                                .put("solved", rank.get("solved"))
+                                .put("isComplete", rank.getBoolean("is_complete"))
+                                .put("lastAnswer", (rank.getLong("last_answer") - quiz.getLong("start")) / 1000);
 
-            Document user = userRepository.findById(rank.getObjectId("user_id"));
+                        if (isAdmin) {
+                            Document std = searchInDocumentsKeyVal(students, "_id", rank.getObjectId("user_id"));
+                            if (std == null) {
+                                jsonArray.put(jsonObject);
+                                return;
+                            }
 
-            JSONObject jsonObject = new JSONObject()
-                    .put("user", user.getString("first_name") + " " + user.getString("last_name"))
-                    .put("rank", rank.get("rank"))
-                    .put("solved", rank.get("solved"))
-                    .put("isComplete", rank.getBoolean("is_complete"))
-                    .put("lastAnswer", (rank.getLong("last_answer") - quiz.getLong("start")) / 1000);
+                            jsonObject.put("startAt", std.containsKey("start_at") && std.get("start_at") != null ? getSolarDate(std.getLong("start_at")) : "")
+                                    .put("finishAt", std.containsKey("finish_at") && std.get("finish_at") != null ? getSolarDateWithSecond(std.getLong("finish_at")) : "");
 
+                            if (std.containsKey("answers")) {
+                                List<Object> answers = (List<Object>) std.get("answers");
+                                JSONArray jsonArray1 = new JSONArray();
 
-            if (isAdmin) {
+                                for (Object ans : answers) {
+                                    if (ans == null)
+                                        continue;
 
-                Document std = searchInDocumentsKeyVal(students, "_id", rank.getObjectId("user_id"));
-                if (std == null) {
-                    jsonArray.put(jsonObject);
-                    continue;
-                }
+                                    Document answer = (Document) ans;
+                                    jsonArray1.put(new JSONObject()
+                                            .put("tries", answer.get("tries"))
+                                            .put("answerAt", answer.containsKey("answer_at") ?
+                                                    (answer.getLong("answer_at") - quiz.getLong("start")) / 1000 : ""
+                                            )
+                                    );
+                                }
+                                jsonObject.put("answers", jsonArray1);
+                            } else
+                                jsonObject.put("answers", new JSONArray());
+                        }
 
-                jsonObject.put("startAt", std.containsKey("start_at") && std.get("start_at") != null ? getSolarDate(std.getLong("start_at")) : "")
-                        .put("finishAt", std.containsKey("finish_at") && std.get("finish_at") != null ? getSolarDateWithSecond(std.getLong("finish_at")) : "");
-
-                if (std.containsKey("answers")) {
-
-                    List<Object> answers = (List<Object>) std.get("answers");
-                    JSONArray jsonArray1 = new JSONArray();
-
-                    for (Object ans : answers) {
-
-                        if (ans == null)
-                            continue;
-
-                        Document answer = (Document) ans;
-                        jsonArray1.put(new JSONObject()
-                                .put("tries", answer.get("tries"))
-                                .put("answerAt", answer.containsKey("answer_at") ?
-                                        (answer.getLong("answer_at") - quiz.getLong("start")) / 1000 : ""
-                                )
-                        );
-                    }
-
-                    jsonObject.put("answers", jsonArray1);
-                } else
-                    jsonObject.put("answers", new JSONArray());
-            }
-
-            jsonArray.put(jsonObject);
+                        jsonArray.put(jsonObject);
+                    });
         }
 
         return generateSuccessMsg("data", jsonArray);
@@ -716,7 +721,7 @@ public class EscapeQuizController extends QuizAbstract {
             List<Document> students = quiz.getList("students", Document.class);
             Document std = searchInDocumentsKeyVal(students, "_id", studentId);
 
-            if(std == null)
+            if (std == null)
                 return JSON_NOT_VALID_ID;
 
             std.put("start_at", null);
@@ -726,8 +731,7 @@ public class EscapeQuizController extends QuizAbstract {
             std.remove("success");
 
             escapeQuizRepository.replaceOneWithoutClearCache(quizId, quiz);
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return generateErr(x.getMessage());
         }
 
@@ -834,7 +838,7 @@ public class EscapeQuizController extends QuizAbstract {
 
             switch (gift.getString("type")) {
                 case "coin":
-                    double d = ((Number)user.get("coin")).doubleValue() + ((Number) gift.get("amount")).doubleValue();
+                    double d = ((Number) user.get("coin")).doubleValue() + ((Number) gift.get("amount")).doubleValue();
                     user.put("coin", Math.round((d * 100.0)) / 100.0);
                     userRepository.replaceOne(user.getObjectId("_id"), user);
                     break;

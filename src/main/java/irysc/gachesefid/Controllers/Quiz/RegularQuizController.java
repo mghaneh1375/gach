@@ -77,7 +77,7 @@ public class RegularQuizController extends QuizAbstract {
 
         try {
 
-            if(withPDF)
+            if (withPDF)
                 Utility.checkFields(pdfQuizMandatoryFields, forbiddenFieldsForPDFQuiz, jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
@@ -110,7 +110,7 @@ public class RegularQuizController extends QuizAbstract {
 
             Document newDoc = QuizController.store(userId, jsonObject, mode);
 
-            if(withPDF)
+            if (withPDF)
                 newDoc.put("pdf_quiz", true);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
@@ -153,13 +153,13 @@ public class RegularQuizController extends QuizAbstract {
         JSONObject jsonObject = new JSONObject();
         Document studentDoc = null;
 
-        if(userId != null) {
+        if (userId != null) {
 
             studentDoc = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                     quiz.getList("students", Document.class), "_id", userId
             );
 
-            if(studentDoc == null)
+            if (studentDoc == null)
                 return jsonObject;
 
         }
@@ -193,13 +193,13 @@ public class RegularQuizController extends QuizAbstract {
             } else
                 jsonObject.put("status", "notStart");
 
-            if(!jsonObject.getString("status").equalsIgnoreCase("notStart")) {
+            if (!jsonObject.getString("status").equalsIgnoreCase("notStart")) {
 
-                if(studentDoc.containsKey("upload_at")) {
+                if (studentDoc.containsKey("upload_at")) {
 
                     long uploadAt = studentDoc.getLong("upload_at");
 
-                    if(uploadAt > quiz.getLong("end"))
+                    if (uploadAt > quiz.getLong("end"))
                         jsonObject.put("delay", uploadAt - quiz.getLong("end"));
 
                     jsonObject.put("uploadAt", getSolarDate(uploadAt));
@@ -240,17 +240,17 @@ public class RegularQuizController extends QuizAbstract {
                     .put("answerType", quiz.getString("answer_type"))
                     .put("maxUploadSize", quiz.getInteger("max_upload_size"));
 
-            if(quiz.containsKey("delay_end")) {
-                    jsonObject.put("delayEnd", quiz.getLong("delay_end"));
-                    jsonObject.put("delayPenalty", quiz.getInteger("delay_penalty"));
+            if (quiz.containsKey("delay_end")) {
+                jsonObject.put("delayEnd", quiz.getLong("delay_end"));
+                jsonObject.put("delayPenalty", quiz.getInteger("delay_penalty"));
             }
 
-            if(userId == null || curr > end)
+            if (userId == null || curr > end)
                 jsonObject.put("descAfter", quiz.getOrDefault("desc_after", ""));
 
-            if(userId != null) {
+            if (userId != null) {
 
-                if(curr > end && quiz.getBoolean("show_results_after_correction")) {
+                if (curr > end && quiz.getBoolean("show_results_after_correction")) {
 
                     if (studentDoc.containsKey("mark"))
                         jsonObject.put("mark", studentDoc.get("mark"));
@@ -259,7 +259,7 @@ public class RegularQuizController extends QuizAbstract {
                         jsonObject.put("markDesc", studentDoc.get("mark_desc"));
                 }
 
-                if(studentDoc.containsKey("filename"))
+                if (studentDoc.containsKey("filename"))
                     jsonObject.put("filename", studentDoc.getString("filename").split("__")[1]);
 
                 jsonObject.put("reminder", Math.max(0, quiz.getLong("end") - curr) / 1000)
@@ -285,7 +285,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("pdfQuiz", quiz.getOrDefault("pdf_quiz", false))
                 .put("qNo", quiz.getOrDefault("q_no", 0))
                 .put("launchMode", quiz.getString("launch_mode"))
-                .put("pdfQuestionFile", (boolean)quiz.getOrDefault("pdf_quiz", false) &&
+                .put("pdfQuestionFile", (boolean) quiz.getOrDefault("pdf_quiz", false) &&
                         !quiz.getOrDefault("question_file", "").toString().isEmpty() ?
                         STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + quiz.getString("question_file") : "")
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
@@ -293,11 +293,12 @@ public class RegularQuizController extends QuizAbstract {
 
         int questionsCount = jsonObject.getInt("qNo");
 
-        if(questionsCount == 0) {
+        if (questionsCount == 0) {
             try {
                 questionsCount = quiz.get("questions", Document.class)
                         .getList("_ids", ObjectId.class).size();
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
         }
 
 
@@ -371,8 +372,10 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest,
-                                boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
+    public JSONObject convertDocToJSON(
+            Document quiz, boolean isDigest,
+            boolean isAdmin, boolean afterBuy, boolean isDescNeeded
+    ) {
 
         if (!quiz.containsKey("start_registry") && quiz.containsKey("database"))
             return convertSchoolDocToJSON(quiz, isDigest, isAdmin, afterBuy);
@@ -385,7 +388,7 @@ public class RegularQuizController extends QuizAbstract {
                 .put("mode", quiz.getOrDefault("mode", "regular").toString())
                 .put("pdfQuiz", quiz.getOrDefault("pdf_quiz", false))
                 .put("qNo", quiz.getOrDefault("q_no", 0))
-                .put("pdfQuestionFile", (boolean)quiz.getOrDefault("pdf_quiz", false) &&
+                .put("pdfQuestionFile", (boolean) quiz.getOrDefault("pdf_quiz", false) &&
                         !quiz.getOrDefault("question_file", "").toString().isEmpty() ?
                         STATICS_SERVER + IRYSCQuizRepository.FOLDER + "/" + quiz.getString("question_file") : "")
                 .put("launchMode", quiz.getString("launch_mode"))
@@ -397,7 +400,7 @@ public class RegularQuizController extends QuizAbstract {
 
         int questionsCount = jsonObject.getInt("qNo");
 
-        if(questionsCount == 0) {
+        if (questionsCount == 0) {
             try {
                 questionsCount = quiz.get("questions", Document.class)
                         .getList("_ids", ObjectId.class).size();
@@ -559,7 +562,7 @@ public class RegularQuizController extends QuizAbstract {
             quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
 
             Document student = userRepository.findById(studentId);
-            if(student != null) {
+            if (student != null) {
                 createNotifAndSendSMS(student, null,
                         quiz.containsKey("pay_by_student") ? "advisorQuiz" : "schoolQuiz"
                 );
@@ -587,10 +590,11 @@ public class RegularQuizController extends QuizAbstract {
             hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
 
             Document student = userRepository.findById(studentId);
-            if(student != null)
+            if (student != null)
                 createNotifAndSendSMS(student, null, "hw");
 
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         return true;
     }
@@ -658,7 +662,7 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     void createTaraz(Document quiz) {
-        if(quiz.getBoolean("pdf_quiz", false))
+        if (quiz.getBoolean("pdf_quiz", false))
             new Taraz().PDFQuizTaraz(quiz, iryscQuizRepository);
         else
             new Taraz(quiz, iryscQuizRepository);
@@ -761,7 +765,8 @@ public class RegularQuizController extends QuizAbstract {
                 storeInRankingTable();
         }
 
-        Taraz() {}
+        Taraz() {
+        }
 
         Taraz(Document quiz, Common db) {
 
@@ -777,7 +782,7 @@ public class RegularQuizController extends QuizAbstract {
 
             try {
 
-                if(!questions.containsKey("marks") ||
+                if (!questions.containsKey("marks") ||
                         questions.getList("marks", Double.class).size() != questionIds.size()
                 ) {
                     for (int i = 0; i < questionIds.size(); i++)
@@ -785,8 +790,7 @@ public class RegularQuizController extends QuizAbstract {
                 }
 
                 marks = questions.getList("marks", Double.class);
-            }
-            catch (Exception ignore) {
+            } catch (Exception ignore) {
                 for (int i = 0; i < questionIds.size(); i++)
                     marks.add(3.0);
             }
@@ -1099,7 +1103,7 @@ public class RegularQuizController extends QuizAbstract {
         private void calcSubjectMarkSum() {
             for (QuestionStat itr : subjectsStat) {
                 for (QuestionStat aStudentsStat : studentsStat) {
-                    if(aStudentsStat.subjectTotalMark.get(itr.id) == null || aStudentsStat.subjectTotalMark.get(itr.id) == 0)
+                    if (aStudentsStat.subjectTotalMark.get(itr.id) == null || aStudentsStat.subjectTotalMark.get(itr.id) == 0)
                         itr.marks.add(0.0);
                     else
                         itr.marks.add(
@@ -1119,8 +1123,7 @@ public class RegularQuizController extends QuizAbstract {
                             itr.marks.add(
                                     (aStudentsStat.lessonMark.get(itr.id) / aStudentsStat.lessonTotalMark.get(itr.id)) * 100.0
                             );
-                    }
-                    catch (Exception x) {
+                    } catch (Exception x) {
                         itr.marks.add(0.0);
                     }
                 }
@@ -1322,8 +1325,7 @@ public class RegularQuizController extends QuizAbstract {
 
                     k++;
                 }
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 System.out.println(ex.getMessage());
                 ex.printStackTrace();
             }

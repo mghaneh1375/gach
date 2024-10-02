@@ -83,7 +83,6 @@ public class PointController {
             ObjectId userId, Action action,
             Object ref, Object additional
     ) {
-//        if(1 == 1) return;
         int p;
 
         if(action.equals(Action.TEACHER_RATE)) {

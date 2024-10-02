@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.Content;
 
+import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
 import irysc.gachesefid.DB.UserRepository;
@@ -13,6 +14,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static irysc.gachesefid.Controllers.Certification.AdminCertification.*;
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildContentQuizTaraz;
@@ -128,23 +130,18 @@ public class Utility {
             jsonObject.put("buyers", students.size());
 
         JSONArray lastBuyers = new JSONArray();
-        int counter = 0;
+        ArrayList<Document> buyers = userRepository.findByIds(
+                students.stream().limit(4).map(document -> document.getObjectId("_id")).collect(Collectors.toList()),
+                false, new BasicDBObject("first_name", 1).append("last_name", 1).append("pic", 1)
+        );
 
-        for (int i = students.size() - 1; i >= 0; i--) {
-
-            if (counter > 3)
-                break;
-
-            Document userTmp = userRepository.findById(students.get(i).getObjectId("_id"));
-            if (userTmp == null)
-                continue;
-
-            lastBuyers.put(new JSONObject()
-                    .put("name", userTmp.getString("first_name") + " " + userTmp.getString("last_name"))
-                    .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + userTmp.getString("pic"))
-            );
-
-            counter++;
+        if(buyers != null) {
+            buyers.forEach(buyer ->
+                    lastBuyers.put(new JSONObject()
+                            .put("id", buyer.getObjectId("_id").toString())
+                            .put("name", buyer.getString("first_name") + " " + buyer.getString("last_name"))
+                            .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + buyer.getString("pic"))
+                    ));
         }
 
         jsonObject.put("lastBuyers", lastBuyers);
@@ -403,7 +400,7 @@ public class Utility {
             Document exam = contentQuizRepository.findById(doc.getObjectId("exam_id"));
             boolean canDoQuiz = false;
 
-            if(exam != null)
+            if (exam != null)
                 canDoQuiz = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                         exam.getList("students", Document.class), "_id", userId
                 ) == -1;

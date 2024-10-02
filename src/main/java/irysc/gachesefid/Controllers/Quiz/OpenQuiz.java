@@ -74,7 +74,7 @@ public class OpenQuiz extends QuizAbstract {
     }
 
     @Override
-    JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
+    public JSONObject convertDocToJSON(Document quiz, boolean isDigest, boolean isAdmin, boolean afterBuy, boolean isDescNeeded) {
 
         JSONObject jsonObject = new JSONObject()
                 .put("title", quiz.getString("title"))

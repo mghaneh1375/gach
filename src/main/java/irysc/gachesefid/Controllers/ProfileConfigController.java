@@ -105,7 +105,7 @@ public class ProfileConfigController {
                         )) > 0
                 )
                 .put("showQuizzes", config != null &&
-                        config.getBoolean("show_quizzes")
+                                config.getBoolean("show_quizzes")
 //                        && (
 //                                iryscQuizRepository.count()
 //                        )
@@ -187,16 +187,16 @@ public class ProfileConfigController {
 
         List<Document> advisors = userRepository.findByIds(
                 user.getList("my_advisors", Object.class),
-                false, TEACHER_PUBLIC_INFO
+                false, ADVISOR_PUBLIC_INFO
         );
 
         JSONArray advisorsJSONArr = new JSONArray();
         if (advisors != null) {
             advisors.forEach(advisor -> advisorsJSONArr.put(new JSONObject()
-                    .put("name", user.getString("first_name") + " " + user.getString("last_name"))
-                    .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
-                    .put("id", user.getObjectId("_id").toString())
-                    .put("rate", user.getOrDefault("rate", 0))
+                    .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
+                    .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + advisor.getString("pic"))
+                    .put("id", advisor.getObjectId("_id").toString())
+                    .put("rate", advisor.getOrDefault("rate", 0))
             ));
         }
 
@@ -259,7 +259,26 @@ public class ProfileConfigController {
         if (config == null || !config.getBoolean("show_quizzes"))
             return JSON_NOT_ACCESS;
 
-        return JSON_OK;
-//        iryscQuizRepository.find(eq())
+        JSONArray jsonArray = new JSONArray();
+        iryscQuizRepository.findLimited(
+                eq("students._id", userId),
+                QUIZ_DIGEST, Sorts.descending("created_at"), 0, 10
+        ).forEach(document -> jsonArray.put(
+                regularQuizController.convertDocToJSON(
+                        document, true, false, false, false
+                )
+        ));
+        if(jsonArray.length() < 10) {
+            openQuizRepository.findLimited(
+                    eq("students._id", userId),
+                    QUIZ_DIGEST, Sorts.descending("created_at"), 0, 10 - jsonArray.length()
+            ).forEach(document -> jsonArray.put(
+                    openQuiz.convertDocToJSON(
+                            document, true, false, false, false
+                    )
+            ));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
     }
 }
