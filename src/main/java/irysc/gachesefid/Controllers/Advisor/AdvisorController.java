@@ -301,7 +301,6 @@ public class AdvisorController {
         return generateSuccessMsg("data", convertFinanceOfferToJSONObject(doc, true));
     }
 
-
     public static String getOffers(ObjectId accessorId, ObjectId advisorId) {
 
         List<Document> docs = advisorFinanceOfferRepository.find(

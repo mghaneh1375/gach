@@ -138,6 +138,19 @@ public class StudentAdviceRoutes extends Router {
         return StudentAdviceController.myRequests(getStudentUser(request).getObjectId("_id"));
     }
 
+    @GetMapping(value = "myAdvisorHistory/{id}")
+    @ResponseBody
+    public String myAdvisorHistory(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+        Document user = getUser(request);
+        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+        return StudentAdviceController.myAdvisorHistory(
+                user.getObjectId("_id"), id, isAdvisor
+        );
+    }
+
     @GetMapping(value = {"myLifeStyle", "myLifeStyle/{studentId}"})
     @ResponseBody
     public String myLifeStyle(HttpServletRequest request,

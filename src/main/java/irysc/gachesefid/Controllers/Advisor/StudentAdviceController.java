@@ -192,9 +192,10 @@ public class StudentAdviceController {
         return JSON_OK;
     }
 
-    public static String payAdvisorPrice(ObjectId userId, double userMoney,
-                                         ObjectId advisorId, JSONObject jsonObject) {
-
+    public static String payAdvisorPrice(
+            ObjectId userId, double userMoney,
+            ObjectId advisorId, JSONObject jsonObject
+    ) {
         Document doc = advisorRequestsRepository.findOne(and(
                 eq("answer", "accept"),
                 eq("advisor_id", advisorId),
@@ -480,13 +481,47 @@ public class StudentAdviceController {
         return returnRequests("advisor_id", requests);
     }
 
-    public static String mySchedule(ObjectId advisorId, ObjectId userId,
-                                    Integer scheduleFor, ObjectId id) {
+    public static String myAdvisorHistory(
+            ObjectId userId, ObjectId advisorReqId,
+            boolean isAdvisor
+    ) {
+        JSONArray jsonArray = new JSONArray();
+        Document req = advisorRequestsRepository.findOne(
+                and(
+                        eq(isAdvisor ? "advisor_id" : "user_id", userId),
+                        eq("_id", advisorReqId),
+                        eq("answer", "accept"),
+                        exists("paid")
+                ), new BasicDBObject(isAdvisor ? "user_id" : "advisor_id", true)
+        );
+        if (req == null)
+            return generateSuccessMsg("data", jsonArray);
 
+        scheduleRepository.find(
+                isAdvisor ? and(
+                        eq("advisors", userId),
+                        eq("user_id", req.getObjectId("user_id"))
+                ) :
+                and(
+                        eq("advisors", req.getObjectId("advisor_id")),
+                        eq("user_id", userId)
+                ), new BasicDBObject("week_start_at", true)
+        ).forEach(document -> jsonArray.put(
+                new JSONObject()
+                        .put("weekStartAt", document.getString("week_start_at"))
+                        .put("id", document.getObjectId("_id").toString())
+        ));
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String mySchedule(
+            ObjectId advisorId, ObjectId userId,
+            Integer scheduleFor, ObjectId id
+    ) {
         Document schedule;
 
         if (id != null) {
-
             schedule = scheduleRepository.findById(id);
             if (schedule == null)
                 return JSON_NOT_VALID_ID;
@@ -496,10 +531,11 @@ public class StudentAdviceController {
             else if (!schedule.getObjectId("user_id").equals(userId))
                 return JSON_NOT_ACCESS;
 
-            if (advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
+            if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId))
                 return JSON_NOT_ACCESS;
+//            if (advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
+//                return JSON_NOT_ACCESS;
         } else {
-
             String weekStartAt;
 
             if (scheduleFor == 0)
@@ -602,10 +638,10 @@ public class StudentAdviceController {
     public static String notifyAdvisorForSchedule(ObjectId scheduleId, String studentName, ObjectId studentId) {
 
         Document schedule = scheduleRepository.findById(scheduleId);
-        if(schedule == null)
+        if (schedule == null)
             return JSON_NOT_VALID_ID;
 
-        if(!schedule.containsKey("advisors") ||
+        if (!schedule.containsKey("advisors") ||
                 !schedule.getObjectId("user_id").equals(studentId)
         )
             return JSON_NOT_ACCESS;
@@ -616,7 +652,7 @@ public class StudentAdviceController {
         if (d > today)
             return JSON_NOT_ACCESS;
 
-        for(ObjectId advisorId : schedule.getList("advisors", ObjectId.class)) {
+        for (ObjectId advisorId : schedule.getList("advisors", ObjectId.class)) {
 
             Document advisor = userRepository.findById(advisorId);
             if (advisor != null) {

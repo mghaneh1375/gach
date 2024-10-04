@@ -4,6 +4,7 @@ package irysc.gachesefid.Controllers;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -594,10 +595,10 @@ public class UserController {
 //        jsonObject.put("birthDay", user.containsKey("birth_day") ? getSolarJustDate(user.getLong("birth_day")) : "");
         jsonObject.put("birthDay", user.getOrDefault("birth_day", ""));
 
-        if (user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0)
-            jsonObject.put("hasAdvisor", true);
-        else
-            jsonObject.put("hasAdvisor", false);
+        jsonObject.put(
+                "hasAdvisor",
+                user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0
+        );
 
         if (user.containsKey("block_notif"))
             jsonObject.put("blockNotif", true);
@@ -825,7 +826,6 @@ public class UserController {
     }
 
     public static String doChangeMail(Document user, String link) {
-
         try {
             Enc.Ticket t = Enc.decryptObject(link.replace("**^^$$", "/"));
 
@@ -844,11 +844,17 @@ public class UserController {
             user.put("mail", t.newMail);
 
             new Thread(() -> {
-
                 userRepository.checkCache(user);
                 userRepository.updateOne(eq("_id", user.getObjectId("_id")),
                         set("mail", t.newMail));
-
+                if (
+                        user.containsKey("birth_day") && user.containsKey("branches") &&
+                                user.containsKey("school") && user.containsKey("grade") &&
+                                user.containsKey("mail") && user.containsKey("phone")
+                ) {
+                    // todo: check for badge
+                    PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, System.currentTimeMillis(), null);
+                }
             }).start();
 
         } catch (Exception e) {
@@ -1375,12 +1381,9 @@ public class UserController {
                         .append("name", grade.getString("name"))
                 );
             else
-
                 user.remove("grade");
 
-
             Document school = null;
-
             if (jsonObject.has("schoolId") &&
                     (
                             !user.containsKey("school") ||
@@ -1451,6 +1454,17 @@ public class UserController {
                 user.getObjectId("_id"),
                 user
         );
+
+        if (!editorIsAdmin &&
+                user.containsKey("birth_day") && user.containsKey("branches") &&
+                user.containsKey("school") && user.containsKey("grade") &&
+                user.containsKey("mail") && user.containsKey("phone")
+        ) {
+            new Thread(() -> {
+                // todo: check for badge
+                PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, System.currentTimeMillis(), null);
+            }).start();
+        }
 
         return JSON_OK;
     }

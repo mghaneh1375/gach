@@ -15,6 +15,8 @@ import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
+import lombok.Builder;
+import lombok.Getter;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -24,7 +26,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Updates.inc;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
@@ -51,6 +52,7 @@ public class Jobs implements Runnable {
         timer.schedule(new CheckContentBuys(), 1200000, ONE_HOUR_MIL_SEC); // delay: 20 min
 
         timer.schedule(new InactiveExpiredAdvice(), ONE_MIN_MSEC * 7, ONE_DAY_MIL_SEC);
+        timer.schedule(new RememberForExpiredSoonAdvice(), ONE_MIN_MSEC * 21, ONE_DAY_MIL_SEC);
         timer.schedule(new BirthDayPoint(), ONE_MIN_MSEC * 3, ONE_HOUR_MIL_SEC * 12);
         timer.schedule(new DailyPoint(), ONE_MIN_MSEC * 4, ONE_MIN_MSEC * 30);
         timer.schedule(new SendMails(), 0, ONE_MIN_MSEC * 5);
@@ -64,16 +66,9 @@ public class Jobs implements Runnable {
     private static class InactiveExpiredAdvice extends TimerTask {
         @Override
         public void run() {
-
-            userRepository.updateMany(exists("check_advice_status_again"), inc("check_advice_status_again", -1));
-
             List<Document> users = userRepository.find(and(
-                    exists("my_advisors.0"),
-                    or(
-                            exists("check_advice_status_again", false),
-                            lte("check_advice_status_again", 2)
-                    )
-            ), new BasicDBObject("my_advisors", 1));
+                    exists("my_advisors.0")
+            ), new BasicDBObject("my_advisors", 1).append("earliest_advice_request", 1));
 
             long curr = System.currentTimeMillis();
             List<WriteModel<Document>> writes = new ArrayList<>();
@@ -81,7 +76,7 @@ public class Jobs implements Runnable {
             Set<ObjectId> shouldClearFromCache = new HashSet<>();
 
             for (Document user : users) {
-                int minReminder = 32;
+                int maxDistance = -1;
                 List<ObjectId> expiredAdvisors = null;
 
                 for (ObjectId advisorId : user.getList("my_advisors", ObjectId.class)) {
@@ -110,25 +105,26 @@ public class Jobs implements Runnable {
                         else
                             expiredStudents.get(advisorId).add(user.getObjectId("_id"));
                     } else
-                        minReminder = Math.min(minReminder, r);
+                        maxDistance = Math.max(maxDistance, r);
                 }
 
-                Document updateQuery = new Document();
-                if (minReminder < 32)
-                    updateQuery.append("check_advice_status_again", minReminder);
+                if (expiredAdvisors != null || !Objects.equals(user.get("earliest_advice_request"), maxDistance)) {
+                    Document updateQuery = new Document();
+                    updateQuery.append("earliest_advice_request", maxDistance);
 
-                if (expiredAdvisors != null) {
-                    List<ObjectId> finalExpiredAdvisors = expiredAdvisors;
-                    updateQuery.append("my_advisors", user.getList("my_advisors", ObjectId.class)
-                            .stream().filter(objectId -> !finalExpiredAdvisors.contains(objectId)).collect(Collectors.toList())
-                    );
+                    if (expiredAdvisors != null) {
+                        List<ObjectId> finalExpiredAdvisors = expiredAdvisors;
+                        updateQuery.append("my_advisors", user.getList("my_advisors", ObjectId.class)
+                                .stream().filter(objectId -> !finalExpiredAdvisors.contains(objectId)).collect(Collectors.toList())
+                        );
+                    }
+
+                    shouldClearFromCache.add(user.getObjectId("_id"));
+                    writes.add(new UpdateOneModel<>(
+                            eq("_id", user.getObjectId("_id")),
+                            new BasicDBObject("$set", updateQuery)
+                    ));
                 }
-
-                shouldClearFromCache.add(user.getObjectId("_id"));
-                writes.add(new UpdateOneModel<>(
-                        eq("_id", user.getObjectId("_id")),
-                        new BasicDBObject("$set", updateQuery)
-                ));
             }
 
             if (expiredStudents != null) {
@@ -162,12 +158,93 @@ public class Jobs implements Runnable {
         }
     }
 
+    private static class RememberForExpiredSoonAdvice extends TimerTask {
+
+        @Builder
+        @Getter
+        static class ReminderSMS {
+            Document user;
+            String advisorName;
+            String mode;
+        }
+
+        @Override
+        public void run() {
+            long curr = System.currentTimeMillis();
+            List<Document> users = userRepository.find(and(
+                            exists("my_advisors.0"),
+                            or(
+                                    eq("earliest_advice_request", 14),
+                                    eq("earliest_advice_request", 28),
+                                    eq("earliest_advice_request", 30)
+                            )
+                    ), new BasicDBObject("phone", 1)
+                            .append("my_advisors", 1)
+                            .append("first_name", 1)
+                            .append("last_name", 1)
+                            .append("events", 1)
+            );
+            HashMap<ObjectId, String> advisors = new HashMap<>();
+            List<ReminderSMS> reminderSMSList = new ArrayList<>();
+
+            users.forEach(user -> {
+                for (ObjectId advisorId : user.getList("my_advisors", ObjectId.class)) {
+                    Document adviceRequest = advisorRequestsRepository.findOne(and(
+                            eq("user_id", user.getObjectId("_id")),
+                            eq("advisor_id", advisorId),
+                            eq("answer", "accept"),
+                            exists("paid_at")
+                    ), new BasicDBObject("paid_at", 1).append("advisor_id", 1), Sorts.descending("paid_at"));
+
+                    int r = (int) ((curr - adviceRequest.getLong("paid_at")) / ONE_DAY_MIL_SEC);
+                    if ((r >= 30 && r <= 31) || (r >= 28 && r <= 29) || (r >= 14 && r <= 15)) {
+                        if (!advisors.containsKey(adviceRequest.getObjectId("advisor_id"))) {
+                            Document advisor = userRepository.findById(adviceRequest.getObjectId("advisor_id"));
+                            advisors.put(advisor.getObjectId("_id"), advisor.getString("first_name") + " " + advisor.getString("last_name"));
+                        }
+                        reminderSMSList.add(
+                                ReminderSMS
+                                        .builder()
+                                        .advisorName(advisors.get(adviceRequest.getObjectId("advisor_id")) + "__" + SERVER + "advisors")
+                                        .mode(r >= 30 ? "adviceWillExpireTomorrow" : r >= 28 ? "adviceWillExpireSoon" : "adviceWillExpireNextWeek")
+                                        .user(user)
+                                        .build()
+                        );
+                    }
+                }
+            });
+
+            reminderSMSList
+                    .forEach(reminderSMS -> Utility.createNotifAndSendSMS(reminderSMS.user, reminderSMS.advisorName, reminderSMS.mode));
+            List<Object> distinctUserIds = reminderSMSList
+                    .stream()
+                    .map(reminderSMS -> reminderSMS.getUser().getObjectId("_id"))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            List<WriteModel<Document>> writes = new ArrayList<>();
+            distinctUserIds.forEach(userId -> reminderSMSList.stream()
+                    .filter(reminderSMS -> reminderSMS.getUser().getObjectId("_id").equals(userId))
+                    .findFirst().ifPresent(reminderSMS -> writes.add(new UpdateOneModel<>(
+                            eq("_id", userId),
+                            new BasicDBObject("$set",
+                                    new BasicDBObject("events", reminderSMS.user.getList("events", Document.class))
+                            )
+                    ))));
+
+            if(writes.size() > 0) {
+                userRepository.bulkWrite(writes);
+                userRepository.clearBatchFromCache(distinctUserIds);
+            }
+        }
+    }
+
     private static class BirthDayPoint extends TimerTask {
         @Override
         public void run() {
 
             Document point = pointRepository.findBySecKey(Action.BIRTH_DAY.getName());
-            if(point == null || point.getInteger("point") == 0)
+            if (point == null || point.getInteger("point") == 0)
                 return;
 
             long curr = System.currentTimeMillis();
@@ -227,7 +304,7 @@ public class Jobs implements Runnable {
         public void run() {
 
             Document point = pointRepository.findBySecKey(Action.DAILY_POINT.getName());
-            if(point == null || point.getInteger("point") == 0)
+            if (point == null || point.getInteger("point") == 0)
                 return;
 
             long curr = System.currentTimeMillis();
