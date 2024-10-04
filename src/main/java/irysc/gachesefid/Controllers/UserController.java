@@ -853,7 +853,7 @@ public class UserController {
                                 user.containsKey("mail") && user.containsKey("phone")
                 ) {
                     // todo: check for badge
-                    PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, System.currentTimeMillis(), null);
+                    PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, 1, null);
                 }
             }).start();
 
@@ -1462,7 +1462,7 @@ public class UserController {
         ) {
             new Thread(() -> {
                 // todo: check for badge
-                PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, System.currentTimeMillis(), null);
+                PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, 1, null);
             }).start();
         }
 
