@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Finance;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Exception.InvalidFieldsException;
@@ -148,7 +149,7 @@ public class PayPing {
                         transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
                 ) {
                     new Thread(() -> {
-                        // todo: check badge
+                        BadgeController.checkForUpgrade(studentId, Action.SET_ADVISOR);
                         PointController.addPointForAction(studentId, Action.SET_ADVISOR, transaction.getObjectId("products"), null);
                     }).start();
                     Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
@@ -176,7 +177,7 @@ public class PayPing {
                         transaction.getString("section").equals(OffCodeSections.CLASSES.getName())
                 ) {
                     new Thread(() -> {
-                        // todo: check badge
+                        BadgeController.checkForUpgrade(studentId, Action.GET_TEACH_CLASS);
                         PointController.addPointForAction(studentId, Action.GET_TEACH_CLASS, transaction.getObjectId("products"), null);
                     }).start();
 
@@ -313,7 +314,7 @@ public class PayPing {
                         transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
                 ) {
                     new Thread(() -> {
-                        // todo: check badge
+                        BadgeController.checkForUpgrade(studentId, Action.BUY_CONTENT);
                         PointController.addPointForAction(studentId, Action.BUY_CONTENT, transaction.getObjectId("products"), null);
                     }).start();
                     Document content = contentRepository.findById(transaction.getObjectId("products"));

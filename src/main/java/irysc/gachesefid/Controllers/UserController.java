@@ -1329,9 +1329,7 @@ public class UserController {
             return JSON_NOT_VALID_PARAMS;
 
         boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
-
         if (isStudent) {
-
             if (!editorIsAdmin) {
                 if ((!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
                         !jsonObject.getString("lastName").equals(user.getString("last_name"))
@@ -1363,7 +1361,6 @@ public class UserController {
             }
 
             Document grade = null;
-
             if (jsonObject.has("gradeId")) {
 //            grade = gradeRepository.findById(
 //                    new ObjectId(jsonObject.getString("gradeId"))
@@ -1399,7 +1396,6 @@ public class UserController {
             }
 
             if (school != null) {
-
                 user.put("school", new Document("_id", school.getObjectId("_id"))
                         .append("name", school.getString("name"))
                 );
@@ -1418,9 +1414,7 @@ public class UserController {
                         }
 
                     }
-
                 }
-
             } else
                 user.remove("school");
 
@@ -1428,7 +1422,6 @@ public class UserController {
                 user.put("branches", branchesDoc);
             else
                 user.remove("branches");
-
         }
 
         if (!jsonObject.getString("firstName").equals(user.getString("first_name")) ||
@@ -1442,13 +1435,11 @@ public class UserController {
         user.put("city", new Document("_id", city.getObjectId("_id"))
                 .append("name", city.getString("name"))
         );
-
         user.put("NID", NID);
         user.put("sex", sex);
 
-        if (jsonObject.has("birthDay")) {
+        if (jsonObject.has("birthDay"))
             user.put("birth_day", jsonObject.getLong("birthDay"));
-        }
 
         userRepository.replaceOne(
                 user.getObjectId("_id"),

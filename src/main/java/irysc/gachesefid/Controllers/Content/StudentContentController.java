@@ -5,6 +5,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.ContentQuizController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
@@ -593,7 +594,7 @@ public class StudentContentController {
             transactionRepository.insertOne(doc);
             registry(contentId, userId, shouldPay, phone, mail);
             new Thread(() -> {
-                // todo: check badge
+                BadgeController.checkForUpgrade(userId, Action.BUY_CONTENT);
                 PointController.addPointForAction(userId, Action.BUY_CONTENT, contentId, null);
             }).start();
 

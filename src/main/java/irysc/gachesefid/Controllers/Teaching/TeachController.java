@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Teaching;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Models.*;
 import irysc.gachesefid.Utility.Utility;
@@ -1201,7 +1202,7 @@ public class TeachController {
         );
         if(rate >= 3) {
             new Thread(() -> {
-                // todo: check badge
+                BadgeController.checkForUpgrade(studentId, Action.TEACHER_RATE);
                 PointController.addPointForAction(studentId, Action.TEACHER_RATE, scheduleId, rate);
             }).start();
         }

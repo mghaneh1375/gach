@@ -2,13 +2,13 @@ package irysc.gachesefid.Controllers.Advisor;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Models.OffCodeTypes;
-import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -26,7 +26,6 @@ import static irysc.gachesefid.Controllers.Advisor.AdvisorController.setAdvisor;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
 import static irysc.gachesefid.Controllers.Finance.PayPing.goToPayment;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Main.GachesefidApplication.transactionRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -250,7 +249,7 @@ public class StudentAdviceController {
                 student.put("money", newUserMoney);
             }
             new Thread(() -> {
-                // todo: check badge
+                BadgeController.checkForUpgrade(userId, Action.SET_ADVISOR);
                 PointController.addPointForAction(userId, Action.SET_ADVISOR, doc.getObjectId("_id"), null);
             }).start();
 

@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -405,7 +406,7 @@ public class StudentTeachController {
                             user.getString("first_name") + " " + user.getString("last_name"),
                             "finalizeTeach"
                     );
-                    // todo: check badge
+                    BadgeController.checkForUpgrade(userId, Action.GET_TEACH_CLASS);
                     PointController.addPointForAction(userId, Action.GET_TEACH_CLASS, finalScheduleId, null);
                 }).start();
 

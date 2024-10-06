@@ -12,7 +12,6 @@ import java.util.List;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Controllers.Level.Utility.returnFirstLevel;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Test.Utility.studentId;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.StaticValues.JSON_OK;
 import static irysc.gachesefid.Utility.Utility.createNotifAndSendSMS;
@@ -139,9 +138,11 @@ public class LevelController {
                 createNotifAndSendSMS(user, finalNextLevel.getString("name"), "nextLevel");
                 double d = ((Number) user.get("coin")).doubleValue() +
                         ((Number) finalNextLevel.get("coin")).doubleValue();
-                userRepository.updateOne(studentId, new BasicDBObject("$set",
-                        new BasicDBObject("events", user.get("events")))
-                        .append("coin", Math.round((d * 100.0)) / 100.0)
+                user.put("coin", Math.round((d * 100.0)) / 100.0);
+                userRepository.updateOne(userId, new BasicDBObject("$set",
+                                new BasicDBObject("events", user.get("events"))
+                                        .append("coin", Math.round((d * 100.0)) / 100.0)
+                        )
                 );
             }).start();
         }

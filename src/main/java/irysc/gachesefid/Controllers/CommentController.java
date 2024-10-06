@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers;
 
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
@@ -117,7 +118,7 @@ public class CommentController {
 
         if (status) {
             new Thread(() -> {
-                // todo: check badge
+                BadgeController.checkForUpgrade(comment.getObjectId("user_id"), Action.COMMENT);
                 PointController.addPointForAction(
                         comment.getObjectId("user_id"), Action.COMMENT, comment.getObjectId("_id"), null
                 );
