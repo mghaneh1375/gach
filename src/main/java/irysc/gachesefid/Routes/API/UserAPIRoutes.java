@@ -116,22 +116,6 @@ public class UserAPIRoutes extends Router {
 ////                        Action.RANK_IN_QUIZ
 ////                );
 //        }
-
-        List<Object> users = userLevelRepository.find(exists("levels.1"), new BasicDBObject("user_id", 1))
-                .stream()
-                .map(document -> document.getObjectId("user_id"))
-                .collect(Collectors.toList());
-
-        userRepository.findByIds(users, false, null).forEach(user -> {
-                    double d = ((Number) user.get("coin")).doubleValue() + 10.0;
-                    user.put("coin", Math.round((d * 100.0)) / 100.0);
-                    userRepository.updateOne(user.getObjectId("_id"), new BasicDBObject("$set",
-                                    new BasicDBObject("coin", Math.round((d * 100.0)) / 100.0)
-                            )
-                    );
-                }
-        );
-        userRepository.clearBatchFromCache(users);
     }
 
 
