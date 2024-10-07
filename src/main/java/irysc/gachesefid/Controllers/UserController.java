@@ -4,6 +4,7 @@ package irysc.gachesefid.Controllers;
 import com.google.common.base.CaseFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.UserRepository;
@@ -524,7 +525,6 @@ public class UserController {
             );
 
         STUDENTS++;
-
         return doc.getString("password");
     }
 
@@ -852,7 +852,7 @@ public class UserController {
                                 user.containsKey("school") && user.containsKey("grade") &&
                                 user.containsKey("mail") && user.containsKey("phone")
                 ) {
-                    // todo: check for badge
+                    BadgeController.checkForUpgrade(user.getObjectId("_id"), Action.COMPLETE_PROFILE);
                     PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, 1, null);
                 }
             }).start();
@@ -1452,7 +1452,7 @@ public class UserController {
                 user.containsKey("mail") && user.containsKey("phone")
         ) {
             new Thread(() -> {
-                // todo: check for badge
+                BadgeController.checkForUpgrade(user.getObjectId("_id"), Action.COMPLETE_PROFILE);
                 PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, 1, null);
             }).start();
         }

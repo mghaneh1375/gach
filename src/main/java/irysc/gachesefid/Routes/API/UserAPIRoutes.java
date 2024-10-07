@@ -4,12 +4,15 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mongodb.BasicDBObject;
+import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Finance.PayPing;
 import irysc.gachesefid.Controllers.ManageUserController;
+import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Models.Sex;
@@ -614,7 +617,6 @@ public class UserAPIRoutes extends Router {
             return JSON_NOT_VALID_PARAMS;
 
         try {
-
             String password = UserController.activate(code,
                     jsonObject.getString("token"),
                     jsonObject.getString("NID")
@@ -622,7 +624,6 @@ public class UserAPIRoutes extends Router {
 
             return userService.signIn(jsonObject.getString("NID"),
                     password, false);
-
         } catch (Exception e) {
             return generateErr(e.getMessage());
         }
@@ -695,9 +696,7 @@ public class UserAPIRoutes extends Router {
             params = {"token", "NID", "code"},
             paramsType = {String.class, String.class, Positive.class}
     ) String json) {
-
         JSONObject jsonObject = convertPersian(new JSONObject(json));
-
         Document doc = activationRepository.findOne(
                 and(
                         eq("token", jsonObject.getString("token")),
@@ -771,9 +770,7 @@ public class UserAPIRoutes extends Router {
                                          optionalsType = {String.class}
                                  ) String json
     ) throws UnAuthException, NotActivateAccountException {
-
         Document user = getUserWithOutCheckCompleteness(request);
-
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
         if (jsonObject.getString("token").length() != 20)
@@ -799,17 +796,25 @@ public class UserAPIRoutes extends Router {
         String phoneOrMail = doc.getString("phone_or_mail");
 
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName())) {
-
             if (user.containsKey("phone"))
                 userService.deleteFromCache(user.getString("phone"));
 
             user.put("phone", phoneOrMail);
         } else {
-
             if (user.containsKey("mail"))
                 userService.deleteFromCache(user.getString("mail"));
 
             user.put("mail", phoneOrMail);
+        }
+        if (
+                user.containsKey("birth_day") && user.containsKey("branches") &&
+                        user.containsKey("school") && user.containsKey("grade") &&
+                        user.containsKey("mail") && user.containsKey("phone")
+        ) {
+            new Thread(() -> {
+                BadgeController.checkForUpgrade(user.getObjectId("_id"), Action.COMPLETE_PROFILE);
+                PointController.addPointForAction(user.getObjectId("_id"), Action.COMPLETE_PROFILE, 1, null);
+            });
         }
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
@@ -824,9 +829,7 @@ public class UserAPIRoutes extends Router {
                                  @PathVariable(required = false) String userId,
                                  @RequestBody @JSONConstraint(params = {"mode", "username"})
                                  @NotBlank String json
-
     ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
-
         Document doc = getUserWithSchoolAccess(request, false, false, userId);
 
         if (doc.getBoolean("isAdmin"))

@@ -83,8 +83,11 @@ public class PointController {
             ObjectId userId, Action action,
             Object ref, Object additional
     ) {
-        int p;
+        // todo: correct section
+        if(action.equals(Action.BUY_QUESTION))
+            return;
 
+        int p;
         if(action.equals(Action.TEACHER_RATE)) {
             p = (int) additional;
             additional = null;

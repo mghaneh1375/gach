@@ -237,11 +237,11 @@ public class PayPing {
                     );
                     new Thread(() -> {
                         transaction.getList("members", ObjectId.class).forEach(memberId -> {
-                            // todo: check badge
+                            BadgeController.checkForUpgrade(memberId, Action.BUY_EXAM);
                             PointController.addPointForAction(memberId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
                         });
                         if(!transaction.getList("members", ObjectId.class).contains(studentId)) {
-                            // todo: check badge
+                            BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
                             PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
                         }
                     }).start();
@@ -283,8 +283,8 @@ public class PayPing {
                         transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
                 ) {
                     new Thread(() -> {
-                        // todo: check badge
-                        PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                        BadgeController.checkForUpgrade(studentId, Action.BUY_QUESTION);
+                        PointController.addPointForAction(studentId, Action.BUY_QUESTION, transaction.getObjectId("products"), null);
                     }).start();
                     Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
                     if (quiz != null) {
@@ -387,7 +387,7 @@ public class PayPing {
                             products.forEach(productId ->
                                     PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
                             );
-                            // todo: check badge
+                            BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
                         }).start();
                     } else {
                         regularQuizController.registry(transaction.getList("student_ids", ObjectId.class),
@@ -398,7 +398,7 @@ public class PayPing {
                         // todo: group registration for tashrihi
                         new Thread(() -> {
                             transaction.getList("student_ids", ObjectId.class).forEach(stdId -> {
-                                // todo: check badge
+                                BadgeController.checkForUpgrade(stdId, Action.BUY_EXAM);
                                 products.forEach(productId ->
                                         PointController.addPointForAction(stdId, Action.BUY_EXAM, productId, null)
                                 );
@@ -417,7 +417,7 @@ public class PayPing {
                                     user.getString("first_name") + " " + user.getString("last_name")
                             );
                     new Thread(() -> {
-                        // todo: check badge
+                        BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
                         products.forEach(productId ->
                                 PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
                         );

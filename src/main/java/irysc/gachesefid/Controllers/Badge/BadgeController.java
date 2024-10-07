@@ -236,7 +236,8 @@ public class BadgeController {
             case BUY_EXAM:
                 return iryscQuizRepository.count(eq("students._id", userId)) +
                         openQuizRepository.count(eq("students._id", userId)) +
-                        escapeQuizRepository.count(eq("students_id", userId));
+                        escapeQuizRepository.count(eq("students_id", userId)) +
+                        onlineStandQuizRepository.count(eq("students._id", userId));
             case SET_ADVISOR:
                 return advisorRequestsRepository.count(and(
                         eq("user_id", userId),

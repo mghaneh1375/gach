@@ -97,7 +97,6 @@ public class UserService {
 
     public String signIn(String username, String password, boolean checkPass
     ) throws NotActivateAccountException {
-
         try {
 
 //            if(checkPass) {
