@@ -4,7 +4,7 @@ import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Ticket.TicketController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
@@ -71,10 +71,11 @@ public class AdminTicketAPIRoutes extends Router {
     @ResponseBody
     public String getRequest(HttpServletRequest request,
                              @PathVariable @ObjectIdConstraint ObjectId ticketId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return TicketController.getRequest(ticketId,
-                Authorization.isEditor(user.getList("accesses", String.class)) ? null
+                Authorization.isEditor(user.getList("accesses", String.class))
+                        ? null
                         : user.getObjectId("_id")
         );
     }
@@ -86,7 +87,7 @@ public class AdminTicketAPIRoutes extends Router {
                                  params = {"items"},
                                  paramsType = {JSONArray.class}
                          ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         boolean isAdmin = Authorization.isEditor(user.getList("accesses", String.class));
 

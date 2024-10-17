@@ -29,7 +29,6 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
-import static irysc.gachesefid.Security.JwtTokenFilter.validateTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
@@ -496,11 +495,6 @@ public class Jobs implements Runnable {
     private static class TokenHandler extends TimerTask {
 
         public void run() {
-
-            synchronized (validateTokens) {
-                validateTokens.removeIf(itr -> !itr.isValidateYet());
-            }
-
             synchronized (blackListTokens) {
                 blackListTokens.removeIf(itr -> (long) itr.getValue() < System.currentTimeMillis());
             }

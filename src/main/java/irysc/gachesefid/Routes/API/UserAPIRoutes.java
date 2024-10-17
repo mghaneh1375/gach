@@ -320,7 +320,7 @@ public class UserAPIRoutes extends Router {
                                             params = {"amount", "mode"},
                                             paramsType = {Number.class, String.class}
                                     ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
@@ -412,7 +412,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String fetchUser(HttpServletRequest request,
                             @PathVariable(required = false) String userId)
-            throws NotActivateAccountException, UnAuthException, InvalidFieldsException, NotCompleteAccountException {
+            throws NotActivateAccountException, UnAuthException, InvalidFieldsException {
         Document user = (Document) getUserWithSchoolAccess(request, false, false, userId).get("user");
         return generateSuccessMsg("user",
                 UserController.isAuth(user)
@@ -422,7 +422,7 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/getInfo")
     @ResponseBody
     public String getInfo(HttpServletRequest request)
-            throws NotCompleteAccountException, NotActivateAccountException, UnAuthException {
+            throws NotActivateAccountException, UnAuthException {
         return ManageUserController.fetchUser(getUser(request), null, false);
     }
 
@@ -514,7 +514,7 @@ public class UserAPIRoutes extends Router {
                             JSONArray.class
                     }
             ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = new JSONObject(jsonStr);
         return UserController.setMyFields(
                 getUser(request),
@@ -579,7 +579,7 @@ public class UserAPIRoutes extends Router {
                                              ObjectId.class, Long.class
                                      }
                              ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         return UserController.updateInfo(
                 convertPersian(new JSONObject(json)),
                 (Document) getUserWithSchoolAccess(request, false, false, userId).get("user"),
@@ -592,7 +592,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String blockNotif(HttpServletRequest request,
                              @PathVariable(required = false) String studentId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         return UserController.blockNotif((Document) getUserWithSchoolAccess(request, false, false, studentId).get("user"));
     }
 
@@ -657,7 +657,7 @@ public class UserAPIRoutes extends Router {
 
                                        }
                                ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         return UserController.setRole(
                 (Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
                 new JSONObject(json)
@@ -829,7 +829,7 @@ public class UserAPIRoutes extends Router {
                                  @PathVariable(required = false) String userId,
                                  @RequestBody @JSONConstraint(params = {"mode", "username"})
                                  @NotBlank String json
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         Document doc = getUserWithSchoolAccess(request, false, false, userId);
 
         if (doc.getBoolean("isAdmin"))
@@ -847,7 +847,7 @@ public class UserAPIRoutes extends Router {
     @ResponseBody
     public String doChangeMail(HttpServletRequest request,
                                @PathVariable @NotBlank String link)
-            throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+            throws UnAuthException, NotActivateAccountException {
         return UserController.doChangeMail(getUser(request), link);
     }
 
@@ -895,7 +895,7 @@ public class UserAPIRoutes extends Router {
                                          paramsType = {
                                                  String.class, String.class, String.class
                                          }) String jsonStr
-    ) throws NotActivateAccountException, UnAuthException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws NotActivateAccountException, UnAuthException, InvalidFieldsException {
 
         Document doc = getUserWithSchoolAccess(request, false, false, userId);
         Document user = (Document) doc.get("user");
@@ -951,7 +951,7 @@ public class UserAPIRoutes extends Router {
     public String setPic(HttpServletRequest request,
                          @RequestBody MultipartFile file,
                          @PathVariable(required = false) String userId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
@@ -969,7 +969,7 @@ public class UserAPIRoutes extends Router {
     public String setAvatar(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId avatarId,
                             @PathVariable(required = false) String userId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         return UserController.setAvatar((
                         Document) getUserWithSchoolAccess(request, false, false, userId).get("user"),
                 avatarId
@@ -980,8 +980,8 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/myTransactions")
     @ResponseBody
     public String myTransactions(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return PayPing.myTransactions(getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return PayPing.myTransactions(getUserId(request));
     }
 
     @GetMapping(value = "/getEducationalHistory/{userId}")
@@ -1011,8 +1011,8 @@ public class UserAPIRoutes extends Router {
     public String getTeacherProfile(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        getUser(request);
+    ) throws UnAuthException {
+        checkAuth(request);
         return UserController.getTeacherProfile(teacherId);
     }
 }

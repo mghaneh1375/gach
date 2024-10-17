@@ -5,7 +5,7 @@ import irysc.gachesefid.Controllers.Teaching.TeachController;
 import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachMode;
 import irysc.gachesefid.Models.TeachReportTagMode;
@@ -343,9 +343,9 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(required = false, value = "from") Long from,
             @RequestParam(required = false, value = "to") Long to,
             @RequestParam(required = false, value = "justSettlements") Boolean justSettlements
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return TeachController.getMyTransactions(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 from, to, justSettlements, needCanRequestSettlement
         );
     }

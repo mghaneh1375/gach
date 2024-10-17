@@ -1,12 +1,12 @@
 package irysc.gachesefid.Security;
 
+import irysc.gachesefid.Models.Role;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,7 +21,8 @@ import javax.servlet.http.HttpServletResponse;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private static JwtTokenProvider jwtTokenProvider = new JwtTokenProvider();
+    @Autowired
+    private JwtTokenFilter jwtTokenFilter;
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
@@ -40,9 +41,42 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and();
 
         http.authorizeRequests()
-                .anyRequest()
+                .antMatchers(
+                        "/api/comment/public/getTopComments/**",
+                        "/api/comment/public/getComments/**",
+                        "/api/comment/public/getCommentsCount/**",
+                        "/api/comment/public/getTeacherMarkedComments/**",
+                        "/api/exchange/public/getAll/**",
+                        "/api/general/getRankingList/**",
+                        "/api/general/checkCert/**",
+                        "/api/general/getSiteStats",
+                        "/api/general/getTagsKeyVals",
+                        "/api/general/fetchStates",
+                        "/api/general/fetchSchoolsDigest",
+                        "/api/general/fetchContentDigests",
+                        "/api/general/rss",
+                        "/api/profile/public/getUserProfile/**",
+                        "/api/profile/public/getUserComments/**",
+                        "/api/profile/public/getUserAdvisors/**",
+                        "/api/profile/public/getUserTeachers/**",
+                        "/api/profile/public/getUserContents/**",
+                        "/api/profile/public/getUserQuizzes/**",
+                )
                 .permitAll()
+                .antMatchers("/api/teach/admin/**").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority())
+                .antMatchers("/api/badge/admin/**").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority())
+                .antMatchers("/api/questionReport/manage/**").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority())
+                .antMatchers("/api/admin/config/author/**").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority())
+                .antMatchers("/api/admin/config/author/getAuthorsKeyVals").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority(), Role.ROLE_CONTENT.getAuthority(), Role.ROLE_EDITOR.getAuthority())
+                .antMatchers("/api/comment/public/**").hasAnyRole(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority(), Role.ROLE_CONTENT.getAuthority(), Role.ROLE_EDITOR.getAuthority())
+                .anyRequest()
+                .authenticated()
         ;
+
+        http.addFilterBefore(
+                jwtTokenFilter,
+                UsernamePasswordAuthenticationFilter.class
+        );
     }
 
     @Bean

@@ -4,7 +4,7 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
@@ -174,7 +174,7 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String getOffers(HttpServletRequest request,
                             @PathVariable(required = false) ObjectId advisorId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
         return AdvisorController.getOffers(isAdvisor ? user.getObjectId("_id") : null, advisorId);
@@ -526,7 +526,7 @@ public class AdvisorAPIRoutes extends Router {
                                       @PathVariable(required = false) String userId,
                                       @PathVariable(required = false) Integer scheduleFor,
                                       @PathVariable(required = false) String id
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         if (
                 ((userId == null) != (scheduleFor == null)) ||

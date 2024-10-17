@@ -56,7 +56,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                  paramsType = {JSONArray.class}
                          ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.removeTags(adviseTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
     }
 
@@ -68,7 +68,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                          paramsType = {JSONArray.class}
                                  ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.removeTags(adviseExamTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
     }
 
@@ -80,7 +80,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                          paramsType = {JSONArray.class}
                                  ) String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.removeTags(lifeStyleTagRepository, new JSONObject(jsonStr).getJSONArray("items"));
     }
 
@@ -94,7 +94,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                     optionalsType = {String.class}
                             ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.createTag(adviseTagRepository, new JSONObject(jsonStr));
     }
 
@@ -109,7 +109,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                   optionalsType = {String.class}
                           ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.editTag(adviseTagRepository, id, new JSONObject(jsonStr));
     }
 
@@ -123,7 +123,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                         }
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.createTag(adviseExamTagRepository, new JSONObject(jsonStr));
     }
 
@@ -137,7 +137,7 @@ public class AdminAdvisorAPIRoutes extends Router {
                                         }
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return AdvisorController.createTag(lifeStyleTagRepository, new JSONObject(jsonStr));
     }
 

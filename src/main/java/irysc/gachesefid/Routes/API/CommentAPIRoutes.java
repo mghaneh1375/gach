@@ -3,7 +3,7 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.CommentController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Routes.Router;
@@ -36,9 +36,9 @@ public class CommentAPIRoutes extends Router {
                     params = {"comment"},
                     paramsType = {String.class}
             ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return CommentController.writeComment(
-                getUser(request).getObjectId("_id"), refId, section,
+                getUserId(request), refId, section,
                 new JSONObject(jsonStr).getString("comment")
         );
     }
@@ -48,9 +48,9 @@ public class CommentAPIRoutes extends Router {
     public String removeComment(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId commentId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return CommentController.removeComment(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 commentId
         );
     }
@@ -98,9 +98,9 @@ public class CommentAPIRoutes extends Router {
             @RequestParam(required = false, value = "to") Long to,
             @RequestParam(required = false, value = "status") String status,
             @RequestParam(required = false, value = "section") String section
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return CommentController.getMyComments(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 section, from, to, status
         );
     }
@@ -112,9 +112,9 @@ public class CommentAPIRoutes extends Router {
             @RequestParam(required = false, value = "from") Long from,
             @RequestParam(required = false, value = "to") Long to,
             @RequestParam(required = false, value = "section") String section
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return CommentController.getCommentsAboutMe(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 section, from, to
         );
     }
@@ -124,9 +124,9 @@ public class CommentAPIRoutes extends Router {
     public String toggleCommentMarkedStatus(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return CommentController.toggleCommentMarkedStatus(
-                getUser(request).getObjectId("_id"), id
+                getUserId(request), id
         );
     }
 

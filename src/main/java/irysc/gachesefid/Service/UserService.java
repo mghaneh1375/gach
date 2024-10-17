@@ -6,6 +6,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Role;
 import irysc.gachesefid.Security.JwtTokenProvider;
+import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Cache;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
@@ -18,6 +19,9 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -59,7 +63,7 @@ public class UserService {
 
     public void deleteFromCache(String username) {
 
-        if(1 == 1)
+        if (1 == 1)
             return;
 
         for (int i = 0; i < cachedToken.size(); i++) {
@@ -73,7 +77,7 @@ public class UserService {
     public String toggleStatus(ObjectId userId) {
 
         Document user = userRepository.findById(userId);
-        if(user == null)
+        if (user == null)
             return null;
 
         switch (user.getString("status")) {
@@ -115,7 +119,7 @@ public class UserService {
 
             Document user = userRepository.findByUnique(username, false);
 
-            if(user == null || user.containsKey("remove_at"))
+            if (user == null || user.containsKey("remove_at"))
                 throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
 
             if (!DEV_MODE && checkPass) {
@@ -130,8 +134,33 @@ public class UserService {
                     user.getString("phone") :
                     user.getString("mail");
 
-            String token = jwtTokenProvider.createToken(username, (user.getBoolean("level")) ? Role.ROLE_ADMIN : Role.ROLE_CLIENT);
+            List<Role> roles;
+            if(user.getBoolean("level")) {
+                roles = user.getList("accesses", String.class).stream().map(access -> {
+                    List<String> currentAccess = Collections.singletonList(access);
+                    return Authorization.isSuperAdmin(currentAccess)
+                            ? Role.ROLE_SUPER_ADMIN
+                            : Authorization.isAdmin(currentAccess)
+                            ? Role.ROLE_ADMIN
+                            : Authorization.isAdvisor(currentAccess)
+                            ? Role.ROLE_ADVISOR
+                            : Authorization.isEditor(currentAccess)
+                            ? Role.ROLE_EDITOR
+                            : Authorization.isContent(currentAccess)
+                            ? Role.ROLE_CONTENT
+                            : Authorization.isAgent(currentAccess)
+                            ? Role.ROLE_AGENT
+                            : Authorization.isSchool(currentAccess)
+                            ? Role.ROLE_SCHOOL
+                            : Role.ROLE_TEACHER;
+                }).collect(Collectors.toList());
+            }
+            else
+                roles = Collections.singletonList(Role.ROLE_CLIENT);
 
+            String token = jwtTokenProvider.createToken(
+                    username, user.getObjectId("_id"), roles
+            );
 //            if(checkPass)
 //                cachedToken.add(new Cache(TOKEN_EXPIRATION, token, new PairValue(user.getString("username"), password)));
 
@@ -156,15 +185,12 @@ public class UserService {
 
     public Document whoAmI(HttpServletRequest req) {
         try {
-
-            Document u = userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req), false));
-
-            if(u == null || u.containsKey("remove_at"))
+            Document u = userRepository.findByUsername(jwtTokenProvider.getUsername(jwtTokenProvider.resolveToken(req)));
+            if (u == null || u.containsKey("remove_at"))
                 return null;
 
             return u;
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return null;
         }
     }

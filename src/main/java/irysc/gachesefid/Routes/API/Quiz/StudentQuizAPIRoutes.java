@@ -6,7 +6,6 @@ import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.AllKindQuiz;
@@ -14,7 +13,6 @@ import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -41,7 +39,6 @@ import java.io.File;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -97,11 +94,11 @@ public class StudentQuizAPIRoutes extends Router {
     public String getRecpForQuiz(HttpServletRequest request,
                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.getMyRecpForCustomQuiz(
-                    quizId, getUser(request).getObjectId("_id")
+                    quizId, getUserId(request)
             );
 
         return StudentQuizController.getMyRecp(
@@ -111,7 +108,7 @@ public class StudentQuizAPIRoutes extends Router {
                                 onlineStandQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                         openQuizRepository : schoolQuizRepository,
-                quizId, getUser(request).getObjectId("_id")
+                quizId, getUserId(request)
         );
     }
 
@@ -122,7 +119,7 @@ public class StudentQuizAPIRoutes extends Router {
                              @PathVariable String mode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId,
                              @RequestParam(required = false, value = "sessionId") ObjectId sessionId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
         boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
@@ -185,10 +182,7 @@ public class StudentQuizAPIRoutes extends Router {
                        @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                        @PathVariable @ObjectIdConstraint ObjectId quizId,
                        @RequestBody @StrongJSONConstraint(params = {"rate"}, paramsType = {Positive.class}) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
-
+    ) throws UnAuthException, NotActivateAccountException {
         if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) &&
@@ -196,12 +190,12 @@ public class StudentQuizAPIRoutes extends Router {
         )
             return JSON_NOT_VALID_PARAMS;
 
-        JSONObject jsonObject = new JSONObject(jsonStr);
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
         if (jsonObject.getInt("rate") <= 0 || jsonObject.getInt("rate") > 5)
             return JSON_NOT_VALID_PARAMS;
 
         return StudentQuizController.rate(selectDB(mode),
-                quizId, user.getObjectId("_id"), jsonObject.getInt("rate")
+                quizId, getUserId(request), jsonObject.getInt("rate")
         );
 
     }
@@ -212,7 +206,7 @@ public class StudentQuizAPIRoutes extends Router {
                          @PathVariable @NotBlank String mode,
                          @PathVariable @ObjectIdConstraint ObjectId quizId,
                          @RequestParam(required = false, value = "sessionId") ObjectId sessionId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         if (!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
                 !mode.equalsIgnoreCase("pdf") &&
@@ -222,29 +216,29 @@ public class StudentQuizAPIRoutes extends Router {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.launchCustom(
-                    quizId, getUser(request).getObjectId("_id")
+                    quizId, getUserId(request)
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName())) {
 
             if (sessionId == null)
                 return StudentContentController.startFinalQuiz(
-                        quizId, getUser(request).getObjectId("_id")
+                        quizId, getUserId(request)
                 );
 
             return StudentContentController.startSessionQuiz(
-                    quizId, sessionId, getUser(request).getObjectId("_id")
+                    quizId, sessionId, getUserId(request)
             );
         }
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
             return OnlineStandingController.launch(
-                    quizId, getUser(request).getObjectId("_id")
+                    quizId, getUserId(request)
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
             return EscapeQuizController.launch(
-                    quizId, getUser(request).getObjectId("_id")
+                    quizId, getUserId(request)
             );
 
         if (mode.contains("pdf")) {
@@ -261,7 +255,7 @@ public class StudentQuizAPIRoutes extends Router {
                         iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                 openQuizRepository : schoolQuizRepository,
-                quizId, getUser(request).getObjectId("_id")
+                quizId, getUserId(request)
         );
     }
 
@@ -277,14 +271,14 @@ public class StudentQuizAPIRoutes extends Router {
     public String getMySubmits(HttpServletRequest request,
                                @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         return StudentQuizController.getMySubmits(
                 mode.equalsIgnoreCase(
                         GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) ?
                                 schoolQuizRepository : null,
-                quizId, getUser(request).getObjectId("_id")
+                quizId, getUserId(request)
         );
     }
 
@@ -293,15 +287,13 @@ public class StudentQuizAPIRoutes extends Router {
     public ResponseEntity<InputStreamResource> getMyQuestionPDF(HttpServletRequest request,
                                                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                                                 @PathVariable @ObjectIdConstraint ObjectId quizId)
-            throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
+            throws UnAuthException {
         File f;
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            f = StudentQuizController.getMyQuestionPDF(iryscQuizRepository, user.getObjectId("_id"), quizId);
+            f = StudentQuizController.getMyQuestionPDF(iryscQuizRepository, getUserId(request), quizId);
         else
-            f = StudentQuizController.getMyQuestionPDF(schoolQuizRepository, user.getObjectId("_id"), quizId);
+            f = StudentQuizController.getMyQuestionPDF(schoolQuizRepository, getUserId(request), quizId);
 
         if (f == null)
             return null;
@@ -439,9 +431,9 @@ public class StudentQuizAPIRoutes extends Router {
     @GetMapping(value = "myCustomQuizzes")
     @ResponseBody
     public String myCustomQuizzes(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentQuizController.myCustomQuizzes(
-                getUser(request).getObjectId("_id")
+                getUserId(request)
         );
     }
 
@@ -450,17 +442,14 @@ public class StudentQuizAPIRoutes extends Router {
     public String getMyAnswerSheet(HttpServletRequest request,
                                    @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
-
+    ) throws UnAuthException {
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.toString()))
             return AdminReportController.getStudentAnswerSheetCustomQuiz(
-                    quizId, user.getObjectId("_id")
+                    quizId, getUserId(request)
             );
 
         return AdminReportController.getStudentAnswerSheet(mode.equalsIgnoreCase("school") ? schoolQuizRepository :
-                selectDB(mode), null, quizId, user.getObjectId("_id"));
+                selectDB(mode), null, quizId, getUserId(request));
     }
 
     @PostMapping(path = "buy")
@@ -473,13 +462,10 @@ public class StudentQuizAPIRoutes extends Router {
                               optionalsType = {ObjectId.class, String.class}
                       )
                       @NotBlank String jsonStr
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
-
-        JSONObject jsonObject = convertPersian(
-                new JSONObject(jsonStr)
-        );
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
         return StudentQuizController.buy(
                 user.getObjectId("_id"),
@@ -540,13 +526,10 @@ public class StudentQuizAPIRoutes extends Router {
                                         optionalsType = {String.class, JSONArray.class}
                                 )
                                 @NotBlank String jsonStr
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
-
-        JSONObject jsonObject = convertPersian(
-                new JSONObject(jsonStr)
-        );
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
         return StudentQuizController.buyOnlineQuiz(
                 user.getObjectId("_id"),
@@ -605,13 +588,10 @@ public class StudentQuizAPIRoutes extends Router {
                                        params = {"answer"},
                                        paramsType = {Object.class}
                                ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
-
+    ) throws UnAuthException {
         return EscapeQuizController.storeAnswer(
                 quizId, questionId,
-                user.getObjectId("_id"), convertPersian(new JSONObject(jsonStr)).get("answer")
+                getUserId(request), convertPersian(new JSONObject(jsonStr)).get("answer")
         );
     }
 
@@ -625,7 +605,7 @@ public class StudentQuizAPIRoutes extends Router {
                                        params = {}, paramsType = {},
                                        optionals = {"answers"}, optionalsType = {JSONArray.class}
                                ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException {
 
         JSONObject jsonObject = jsonStr == null || jsonStr.isEmpty() ?
                 new JSONObject() : new JSONObject(jsonStr);
@@ -633,17 +613,15 @@ public class StudentQuizAPIRoutes extends Router {
         if(!jsonObject.has("answers") || jsonObject.getJSONArray("answers").length() == 0)
             return JSON_OK;
 
-        Document user = getUser(request);
-
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.storeCustomAnswers(
-                    quizId, user.getObjectId("_id"),
+                    quizId, getUserId(request),
                     jsonObject.getJSONArray("answers")
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return StudentContentController.storeAnswers(
-                    quizId, user.getObjectId("_id"),
+                    quizId, getUserId(request),
                     jsonObject.getJSONArray("answers")
             );
 
@@ -652,7 +630,7 @@ public class StudentQuizAPIRoutes extends Router {
                         iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                 openQuizRepository : schoolQuizRepository,
-                quizId, user.getObjectId("_id"),
+                quizId, getUserId(request),
                 jsonObject.getJSONArray("answers")
         );
     }
@@ -667,13 +645,10 @@ public class StudentQuizAPIRoutes extends Router {
                                                 params = {"answer"},
                                                 paramsType = {Object.class}
                                         ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
-
+    ) throws UnAuthException {
         return OnlineStandingController.storeAnswer(
                 quizId, questionId,
-                user.getObjectId("_id"),
+                getUserId(request),
                 new JSONObject(jsonStr).get("answer")
         );
     }
@@ -686,10 +661,7 @@ public class StudentQuizAPIRoutes extends Router {
                                 @PathVariable @ObjectIdConstraint ObjectId quizId,
                                 @PathVariable @ObjectIdConstraint ObjectId questionId,
                                 @RequestBody MultipartFile file
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        Document user = getUser(request);
-
+    ) throws UnAuthException {
         if (!mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) &&
                 !mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())
         )
@@ -699,7 +671,7 @@ public class StudentQuizAPIRoutes extends Router {
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
                 quizId, questionId,
-                user.getObjectId("_id"), file
+                getUserId(request), file
         );
     }
 
@@ -712,12 +684,12 @@ public class StudentQuizAPIRoutes extends Router {
                                             paramsType = {JSONArray.class, String.class}
                                     )
                                     @NotBlank String jsonStr
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         JSONObject jsonObject = new JSONObject(jsonStr);
 
         return StudentQuizController.prepareCustomQuiz(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 jsonObject.getJSONArray("filters"),
                 jsonObject.getString("name")
         );
@@ -732,7 +704,7 @@ public class StudentQuizAPIRoutes extends Router {
                                         optionals = {"offcode"},
                                         optionalsType = {String.class}
                                 ) String jsonStr
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentQuizController.payCustomQuiz(
                 getUser(request),
                 id,

@@ -3,7 +3,7 @@ package irysc.gachesefid.Routes.API.Content;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
@@ -51,8 +51,8 @@ public class StudentContentAPIRoutes extends Router {
     @GetMapping(value = "getMy")
     @ResponseBody
     public String getMy(HttpServletRequest request
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.getMy(getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.getMy(getUserId(request));
     }
 
     @PostMapping(value = "buy/{id}")
@@ -69,7 +69,7 @@ public class StudentContentAPIRoutes extends Router {
                                       String.class
                               }
                       ) String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return StudentContentController.buy(id, new JSONObject(jsonStr), user.getObjectId("_id"),
                 ((Number) user.get("money")).doubleValue(), user.getString("phone"), user.getString("mail")
@@ -81,8 +81,8 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String startFinalQuiz(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.startFinalQuiz(id, getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.startFinalQuiz(id, getUserId(request));
     }
 
     @PostMapping(value = "startSessionQuiz/{id}/{sessionId}")
@@ -90,8 +90,8 @@ public class StudentContentAPIRoutes extends Router {
     public String startSessionQuiz(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId id,
                                    @PathVariable @ObjectIdConstraint ObjectId sessionId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.startSessionQuiz(id, sessionId, getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.startSessionQuiz(id, sessionId, getUserId(request));
     }
 
 
@@ -99,8 +99,8 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String reviewFinalQuiz(HttpServletRequest request,
                                   @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.reviewFinalQuiz(id, getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.reviewFinalQuiz(id, getUserId(request));
     }
 
     @PostMapping(value = "reviewSessionQuiz/{id}/{sessionId}")
@@ -108,8 +108,8 @@ public class StudentContentAPIRoutes extends Router {
     public String reviewSessionQuiz(HttpServletRequest request,
                                   @PathVariable @ObjectIdConstraint ObjectId id,
                                   @PathVariable @ObjectIdConstraint ObjectId sessionId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.reviewSessionQuiz(id, sessionId, getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.reviewSessionQuiz(id, sessionId, getUserId(request));
     }
 
     @GetMapping(value = "get/{slug}")
@@ -128,8 +128,8 @@ public class StudentContentAPIRoutes extends Router {
     public String rate(HttpServletRequest request,
                        @PathVariable @ObjectIdConstraint ObjectId id,
                        @RequestBody @StrongJSONConstraint(params = {"rate"}, paramsType = {Positive.class}) String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return StudentContentController.rate(id, getUser(request).getObjectId("_id"),
+    ) throws UnAuthException, NotActivateAccountException {
+        return StudentContentController.rate(id, getUserId(request),
                 new JSONObject(jsonStr).getInt("rate")
         );
     }
@@ -146,8 +146,8 @@ public class StudentContentAPIRoutes extends Router {
     public String getTeacherContents(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        getUser(request);
+    ) throws UnAuthException {
+        checkAuth(request);
         return StudentContentController.getTeacherContents(teacherId);
     }
 

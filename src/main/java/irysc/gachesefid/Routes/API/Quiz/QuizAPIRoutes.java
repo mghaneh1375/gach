@@ -39,6 +39,7 @@ import java.io.File;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
+import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 
@@ -851,7 +852,6 @@ public class QuizAPIRoutes extends Router {
                                   @RequestParam(value = "justMarked", required = false) Boolean justMarked,
                                   @RequestParam(value = "justNotMarked", required = false) Boolean justNotMarked
     ) throws NotActivateAccountException, UnAuthException, NotAccessException {
-
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
 
@@ -911,7 +911,7 @@ public class QuizAPIRoutes extends Router {
                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
                                        @PathVariable @Min(1) int rank
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return EscapeQuizController.removeGift(quizId, rank);
     }
 
@@ -934,8 +934,8 @@ public class QuizAPIRoutes extends Router {
                                             }
                                     ) @NotBlank String str
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
-        return EscapeQuizController.addGift(quizId, new JSONObject(str));
+        getAdminPrivilegeUserVoid(request);
+        return EscapeQuizController.addGift(quizId, convertPersian(new JSONObject(str)));
     }
 
     @PutMapping(path = "addAttach/{mode}/{quizId}")
@@ -1159,11 +1159,9 @@ public class QuizAPIRoutes extends Router {
                                      @PathVariable Number mark,
                                      @RequestParam(required = false, value = "canUpload") String canUpload
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getAdminPrivilegeUser(request);
+        Document user = getQuizUser(request);
 
         boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
-
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.updateQuestionMark(selectDB(mode), null, quizId, questionId, mark, canUpload);
 
@@ -1447,9 +1445,7 @@ public class QuizAPIRoutes extends Router {
                                     @RequestParam(required = false) ObjectId gradeId,
                                     @RequestParam(required = false) ObjectId lessonId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUser(request);
-
+        getAdminPrivilegeUserVoid(request);
         return PackageController.getPackagesDigest(
                 gradeId, lessonId
         );
@@ -1662,7 +1658,7 @@ public class QuizAPIRoutes extends Router {
                         @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                         @PathVariable @ObjectIdConstraint ObjectId id
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return QuizController.rates(mode.equalsIgnoreCase(
                 GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                 openQuizRepository, id
