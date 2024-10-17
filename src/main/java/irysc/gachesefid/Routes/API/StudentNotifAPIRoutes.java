@@ -3,7 +3,7 @@ package irysc.gachesefid.Routes.API;
 import irysc.gachesefid.Controllers.Notif.NotifController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -23,7 +23,7 @@ public class StudentNotifAPIRoutes extends Router {
     @ResponseBody
     public String get(HttpServletRequest request,
                       @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return NotifController.getNotif(id, getUser(request));
     }
 
@@ -31,14 +31,14 @@ public class StudentNotifAPIRoutes extends Router {
     @ResponseBody
     public String setSeen(HttpServletRequest request,
                           @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return NotifController.setSeen(id, getUser(request));
     }
 
     @GetMapping(value = "myNotifs")
     @ResponseBody
     public String myNotifs(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return NotifController.myNotifs(getUser(request));
     }
 

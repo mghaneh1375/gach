@@ -42,7 +42,7 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "/getMyAdvisors")
     @ResponseBody
     public String getMyAdvisors(HttpServletRequest request
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentAdviceController.getMyAdvisors(getUser(request));
     }
 
@@ -60,7 +60,7 @@ public class StudentAdviceRoutes extends Router {
                                                   String.class
                                           }
                                   ) String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return StudentAdviceController.payAdvisorPrice(
                 user.getObjectId("_id"),
@@ -93,7 +93,7 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "hasOpenRequest")
     @ResponseBody
     public String hasOpenRequest(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return AdvisorController.hasOpenRequest(
                 user.getObjectId("_id"),
@@ -105,7 +105,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String cancelRequest(HttpServletRequest request,
                                 @PathVariable @ObjectIdConstraint ObjectId reqId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         Document user = getStudentUser(request);
         return StudentAdviceController.cancelRequest(
                 user.getObjectId("_id"),
@@ -118,7 +118,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String cancel(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId advisorId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return AdvisorController.cancel(getStudentUser(request), advisorId);
     }
 
@@ -127,15 +127,15 @@ public class StudentAdviceRoutes extends Router {
     public String request(HttpServletRequest request,
                           @PathVariable @ObjectIdConstraint ObjectId advisorId,
                           @PathVariable String planId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return AdvisorController.request(getStudentUser(request), advisorId, planId);
     }
 
     @GetMapping(value = "myRequests")
     @ResponseBody
     public String myRequests(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
-        return StudentAdviceController.myRequests(getStudentUser(request).getObjectId("_id"));
+    ) throws UnAuthException {
+        return StudentAdviceController.myRequests(getUserId(request));
     }
 
     @GetMapping(value = "myAdvisorHistory/{id}")
@@ -143,7 +143,7 @@ public class StudentAdviceRoutes extends Router {
     public String myAdvisorHistory(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
         return StudentAdviceController.myAdvisorHistory(
@@ -174,7 +174,7 @@ public class StudentAdviceRoutes extends Router {
                                                        JSONArray.class
                                                }
                                        ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return StudentAdviceController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("exams")
         );
@@ -199,7 +199,7 @@ public class StudentAdviceRoutes extends Router {
                                                        String.class
                                                }
                                        ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return StudentAdviceController.addItemToMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
     }
 
@@ -215,7 +215,7 @@ public class StudentAdviceRoutes extends Router {
                                                             String.class, String.class
                                                     }
                                             ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         return StudentAdviceController.removeItemFromMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
     }
 
@@ -228,7 +228,7 @@ public class StudentAdviceRoutes extends Router {
                                params = {"rate"},
                                paramsType = {Positive.class}
                        ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, NotAccessException {
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
         Document user = getStudentUser(request);
         if (!user.containsKey("my_advisors"))
@@ -253,18 +253,18 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String getMySchedules(HttpServletRequest request,
                                       @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException {
         return AdvisorController.getStudentSchedules(
-                null, getUser(request).getObjectId("_id"), notReturnPassed
+                null, getUserId(request), notReturnPassed
         );
     }
 
     @GetMapping(value = "getMySchedulesDigest")
     @ResponseBody
     public String getMySchedulesDigest(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return AdvisorController.getStudentSchedulesDigest(
-                getUser(request).getObjectId("_id")
+                getUserId(request)
         );
     }
 
@@ -272,9 +272,9 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String getMyLessonsInSchedule(HttpServletRequest request,
                                          @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
-        ObjectId studentId = getUser(request).getObjectId("_id");
+        ObjectId studentId = getUserId(request);
 
         return AdvisorController.lessonsInSchedule(
                 studentId, id, false
@@ -285,8 +285,8 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "getMyCurrentRoom")
     @ResponseBody
     public String getMyCurrentRoom(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return StudentAdviceController.getMyCurrentRoom(getStudentUser(request).getObjectId("_id"));
+    ) throws NotAccessException, UnAuthException {
+        return StudentAdviceController.getMyCurrentRoom(getUserId(request));
     }
 
     @GetMapping(value = "getAdvisorTags")
@@ -304,10 +304,9 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public ResponseEntity<InputStreamResource> exportPDF(HttpServletRequest request,
                                                          @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
-
         boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
         ObjectId userId = user.getObjectId("_id");
 
@@ -352,9 +351,9 @@ public class StudentAdviceRoutes extends Router {
                                               Positive.class, Positive.class
                                       }
                               ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentAdviceController.setDoneTime(
-                getUser(request).getObjectId("_id"), id, itemId,
+                getUserId(request), id, itemId,
                 Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -363,10 +362,9 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String notifyAdvisorForSchedule(HttpServletRequest request,
                               @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
 
         Document user = getUser(request);
-
         return StudentAdviceController.notifyAdvisorForSchedule(
                 id,
                 user.getString("first_name") + " " + user.getString("last_name"),

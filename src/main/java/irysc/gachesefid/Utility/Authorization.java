@@ -22,6 +22,9 @@ public class Authorization {
                 accesses.contains(Access.SUPERADMIN.getName());
     }
 
+    public static boolean isSuperAdmin(List<String> accesses) {
+        return accesses.contains(Access.SUPERADMIN.getName());
+    }
     public static boolean isEditor(List<String> accesses) {
         return accesses.contains(Access.ADMIN.getName()) ||
                 accesses.contains(Access.SUPERADMIN.getName()) ||

@@ -1,8 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.ProfileConfigController;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -24,8 +22,8 @@ public class ProfileAPIRoutes extends Router {
     @GetMapping(value = "getMyConfig")
     @ResponseBody
     public String getMyConfig(HttpServletRequest request
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return ProfileConfigController.getMyConfig(getUser(request).getObjectId("_id"));
+    ) throws UnAuthException {
+        return ProfileConfigController.getMyConfig(getUserId(request));
     }
 
     @PutMapping(value = "setMyConfig")
@@ -48,9 +46,9 @@ public class ProfileAPIRoutes extends Router {
                             Boolean.class, Boolean.class
                     }
             ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return ProfileConfigController.setMyConfig(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 new JSONObject(jsonStr)
         );
     }

@@ -3,7 +3,7 @@ package irysc.gachesefid.Routes.API.Admin;
 import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.GradeSchool;
@@ -218,9 +218,8 @@ public class ManageUserAPIRoutes extends Router {
     @ResponseBody
     public String acceptInvite(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId reqId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        Document user = getUser(request);
-        return ManageUserController.acceptInvite(user, reqId);
+    ) throws UnAuthException, NotActivateAccountException {
+        return ManageUserController.acceptInvite(getUser(request), reqId);
     }
 
     @PostMapping(value = "/addSchool")

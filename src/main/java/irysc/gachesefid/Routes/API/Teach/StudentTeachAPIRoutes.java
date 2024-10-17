@@ -2,9 +2,7 @@ package irysc.gachesefid.Routes.API.Teach;
 
 import irysc.gachesefid.Controllers.Teaching.StudentTeachController;
 import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
-import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
@@ -38,7 +36,7 @@ public class StudentTeachAPIRoutes extends Router {
     public String submitRequest(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.submitRequest(
                 getUser(request), scheduleId
         );
@@ -49,7 +47,7 @@ public class StudentTeachAPIRoutes extends Router {
     public String cancelRequest(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return StudentTeachController.cancelRequest(
                 user.getObjectId("_id"),
@@ -65,9 +63,9 @@ public class StudentTeachAPIRoutes extends Router {
             @RequestParam(value = "activeMode", required = false) String activeMode,
             @RequestParam(value = "statusMode", required = false) String statusMode,
             @RequestParam(value = "scheduleActiveMode", required = false) String scheduleActiveMode
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.myScheduleRequests(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 activeMode, statusMode, scheduleActiveMode
         );
     }
@@ -77,8 +75,8 @@ public class StudentTeachAPIRoutes extends Router {
     public String getSchedules(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        getUser(request);
+    ) throws UnAuthException {
+        checkAuth(request);
         return StudentTeachController.getSchedules(teacherId);
     }
 
@@ -90,7 +88,7 @@ public class StudentTeachAPIRoutes extends Router {
                                          params = {}, paramsType = {},
                                          optionals = {"code"}, optionalsType = {String.class}
                                  ) String json
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = json != null && !json.isEmpty() ? convertPersian(new JSONObject(json)) : new JSONObject();
         return StudentTeachController.payForSchedule(
                 getUser(request), null, scheduleId,
@@ -106,7 +104,7 @@ public class StudentTeachAPIRoutes extends Router {
                                             params = {}, paramsType = {},
                                             optionals = {"code"}, optionalsType = {String.class}
                                     ) String json
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = json != null && !json.isEmpty() ? convertPersian(new JSONObject(json)) : new JSONObject();
         return StudentTeachController.prePayForSemiPrivateSchedule(
                 scheduleId, getUser(request),
@@ -119,9 +117,9 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMySchedules(
             HttpServletRequest request,
             @RequestParam(value = "activeMode", required = false) String activeMode
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.getMySchedules(
-                getUser(request).getObjectId("_id"), activeMode
+                getUserId(request), activeMode
         );
     }
 
@@ -131,7 +129,7 @@ public class StudentTeachAPIRoutes extends Router {
 //            HttpServletRequest request,
 //            @PathVariable @ObjectIdConstraint ObjectId teacherId,
 //            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-//    ) throws NotAccessException, UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+//    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 //        return StudentTeachController.rateToTeacher(
 //                getStudentUser(request).getObjectId("_id"), teacherId, rate
 //        );
@@ -143,9 +141,9 @@ public class StudentTeachAPIRoutes extends Router {
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId,
             @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.rateToSchedule(
-                getUser(request).getObjectId("_id"), scheduleId, rate
+                getUserId(request), scheduleId, rate
         );
     }
 
@@ -176,9 +174,9 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMyRate(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.getMyRate(
-                getUser(request).getObjectId("_id"), teacherId
+                getUserId(request), teacherId
         );
     }
 
@@ -187,9 +185,9 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMyTeachScheduleReportProblems(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return StudentTeachController.getMyTeachScheduleReportProblems(
-                getUser(request).getObjectId("_id"), scheduleId, true
+                getUserId(request), scheduleId, true
         );
     }
 
@@ -202,13 +200,13 @@ public class StudentTeachAPIRoutes extends Router {
                     params = {}, paramsType = {},
                     optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
             ) String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject;
         if (jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
         else jsonObject = new JSONObject(jsonStr);
 
         return StudentTeachController.setMyTeachScheduleReportProblems(
-                getUser(request).getObjectId("_id"), scheduleId,
+                getUserId(request), scheduleId,
                 jsonObject.has("tagIds") ? jsonObject.getJSONArray("tagIds") : null,
                 jsonObject.has("desc") ? jsonObject.getString("desc") : null
         );

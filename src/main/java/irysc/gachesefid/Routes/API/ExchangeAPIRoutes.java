@@ -2,9 +2,7 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Exchange.ExchangeController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Kavenegar.excepctions.HttpException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.types.ObjectId;
@@ -30,7 +28,7 @@ public class ExchangeAPIRoutes extends Router {
     public String getReward(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return ExchangeController.getReward(
                 getUser(request), id
         );

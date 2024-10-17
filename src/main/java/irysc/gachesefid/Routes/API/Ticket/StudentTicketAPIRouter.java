@@ -2,12 +2,12 @@ package irysc.gachesefid.Routes.API.Ticket;
 
 import irysc.gachesefid.Controllers.Ticket.TicketController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TicketPriority;
 import irysc.gachesefid.Models.TicketSection;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -40,8 +40,7 @@ public class StudentTicketAPIRouter extends Router {
                                 @RequestParam(value = "studentId", required = false) ObjectId studentId,
                                 @RequestParam(value = "priority", required = false) String priority,
                                 @RequestParam(value = "status", required = false) String status
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
 
@@ -76,16 +75,12 @@ public class StudentTicketAPIRouter extends Router {
                                          ObjectId.class
                                  }
                          ) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
-        JSONObject jsonObject = new JSONObject(jsonStr);
-
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
-
         return TicketController.insert(
                 user.getList("accesses", String.class),
                 user.getObjectId("_id"),
-                jsonObject
+                Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
 
@@ -95,11 +90,10 @@ public class StudentTicketAPIRouter extends Router {
     public String setAnswer(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId requestId,
                             @RequestBody @JSONConstraint(params = {"answer"}) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
 
-        if(
+        if (
                 Authorization.isAdvisor(user.getList("accesses", String.class)) ||
                         Authorization.isEditor(user.getList("accesses", String.class))
         )
@@ -119,13 +113,12 @@ public class StudentTicketAPIRouter extends Router {
     public String addFileToRequest(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId requestId,
                                    @RequestBody MultipartFile file)
-            throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+            throws UnAuthException, NotActivateAccountException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
         Document user = getUser(request);
-
         return TicketController.addFileToRequest(
                 user.getList("accesses", String.class),
                 user.getObjectId("_id"),
@@ -136,10 +129,9 @@ public class StudentTicketAPIRouter extends Router {
     @ResponseBody
     public String sendRequest(HttpServletRequest request,
                               @PathVariable @ObjectIdConstraint ObjectId requestId)
-            throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+            throws UnAuthException {
         return TicketController.sendRequest(
-                getUser(request).getObjectId("_id"),
-                requestId
+                getUserId(request), requestId
         );
     }
 

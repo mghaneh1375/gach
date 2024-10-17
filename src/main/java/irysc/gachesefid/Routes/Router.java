@@ -1,29 +1,44 @@
 package irysc.gachesefid.Routes;
 
-import irysc.gachesefid.Exception.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Exception.NotAccessException;
+import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.Access;
+import irysc.gachesefid.Models.Role;
 import irysc.gachesefid.Security.JwtTokenFilter;
+import irysc.gachesefid.Security.MyUserDetailsService;
 import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Objects;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
+@Service
 public class Router {
 
-    private final static JwtTokenFilter JWT_TOKEN_FILTER = new JwtTokenFilter();
+    @Autowired
+    private JwtTokenFilter jwtTokenFilter;
+
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private MyUserDetailsService myUserDetailsService;
+
     protected Document getUser(HttpServletRequest request)
-            throws NotActivateAccountException, NotCompleteAccountException, UnAuthException {
+            throws NotActivateAccountException, UnAuthException {
 
-        boolean auth = new JwtTokenFilter().isAuth(request);
-
+        boolean auth = jwtTokenFilter.isAuth(request);
         if (auth) {
             Document u = userService.whoAmI(request);
             if (u != null) {
@@ -31,12 +46,6 @@ public class Router {
                     JwtTokenFilter.removeTokenFromCache(request.getHeader("Authorization").replace("Bearer ", ""));
                     throw new NotActivateAccountException("Account not activated");
                 }
-
-                if (Authorization.isPureStudent(u.getList("accesses", String.class))) {
-//                    if (!u.containsKey("pic"))
-//                        throw new NotCompleteAccountException("Account not complete");
-                }
-
                 return u;
             }
         }
@@ -44,11 +53,52 @@ public class Router {
         throw new UnAuthException("Token is not valid");
     }
 
-    protected Document getStudentUser(HttpServletRequest request)
-            throws NotActivateAccountException, NotCompleteAccountException,
-            UnAuthException, NotAccessException {
+    protected ObjectId getUserId(HttpServletRequest request
+    ) throws UnAuthException {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String token = bearerToken.substring(7);
+            Claims claims;
 
-        boolean auth = new JwtTokenFilter().isAuth(request);
+            try {
+                claims = Jwts.parser()
+                        .setSigningKey(myUserDetailsService.getSharedKeyBytes())
+                        .parseClaimsJws(token)
+                        .getBody();
+
+                if(claims == null || !claims.containsKey("id"))
+                    throw new UnAuthException("Token is not valid");
+                return new ObjectId(claims.get("id").toString());
+            } catch (Exception x) {
+                x.printStackTrace();
+            }
+        }
+
+        throw new UnAuthException("Token is not valid");
+    }
+
+    protected void checkAuth(HttpServletRequest request
+    ) throws UnAuthException {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String token = bearerToken.substring(7);
+            try {
+                Jwts.parser()
+                        .setSigningKey(myUserDetailsService.getSharedKeyBytes())
+                        .parseClaimsJws(token)
+                        .getBody();
+                return;
+            } catch (Exception x) {
+                x.printStackTrace();
+            }
+        }
+
+        throw new UnAuthException("Token is not valid");
+    }
+
+    protected Document getStudentUser(HttpServletRequest request)
+            throws NotActivateAccountException, UnAuthException, NotAccessException {
+        boolean auth = jwtTokenFilter.isAuth(request);
 
         if (auth) {
             Document u = userService.whoAmI(request);
@@ -62,12 +112,6 @@ public class Router {
                 if (!Authorization.isStudent(u.getList("accesses", String.class)))
                     throw new NotAccessException("Access denied");
 
-                if (
-                        (!u.containsKey("NID") && !u.containsKey("passport_no")) ||
-                                !u.containsKey("pic")
-                )
-                    throw new NotCompleteAccountException("Account not complete");
-
                 return u;
             }
         }
@@ -77,7 +121,7 @@ public class Router {
 
     protected void getAdminPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        isWantedAccess(request, Access.ADMIN.getName());
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_ADMIN);
     }
 
     protected void getWeakAdminPrivilegeUserVoid(HttpServletRequest request)
@@ -85,8 +129,8 @@ public class Router {
         isWantedAccess(request, Access.WEAK_ADMIN.getName());
     }
     protected void getEditorPrivilegeUserVoid(HttpServletRequest request)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
-        isWantedAccess(request, Access.EDITOR.getName());
+            throws UnAuthException, NotAccessException {
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_EDITOR);
     }
 
     protected Document getEditorPrivilegeUser(HttpServletRequest request)
@@ -95,8 +139,8 @@ public class Router {
     }
 
     protected void getContentPrivilegeUserVoid(HttpServletRequest request)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
-        isWantedAccess(request, Access.CONTENT.getName());
+            throws UnAuthException, NotAccessException {
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_CONTENT);
     }
 
     protected Document getAdminPrivilegeUser(HttpServletRequest request)
@@ -104,15 +148,9 @@ public class Router {
         return isWantedAccess(request, Access.ADMIN.getName());
     }
 
-    protected Document getSuperAdminPrivilegeUser(HttpServletRequest request)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
-        return null;
-//        return isWantedAccess(request, Access.SUPERADMIN.getName());
-    }
-
-    protected Document getTeacherPrivilegeUser(HttpServletRequest request)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
-        return isWantedAccess(request, Access.TEACHER.getName());
+    protected void getSuperAdminPrivilegeUserVoid(HttpServletRequest request)
+            throws UnAuthException, NotAccessException {
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_SUPER_ADMIN);
     }
 
     protected Document getAgentUser(HttpServletRequest request)
@@ -143,7 +181,7 @@ public class Router {
     protected Document getUserWithOutCheckCompleteness(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException {
 
-        boolean auth = new JwtTokenFilter().isAuth(request);
+        boolean auth = jwtTokenFilter.isAuth(request);
         Document u;
         if (auth) {
             u = userService.whoAmI(request);
@@ -164,7 +202,7 @@ public class Router {
     protected void getUserWithOutCheckCompletenessVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException {
 
-        boolean auth = new JwtTokenFilter().isAuth(request);
+        boolean auth = jwtTokenFilter.isAuth(request);
 
         Document u;
         if (auth) {
@@ -185,7 +223,7 @@ public class Router {
 
     protected Document getUserIfLogin(HttpServletRequest request) {
 
-        boolean auth = new JwtTokenFilter().isAuth(request);
+        boolean auth = jwtTokenFilter.isAuth(request);
 
         Document u;
         if (auth) {
@@ -202,13 +240,39 @@ public class Router {
         return null;
     }
 
+    protected void isWantedAccess(String bearerToken, Role wantedRole
+    ) throws UnAuthException, NotAccessException {
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            String token = bearerToken.substring(7);
+            try {
+                Claims claims = Jwts.parser()
+                        .setSigningKey(myUserDetailsService.getSharedKeyBytes())
+                        .parseClaimsJws(token)
+                        .getBody();
+                if(claims == null || !claims.containsKey("roles"))
+                    throw new UnAuthException("Token is not valid");
+
+                if(!Objects.equals(
+                        Role.valueOf(((HashMap<?, ?>)claims.get("roles")).get("authority").toString()),
+                        wantedRole
+                ))
+                    throw new NotAccessException("not access");
+
+                return;
+            } catch (Exception x) {
+                if(x instanceof NotAccessException)
+                    throw x;
+                x.printStackTrace();
+            }
+        }
+
+        throw new UnAuthException("Token is not valid");
+    }
+
     private Document isWantedAccess(HttpServletRequest request, String wantedAccess
     ) throws NotActivateAccountException, NotAccessException, UnAuthException {
-
-        if (JWT_TOKEN_FILTER.isAuth(request)) {
-
+        if (jwtTokenFilter.isAuth(request)) {
             Document u = userService.whoAmI(request);
-
             if (u != null) {
 
                 if (!u.getString("status").equals("active")) {
@@ -268,7 +332,7 @@ public class Router {
     private Document isPrivilegeUser(HttpServletRequest request
     ) throws NotActivateAccountException, NotAccessException, UnAuthException {
 
-        if (new JwtTokenFilter().isAuth(request)) {
+        if (jwtTokenFilter.isAuth(request)) {
             Document u = userService.whoAmI(request);
             if (u != null) {
 
@@ -291,7 +355,7 @@ public class Router {
                                               boolean checkCompleteness,
                                               boolean isPrivilege,
                                               String userId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
 
         Document user = checkCompleteness ? getUser(request) : getUserWithOutCheckCompleteness(request);
 
@@ -319,7 +383,7 @@ public class Router {
                                                boolean checkCompleteness,
                                                boolean isPrivilege,
                                                String userId
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
 
         Document user = checkCompleteness ? getUser(request) : getUserWithOutCheckCompleteness(request);
 

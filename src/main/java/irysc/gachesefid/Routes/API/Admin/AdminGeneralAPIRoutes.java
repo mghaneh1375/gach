@@ -2,16 +2,12 @@ package irysc.gachesefid.Routes.API.Admin;
 
 import irysc.gachesefid.Controllers.ContentController;
 import irysc.gachesefid.Controllers.UploadController;
-import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.UploadSection;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
-import irysc.gachesefid.Validator.JSONConstraint;
-import irysc.gachesefid.Validator.StrongJSONConstraint;
-import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -32,12 +28,11 @@ public class AdminGeneralAPIRoutes extends Router {
     public String uploadFiles(HttpServletRequest request,
                               @PathVariable @NotBlank @EnumValidator(enumClazz = UploadSection.class) String section,
                               @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
+    ) throws NotAccessException, UnAuthException {
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getSuperAdminPrivilegeUser(request);
+        getSuperAdminPrivilegeUserVoid(request);
         return UploadController.uploadFiles(file, section);
     }
 
@@ -45,8 +40,7 @@ public class AdminGeneralAPIRoutes extends Router {
     @ResponseBody
     public String refreshSubjectQNo(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUser(request);
+        getAdminPrivilegeUserVoid(request);
         return ContentController.refreshSubjectQNo();
     }
 

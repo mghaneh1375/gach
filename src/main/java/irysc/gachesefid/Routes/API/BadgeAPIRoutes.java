@@ -2,7 +2,7 @@ package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.NotCompleteAccountException;
+
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import org.springframework.stereotype.Controller;
@@ -22,7 +22,7 @@ public class BadgeAPIRoutes extends Router {
     @ResponseBody
     public String getAll(
             HttpServletRequest request
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
-        return BadgeController.getAll(getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return BadgeController.getAll(getUserId(request));
     }
 }

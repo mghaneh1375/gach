@@ -14,8 +14,10 @@ import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
-import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Models.ExchangeMode;
+import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Exception.NotAccessException;
+import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
@@ -94,7 +96,7 @@ public class GeneralAPIRoutes extends Router {
                                         optionals = {"coin"},
                                         optionalsType = {Number.class}
                                 ) @NotBlank String jsonStr
-    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
 
         Document user = getUserWithAdminAccess(request, false, false, userId);
 
@@ -129,7 +131,7 @@ public class GeneralAPIRoutes extends Router {
         }
 
         return PayPing.chargeAccount(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 jsonObject.getInt("amount")
         );
     }
@@ -142,7 +144,7 @@ public class GeneralAPIRoutes extends Router {
 //                                   params = {"amount", "mode"},
 //                                   paramsType = {Number.class, ExchangeMode.class}
 //                           ) @NotBlank String jsonStr
-//    ) throws NotCompleteAccountException, UnAuthException, NotActivateAccountException {
+//    ) throws UnAuthException, NotActivateAccountException {
 //
 //        Document user = getUser(request);
 //        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
@@ -294,9 +296,9 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String fetchInvoice(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId refId
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return TransactionController.fetchInvoice(
-                getUser(request).getObjectId("_id"), refId
+                getUserId(request), refId
         );
     }
 
@@ -378,8 +380,8 @@ public class GeneralAPIRoutes extends Router {
     @GetMapping(value = "/getAllFlags")
     @ResponseBody
     public String getAllFlags(HttpServletRequest request
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
-        getUser(request);
+    ) throws UnAuthException {
+        checkAuth(request);
         return QuestionController.getAllFlags();
     }
 
@@ -393,9 +395,9 @@ public class GeneralAPIRoutes extends Router {
                                           @RequestParam(required = false, value = "subjectId") ObjectId subjectId,
                                           @RequestParam(required = false, value = "author") String author,
                                           @RequestParam(required = false, value = "tag") String tag
-    ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return QuestionController.checkAvailableQuestions(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 tag, gradeId, lessonId, subjectId, qNo, level, author
         );
     }
@@ -443,7 +445,7 @@ public class GeneralAPIRoutes extends Router {
     public String buildSpinner(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId id,
                                @RequestParam(value = "mode") String mode
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return GiftController.buildSpinner(mode, user.getObjectId("_id"), ((Number)user.get("coin")).doubleValue(), id);
     }
@@ -455,7 +457,7 @@ public class GeneralAPIRoutes extends Router {
                                     @PathVariable @ObjectIdConstraint ObjectId id,
                                     @RequestParam(value = "repeat") String repeat,
                                     @RequestParam(value = "mode") String mode
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return GiftController.buildSpinnerAgain(
                 mode, user.getObjectId("_id"),
@@ -470,15 +472,15 @@ public class GeneralAPIRoutes extends Router {
     public String giveMyGift(HttpServletRequest request,
                              @RequestParam(value = "id") @ObjectIdConstraint ObjectId id,
                              @RequestParam(value = "repeat", required = false) String repeat
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return GiftController.giveMyGift(id, repeat, getUser(request));
     }
 
     @GetMapping(value = "/giveMyGifts")
     @ResponseBody
     public String giveMyGifts(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
-        return GiftController.giveMyGifts(getUser(request).getObjectId("_id"));
+    ) throws UnAuthException, NotActivateAccountException {
+        return GiftController.giveMyGifts(getUserId(request));
     }
 
     @GetMapping(value = "/fetchStates")
@@ -504,7 +506,7 @@ public class GeneralAPIRoutes extends Router {
     @GetMapping(value = "/getMyAlerts")
     @ResponseBody
     public String getMyAlerts(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         return AlertController.getMyAlerts(getUser(request));
     }
 
@@ -523,10 +525,10 @@ public class GeneralAPIRoutes extends Router {
                                        params = {"code", "for"},
                                        paramsType = {String.class, OffCodeSections.class}
                                ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException {
+    ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = new JSONObject(jsonStr);
         return OffCodeController.check(
-                getUser(request).getObjectId("_id"),
+                getUserId(request),
                 jsonObject.getString("code"),
                 jsonObject.getString("for")
         );
