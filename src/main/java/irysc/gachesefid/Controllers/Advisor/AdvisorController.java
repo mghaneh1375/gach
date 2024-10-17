@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers.Advisor;
 
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Common;
 import irysc.gachesefid.DB.UserRepository;
@@ -22,6 +23,8 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.*;
 
+import static com.mongodb.client.model.Aggregates.match;
+import static com.mongodb.client.model.Aggregates.project;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.Utility.*;
@@ -996,7 +999,7 @@ public class AdvisorController {
         docs.sort((o1, o2) -> {
             int a = o1.has(sortKey) ? o1.getInt(sortKey) : -1;
             int b = o2.has(sortKey) ? o2.getInt(sortKey) : -1;
-            if(a == b) return o1.getInt("advisorPriority") - o2.getInt("advisorPriority");
+            if (a == b) return o1.getInt("advisorPriority") - o2.getInt("advisorPriority");
             return b - a;
         });
 
@@ -2272,4 +2275,168 @@ public class AdvisorController {
         return JSON_OK;
     }
 
+    public static String getAdvisorTransactions(
+            ObjectId advisorId, Boolean settlementStatus,
+            Long startAt, Long endAt, String transactionMode,
+            Long fromSettled, Long toSettled
+    ) {
+        List<Bson> filters;
+        Document config = getConfig();
+        int iryscAdvicePercent = config.getInteger("irysc_advice_percent");
+        int iryscTeachPercent = config.getInteger("irysc_teach_percent");
+        List<Document> adviceTransactions = null;
+        List<Document> teachTransactions = null;
+        List<ObjectId> settlementsRefs = new ArrayList<>();
+        List<Document> settlementRequests = null;
+
+        JSONArray jsonArray = new JSONArray();
+
+        if (transactionMode == null || transactionMode.equals("advice")) {
+            filters = new ArrayList<>() {{
+                add(eq("advisor_id", advisorId));
+                add(exists("paid_at"));
+            }};
+            if (settlementStatus != null)
+                filters.add(exists("settled_at", settlementStatus));
+            if (startAt != null)
+                filters.add(gte("paid_at", startAt));
+            if (endAt != null)
+                filters.add(lte("paid_at", endAt));
+            if(fromSettled != null || toSettled != null) {
+                filters.add(exists("settled_at"));
+                if(fromSettled != null)
+                    filters.add(gte("settled_at", fromSettled));
+                if(toSettled != null)
+                    filters.add(lte("settled_at", toSettled));
+            }
+
+            AggregateIterable<Document> adviceTransactionsIter = advisorRequestsRepository.findWithJoinUser(
+                    "user_id", "student",
+                    match(and(filters)), project(
+                            new BasicDBObject("title", 1)
+                                    .append("paid_at", 1)
+                                    .append("price", 1)
+                                    .append("paid", 1)
+                                    .append("paid_at", 1)
+                                    .append("_id", 1)
+                                    .append("settled_at", 1)
+                                    .append("irysc_percent", 1)
+                                    .append("student", 1)
+                    ),
+                    Sorts.descending("created_at"),
+                    null, null, project(USER_DIGEST)
+            );
+
+            adviceTransactions = new ArrayList<>();
+            for(Document transaction : adviceTransactionsIter) {
+                if(transaction.containsKey("settled_at"))
+                    settlementsRefs.add(transaction.getObjectId("_id"));
+                adviceTransactions.add(transaction);
+            }
+        }
+
+        if (transactionMode == null || transactionMode.equals("teach")) {
+            filters = new ArrayList<>() {{
+                add(eq("user_id", advisorId));
+                add(exists("students.0"));
+                add(lte("start_at", System.currentTimeMillis()));
+            }};
+            if (settlementStatus != null)
+                filters.add(exists("settled_at", settlementStatus));
+            if (startAt != null)
+                filters.add(gte("start_at", startAt));
+            if (endAt != null)
+                filters.add(lte("start_at", endAt));
+            if(fromSettled != null || toSettled != null) {
+                filters.add(exists("settled_at"));
+                if(fromSettled != null)
+                    filters.add(gte("settled_at", fromSettled));
+                if(toSettled != null)
+                    filters.add(lte("settled_at", toSettled));
+            }
+
+            teachTransactions = teachScheduleRepository.find(
+                    and(filters),
+                    new BasicDBObject("start_at", 1)
+                            .append("teach_mode", 1)
+                            .append("price", 1)
+                            .append("irysc_percent", 1)
+                            .append("students", 1)
+                            .append("length", 1)
+                            .append("title", 1)
+                            .append("settled_at", 1)
+                            .append("_id", 1),
+                    Sorts.descending("start_at")
+            );
+
+            for(Document transaction : teachTransactions) {
+                if(transaction.containsKey("settled_at"))
+                    settlementsRefs.add(transaction.getObjectId("_id"));
+            }
+        }
+
+        if(settlementsRefs.size() > 0) {
+            settlementRequests = settlementRequestRepository.find(
+                    and(
+                            exists("ref_id"),
+                            in("ref_id", settlementsRefs)
+                    ),
+                    new BasicDBObject("amount", 1).append("ref_id", 1)
+            );
+        }
+
+        if(adviceTransactions != null) {
+            try {
+                for (Document transaction : adviceTransactions) {
+                    try {
+                        Document student = transaction.get("student", Document.class);
+                        JSONObject jsonObject = new JSONObject()
+                                .put("title", transaction.getString("title"))
+                                .put("student", student.getString("first_name") + " " + student.getString("last_name"))
+                                .put("paidAt", Utility.getSolarDate(transaction.getLong("paid_at")))
+                                .put("settledAt", transaction.containsKey("settled_at") ? Utility.getSolarDate(transaction.getLong("settled_at")) : "تسویه نشده")
+                                .put("paid", transaction.get("paid"))
+                                .put("iryscPercent", transaction.getOrDefault("irysc_percent", iryscAdvicePercent))
+                                .put("price", transaction.get("price"))
+                                .put("mode", "advice")
+                                .put("id", transaction.getObjectId("_id").toString());
+
+                        if(transaction.containsKey("settled_at") && settlementRequests != null)
+                            settlementRequests.stream().filter(
+                                    document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
+                            ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));
+
+                        jsonArray.put(jsonObject);
+                    } catch (Exception ignore) {
+                    }
+                }
+            } catch (Exception ignore) {
+            }
+        }
+
+        if(teachTransactions != null) {
+            for (Document transaction : teachTransactions) {
+                JSONObject jsonObject = new JSONObject()
+                        .put("title", transaction.getString("title"))
+                        .put("studentsCount", transaction.getList("students", Document.class).size())
+                        .put("startAt", getSolarDate(transaction.getLong("start_at")))
+                        .put("settledAt", transaction.containsKey("settled_at") ? getSolarDate(transaction.getLong("settled_at")) : "تسویه نشده")
+                        .put("iryscPercent", transaction.getOrDefault("irysc_percent", iryscTeachPercent))
+                        .put("price", transaction.get("price"))
+                        .put("length", transaction.get("length"))
+                        .put("teachMode", transaction.get("teach_mode"))
+                        .put("mode", "teach")
+                        .put("id", transaction.getObjectId("_id").toString());
+
+                if(transaction.containsKey("settled_at") && settlementRequests != null)
+                    settlementRequests.stream().filter(
+                            document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
+                    ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));
+
+                jsonArray.put(jsonObject);
+            }
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
 }

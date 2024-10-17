@@ -26,10 +26,10 @@ public class AdminSettlementController {
     ) {
 
         Document doc = settlementRequestRepository.findById(id);
-        if(doc == null)
+        if (doc == null)
             return JSON_NOT_VALID_ID;
 
-        if(doc.getString("status").equals("paid"))
+        if (doc.getString("status").equals("paid"))
             return generateErr("وضعیت این درخواست پرداخت شده است و امکان تغییر این وضعیت وجود ندارد");
 
         long curr = System.currentTimeMillis();
@@ -37,12 +37,12 @@ public class AdminSettlementController {
         doc.put("status", data.getString("status"));
         doc.put("answer_at", curr);
 
-        if(data.has("desc"))
+        if (data.has("desc"))
             doc.put("desc", data.getString("desc"));
 
-        if(data.getString("status").equalsIgnoreCase("paid")) {
+        if (data.getString("status").equalsIgnoreCase("paid")) {
             doc.put("paid_at", curr);
-            if(doc.getString("section").equals("class")) {
+            if (doc.getString("section").equals("class")) {
                 teachScheduleRepository.updateMany(
                         and(
                                 eq("user_id", doc.getObjectId("user_id")),
@@ -67,25 +67,25 @@ public class AdminSettlementController {
             Long answerFrom, Long answerTo
     ) {
         List<Bson> filters = new ArrayList<>();
-        if(status != null) {
-            if(!EnumValidatorImp.isValid(status, SettledStatus.class))
+        if (status != null) {
+            if (!EnumValidatorImp.isValid(status, SettledStatus.class))
                 return JSON_NOT_VALID_PARAMS;
             filters.add(eq("status", status));
         }
 
-        if(createdFrom != null)
+        if (createdFrom != null)
             filters.add(gte("created_at", createdFrom));
 
-        if(createdTo != null)
+        if (createdTo != null)
             filters.add(lte("created_at", createdTo));
 
-        if(answerFrom != null || answerTo != null)
+        if (answerFrom != null || answerTo != null)
             filters.add(exists("answer_at"));
 
-        if(answerFrom != null)
+        if (answerFrom != null)
             filters.add(gte("answer_at", answerFrom));
 
-        if(answerTo != null)
+        if (answerTo != null)
             filters.add(lte("answer_at", answerTo));
 
         List<Document> requests = settlementRequestRepository.find(
@@ -98,11 +98,11 @@ public class AdminSettlementController {
             userIds.add(request.getObjectId("user_id"));
 
         List<Document> users = userRepository.findByIds(new ArrayList<>(userIds), false, JUST_NAME);
-        if(users == null)
+        if (users == null)
             return JSON_NOT_UNKNOWN;
 
         JSONArray jsonArray = new JSONArray();
-        for(Document request : requests) {
+        for (Document request : requests) {
             String username = users
                     .stream()
                     .filter(document -> document.getObjectId("_id").equals(request.getObjectId("user_id")))
@@ -125,4 +125,43 @@ public class AdminSettlementController {
         return generateSuccessMsg("data", jsonArray);
     }
 
+    public static String createSettlementRequest(
+            String section, ObjectId userId,
+            Integer amount, ObjectId refId,
+            String desc
+    ) {
+
+        if(!section.equalsIgnoreCase("class") &&
+                !section.equalsIgnoreCase("advice")
+        )
+            return JSON_NOT_VALID_PARAMS;
+
+        long curr = System.currentTimeMillis();
+        Document newDoc = new Document("section", section)
+                .append("user_id", userId)
+                .append("ref_id", refId)
+                .append("created_at", curr)
+                .append("status", "paid")
+                .append("amount", amount)
+                .append("paid_at", curr)
+                .append("answer_at", curr);
+
+        if (desc != null)
+            newDoc.put("desc", desc);
+
+        settlementRequestRepository.insertOne(newDoc);
+
+        if (section.equals("class")) {
+            teachScheduleRepository.updateOne(
+                    refId, set("settled_at", curr)
+            );
+        }
+        else if(section.equals("advice")) {
+            advisorRequestsRepository.updateOne(
+                    refId, set("settled_at", curr)
+            );
+        }
+
+        return JSON_OK;
+    }
 }

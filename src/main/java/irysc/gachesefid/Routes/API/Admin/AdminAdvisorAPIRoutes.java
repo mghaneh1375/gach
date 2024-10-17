@@ -141,4 +141,23 @@ public class AdminAdvisorAPIRoutes extends Router {
         return AdvisorController.createTag(lifeStyleTagRepository, new JSONObject(jsonStr));
     }
 
+    @GetMapping(value = "getAdvisorTransactions/{advisorId}")
+    @ResponseBody
+    public String getAdvisorTransactions(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId advisorId,
+            @RequestParam(required = false, value = "settlementStatus") Boolean settlementStatus,
+            @RequestParam(required = false, value = "from") Long startAt,
+            @RequestParam(required = false, value = "to") Long endAt,
+            @RequestParam(required = false, value = "fromSettled") Long fromSettled,
+            @RequestParam(required = false, value = "toSettled") Long toSettled,
+            @RequestParam(required = false, value = "transactionMode") String transactionMode
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUser(request);
+        return AdvisorController.getAdvisorTransactions(
+                advisorId, settlementStatus,
+                startAt, endAt, transactionMode,
+                fromSettled, toSettled
+        );
+    }
 }

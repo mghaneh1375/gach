@@ -6,6 +6,8 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.SettledStatus;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.types.ObjectId;
@@ -55,4 +57,29 @@ public class AdminSettledAPIRoutes extends Router {
                 status, createdFrom, createdTo, answerFrom, answerTo
         );
     }
+
+    @PostMapping(value = "createSettlementRequest/{userId}/{refId}")
+    @ResponseBody
+    public String createSettlementRequest(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId userId,
+            @PathVariable @ObjectIdConstraint ObjectId refId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"section", "amount"},
+                    paramsType = {
+                            String.class, Positive.class
+                    },
+                    optionals = {"desc"},
+                    optionalsType = {String.class}
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
+        return AdminSettlementController.createSettlementRequest(
+                jsonObject.getString("section"), userId,
+                jsonObject.getInt("amount"), refId,
+                jsonObject.has("desc") ? jsonObject.getString("desc") : null
+        );
+    }
+
 }
