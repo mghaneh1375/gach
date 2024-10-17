@@ -14,7 +14,9 @@ import static irysc.gachesefid.Main.GachesefidApplication.userBadgeRepository;
 
 public class Utility {
 
-    static JSONObject convertToJSON(Document badge, boolean isForAdmin, Boolean hasIt) {
+    public static JSONObject convertToJSON(
+            Document badge, boolean isForAdmin, Boolean hasIt
+    ) {
         JSONObject jsonObject = new JSONObject()
                 .put("name", badge.getString("name"))
                 .put("award", badge.getDouble("award"));

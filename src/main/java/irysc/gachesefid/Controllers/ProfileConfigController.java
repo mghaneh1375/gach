@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers;
 
 import com.mongodb.client.model.Sorts;
+import irysc.gachesefid.Controllers.Badge.Utility;
 import irysc.gachesefid.Controllers.Level.LevelController;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Utility.StaticValues;
@@ -277,6 +278,30 @@ public class ProfileConfigController {
                             document, true, false, false, false
                     )
             ));
+        }
+
+        return generateSuccessMsg("data", jsonArray);
+    }
+
+    public static String getUserBadges(ObjectId userId) {
+        Document userBadgeDoc = userBadgeRepository.findBySecKey(userId);
+        if(userBadgeDoc == null)
+            return generateSuccessMsg("data", new JSONArray());
+
+        List<ObjectId> badgeIds = userBadgeDoc.getList("badges", Document.class)
+                .stream().map(document -> document.getObjectId("_id"))
+                .collect(Collectors.toList());
+
+        List<Document> badges = badgeRepository.findByIds(badgeIds, false);
+        if(badges == null)
+            return generateSuccessMsg("data", new JSONArray());
+
+        JSONArray jsonArray = new JSONArray();
+        for(Document badge : badges) {
+            jsonArray.put(
+                    Utility.convertToJSON(badge, false, true)
+                            .put("hasIt", true)
+            );
         }
 
         return generateSuccessMsg("data", jsonArray);

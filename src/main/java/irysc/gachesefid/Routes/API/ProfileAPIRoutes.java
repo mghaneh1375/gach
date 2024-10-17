@@ -102,4 +102,12 @@ public class ProfileAPIRoutes extends Router {
     ) {
         return ProfileConfigController.getUserQuizzes(userId);
     }
+
+    @GetMapping("getUserBadges/{userId}")
+    @ResponseBody
+    public String getUserBadges(
+            @PathVariable @ObjectIdConstraint ObjectId userId
+    ) {
+        return ProfileConfigController.getUserBadges(userId);
+    }
 }
