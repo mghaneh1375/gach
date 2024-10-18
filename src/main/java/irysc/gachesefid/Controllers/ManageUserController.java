@@ -65,15 +65,14 @@ public class ManageUserController {
         return generateSuccessMsg("user", userJson);
     }
 
-    public static String fetchTinyUser(String level, String name,
-                                       String lastname, String phone,
-                                       String mail, String NID,
-                                       ObjectId gradeId, ObjectId branchId,
-                                       String additionalLevel
+    public static String fetchTinyUser(
+            String level, String name,
+            String lastname, String phone,
+            String mail, String NID,
+            ObjectId gradeId, ObjectId branchId,
+            String additionalLevel
     ) {
-
         ArrayList<Bson> filters = new ArrayList<>();
-
         filters.add(exists("remove_at", false));
 
         if (level != null) {
@@ -82,12 +81,12 @@ public class ManageUserController {
             )
                 return JSON_NOT_VALID_PARAMS;
 
-            if(!level.equalsIgnoreCase("all"))
+            if (!level.equalsIgnoreCase("all"))
                 filters.add(eq("accesses", level));
 
-            if(additionalLevel != null && additionalLevel.equals("teach"))
+            if (additionalLevel != null && additionalLevel.equals("teach"))
                 filters.add(eq("teach", true));
-            else if(additionalLevel != null && additionalLevel.equals("advice"))
+            else if (additionalLevel != null && additionalLevel.equals("advice"))
                 filters.add(eq("advice", true));
         }
 
@@ -106,13 +105,13 @@ public class ManageUserController {
         if (lastname != null)
             filters.add(regex("last_name", Pattern.compile(Pattern.quote(lastname), Pattern.CASE_INSENSITIVE)));
 
-        if(gradeId != null)
+        if (gradeId != null)
             filters.add(and(
                     exists("branches"),
                     eq("branches._id", gradeId)
             ));
 
-        if(branchId != null)
+        if (branchId != null)
             filters.add(and(
                     exists("grade"),
                     eq("grade._id", branchId)
@@ -132,7 +131,7 @@ public class ManageUserController {
                 List<Document> branches = user.containsKey("branches") ?
                         user.getList("branches", Document.class) : null;
 
-                if(branches != null && branches.size() > 0) {
+                if (branches != null && branches.size() > 0) {
 
                     for (Document itr : branches)
                         branchBuilder.append(itr.getString("name")).append("-");
@@ -167,9 +166,25 @@ public class ManageUserController {
                         )
                         .put("branch", branch);
 
-                if(user.getList("accesses", String.class).contains(Access.ADVISOR.getName())) {
-                    jsonObject.put("teachPriority", user.getOrDefault("teach_priority", 1000));
-                    jsonObject.put("advisorPriority", user.getOrDefault("advisor_priority", 1000));
+                if (user.getList("accesses", String.class).contains(Access.ADVISOR.getName())) {
+                    jsonObject
+                            .put("notSettledCounts",
+                                    teachScheduleRepository.count(
+                                            and(
+                                                    exists("settled_at", false),
+                                                    eq("user_id", user.getObjectId("_id")),
+                                                    exists("students.0")
+                                            )
+                                    ) + advisorRequestsRepository.count(
+                                            and(
+                                                    exists("settled_at", false),
+                                                    eq("advisor_id", user.getObjectId("_id")),
+                                                    exists("paid_at")
+                                            )
+                                    )
+                            )
+                            .put("teachPriority", user.getOrDefault("teach_priority", 1000))
+                            .put("advisorPriority", user.getOrDefault("advisor_priority", 1000));
                 }
 
                 jsonArray.put(jsonObject);
@@ -288,12 +303,12 @@ public class ManageUserController {
                 user.put("accesses", accesses);
                 ArrayList<ObjectId> students = new ArrayList<>();
                 ArrayList<Document> stds = userRepository.find(and(
-                            eq("school._id", school.getObjectId("_id")),
-                            eq("level", false)
-                    ), new BasicDBObject("_id", 1)
+                                eq("school._id", school.getObjectId("_id")),
+                                eq("level", false)
+                        ), new BasicDBObject("_id", 1)
                 );
 
-                for(Document std : stds)
+                for (Document std : stds)
                     students.add(std.getObjectId("_id"));
 
                 user.put("students", students);
@@ -425,16 +440,16 @@ public class ManageUserController {
         filters.add(in("accesses", Access.SCHOOL.getName()));
         filters.add(exists("form_list"));
         filters.add(eq("form_list.role", "school"));
-        if(agentId != null)
+        if (agentId != null)
             filters.add(eq("form_list.agent_id", agentId));
 
         ArrayList<Document> docs = userRepository.find(and(filters), new BasicDBObject("form_list", 1)
-                        .append("NID", 1)
-                        .append("phone", 1)
-                        .append("_id", 1)
-                        .append("first_name", 1)
-                        .append("last_name", 1)
-                        .append("students", 1)
+                .append("NID", 1)
+                .append("phone", 1)
+                .append("_id", 1)
+                .append("first_name", 1)
+                .append("last_name", 1)
+                .append("students", 1)
         );
 
         JSONArray jsonArray = new JSONArray();
@@ -466,7 +481,7 @@ public class ManageUserController {
         JSONArray data = new JSONArray();
 
         for (Document itr : studentsInfo) {
-            if(itr == null)
+            if (itr == null)
                 continue;
 
             data.put(Utility.fillJSONWithUser(itr));
@@ -478,17 +493,17 @@ public class ManageUserController {
     private static JSONObject convertSchoolToJSON(Document doc, Document form, boolean isAgentInfoNeeded) {
 
         String schoolName = "";
-        if(form.containsKey("school_id")) {
+        if (form.containsKey("school_id")) {
             Document school = schoolRepository.findById(form.getObjectId("school_id"));
-            if(school != null)
+            if (school != null)
                 schoolName = school.getString("name") + " " + school.getString("city_name");
         }
 
         String agentName = "";
 
-        if(isAgentInfoNeeded && form.containsKey("agent_id")) {
+        if (isAgentInfoNeeded && form.containsKey("agent_id")) {
             Document user = userRepository.findById(form.getObjectId("agent_id"));
-            if(user != null)
+            if (user != null)
                 agentName = user.getString("first_name") + " " + user.getString("last_name");
         }
 
@@ -511,7 +526,7 @@ public class ManageUserController {
                 .put("schoolSexFa", form.getString("school_sex").equalsIgnoreCase(Sex.MALE.getName()) ? "آقا" : "خانم")
                 .put("managerName", form.getString("manager_name"));
 
-        if(isAgentInfoNeeded)
+        if (isAgentInfoNeeded)
             jsonObject.put("agent", agentName);
 
         return jsonObject;
@@ -556,7 +571,7 @@ public class ManageUserController {
             Document config = Utility.getConfig();
             Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
 
-            if(avatar == null)
+            if (avatar == null)
                 avatar = avatarRepository.findOne(null, null);
 
             avatar.put("used", (int) avatar.getOrDefault("used", 0) + 1);
@@ -566,8 +581,8 @@ public class ManageUserController {
                     .append("phone", phone)
                     .append("status", "active")
                     .append("level", false)
-                    .append("money", (double)config.getInteger("init_money"))
-                    .append("coin", ((Number)config.get("init_coin")).doubleValue())
+                    .append("money", (double) config.getInteger("init_money"))
+                    .append("coin", ((Number) config.get("init_coin")).doubleValue())
                     .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
                     .append("events", new ArrayList<>())
                     .append("avatar_id", avatar.getObjectId("_id"))
@@ -661,7 +676,7 @@ public class ManageUserController {
         ArrayList<Bson> filter = schoolUser == null ? new ArrayList<>() : null;
         List<ObjectId> students = schoolUser != null ? schoolUser.getList("students", ObjectId.class) : null;
 
-        if(filter != null) {
+        if (filter != null) {
             filter.add(eq("level", true));
             filter.add(exists("form_list"));
             filter.add(eq("form_list.role", "school"));
@@ -669,12 +684,12 @@ public class ManageUserController {
             filter.add(exists("students"));
         }
 
-        if(isAgent && filter != null) {
+        if (isAgent && filter != null) {
             filter.add(exists("form_list.agent_id"));
             filter.add(eq("form_list.agent_id", wantedId));
         }
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
             if (!ObjectId.isValid(id)) {
@@ -683,7 +698,7 @@ public class ManageUserController {
             }
 
             Document user = userRepository.findById(new ObjectId(id));
-            if(user == null) {
+            if (user == null) {
                 excepts.put(i + 1);
                 continue;
             }
@@ -691,17 +706,17 @@ public class ManageUserController {
             ObjectId schoolId = user.get("school", Document.class)
                     .getObjectId("_id");
 
-            if(!isAgent && wantedId != null && !schoolId.equals(wantedId)) {
+            if (!isAgent && wantedId != null && !schoolId.equals(wantedId)) {
                 excepts.put(i + 1);
                 continue;
             }
 
-            if(students != null && !students.contains(user.getObjectId("_id"))) {
+            if (students != null && !students.contains(user.getObjectId("_id"))) {
                 excepts.put(i + 1);
                 continue;
             }
 
-            if(students != null) {
+            if (students != null) {
                 students.remove(user.getObjectId("_id"));
                 user.remove("school");
                 userRepository.replaceOne(user.getObjectId("_id"), user);
@@ -709,11 +724,11 @@ public class ManageUserController {
                 continue;
             }
 
-            if(isAgent && checked.containsKey(schoolId) && checked.get(schoolId) == null) {
+            if (isAgent && checked.containsKey(schoolId) && checked.get(schoolId) == null) {
                 excepts.put(i + 1);
                 continue;
             }
-            if(checked != null && checked.containsKey(schoolId) && checked.get(schoolId) != null) {
+            if (checked != null && checked.containsKey(schoolId) && checked.get(schoolId) != null) {
                 checked.get(schoolId).remove(user.getObjectId("_id"));
                 user.remove("school");
                 userRepository.replaceOne(user.getObjectId("_id"), user);
@@ -721,13 +736,13 @@ public class ManageUserController {
                 continue;
             }
 
-            if(checked != null && filter != null && !checked.containsKey(schoolId)) {
+            if (checked != null && filter != null && !checked.containsKey(schoolId)) {
 
                 Document schoolAccount = userRepository.findOne(
                         and(and(filter), eq("form_list.school_id", schoolId)), null
                 );
 
-                if(schoolAccount == null) {
+                if (schoolAccount == null) {
                     checked.put(schoolId, null);
                     excepts.put(i + 1);
                     continue;
@@ -735,7 +750,7 @@ public class ManageUserController {
 
                 List<ObjectId> tmp =
                         userRepository.findById(schoolAccount.getObjectId("_id"))
-                    .getList("students", ObjectId.class);
+                                .getList("students", ObjectId.class);
 
                 checked.put(schoolId, tmp);
                 schoolUserIds.put(schoolId, schoolAccount.getObjectId("_id"));
@@ -747,12 +762,12 @@ public class ManageUserController {
             }
         }
 
-        if(doneIds.length() > 0) {
+        if (doneIds.length() > 0) {
 
-            if(students != null)
+            if (students != null)
                 userRepository.replaceOne(wantedId, schoolUser);
-            else if(checked != null) {
-                for(ObjectId oId : schoolUserIds.keySet()) {
+            else if (checked != null) {
+                for (ObjectId oId : schoolUserIds.keySet()) {
                     userRepository.updateOne(schoolUserIds.get(oId),
                             set("students", checked.get(oId)));
                 }
@@ -767,16 +782,16 @@ public class ManageUserController {
         JSONArray excepts = new JSONArray();
         JSONArray doneIds = new JSONArray();
 
-        for(int i = 0; i < jsonArray.length(); i++) {
+        for (int i = 0; i < jsonArray.length(); i++) {
 
             String id = jsonArray.getString(i);
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i);
                 continue;
             }
 
             Document user = userRepository.findById(new ObjectId(id));
-            if(user == null || !user.containsKey("form_list")) {
+            if (user == null || !user.containsKey("form_list")) {
                 excepts.put(i);
                 continue;
             }
@@ -786,12 +801,12 @@ public class ManageUserController {
                     "role", "school"
             );
 
-            if(form == null || !form.containsKey("agent_id")) {
+            if (form == null || !form.containsKey("agent_id")) {
                 excepts.put(i);
                 continue;
             }
 
-            if(agentId != null && !form.getObjectId("agent_id").equals(agentId)) {
+            if (agentId != null && !form.getObjectId("agent_id").equals(agentId)) {
                 excepts.put(i);
                 continue;
             }
@@ -848,7 +863,7 @@ public class ManageUserController {
         if (validSchool == null)
             throw new InvalidFieldsException("unknown2 err");
 
-        if(!school.containsKey("city"))
+        if (!school.containsKey("city"))
             throw new InvalidFieldsException("ابتدا شهر خود را در پروفایل انتخاب کنید");
 
         return validSchool;
@@ -863,12 +878,12 @@ public class ManageUserController {
 
             Document config = Utility.getConfig();
             Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
-            avatar.put("used", (int)avatar.getOrDefault("used", 0) + 1);
+            avatar.put("used", (int) avatar.getOrDefault("used", 0) + 1);
             avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
             ObjectId oId = doAddStudent(jsonObject, avatar, System.currentTimeMillis(),
                     config.getInteger("init_money"),
-                    ((Number)config.get("init_coin")).doubleValue(),
+                    ((Number) config.get("init_coin")).doubleValue(),
                     validSchool, school.get("city", Document.class)
             );
 
@@ -879,8 +894,7 @@ public class ManageUserController {
             userRepository.updateOne(school.getObjectId("_id"), set("students", students));
 
             return generateSuccessMsg("id", oId.toString());
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             return generateErr(x.getMessage());
         }
     }
@@ -936,7 +950,7 @@ public class ManageUserController {
                                 .append("name", school.getString("name"))
                 );
 
-        if(city != null)
+        if (city != null)
             student.put("city", new Document("_id", city.getObjectId("_id"))
                     .append("name", city.getString("name"))
             );
@@ -990,7 +1004,7 @@ public class ManageUserController {
 
             try {
 
-                if(row.getCell(1) == null)
+                if (row.getCell(1) == null)
                     break;
 
                 if (row.getLastCellNum() < minNeededCols) {
@@ -1014,27 +1028,27 @@ public class ManageUserController {
                 String password =
                         passwordPolicy.equalsIgnoreCase(PasswordMode.SIMPLE.getName()) ?
                                 "123456" :
-                            passwordPolicy.equalsIgnoreCase(PasswordMode.NID.getName()) ?
-                                NID :
-                            passwordPolicy.equalsIgnoreCase(PasswordMode.LAST_4_DIGIT_NID.getName()) ?
-                                    NID.substring(6) :
-                            passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()) ?
-                                    Utility.randomPhone(6) :
-                                    row.getCell(row.getLastCellNum()).getStringCellValue();
+                                passwordPolicy.equalsIgnoreCase(PasswordMode.NID.getName()) ?
+                                        NID :
+                                        passwordPolicy.equalsIgnoreCase(PasswordMode.LAST_4_DIGIT_NID.getName()) ?
+                                                NID.substring(6) :
+                                                passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()) ?
+                                                        Utility.randomPhone(6) :
+                                                        row.getCell(row.getLastCellNum()).getStringCellValue();
 
                 jsonObject1.put("password", getEncPassStatic(password));
 
                 ObjectId stdId = doAddStudent(jsonObject1,
                         avatar, curr,
                         config.getInteger("init_money"),
-                        ((Number)config.get("init_coin")).doubleValue(),
+                        ((Number) config.get("init_coin")).doubleValue(),
                         validSchool, school.get("city", Document.class)
                 );
 
                 dones++;
                 myStudents.add(stdId);
 
-                if(passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()))
+                if (passwordPolicy.equalsIgnoreCase(PasswordMode.RANDOM.getName()))
                     passwords.put(new JSONObject()
                             .put("name", firstName + " " + lastName)
                             .put("password", password)
@@ -1048,7 +1062,7 @@ public class ManageUserController {
 
         }
 
-        if(dones > 0) {
+        if (dones > 0) {
             avatar.put("used", (int) avatar.getOrDefault("used", 0) + dones);
             avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
             userRepository.replaceOne(school.getObjectId("_id"), school);
@@ -1120,17 +1134,17 @@ public class ManageUserController {
         long curr = System.currentTimeMillis();
         List<WriteModel<Document>> writes = new ArrayList<>();
 
-        for(int i = 0; i < list.length(); i++) {
+        for (int i = 0; i < list.length(); i++) {
 
             String id = list.getString(i);
 
-            if(!ObjectId.isValid(id)) {
+            if (!ObjectId.isValid(id)) {
                 excepts.put(i + 1);
                 continue;
             }
 
             Document user = userRepository.findById(new ObjectId(id));
-            if(user == null || Authorization.isAdmin(user.getList("accesses", String.class))) {
+            if (user == null || Authorization.isAdmin(user.getList("accesses", String.class))) {
                 excepts.put(i + 1);
                 continue;
             }
