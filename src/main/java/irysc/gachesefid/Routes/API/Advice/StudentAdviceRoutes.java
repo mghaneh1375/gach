@@ -83,10 +83,12 @@ public class StudentAdviceRoutes extends Router {
             @RequestParam(required = false, value = "minRate") Integer minRate,
             @RequestParam(required = false, value = "maxRate") Integer maxRate,
             @RequestParam(required = false, value = "returnFilters") Boolean returnFilters,
-            @RequestParam(required = false, value = "sortBy") String sortBy
+            @RequestParam(required = false, value = "sortBy") String sortBy,
+            @RequestParam(value = "pageIndex") Integer pageIndex
     ) {
         return AdvisorController.getAllAdvisors(minAge, maxAge, tag,
-                minPrice, maxPrice, minRate, maxRate, returnFilters, sortBy
+                minPrice, maxPrice, minRate, maxRate, returnFilters, sortBy,
+                pageIndex
         );
     }
 

@@ -35,6 +35,7 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
+    private final static Integer PAGE_SIZE = 5;
 
     public static File exportPDF(ObjectId id, ObjectId advisorId, ObjectId userId) {
 
@@ -547,9 +548,7 @@ public class AdvisorController {
         return JSON_OK;
     }
 
-
     public static String hasOpenRequest(ObjectId userId, Number userMoney) {
-
         List<Document> docs = advisorRequestsRepository.find(
                 and(
                         eq("user_id", userId),
@@ -567,9 +566,7 @@ public class AdvisorController {
         );
 
         JSONArray jsonArray = new JSONArray();
-
         for (Document doc : docs) {
-
             JSONObject jsonObject = new JSONObject()
                     .put("advisorId", doc.getObjectId("advisor_id").toString())
                     .put("id", doc.getObjectId("_id").toString())
@@ -844,17 +841,18 @@ public class AdvisorController {
 
     }
 
-    public static String getAllAdvisors(Integer minAge,
-                                        Integer maxAge,
-                                        String tag,
-                                        Integer minPrice,
-                                        Integer maxPrice,
-                                        Integer minRate,
-                                        Integer maxRate,
-                                        Boolean returnFilters,
-                                        String sortBy
+    public static String getAllAdvisors(
+            Integer minAge,
+            Integer maxAge,
+            String tag,
+            Integer minPrice,
+            Integer maxPrice,
+            Integer minRate,
+            Integer maxRate,
+            Boolean returnFilters,
+            String sortBy,
+            Integer pageIndex
     ) {
-
         if (sortBy != null &&
                 !sortBy.equalsIgnoreCase("age") &&
                 !sortBy.equalsIgnoreCase("rate") &&
@@ -863,7 +861,6 @@ public class AdvisorController {
             return JSON_NOT_VALID_PARAMS;
 
         ArrayList<Bson> filters = new ArrayList<>();
-
         filters.add(eq("accesses", Access.ADVISOR.getName()));
         filters.add(exists("advice"));
 
@@ -894,32 +891,36 @@ public class AdvisorController {
             filters.add(gte("birth_day", age));
         }
 
-        List<Document> advisors = userRepository.find(
-                and(filters),
-                ADVISOR_PUBLIC_DIGEST
-        );
+        boolean b1 = sortBy == null ||
+                sortBy.equalsIgnoreCase("rate") ||
+                sortBy.equalsIgnoreCase("age");
+        List<Document> advisors = b1
+                ? userRepository.find(
+                        and(filters),
+                        ADVISOR_PUBLIC_DIGEST,
+                        Sorts.descending(Objects.equals(sortBy, "age") ? "birth_day" : "rate")
+                )
+                : userRepository.find(
+                        and(filters),
+                        ADVISOR_PUBLIC_DIGEST
+                );
 
-        boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
-                tag == null && maxPrice == null && minPrice == null && minRate == null && maxRate == null;
-
+        HashMap<ObjectId, List<Document>> advisorsPlans = new HashMap<>();
+        List<Document> filteredAdvisors = new ArrayList<>();
         Document config = getConfig();
         int defaultPrice = config.getInteger("min_advice_price");
-
+        boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
+                tag == null && maxPrice == null && minPrice == null && minRate == null && maxRate == null;
         int minAgeFilter = -1, maxAgeFilter = -1, minPriceFilter = defaultPrice, maxPriceFilter = defaultPrice;
+
         long curr = System.currentTimeMillis();
         long one_year_ms = ONE_DAY_MIL_SEC * 365;
 
-        List<JSONObject> docs = new ArrayList<>();
-
         for (Document advisor : advisors) {
-
             List<Document> plans = advisorFinanceOfferRepository.find(
                     eq("advisor_id", advisor.getObjectId("_id")),
                     new BasicDBObject("price", 1)
             );
-
-//            if(plans.size() == 0)
-//                continue;
 
             if (minPrice != null || maxPrice != null) {
                 if (plans.size() == 0 && (
@@ -931,7 +932,6 @@ public class AdvisorController {
                 else if (plans.size() > 0) {
                     boolean passFilter = false;
                     for (Document plan : plans) {
-
                         int p = (int) plan.getOrDefault("price", defaultPrice);
 
                         if (minPrice != null && p < minPrice)
@@ -947,39 +947,21 @@ public class AdvisorController {
                     if (!passFilter)
                         continue;
                 }
-
             }
 
-            JSONObject jsonObject = convertToJSONDigest(null, advisor);
-            jsonObject.put("advisorPriority", advisor.getOrDefault("advisor_priority", 1000));
-
-            int age = -1;
-            if (advisor.containsKey("birth_day")) {
-                age = (int) ((curr - advisor.getLong("birth_day")) / one_year_ms);
-                jsonObject.put("age", age);
-            }
-
-            docs.add(jsonObject);
-
+            advisorsPlans.put(advisor.getObjectId("_id"), plans);
+            filteredAdvisors.add(advisor);
             if (isAllFiltersOff) {
-
-                if (age != -1) {
-
+                if (advisor.containsKey("birth_day")) {
+                    int age = (int) ((curr - advisor.getLong("birth_day")) / one_year_ms);
                     if (minAgeFilter == -1 || minAgeFilter > age)
                         minAgeFilter = age;
 
                     if (maxAgeFilter == -1 || maxAgeFilter < age)
                         maxAgeFilter = age;
-
                 }
 
-                plans = advisorFinanceOfferRepository.find(
-                        eq("advisor_id", advisor.getObjectId("_id")),
-                        new BasicDBObject("price", 1)
-                );
-
-                for (Document plan : plans) {
-
+                for (Document plan : advisorsPlans.get(advisor.getObjectId("_id"))) {
                     int price = (int) plan.getOrDefault("price", defaultPrice);
 
                     if (minPriceFilter == -1 || minPriceFilter > price)
@@ -987,30 +969,42 @@ public class AdvisorController {
 
                     if (maxPriceFilter == -1 || maxPriceFilter < price)
                         maxPriceFilter = price;
-
                 }
-
             }
         }
 
-        String sortKey = sortBy == null || sortBy.equalsIgnoreCase("rate") ? "rate" :
-                sortBy.equalsIgnoreCase("age") ? "age" : "stdCount";
+        int totalCount = filteredAdvisors.size();
+        boolean hasMore = !Objects.equals(sortBy, "student") && totalCount > pageIndex * PAGE_SIZE;
 
-        docs.sort((o1, o2) -> {
-            int a = o1.has(sortKey) ? o1.getInt(sortKey) : -1;
-            int b = o2.has(sortKey) ? o2.getInt(sortKey) : -1;
-            if (a == b) return o1.getInt("advisorPriority") - o2.getInt("advisorPriority");
-            return b - a;
-        });
+        List<JSONObject> docs = new ArrayList<>();
+        for (Document advisor : b1 ? filteredAdvisors.subList((pageIndex - 1) * PAGE_SIZE, Math.min(pageIndex * PAGE_SIZE, filteredAdvisors.size())) : filteredAdvisors) {
+            JSONObject jsonObject = convertToJSONDigest(null, advisor);
+            jsonObject.put("advisorPriority", advisor.getOrDefault("advisor_priority", 1000));
+
+            if (advisor.containsKey("birth_day"))
+                jsonObject.put("age", (int) ((curr - advisor.getLong("birth_day")) / one_year_ms));
+
+            docs.add(jsonObject);
+        }
+
+        if(!b1) {
+            docs.sort((o1, o2) -> {
+                int a = o1.has("stdCount") ? o1.getInt("stdCount") : -1;
+                int b = o2.has("stdCount") ? o2.getInt("stdCount") : -1;
+                if (a == b) return o1.getInt("advisorPriority") - o2.getInt("advisorPriority");
+                return b - a;
+            });
+        }
 
         JSONArray jsonArray = new JSONArray();
-
         for (JSONObject jsonObject : docs)
             jsonArray.put(jsonObject);
 
         if (isAllFiltersOff)
             return generateSuccessMsg("data", new JSONObject()
                     .put("data", jsonArray)
+                    .put("hasMore", hasMore)
+                    .put("totalCount", totalCount)
                     .put("filters", new JSONObject()
                             .put("minPrice", minPriceFilter)
                             .put("maxPrice", maxPriceFilter)
@@ -1019,7 +1013,11 @@ public class AdvisorController {
                     )
             );
 
-        return generateSuccessMsg("data", jsonArray);
+        return generateSuccessMsg("data", new JSONObject()
+                .put("data", jsonArray)
+                .put("hasMore", hasMore)
+                .put("totalCount", totalCount)
+        );
     }
 
     public static String createTag(Common db, JSONObject jsonObject) {
@@ -2302,11 +2300,11 @@ public class AdvisorController {
                 filters.add(gte("paid_at", startAt));
             if (endAt != null)
                 filters.add(lte("paid_at", endAt));
-            if(fromSettled != null || toSettled != null) {
+            if (fromSettled != null || toSettled != null) {
                 filters.add(exists("settled_at"));
-                if(fromSettled != null)
+                if (fromSettled != null)
                     filters.add(gte("settled_at", fromSettled));
-                if(toSettled != null)
+                if (toSettled != null)
                     filters.add(lte("settled_at", toSettled));
             }
 
@@ -2328,8 +2326,8 @@ public class AdvisorController {
             );
 
             adviceTransactions = new ArrayList<>();
-            for(Document transaction : adviceTransactionsIter) {
-                if(transaction.containsKey("settled_at"))
+            for (Document transaction : adviceTransactionsIter) {
+                if (transaction.containsKey("settled_at"))
                     settlementsRefs.add(transaction.getObjectId("_id"));
                 adviceTransactions.add(transaction);
             }
@@ -2347,11 +2345,11 @@ public class AdvisorController {
                 filters.add(gte("start_at", startAt));
             if (endAt != null)
                 filters.add(lte("start_at", endAt));
-            if(fromSettled != null || toSettled != null) {
+            if (fromSettled != null || toSettled != null) {
                 filters.add(exists("settled_at"));
-                if(fromSettled != null)
+                if (fromSettled != null)
                     filters.add(gte("settled_at", fromSettled));
-                if(toSettled != null)
+                if (toSettled != null)
                     filters.add(lte("settled_at", toSettled));
             }
 
@@ -2369,13 +2367,13 @@ public class AdvisorController {
                     Sorts.descending("start_at")
             );
 
-            for(Document transaction : teachTransactions) {
-                if(transaction.containsKey("settled_at"))
+            for (Document transaction : teachTransactions) {
+                if (transaction.containsKey("settled_at"))
                     settlementsRefs.add(transaction.getObjectId("_id"));
             }
         }
 
-        if(settlementsRefs.size() > 0) {
+        if (settlementsRefs.size() > 0) {
             settlementRequests = settlementRequestRepository.find(
                     and(
                             exists("ref_id"),
@@ -2385,7 +2383,7 @@ public class AdvisorController {
             );
         }
 
-        if(adviceTransactions != null) {
+        if (adviceTransactions != null) {
             try {
                 for (Document transaction : adviceTransactions) {
                     try {
@@ -2401,7 +2399,7 @@ public class AdvisorController {
                                 .put("mode", "advice")
                                 .put("id", transaction.getObjectId("_id").toString());
 
-                        if(transaction.containsKey("settled_at") && settlementRequests != null)
+                        if (transaction.containsKey("settled_at") && settlementRequests != null)
                             settlementRequests.stream().filter(
                                     document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
                             ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));
@@ -2414,7 +2412,7 @@ public class AdvisorController {
             }
         }
 
-        if(teachTransactions != null) {
+        if (teachTransactions != null) {
             for (Document transaction : teachTransactions) {
                 JSONObject jsonObject = new JSONObject()
                         .put("title", transaction.getString("title"))
@@ -2428,7 +2426,7 @@ public class AdvisorController {
                         .put("mode", "teach")
                         .put("id", transaction.getObjectId("_id").toString());
 
-                if(transaction.containsKey("settled_at") && settlementRequests != null)
+                if (transaction.containsKey("settled_at") && settlementRequests != null)
                     settlementRequests.stream().filter(
                             document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
                     ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));

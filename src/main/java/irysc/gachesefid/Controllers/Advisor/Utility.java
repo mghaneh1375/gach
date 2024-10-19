@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
 import static irysc.gachesefid.Utility.Utility.*;
@@ -27,7 +29,10 @@ public class Utility {
         JSONObject jsonObject = new JSONObject()
                 .put("name", advisor.getString("first_name") + " " + advisor.getString("last_name"))
                 .put("acceptStd", advisor.getOrDefault("accept_std", true))
-                .put("stdCount", students.size())
+                .put("stdCount", advisorRequestsRepository.count(and(
+                        eq("advisor_id", advisor.getObjectId("_id")),
+                        exists("paid_at")
+                )))
                 .put("rate", advisor.getOrDefault("rate", 0))
                 .put("bio", advisor.getString("advice_bio"))
                 .put("videoLink", advisor.getOrDefault("advice_video_link", ""))
