@@ -111,6 +111,7 @@ public class ProfileConfigController {
 //                                iryscQuizRepository.count()
 //                        )
                 )
+                .put("showBadges", userBadgeRepository.exist(eq("user_id", userId)))
                 .put("name", user.getString("first_name") + " " + user.getString("last_name"))
                 .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
                 .put("id", user.getObjectId("_id").toString())

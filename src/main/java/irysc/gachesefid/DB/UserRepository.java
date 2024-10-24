@@ -3,6 +3,9 @@ package irysc.gachesefid.DB;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Field;
+import com.mongodb.client.model.Variable;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
@@ -14,7 +17,11 @@ import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
+import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -70,7 +77,7 @@ public class UserRepository extends Common {
                 .append("auth_via", authVia)
         );
 
-        if(authVia.equals(AuthVia.SMS.getName()))
+        if (authVia.equals(AuthVia.SMS.getName()))
             Utility.sendSMS(username, code + "", "", "", "activationCode");
         else
             Utility.sendMail(
@@ -105,13 +112,13 @@ public class UserRepository extends Common {
                     .append("auth_via", via)
                     .append("username", NID);
 
-            if(savePhoneOrMail)
+            if (savePhoneOrMail)
                 newDoc.append("phone_or_mail", phoneOrMail);
 
             activationRepository.insertOne(newDoc);
 
             if (via.equals(AuthVia.SMS.getName()))
-                Utility.sendSMS(phoneOrMail, code + "" , "", "", "activationCode");
+                Utility.sendSMS(phoneOrMail, code + "", "", "", "activationCode");
             else
                 Utility.sendMail(phoneOrMail, code + "", "forget", null);
 
@@ -197,6 +204,113 @@ public class UserRepository extends Common {
         return null;
     }
 
+    public List<Document> findUsersWithSettlementStatus(
+            Bson match, Bson sortFilter,
+            Integer skip, Integer limit,
+            Boolean justSettled
+    ) {
+        List<Bson> filters = new ArrayList<>() {{
+            add(match(match));
+            add(lookup("teach_schedule",
+                    Collections.singletonList(new Variable<>("myId", "$_id")), Arrays.asList(
+                            match(
+                                    and(
+                                            expr(
+                                                    new Document("$eq", Arrays.asList("$user_id", "$$myId"))
+                                            ),
+                                            exists("settled_at", false),
+                                            exists("students.0")
+                                    )),
+                            project(JUST_ID)
+                    ), "teachSettlements"));
+            add(lookup("advisor_requests",
+                    Collections.singletonList(new Variable<>("myId", "$_id")), Arrays.asList(
+                            match(and(
+                                    expr(
+                                            new Document("$eq", Arrays.asList("$advisor_id", "$$myId"))
+                                    ),
+                                    exists("settled_at", false),
+                                    exists("paid_at")
+                            )),
+                            project(JUST_ID)
+                    ), "adviceSettlements"));
+            add(
+                    project(USER_MANAGEMENT_INFO_DIGEST
+                            .append("teachSettlementsCount", new BasicDBObject("$size", "$teachSettlements"))
+                            .append("adviceSettlementsCount", new BasicDBObject("$size", "$adviceSettlements"))
+                    )
+            );
+            add(addFields(new Field<>(
+                    "settlementsCount", new BasicDBObject("$add", Arrays.asList("$teachSettlementsCount", "$adviceSettlementsCount")))
+            ));
+        }};
+        if(justSettled != null && justSettled)
+            filters.add(match(eq("settlementsCount", 0)));
+        else if(justSettled != null)
+            filters.add(match(gt("settlementsCount", 0)));
+
+        filters.addAll(List.of(
+                Aggregates.sort(sortFilter),
+                skip(skip),
+                limit(limit)
+        ));
+
+        List<Document> users = new ArrayList<>();
+        for (Document doc : documentMongoCollection.aggregate(filters))
+            users.add(doc);
+
+        return users;
+    }
+
+    public Integer countUsersWithSettlementStatus(
+            Bson match, Boolean justSettled
+    ) {
+        List<Bson> filters = new ArrayList<>() {{
+            add(match(match));
+            add(lookup("teach_schedule",
+                    Collections.singletonList(new Variable<>("myId", "$_id")), Arrays.asList(
+                            match(
+                                    and(
+                                            expr(
+                                                    new Document("$eq", Arrays.asList("$user_id", "$$myId"))
+                                            ),
+                                            exists("settled_at", false),
+                                            exists("students.0")
+                                    )),
+                            project(JUST_ID)
+                    ), "teachSettlements"));
+            add(lookup("advisor_requests",
+                    Collections.singletonList(new Variable<>("myId", "$_id")), Arrays.asList(
+                            match(and(
+                                    expr(
+                                            new Document("$eq", Arrays.asList("$advisor_id", "$$myId"))
+                                    ),
+                                    exists("settled_at", false),
+                                    exists("paid_at")
+                            )),
+                            project(JUST_ID)
+                    ), "adviceSettlements"));
+            add(
+                    project(new BasicDBObject()
+                            .append("teachSettlementsCount", new BasicDBObject("$size", "$teachSettlements"))
+                            .append("adviceSettlementsCount", new BasicDBObject("$size", "$adviceSettlements"))
+                    )
+            );
+            add(addFields(new Field<>(
+                    "settlementsCount", new BasicDBObject("$add", Arrays.asList("$teachSettlementsCount", "$adviceSettlementsCount")))
+            ));
+        }};
+        if(justSettled != null && justSettled)
+            filters.add(match(eq("settlementsCount", 0)));
+        else if(justSettled != null)
+            filters.add(match(gt("settlementsCount", 0)));
+
+        int counter = 0;
+        for (Document ignored : documentMongoCollection.aggregate(filters))
+            counter++;
+
+        return counter;
+    }
 
     @Override
     void init() {
@@ -207,7 +321,7 @@ public class UserRepository extends Common {
 
     public void checkCache(Document newDoc) {
         removeFromCache(table, newDoc.getObjectId("_id"));
-        if(secKey != null)
+        if (secKey != null)
             removeFromCache(table, newDoc.get(secKey));
     }
 

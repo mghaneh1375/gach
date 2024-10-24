@@ -1,6 +1,7 @@
 package irysc.gachesefid.Controllers;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.UserRepository;
@@ -33,6 +34,8 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class ManageUserController {
+
+    private final static int PAGE_SIZE = 10;
 
     // todo: review teacher scenario access
     public static String fetchUser(Document user, String unique, boolean isAdmin) {
@@ -70,7 +73,8 @@ public class ManageUserController {
             String lastname, String phone,
             String mail, String NID,
             ObjectId gradeId, ObjectId branchId,
-            String additionalLevel
+            String additionalLevel, Boolean justSettled,
+            Integer pageIndex
     ) {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(exists("remove_at", false));
@@ -117,10 +121,23 @@ public class ManageUserController {
                     eq("grade._id", branchId)
             ));
 
-
-        ArrayList<Document> docs = userRepository.find(
-                and(filters), USER_MANAGEMENT_INFO_DIGEST
-        );
+        List<Document> docs = pageIndex == null ?
+                userRepository.find(
+                        and(filters), USER_MANAGEMENT_INFO_DIGEST
+                ) : level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName()) ?
+                userRepository.findLimited(
+                        and(filters), USER_MANAGEMENT_INFO_DIGEST,
+                        Sorts.ascending("created_at"),
+                        (pageIndex - 1) * PAGE_SIZE, PAGE_SIZE
+                ) :
+                userRepository.findUsersWithSettlementStatus(
+                        and(filters),
+                        Sorts.ascending("created_at"),
+                        (pageIndex - 1) * PAGE_SIZE, PAGE_SIZE,
+                        justSettled
+                );
+        int count = level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName()) ?
+                userRepository.count(and(filters)) : userRepository.countUsersWithSettlementStatus(and(filters), justSettled);
 
         try {
             JSONArray jsonArray = new JSONArray();
@@ -166,22 +183,22 @@ public class ManageUserController {
                         )
                         .put("branch", branch);
 
-                if (user.getList("accesses", String.class).contains(Access.ADVISOR.getName())) {
+                if (level != null && level.equalsIgnoreCase(Access.ADVISOR.getName())) {
                     jsonObject
-                            .put("notSettledCounts",
-                                    teachScheduleRepository.count(
-                                            and(
-                                                    exists("settled_at", false),
-                                                    eq("user_id", user.getObjectId("_id")),
-                                                    exists("students.0")
-                                            )
-                                    ) + advisorRequestsRepository.count(
-                                            and(
-                                                    exists("settled_at", false),
-                                                    eq("advisor_id", user.getObjectId("_id")),
-                                                    exists("paid_at")
-                                            )
-                                    )
+                            .put("notSettledCounts", user.getInteger("settlementsCount")
+//                                    teachScheduleRepository.count(
+//                                            and(
+//                                                    exists("settled_at", false),
+//                                                    eq("user_id", user.getObjectId("_id")),
+//                                                    exists("students.0")
+//                                            )
+//                                    ) + advisorRequestsRepository.count(
+//                                            and(
+//                                                    exists("settled_at", false),
+//                                                    eq("advisor_id", user.getObjectId("_id")),
+//                                                    exists("paid_at")
+//                                            )
+//                                    )
                             )
                             .put("teachPriority", user.getOrDefault("teach_priority", 1000))
                             .put("advisorPriority", user.getOrDefault("advisor_priority", 1000));
@@ -190,9 +207,15 @@ public class ManageUserController {
                 jsonArray.put(jsonObject);
             }
 
-            return generateSuccessMsg("users", jsonArray);
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("users", jsonArray)
+                    .put("totalCount", count)
+            );
         } catch (Exception x) {
-            return generateSuccessMsg("user", "");
+            return generateSuccessMsg("data", new JSONObject()
+                    .put("users", new JSONArray())
+                    .put("totalCount", 0)
+            );
         }
     }
 

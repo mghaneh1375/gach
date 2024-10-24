@@ -82,6 +82,7 @@ public abstract class Common extends Repository {
         return (int) documentMongoCollection.countDocuments(filter);
     }
 
+    synchronized
     public ArrayList<Document> find(Bson filter, Bson project, Bson orderBy) {
 
         FindIterable<Document> cursor;
@@ -106,13 +107,12 @@ public abstract class Common extends Repository {
         return result;
     }
 
+    synchronized
     public ArrayList<Document> findLimited(Bson filter, Bson project, Bson orderBy, int skip, int limit) {
-
         FindIterable<Document>
                 cursor = documentMongoCollection.find(filter).sort(orderBy).projection(project).skip(skip).limit(limit);
 
         ArrayList<Document> result = new ArrayList<>();
-
         for (Document doc : cursor)
             result.add(doc);
 
@@ -332,7 +332,6 @@ public abstract class Common extends Repository {
             filters.add(match);
 
         if (userKey != null) {
-
             filters.add(lookup("user",
                     Collections.singletonList(new Variable<>("myId", "$" + userKey)), Arrays.asList(
                             match(expr(new Document("$eq", Arrays.asList("$_id", "$$myId")))),
@@ -340,7 +339,6 @@ public abstract class Common extends Repository {
                     ), finalUserKey));
 
             filters.add(unwind("$" + finalUserKey, new UnwindOptions().preserveNullAndEmptyArrays(true)));
-
         }
 
         if (project != null)
