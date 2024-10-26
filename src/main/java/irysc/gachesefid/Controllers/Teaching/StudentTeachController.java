@@ -42,8 +42,10 @@ public class StudentTeachController {
                 return JSON_NOT_ACCESS;
 
             long curr = System.currentTimeMillis();
-            if (schedule.getLong("start_at") < curr)
+            if (schedule.containsKey("start_at") && schedule.getLong("start_at") < curr)
                 return generateErr("این جلسه منقضی شده است");
+            if (schedule.containsKey("end_registration") && schedule.getLong("end_registration") < curr)
+                return generateErr("مهلت ثبت نام در این کلاس به اتمام رسیده است");
 
             List<Document> requests;
             if (!schedule.containsKey("requests"))
@@ -70,7 +72,7 @@ public class StudentTeachController {
             Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
             createNotifAndSendSMS(
                     advisor,
-                    getSolarDate(schedule.getLong("start_at")) + "__" + user.getString("first_name") + " " + user.getString("last_name"),
+                    getSolarDate(schedule.containsKey("start_at") ? schedule.getLong("start_at") : schedule.getLong("start_date")) + "__" + user.getString("first_name") + " " + user.getString("last_name"),
                     "newTeachRequest"
             );
             userRepository.updateOne(
@@ -120,7 +122,9 @@ public class StudentTeachController {
                 Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
                 createNotifAndSendSMS(
                         advisor,
-                        getSolarDate(schedule.getLong("start_at")) + "__" + name,
+                        getSolarDate(
+                                schedule.containsKey("start_at") ? schedule.getLong("start_at") : schedule.getLong("start_date")
+                        ) + "__" + name,
                         "cancelRequest"
                 );
                 userRepository.updateOne(advisor.getObjectId("_id"), set("events", advisor.get("events")));
@@ -248,7 +252,10 @@ public class StudentTeachController {
                 JSONObject jsonObject = new JSONObject()
                         .put("id", schedule.getObjectId("_id").toString())
                         .put("teacher", teacher.getString("first_name") + " " + teacher.getString("last_name"))
-                        .put("startAt", getSolarDate(schedule.getLong("start_at")))
+                        .put("startAt", schedule.containsKey("start_at") ?
+                                getSolarDate(schedule.getLong("start_at")) :
+                                getSolarDate(schedule.getLong("start_date")) + " تا " + getSolarDate(schedule.getLong("end_date"))
+                        )
                         .put("length", schedule.get("length"))
                         .put("price", schedule.get("price"))
                         .put("teachMode", schedule.get("teach_mode"))
@@ -278,10 +285,43 @@ public class StudentTeachController {
             add(eq("students._id", userId));
         }};
         if (activeMode != null) {
+            long curr = System.currentTimeMillis();
+            // todo: check
             if (activeMode.equalsIgnoreCase(ActiveMode.ACTIVE.getName()))
-                filters.add(gt("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC));
-            else
-                filters.add(lt("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC));
+                filters.add(or(
+                        and(
+                                exists("start_at"),
+                                gt("start_at", curr - ONE_DAY_MIL_SEC)
+                        ),
+                        and(
+                                exists("start_date"),
+                                gte("start_date", curr),
+                                lte("end_date", curr)
+                        )
+                ));
+            else if(activeMode.equalsIgnoreCase(ActiveMode.EXPIRED.getName())) {
+                filters.add(
+                        or(
+                                and(
+                                        exists("start_at"),
+                                        lt("start_at", curr - ONE_DAY_MIL_SEC)
+                                ),
+                                and(
+                                        exists("start_date"),
+                                        lt("end_date", curr)
+                                )
+                        )
+                );
+            }
+            else if(activeMode.equalsIgnoreCase(ActiveMode.NOT_START.getName())) {
+                //todo
+                filters.add(
+                        and(
+                                exists("start_date"),
+                                lt("start_date", curr)
+                        )
+                );
+            }
         }
 
         List<Document> schedules = teachScheduleRepository.find(
@@ -289,7 +329,6 @@ public class StudentTeachController {
         );
 
         Set<ObjectId> teachersId = new HashSet<>();
-
         for (Document schedule : schedules)
             teachersId.add(schedule.getObjectId("user_id"));
 
@@ -319,25 +358,31 @@ public class StudentTeachController {
     }
 
     public static String getSchedules(ObjectId teacherId) {
-
+        long curr = System.currentTimeMillis();
         List<Document> schedules = teachScheduleRepository.find(
                 and(
                         eq("user_id", teacherId),
                         eq("can_request", true),
-                        gt("start_at", System.currentTimeMillis()),
+                        or(
+                                and(
+                                        exists("start_at"),
+                                        gt("start_at", curr)
+                                ),
+                                and(
+                                        exists("end_registration"),
+                                        gt("end_registration", curr)
+                                )
+                        ),
                         eq("visibility", true)
                 ),
                 null
         );
-
-        schedules.sort(Comparator.comparing(o -> o.getLong("start_at")));
-
+        schedules.sort(Comparator.comparing(o -> o.containsKey("start_at") ? o.getLong("start_at") : o.getLong("start_date")));
         JSONArray jsonArray = new JSONArray();
-        for (Document schedule : schedules) {
-            jsonArray.put(
-                    publicConvertScheduleToJSONDigest(schedule)
-            );
-        }
+        schedules.forEach(schedule ->
+                jsonArray.put(
+                        publicConvertScheduleToJSONDigest(schedule)
+                ));
 
         return generateSuccessMsg("data", jsonArray);
     }
@@ -564,7 +609,16 @@ public class StudentTeachController {
                     and(
                             eq("visibility", true),
                             eq("can_request", true),
-                            gt("start_at", curr)
+                            or(
+                                    and(
+                                            exists("start_at"),
+                                            gt("start_at", curr)
+                                    ),
+                                    and(
+                                            exists("end_registration"),
+                                            gt("end_registration", curr)
+                                    )
+                            )
                     ), new BasicDBObject("user_id", 1)
             ).stream().map(document -> document.getObjectId("user_id")).collect(Collectors.toList());
             filters.add(in("_id", userIds));
@@ -723,12 +777,22 @@ public class StudentTeachController {
             long curr = System.currentTimeMillis();
 
             if (schedule == null || !schedule.containsKey("students") ||
-                    schedule.getLong("start_at") > curr ||
-                    schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr ||
                     searchInDocumentsKeyValIdx(
                             schedule.getList("students", Document.class), "_id", userId
                     ) == -1
             )
+                return JSON_NOT_ACCESS;
+
+            if(schedule.containsKey("start_at") && (
+                    schedule.getLong("start_at") > curr ||
+                            schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr
+            ))
+                return JSON_NOT_ACCESS;
+
+            if(schedule.containsKey("start_date") && (
+                    schedule.getLong("start_date") > curr ||
+                            schedule.getLong("end_date") + 30 * ONE_DAY_MIL_SEC < curr
+            ))
                 return JSON_NOT_ACCESS;
 
             myTeachReport = new Document("student_id", userId)

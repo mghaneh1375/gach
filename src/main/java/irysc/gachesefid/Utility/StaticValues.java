@@ -65,7 +65,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public final static boolean DEV_MODE = true;
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";
@@ -102,7 +102,9 @@ public class StaticValues {
                     .append("time", 1).append("min_cap", 1)
                     .append("max_cap", 1).append("user_id", 1)
                     .append("can_request", 1).append("need_registry_confirmation", 1)
-                    .append("sky_room_url", 1);
+                    .append("sky_room_url", 1).append("sessions_count", 1)
+                    .append("start_date", 1).append("end_date", 1)
+                    .append("end_registration", 1);
 
     public final static BasicDBObject TEACH_PUBLIC_DIGEST =
             new BasicDBObject("first_name", 1).append("_id", 1)
