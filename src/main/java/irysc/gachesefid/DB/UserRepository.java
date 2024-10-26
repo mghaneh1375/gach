@@ -235,7 +235,7 @@ public class UserRepository extends Common {
                             project(JUST_ID)
                     ), "adviceSettlements"));
             add(
-                    project(USER_MANAGEMENT_INFO_DIGEST
+                    project(new BasicDBObject(USER_MANAGEMENT_INFO_DIGEST)
                             .append("teachSettlementsCount", new BasicDBObject("$size", "$teachSettlements"))
                             .append("adviceSettlementsCount", new BasicDBObject("$size", "$adviceSettlements"))
                     )
