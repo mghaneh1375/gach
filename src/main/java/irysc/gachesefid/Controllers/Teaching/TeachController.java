@@ -346,6 +346,134 @@ public class TeachController {
         );
     }
 
+    private static String validatePackage(JSONObject jsonObject) {
+        long curr = System.currentTimeMillis();
+        if (jsonObject.getLong("endRegistration") < curr)
+            return generateErr("زمان پایان ثبت نام باید بزرگ تر از امروز باشد");
+
+        if (jsonObject.getLong("endRegistration") > jsonObject.getLong("startDate"))
+            return generateErr("زمان شروع کلاس باید بزرگ تر از زمان پایان ثبت نام باشد");
+
+        if (jsonObject.getLong("startDate") > jsonObject.getLong("endDate"))
+            return generateErr("زمان پایان کلاس باید بزرگ تر از زمان شروع کلاس باشد");
+
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) &&
+                !jsonObject.has("minCap")
+        )
+            return generateErr("لطفا حداقل تعداد نفرات برای تشکیل جلسه را تعیین نمایید");
+
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) &&
+                !jsonObject.has("maxCap")
+        )
+            return generateErr("لطفا حداکثر تعداد نفرات برای تشکیل جلسه را تعیین نمایید");
+
+        Document config = getConfig();
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName())) {
+            if (jsonObject.getInt("maxCap") > config.getInteger("max_teach_cap"))
+                return generateErr("حداکثر تعداد نفرات در هر جلسه نباید بیشتر از " + config.getInteger("max_teach_cap") + " باشد");
+        }
+
+        if ((jsonObject.getLong("endDate") - jsonObject.getLong("startDate")) / ONE_DAY_MIL_SEC >
+                (Integer) config.getOrDefault("max_interval_for_class", 90))
+            return generateErr("حداکثر فاصله بین شروع و پایان زمان کلاس باید " + config.getInteger("max_interval_for_class") + " روز باشد");
+
+        return null;
+    }
+    public static String createNewPackage(Document user, JSONObject jsonObject) {
+        String err = validatePackage(jsonObject);
+        if(err != null)
+            return err;
+
+        Document config = getConfig();
+        int iryscTeachPercent;
+        if (user.containsKey("irysc_teach_percent"))
+            iryscTeachPercent = user.getInteger("irysc_teach_percent");
+        else
+            iryscTeachPercent = config.getInteger("irysc_teach_percent");
+
+        ObjectId userId = user.getObjectId("_id");
+        Document newDoc = new Document("_id", new ObjectId())
+                .append("user_id", userId)
+                .append("length", jsonObject.getInt("length"))
+                .append("sessions_count", jsonObject.getInt("sessionsCount"))
+                .append("end_registration", jsonObject.getLong("endRegistration"))
+                .append("start_date", jsonObject.getLong("startDate"))
+                .append("end_date", jsonObject.getLong("endDate"))
+                .append("created_at", System.currentTimeMillis())
+                .append("irysc_percent", iryscTeachPercent)
+                .append("visibility", jsonObject.getBoolean("visibility"))
+                .append("price", jsonObject.getInt("price"))
+                .append("teach_mode", jsonObject.getString("teachMode"))
+                .append("title", jsonObject.getString("title"))
+                .append("need_registry_confirmation",
+                        !jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) &&
+                                (
+                                        !jsonObject.has("needRegistryConfirmation") ||
+                                                jsonObject.getBoolean("needRegistryConfirmation")
+                                )
+                )
+                .append("can_request", true)
+                .append("description", jsonObject.getString("description"));
+
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName())) {
+            newDoc.append("max_cap", jsonObject.getInt("maxCap"));
+            newDoc.append("min_cap", jsonObject.getInt("minCap"));
+        }
+
+        teachScheduleRepository.insertOneWithReturnId(newDoc);
+        if (user.containsKey("teach")) {
+            user.put("teach", true);
+            userRepository.updateOne(userId, set("teach", true));
+        }
+
+        return generateSuccessMsg("data",
+                convertScheduleToJSONDigestForTeacher(newDoc, false, null, false)
+        );
+    }
+
+    public static String updatePackage(
+            ObjectId userId, ObjectId id,
+            JSONObject jsonObject
+    ) {
+        String err = validatePackage(jsonObject);
+        if(err != null)
+            return err;
+
+        Document teachPackage = teachScheduleRepository.findById(id);
+        if(teachPackage == null)
+            return JSON_NOT_VALID_ID;
+        if(!teachPackage.getObjectId("user_id").equals(userId))
+            return JSON_NOT_ACCESS;
+
+        teachPackage.put("length", jsonObject.getInt("length"));
+        teachPackage.put("sessions_count", jsonObject.getInt("sessionsCount"));
+        teachPackage.put("end_registration", jsonObject.getLong("endRegistration"));
+        teachPackage.put("start_date", jsonObject.getLong("startDate"));
+        teachPackage.put("end_date", jsonObject.getLong("endDate"));
+        teachPackage.put("visibility", jsonObject.getBoolean("visibility"));
+        teachPackage.put("price", jsonObject.getInt("price"));
+        teachPackage.put("teach_mode", jsonObject.getString("teachMode"));
+        teachPackage.put("title", jsonObject.getString("title"));
+        teachPackage.put("need_registry_confirmation",
+                !jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) &&
+                        (
+                                !jsonObject.has("needRegistryConfirmation") ||
+                                        jsonObject.getBoolean("needRegistryConfirmation")
+                        )
+        );
+        teachPackage.put("description", jsonObject.getString("description"));
+
+        if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName())) {
+            teachPackage.put("max_cap", jsonObject.getInt("maxCap"));
+            teachPackage.put("min_cap", jsonObject.getInt("minCap"));
+        }
+
+        teachScheduleRepository.replaceOneWithoutClearCache(id, teachPackage);
+        return generateSuccessMsg("data",
+                convertScheduleToJSONDigestForTeacher(teachPackage, false, null, false)
+        );
+    }
+
     public static String copySchedule(ObjectId userId, ObjectId scheduleId, JSONObject jsonObject) {
 
         if (jsonObject.getLong("start") < System.currentTimeMillis())
@@ -508,8 +636,16 @@ public class TeachController {
 
             String url = SKY_ROOM_PUBLIC_URL + roomUrl;
             addUserToClass(studentsSkyRoomId, teacherSkyRoomId, roomId);
-            schedule.put("sky_room_url", url);
-            teachScheduleRepository.updateOne(scheduleId, set("sky_room_url", url));
+            if(schedule.containsKey("start_at")) {
+                schedule.put("sky_room_url", url);
+                teachScheduleRepository.updateOne(scheduleId, set("sky_room_url", url));
+            }
+            else {
+                List<String> urls = (List<String>) schedule.getOrDefault("sky_room_urls", new ArrayList<>());
+                urls.add(url);
+                schedule.put("sky_room_urls", urls);
+                teachScheduleRepository.updateOne(scheduleId, set("sky_room_urls", urls));
+            }
 
             List<WriteModel<Document>> writeModels = new ArrayList<>();
             for (Document user : users) {
@@ -558,7 +694,10 @@ public class TeachController {
             return generateErr("تعیین وضعیت ثبت نام این تدریس برعهده سیستم است");
 
         long curr = System.currentTimeMillis();
-        if (schedule.getLong("start_at") < curr)
+        if (
+                (schedule.containsKey("start_at") && schedule.getLong("start_at") < curr) ||
+                        (schedule.containsKey("end_registration") && schedule.getLong("end_registration") < curr)
+        )
             return generateErr("این جلسه به اتمام رسیده و امکان تغییر وضعیت ثبت نام افراد در آن وجود ندارد");
 
         if (!schedule.containsKey("requests"))
@@ -629,9 +768,29 @@ public class TeachController {
                 return JSON_NOT_VALID_PARAMS;
 
             if (activeMode.equalsIgnoreCase("active"))
-                filters.add(gt("start_at", curr));
+                filters.add(or(
+                        and(
+                                exists("start_at"),
+                                gt("start_at", curr)
+                        ),
+                        and(
+                                exists("start_date"),
+                                gt("start_date", curr)
+                        )
+                ));
             else
-                filters.add(lt("start_at", curr));
+                filters.add(
+                        or(
+                                and(
+                                        exists("start_at"),
+                                        lt("start_at", curr)
+                                ),
+                                and(
+                                        exists("start_date"),
+                                        lt("start_date", curr)
+                                )
+                        )
+                );
         }
 
         List<Document> schedules = teachScheduleRepository.find(and(filters), null);
@@ -689,7 +848,6 @@ public class TeachController {
 
             wantedRequests.sort(Comparator.comparing(o -> o.getLong("created_at")));
             JSONObject scheduleJSON = new JSONObject()
-                    .put("start", getSolarDate(schedule.getLong("start_at")))
                     .put("teachMode", schedule.getString("teach_mode"))
                     .put("requestCounts", requests.size())
                     .put("id", schedule.getObjectId("_id").toString())
@@ -698,7 +856,16 @@ public class TeachController {
                     .put("title", schedule.getOrDefault("title", ""));
 
             boolean canChangeStatus = schedule.getBoolean("need_registry_confirmation") &&
-                    schedule.getLong("start_at") > curr;
+                    (
+                            (schedule.containsKey("start_at") && schedule.getLong("start_at") > curr) ||
+                                    (schedule.containsKey("end_registration") && schedule.getLong("end_registration") > curr)
+                    );
+            if(schedule.containsKey("start_at"))
+                scheduleJSON.put("start", getSolarDate(schedule.getLong("start_at")));
+            else
+                scheduleJSON.put("start",
+                        getSolarDate(schedule.getLong("start_date")) + " تا " + getSolarDate(schedule.getLong("end_date"))
+                );
 
             JSONArray requestsJSON = new JSONArray();
 
@@ -738,7 +905,8 @@ public class TeachController {
             String activeMode,
             Boolean justHasStudents,
             Boolean justHasRequests,
-            String teachMode
+            String teachMode,
+            Boolean justMultiSessions
     ) {
         List<Bson> filters = new ArrayList<>();
 
@@ -746,19 +914,57 @@ public class TeachController {
             filters.add(eq("user_id", userId));
 
         if (from != null)
-            filters.add(gte("start_at", from));
+            filters.add(or(
+                    and(
+                            exists("start_at"),
+                            gte("start_at", from)
+                    ),
+                    and(
+                            exists("start_date"),
+                            gte("start_date", from)
+                    )
+            ));
 
-        if (to != null)
-            filters.add(lte("start_at", to));
+        if (to != null) {
+            filters.add(or(
+                    and(
+                            exists("start_at"),
+                            lte("start_at", to)
+                    ),
+                    and(
+                            exists("start_date"),
+                            lte("start_date", to)
+                    )
+            ));
+        }
 
         if (activeMode != null) {
             if (!activeMode.equals("active") && !activeMode.equals("expired"))
                 return JSON_NOT_VALID_PARAMS;
 
+            long curr = System.currentTimeMillis();
             if (activeMode.equals("active"))
-                filters.add(gt("start_at", System.currentTimeMillis()));
+                filters.add(or(
+                        and(
+                                exists("start_at"),
+                                gt("start_at", curr)
+                        ),
+                        and(
+                                exists("start_date"),
+                                gt("start_date", curr)
+                        )
+                ));
             else
-                filters.add(lt("start_at", System.currentTimeMillis()));
+                filters.add(or(
+                        and(
+                                exists("start_at"),
+                                lt("start_at", curr)
+                        ),
+                        and(
+                                exists("start_date"),
+                                lt("start_date", curr)
+                        )
+                ));
         }
 
         if (justHasStudents != null)
@@ -770,12 +976,14 @@ public class TeachController {
         if (teachMode != null)
             filters.add(eq("teach_mode", teachMode));
 
+        if (justMultiSessions != null)
+            filters.add(exists("sessions_count", justMultiSessions));
+
         List<Document> schedules = teachScheduleRepository.find(
                 filters.size() == 0 ? null : and(filters),
                 SCHEDULE_DIGEST_FOR_TEACHER
         );
         List<Document> users = null;
-
         if (userId == null) {
             List<Object> userIds = new ArrayList<>();
             for (Document schedule : schedules)
@@ -1200,7 +1408,7 @@ public class TeachController {
                                 .append("teach_rate_count", rateCount)
                 )
         );
-        if(rate >= 3) {
+        if (rate >= 3) {
             new Thread(() -> {
                 BadgeController.checkForUpgrade(studentId, Action.TEACHER_RATE);
                 PointController.addPointForAction(studentId, Action.TEACHER_RATE, scheduleId, rate);

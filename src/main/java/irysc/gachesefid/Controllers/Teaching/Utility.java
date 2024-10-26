@@ -1,8 +1,6 @@
 package irysc.gachesefid.Controllers.Teaching;
 
 import com.mongodb.BasicDBObject;
-import com.mongodb.client.model.InsertOneModel;
-import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.ActiveMode;
@@ -234,10 +232,40 @@ public class Utility {
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1));
 
-        if (!isForUpdate) {
+        if (isForUpdate) {
+            if (schedule.containsKey("start_at"))
+                jsonObject.put("startAt", schedule.getLong("start_at"));
+            else {
+                jsonObject.put("sessionsCount", schedule.getInteger("sessions_count"))
+                        .put("endRegistration", schedule.getLong("end_registration"))
+                        .put("startDate", schedule.getLong("start_date"))
+                        .put("endDate", schedule.getLong("end_date"));
+            }
+        } else {
             long curr = System.currentTimeMillis();
-            boolean isInTeachPeriod = curr - ONE_DAY_MIL_SEC < schedule.getLong("start_at") &&
-                    schedule.getLong("start_at") < curr + ONE_DAY_MIL_SEC;
+            boolean isInTeachPeriod = schedule.containsKey("sessions_count") ?
+                    curr >= schedule.getLong("start_date") && curr <= schedule.getLong("end_date") :
+                    curr - ONE_DAY_MIL_SEC < schedule.getLong("start_at") &&
+                            schedule.getLong("start_at") < curr + ONE_DAY_MIL_SEC;
+            boolean canBuildSkyRoom = false;
+            if(schedule.containsKey("students") &&
+                    schedule.getList("students", Document.class).size() > 0 && isInTeachPeriod) {
+                if (schedule.containsKey("start_at") && !schedule.containsKey("sky_room_url"))
+                    canBuildSkyRoom = true;
+                else if (schedule.containsKey("sessions_count")) {
+                    int skyRoomUrlCount = ((List<String>) schedule.getOrDefault("sky_room_urls", new ArrayList<>())).size();
+                    if (skyRoomUrlCount < schedule.getInteger("sessions_count") ||
+                            skyRoomUrlCount < schedule.getInteger("sessions_count") +
+                                    (Integer) getConfig().getOrDefault("additional_classes_count", 0)
+                    ) {
+                        canBuildSkyRoom = true;
+                        jsonObject.put("reminderLinks",
+                                schedule.getInteger("sessions_count") +
+                                        (Integer) getConfig().getOrDefault("additional_classes_count", 0) - skyRoomUrlCount
+                        );
+                    }
+                }
+            }
 
             jsonObject.put("createdAt", getSolarDate(schedule.getLong("created_at")))
                     .put("requestsCount", schedule.containsKey("requests") ?
@@ -245,16 +273,22 @@ public class Utility {
                     .put("studentsCount", schedule.containsKey("students") ?
                             schedule.getList("students", Document.class).size() : 0)
                     .put("id", schedule.getObjectId("_id").toString())
-                    .put("startAt", getSolarDate(schedule.getLong("start_at")))
-                    .put("skyRoomUrl", isInTeachPeriod ? schedule.getOrDefault("sky_room_url", "") : "")
-                    .put("canBuildSkyRoom",
-                            !schedule.containsKey("sky_room_url") &&
-                                    schedule.containsKey("students") &&
-                                    schedule.getList("students", Document.class).size() > 0 && isInTeachPeriod
-
-                    );
-        } else
-            jsonObject.put("startAt", schedule.getLong("start_at"));
+                    .put("skyRoomUrl",
+                            isInTeachPeriod ? schedule.containsKey("start_at")
+                                    ? schedule.getOrDefault("sky_room_url", "")
+                                    : schedule.containsKey("sky_room_urls")
+                                    ? schedule.getList("sky_room_urls", List.class).get(0) : "" : ""
+                    )
+                    .put("canBuildSkyRoom", canBuildSkyRoom);
+            if (schedule.containsKey("start_at"))
+                jsonObject.put("startAt", getSolarDate(schedule.getLong("start_at")));
+            else {
+                jsonObject.put("sessionsCount", schedule.getInteger("sessions_count"))
+                        .put("endRegistration", getSolarDate(schedule.getLong("end_registration")))
+                        .put("startDate", getSolarDate(schedule.getLong("start_date")))
+                        .put("endDate", getSolarDate(schedule.getLong("end_date")));
+            }
+        }
 
         if (isUserNeed) {
             users.stream()
@@ -273,12 +307,21 @@ public class Utility {
                 .put("teachMode", schedule.getString("teach_mode"))
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
-                .put("startAt", getSolarDate(schedule.getLong("start_at")))
                 .put("minCap", schedule.getOrDefault("min_cap", 1))
                 .put("maxCap", schedule.getOrDefault("max_cap", 1))
                 .put("description", schedule.getOrDefault("description", ""))
                 .put("needRegistryConfirmation", schedule.getOrDefault("need_registry_confirmation", true))
                 .put("id", schedule.getObjectId("_id").toString());
+        if(schedule.containsKey("start_at"))
+            jsonObject.put("startAt", getSolarDate(schedule.getLong("start_at")));
+        else {
+            jsonObject
+                    .put("startDate", getSimpleSolarDate(schedule.getLong("start_date")))
+                    .put("endDate", getSimpleSolarDate(schedule.getLong("end_date")))
+                    .put("endRegistration", getSolarDate(schedule.getLong("end_registration")))
+                    .put("sessionsCount", schedule.getInteger("sessions_count"))
+            ;
+        }
 
         if (Objects.equals(
                 schedule.getString("teach_mode"),
@@ -558,20 +601,35 @@ public class Utility {
         if (!schedule.getObjectId("user_id").equals(userId))
             throw new InvalidFieldsException("not access");
 
-        if (schedule.containsKey("sky_room_url"))
-            throw new InvalidFieldsException("یکبار برای این جلسه لینک اتاق جلسه ساخته شده است و امکان ساخت مجدد آن وجود ندارد");
-
         if (!schedule.containsKey("students") ||
                 schedule.getList("students", Document.class).size() == 0
         )
             throw new InvalidFieldsException("این جلسه دانش آموزی ندارد و امکان ساخت لینک اتاق جلسه وجود ندارد");
 
         long curr = System.currentTimeMillis();
-        if (
-                (curr < schedule.getLong("start_at") - ONE_DAY_MIL_SEC) ||
-                        (curr > schedule.getLong("start_at") + ONE_DAY_MIL_SEC)
-        )
-            throw new InvalidFieldsException("ساخت لینک جلسه در بازه یک روز قبل و یا بعد از زمان شروع جلسه امکان پذیر است");
+        if (schedule.containsKey("start_at")) {
+            if (schedule.containsKey("sky_room_url"))
+                throw new InvalidFieldsException("یکبار برای این جلسه لینک اتاق جلسه ساخته شده است و امکان ساخت مجدد آن وجود ندارد");
+
+            if (
+                    (curr < schedule.getLong("start_at") - ONE_DAY_MIL_SEC) ||
+                            (curr > schedule.getLong("start_at") + ONE_DAY_MIL_SEC)
+            )
+                throw new InvalidFieldsException("ساخت لینک جلسه در بازه یک روز قبل و یا بعد از زمان شروع جلسه امکان پذیر است");
+        } else {
+            if (
+                    curr < schedule.getLong("start_date") ||
+                            curr > schedule.getLong("end_date")
+            )
+                throw new InvalidFieldsException("ساخت لینک جلسه در بازه شروع و پایان جلسه امکان پذیر است");
+
+            int skyRoomUrlCount = ((List<String>) schedule.getOrDefault("sky_room_urls", new ArrayList<>())).size();
+            if (skyRoomUrlCount >= schedule.getInteger("sessions_count") &&
+                    skyRoomUrlCount >= schedule.getInteger("sessions_count") +
+                            (Integer) getConfig().getOrDefault("additional_classes_count", 0)
+            )
+                throw new InvalidFieldsException("تمام لینکهای جلسات این تدریس ساخته شده است و امکان ساخت لینک بیشتر وجود ندارد");
+        }
 
         return schedule;
     }

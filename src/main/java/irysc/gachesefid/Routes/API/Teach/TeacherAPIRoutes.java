@@ -34,6 +34,79 @@ import static irysc.gachesefid.Utility.Utility.convertPersian;
 @Validated
 public class TeacherAPIRoutes extends Router {
 
+    @PostMapping(value = "createPackage")
+    @ResponseBody
+    public String createPackage(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "price", "sessionsCount",
+                            "length", "visibility",
+                            "title", "teachMode",
+                            "endRegistration",
+                            "startDate", "endDate",
+                            "description"
+                    },
+                    paramsType = {
+                            Positive.class, Positive.class,
+                            Positive.class, Boolean.class,
+                            String.class, TeachMode.class,
+                            Long.class, Long.class,
+                            Long.class, String.class
+                    },
+                    optionals = {
+                            "needRegistryConfirmation",
+                            "minCap", "maxCap",
+
+                    },
+                    optionalsType = {
+                            Boolean.class,
+                            Positive.class, Positive.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.createNewPackage(
+                getAdvisorUser(request), convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
+    @PutMapping(value = "updatePackage/{id}")
+    @ResponseBody
+    public String updatePackage(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "price", "sessionsCount",
+                            "length", "visibility",
+                            "title", "teachMode",
+                            "endRegistration",
+                            "startDate", "endDate",
+                            "description"
+                    },
+                    paramsType = {
+                            Positive.class, Positive.class,
+                            Positive.class, Boolean.class,
+                            String.class, TeachMode.class,
+                            Long.class, Long.class,
+                            Long.class, String.class
+                    },
+                    optionals = {
+                            "needRegistryConfirmation",
+                            "minCap", "maxCap",
+
+                    },
+                    optionalsType = {
+                            Boolean.class,
+                            Positive.class, Positive.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        return TeachController.updatePackage(
+                getAdvisorUser(request).getObjectId("_id"), id,
+                convertPersian(new JSONObject(jsonStr))
+        );
+    }
 
     @PostMapping(value = "createNewSchedule")
     @ResponseBody
@@ -122,11 +195,13 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(required = false, value = "justHasStudents") Boolean justHasStudents,
             @RequestParam(required = false, value = "justHasRequests") Boolean justHasRequests,
             @RequestParam(required = false, value = "teachMode") String teachMode,
-            @RequestParam(required = false, value = "activeMode") String activeMode
+            @RequestParam(required = false, value = "activeMode") String activeMode,
+            @RequestParam(required = false, value = "justMultiSessions") Boolean justMultiSessions
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return TeachController.getSchedules(
                 getAdvisorUser(request).getObjectId("_id"), from, to,
-                activeMode, justHasStudents, justHasRequests, teachMode
+                activeMode, justHasStudents, justHasRequests, teachMode,
+                justMultiSessions
         );
     }
 
