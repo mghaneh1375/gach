@@ -346,7 +346,7 @@ public class TeachController {
         );
     }
 
-    private static String validatePackage(JSONObject jsonObject) {
+    private static String validatePackageDates(JSONObject jsonObject) {
         long curr = System.currentTimeMillis();
         if (jsonObject.getLong("endRegistration") < curr)
             return generateErr("زمان پایان ثبت نام باید بزرگ تر از امروز باشد");
@@ -356,6 +356,13 @@ public class TeachController {
 
         if (jsonObject.getLong("startDate") > jsonObject.getLong("endDate"))
             return generateErr("زمان پایان کلاس باید بزرگ تر از زمان شروع کلاس باشد");
+
+        return null;
+    }
+    private static String validatePackage(JSONObject jsonObject) {
+        String err = validatePackageDates(jsonObject);
+        if(err != null)
+            return err;
 
         if (jsonObject.getString("teachMode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()) &&
                 !jsonObject.has("minCap")
@@ -474,18 +481,35 @@ public class TeachController {
         );
     }
 
-    public static String copySchedule(ObjectId userId, ObjectId scheduleId, JSONObject jsonObject) {
-
-        if (jsonObject.getLong("start") < System.currentTimeMillis())
-            return generateErr("زمان باید بزرگ تر از امروز باشد");
+    public static String copySchedule(
+            ObjectId userId, ObjectId scheduleId,
+            JSONObject jsonObject
+    ) {
 
         Document schedule = teachScheduleRepository.findById(scheduleId);
         if (schedule == null || !schedule.getObjectId("user_id").equals(userId))
             return JSON_NOT_ACCESS;
 
+        if(schedule.containsKey("start_at")) {
+            if (!jsonObject.has("start"))
+                return JSON_NOT_VALID;
+            if (jsonObject.getLong("start") < System.currentTimeMillis())
+                return generateErr("زمان باید بزرگ تر از امروز باشد");
+        }
+        else {
+            if (!jsonObject.has("startDate") ||
+                    !jsonObject.has("endDate") ||
+                    !jsonObject.has("endRegistration")
+            )
+                return JSON_NOT_VALID;
+
+            String err = validatePackageDates(jsonObject);
+            if(err != null)
+                return err;
+        }
+
         Document newDoc = new Document("_id", new ObjectId())
                 .append("user_id", userId)
-                .append("start_at", jsonObject.getLong("start"))
                 .append("length", schedule.getInteger("length"))
                 .append("created_at", System.currentTimeMillis())
                 .append("visibility", schedule.getBoolean("visibility"))
@@ -505,8 +529,17 @@ public class TeachController {
             newDoc.append("min_cap", schedule.getInteger("minCap"));
         }
 
-        teachScheduleRepository.insertOne(newDoc);
+        if(schedule.containsKey("start_at"))
+            newDoc.append("start_at", jsonObject.getLong("start"));
+        else {
+            newDoc
+                    .append("start_date", jsonObject.getLong("startDate"))
+                    .append("end_date", jsonObject.getLong("endDate"))
+                    .append("end_registration", jsonObject.getLong("endRegistration"))
+                    .append("sessions_count", schedule.getInteger("sessions_count"));
+        }
 
+        teachScheduleRepository.insertOne(newDoc);
         return generateSuccessMsg("data",
                 convertScheduleToJSONDigestForTeacher(newDoc, false, null, false)
         );
@@ -628,9 +661,16 @@ public class TeachController {
                 studentsSkyRoomId.add(studentSkyRoomId);
             }
 
-            String roomUrl = "teaching-" + scheduleId.toString() + "-" + schedule.getLong("start_at");
+            String roomUrl = schedule.containsKey("start_at")
+                    ? "teaching-" + scheduleId.toString() + "-" + schedule.getLong("start_at")
+                    : "teaching-" + scheduleId.toString() + "-" + schedule.getLong("start_date");
 
-            int roomId = createMeeting("جلسه تدریس استاد " + advisorName + " - " + getSolarDate(schedule.getLong("start_at")), roomUrl, users.size() + 1, true);
+            int roomId = createMeeting("جلسه تدریس استاد "
+                    + advisorName + " - " + (
+                            schedule.containsKey("start_at")
+                                    ? getSolarDate(schedule.getLong("start_at"))
+                                    : getSolarDate(schedule.getLong("start_date")) + " تا " + getSolarDate(schedule.getLong("end_date"))
+            ), roomUrl, users.size() + 1, true);
             if (roomId == -1)
                 return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");
 
@@ -939,32 +979,50 @@ public class TeachController {
         }
 
         if (activeMode != null) {
-            if (!activeMode.equals("active") && !activeMode.equals("expired"))
+            if (!EnumValidatorImp.isValid(activeMode, ActiveMode.class))
                 return JSON_NOT_VALID_PARAMS;
 
             long curr = System.currentTimeMillis();
-            if (activeMode.equals("active"))
+            if (activeMode.equals("active")) {
                 filters.add(or(
                         and(
                                 exists("start_at"),
-                                gt("start_at", curr)
+                                gt("start_at", curr - ONE_DAY_MIL_SEC),
+                                lt("start_at", curr + 2 * ONE_DAY_MIL_SEC)
                         ),
                         and(
                                 exists("start_date"),
-                                gt("start_date", curr)
+                                lte("start_date", curr),
+                                gte("end_date", curr)
                         )
                 ));
-            else
+            }
+            else if(activeMode.equalsIgnoreCase(ActiveMode.EXPIRED.getName())) {
                 filters.add(or(
                         and(
                                 exists("start_at"),
-                                lt("start_at", curr)
+                                lt("start_at", curr - 2 * ONE_DAY_MIL_SEC)
                         ),
                         and(
                                 exists("start_date"),
-                                lt("start_date", curr)
+                                lt("end_date", curr)
                         )
                 ));
+            }
+            else if(activeMode.equalsIgnoreCase(ActiveMode.NOT_START.getName())) {
+                filters.add(
+                        or(
+                                and(
+                                        exists("start_at"),
+                                        gt("start_at", curr + ONE_DAY_MIL_SEC)
+                                ),
+                                and(
+                                        exists("start_date"),
+                                        gt("start_date", curr)
+                                )
+                        )
+                );
+            }
         }
 
         if (justHasStudents != null)
@@ -1060,7 +1118,10 @@ public class TeachController {
 
         return generateSuccessMsg("data", new JSONObject()
                 .put("students", students)
-                .put("canRate", schedule.getLong("start_at") <= System.currentTimeMillis())
+                .put("canRate", schedule.containsKey("start_at")
+                        ? schedule.getLong("start_at") <= System.currentTimeMillis()
+                        : schedule.getLong("start_date") <= System.currentTimeMillis()
+                )
         );
     }
 
@@ -1106,10 +1167,19 @@ public class TeachController {
             isFirstReport = true;
             Document schedule = teachScheduleRepository.findById(scheduleId);
             long curr = System.currentTimeMillis();
-            if (!schedule.getObjectId("user_id").equals(userId) ||
+            if (!schedule.getObjectId("user_id").equals(userId))
+                return JSON_NOT_ACCESS;
+
+            if(schedule.containsKey("start_at") && (
                     schedule.getLong("start_at") > curr ||
-                    schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr
-            )
+                            schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC < curr
+            ))
+                return JSON_NOT_ACCESS;
+
+            if(schedule.containsKey("start_date") && (
+                    schedule.getLong("start_date") > curr ||
+                            schedule.getLong("end_date") + 30 * ONE_DAY_MIL_SEC < curr
+            ))
                 return JSON_NOT_ACCESS;
 
             myTeachReport = new Document("student_id", studentId)
