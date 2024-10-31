@@ -248,7 +248,7 @@ public class Utility {
                     curr - ONE_DAY_MIL_SEC < schedule.getLong("start_at") &&
                             schedule.getLong("start_at") < curr + ONE_DAY_MIL_SEC;
             boolean canBuildSkyRoom = false;
-            if(schedule.containsKey("students") &&
+            if (schedule.containsKey("students") &&
                     schedule.getList("students", Document.class).size() > 0 && isInTeachPeriod) {
                 if (schedule.containsKey("start_at") && !schedule.containsKey("sky_room_url"))
                     canBuildSkyRoom = true;
@@ -274,10 +274,13 @@ public class Utility {
                             schedule.getList("students", Document.class).size() : 0)
                     .put("id", schedule.getObjectId("_id").toString())
                     .put("skyRoomUrl",
-                            isInTeachPeriod ? schedule.containsKey("start_at")
+                            isInTeachPeriod
+                                    ? schedule.containsKey("start_at")
                                     ? schedule.getOrDefault("sky_room_url", "")
                                     : schedule.containsKey("sky_room_urls")
-                                    ? schedule.getList("sky_room_urls", List.class).get(0) : "" : ""
+                                    ? schedule.get("sky_room_urls", List.class).get(0)
+                                    : ""
+                                    : ""
                     )
                     .put("canBuildSkyRoom", canBuildSkyRoom);
             if (schedule.containsKey("start_at"))
@@ -312,7 +315,7 @@ public class Utility {
                 .put("description", schedule.getOrDefault("description", ""))
                 .put("needRegistryConfirmation", schedule.getOrDefault("need_registry_confirmation", true))
                 .put("id", schedule.getObjectId("_id").toString());
-        if(schedule.containsKey("start_at"))
+        if (schedule.containsKey("start_at"))
             jsonObject.put("startAt", getSolarDate(schedule.getLong("start_at")));
         else {
             jsonObject
@@ -342,25 +345,43 @@ public class Utility {
 
     static JSONObject convertMySchedule(Document schedule, Document teacher, int rate) {
         long curr = System.currentTimeMillis();
-        return new JSONObject()
+        JSONObject jsonObject = new JSONObject()
                 .put("title", schedule.getOrDefault("title", ""))
                 .put("teachMode", schedule.getString("teach_mode"))
                 .put("price", schedule.get("price"))
                 .put("length", schedule.get("length"))
                 .put("rate", rate)
-                .put("startAt", getSolarDate(schedule.getLong("start_at")))
                 .put("canRate",
-                        schedule.getLong("start_at") < curr &&
-                                curr < schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC
+                        schedule.containsKey("start_at") ?
+                                schedule.getLong("start_at") < curr &&
+                                        curr < schedule.getLong("start_at") + 30 * ONE_DAY_MIL_SEC
+                                : schedule.getLong("start_date") < curr &&
+                                curr < schedule.getLong("end_date") + 30 * ONE_DAY_MIL_SEC
                 )
                 .put("id", schedule.getObjectId("_id").toString())
-                .put("skyRoomUrl", schedule.getOrDefault("sky_room_url", ""))
                 .put("teacher", new JSONObject()
                         .put("id", teacher.getObjectId("_id").toString())
                         .put("name", teacher.getString("first_name") + " " + teacher.getString("last_name"))
                         .put("teachRate", teacher.getOrDefault("teach_rate", 0))
                         .put("pic", STATICS_SERVER + UserRepository.FOLDER + "/" + teacher.getString("pic"))
                 );
+        if (schedule.containsKey("start_at"))
+            jsonObject.put("startAt", getSolarDate(schedule.getLong("start_at")));
+        else if (schedule.containsKey("start_date")) {
+            jsonObject.put("startDate", getSolarDate(schedule.getLong("start_date")));
+            jsonObject.put("endDate", getSolarDate(schedule.getLong("end_date")));
+        }
+        if(schedule.containsKey("sessions_count")) {
+            jsonObject.put("sessionsCount", schedule.getInteger("sessions_count"));
+            List<String> skyRoomUrls = (List<String>) schedule.getOrDefault("sky_room_urls", new ArrayList<>());
+            jsonObject.put("doneSessions", skyRoomUrls.size());
+            jsonObject.put("skyRoomUrl", skyRoomUrls.size() > 0 ? skyRoomUrls.get(skyRoomUrls.size() - 1) : "");
+        }
+        else {
+            jsonObject.put("skyRoomUrl", schedule.getOrDefault("sky_room_url", ""));
+        }
+
+        return jsonObject;
     }
 
     static Document createTransactionDoc(

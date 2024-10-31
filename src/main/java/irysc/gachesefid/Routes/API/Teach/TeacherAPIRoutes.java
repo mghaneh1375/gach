@@ -142,8 +142,16 @@ public class TeacherAPIRoutes extends Router {
     public String copySchedule(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId scheduleId,
                                @RequestBody @StrongJSONConstraint(
-                                       params = {"start"},
-                                       paramsType = {Long.class}
+                                       params = {},
+                                       paramsType = {},
+                                       optionals = {
+                                               "start", "startDate",
+                                               "endDate", "endRegistration"
+                                       },
+                                       optionalsType = {
+                                               Long.class, Long.class,
+                                               Long.class, Long.class
+                                       }
                                ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return TeachController.copySchedule(

@@ -286,17 +286,17 @@ public class StudentTeachController {
         }};
         if (activeMode != null) {
             long curr = System.currentTimeMillis();
-            // todo: check
             if (activeMode.equalsIgnoreCase(ActiveMode.ACTIVE.getName()))
                 filters.add(or(
                         and(
                                 exists("start_at"),
-                                gt("start_at", curr - ONE_DAY_MIL_SEC)
+                                gt("start_at", curr - ONE_DAY_MIL_SEC),
+                                lt("start_at", curr + 2 * ONE_DAY_MIL_SEC)
                         ),
                         and(
                                 exists("start_date"),
-                                gte("start_date", curr),
-                                lte("end_date", curr)
+                                lte("start_date", curr),
+                                gte("end_date", curr)
                         )
                 ));
             else if(activeMode.equalsIgnoreCase(ActiveMode.EXPIRED.getName())) {
@@ -304,7 +304,7 @@ public class StudentTeachController {
                         or(
                                 and(
                                         exists("start_at"),
-                                        lt("start_at", curr - ONE_DAY_MIL_SEC)
+                                        lt("start_at", curr - 2 * ONE_DAY_MIL_SEC)
                                 ),
                                 and(
                                         exists("start_date"),
@@ -314,11 +314,16 @@ public class StudentTeachController {
                 );
             }
             else if(activeMode.equalsIgnoreCase(ActiveMode.NOT_START.getName())) {
-                //todo
                 filters.add(
-                        and(
-                                exists("start_date"),
-                                lt("start_date", curr)
+                        or(
+                                and(
+                                        exists("start_at"),
+                                        gt("start_at", curr + ONE_DAY_MIL_SEC)
+                                ),
+                                and(
+                                        exists("start_date"),
+                                        gt("start_date", curr)
+                                )
                         )
                 );
             }

@@ -103,6 +103,7 @@ public class StaticValues {
                     .append("max_cap", 1).append("user_id", 1)
                     .append("can_request", 1).append("need_registry_confirmation", 1)
                     .append("sky_room_url", 1).append("sessions_count", 1)
+                    .append("sky_room_urls", 1)
                     .append("start_date", 1).append("end_date", 1)
                     .append("end_registration", 1);
 

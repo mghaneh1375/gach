@@ -8,6 +8,7 @@ import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 
 public class Authorization {
 
@@ -146,10 +147,22 @@ public class Authorization {
                 return true;
 
             if(applicator.containsKey("teach")) {
+                long curr = System.currentTimeMillis();
                 return teachScheduleRepository.exist(
                         and(
                                 eq("user_id", applicatorId),
-                                gt("start_at", System.currentTimeMillis() + StaticValues.ONE_DAY_MIL_SEC),
+                                or(
+                                        and(
+                                                exists("start_at"),
+                                                gt("start_at", curr + StaticValues.ONE_DAY_MIL_SEC),
+                                                lt("start_at", curr + 2 * ONE_DAY_MIL_SEC)
+                                        ),
+                                        and(
+                                                exists("start_date"),
+                                                lte("start_date", curr),
+                                                gte("end_date", curr)
+                                        )
+                                ),
                                 elemMatch("requests", and(
                                         eq("_id", studentId),
                                         or(

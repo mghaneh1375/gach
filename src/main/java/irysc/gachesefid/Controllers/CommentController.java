@@ -45,11 +45,23 @@ public class CommentController {
             return generateErr("متن نظر باید حداکثر 1000 کاراکتر باشد");
 
         String sectionFa = "";
+        long curr = System.currentTimeMillis();
+
         if (section.equals(CommentSection.TEACH.getName())) {
             if (!teachScheduleRepository.exist(and(
                     eq("user_id", refId),
                     eq("students._id", userId),
-                    gt("start_at", System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30)
+                    or(
+                            and(
+                                    exists("start_at"),
+                                    gt("start_at", curr - StaticValues.ONE_DAY_MIL_SEC * 30)
+                            ),
+                            and(
+                                    exists("start_date"),
+                                    lt("start_date", curr),
+                                    gt("end_date", curr - StaticValues.ONE_DAY_MIL_SEC * 30)
+                            )
+                    )
             )))
                 return generateErr("شما اجازه نوشتن نظر برای این دبیر را ندارید (برای نوشتن نظر باید در یک ماه گذشته با این استاد کلاس داشته باشید)");
 
@@ -79,7 +91,7 @@ public class CommentController {
         commentRepository.insertOne(
                 new Document("user_id", userId)
                         .append("status", "pending")
-                        .append("created_at", System.currentTimeMillis())
+                        .append("created_at", curr)
                         .append("ref_id", refId)
                         .append("comment", comment)
                         .append("section", section)
