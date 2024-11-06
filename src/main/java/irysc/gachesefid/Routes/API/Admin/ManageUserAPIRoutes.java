@@ -125,7 +125,7 @@ public class ManageUserAPIRoutes extends Router {
                                 @RequestParam(value = "mail", required = false) String mail,
                                 @RequestParam(value = "NID", required = false) String NID,
                                 @RequestParam(value = "additionalLevel", required = false) String additionalLevel
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws NotAccessException, UnAuthException {
         getEditorPrivilegeUserVoid(request);
         return ManageUserController.fetchTinyUser(
                 level, name, lastname,
@@ -136,11 +136,12 @@ public class ManageUserAPIRoutes extends Router {
 
     @GetMapping(value = "/fetchUser/{unique}")
     @ResponseBody
-    public String fetchUser(HttpServletRequest request,
-                            @PathVariable @NotBlank String unique)
-            throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String fetchUser(
+            HttpServletRequest request,
+            @PathVariable @NotBlank String unique
+    ) throws UnAuthException {
         return ManageUserController.fetchUser(null, unique,
-                Authorization.isAdmin(getPrivilegeUser(request).getList("accesses", String.class))
+                Authorization.isAdmin(getUserTokenInfo(request).getAccesses())
         );
     }
 
@@ -273,34 +274,37 @@ public class ManageUserAPIRoutes extends Router {
 
     @DeleteMapping(value = "/removeSchools")
     @ResponseBody
-    public String removeSchools(HttpServletRequest request,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {
-                                                "items"
-                                        },
-                                        paramsType = {
-                                                JSONArray.class
-                                        }
-                                ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getAgentUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-        return ManageUserController.removeSchools(isAdmin ? null : user.getObjectId("_id"),
+    public String removeSchools(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "items"
+                    },
+                    paramsType = {
+                            JSONArray.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+        return ManageUserController.removeSchools(
+                isAdmin ? null : userTokenInfo.getId(),
                 new JSONObject(jsonStr).getJSONArray("items")
         );
     }
 
     @DeleteMapping(value = "/removeStudents")
     @ResponseBody
-    public String removeStudents(HttpServletRequest request,
-                                 @RequestBody @StrongJSONConstraint(
-                                         params = {
-                                                 "items"
-                                         },
-                                         paramsType = {
-                                                 JSONArray.class
-                                         }
-                                 ) @NotBlank String jsonStr
+    public String removeStudents(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "items"
+                    },
+                    paramsType = {
+                            JSONArray.class
+                    }
+            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         Document user = getSchoolUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
@@ -369,7 +373,6 @@ public class ManageUserAPIRoutes extends Router {
             return JSON_NOT_ACCESS;
 
         Document school;
-
         if (jsonObject.has("schoolId")) {
 
             school = userRepository.findById(
@@ -443,10 +446,10 @@ public class ManageUserAPIRoutes extends Router {
     @GetMapping(value = "/getMySchools")
     @ResponseBody
     public String getMySchools(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getAgentUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-        return ManageUserController.getMySchools(isAdmin ? null : user.getObjectId("_id"));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+        return ManageUserController.getMySchools(isAdmin ? null : userTokenInfo.getId());
     }
 
     @GetMapping(value = {"/getStudents", "/getStudents/{schoolId}"})
@@ -454,9 +457,7 @@ public class ManageUserAPIRoutes extends Router {
     public String getStudents(HttpServletRequest request,
                               @PathVariable(required = false) String schoolId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
-
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))

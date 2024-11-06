@@ -64,8 +64,11 @@ public class StudentQuizAPIRoutes extends Router {
                       @RequestParam(required = false) Boolean finishedIsNeeded,
                       @RequestParam(required = false) Boolean justRegistrable
     ) {
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = false;
+        try {
+            isAdmin = Authorization.isAdmin(getUserTokenInfo(request).getAccesses());
+        }
+        catch (Exception ignore) {}
 
         if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
                 mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
@@ -119,10 +122,10 @@ public class StudentQuizAPIRoutes extends Router {
                              @PathVariable String mode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId,
                              @RequestParam(required = false, value = "sessionId") ObjectId sessionId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
-        Document user = getUser(request);
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (!EnumValidatorImp.isValid(mode, AllKindQuiz.class) &&
                 !mode.equalsIgnoreCase("pdf") &&
@@ -138,29 +141,29 @@ public class StudentQuizAPIRoutes extends Router {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
             return StudentQuizController.reviewCustomQuiz(
-                    quizId, user.getObjectId("_id")
+                    quizId, userTokenInfo.getId()
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
             return isAdmin ? QuizController.reviewContentQuiz(quizId) :
                     sessionId != null ?
                             StudentContentController.reviewSessionQuiz(
-                                    quizId, sessionId, user.getObjectId("_id")
+                                    quizId, sessionId, userTokenInfo.getId()
                             ) :
                             StudentContentController.reviewFinalQuiz(
-                                    quizId, user.getObjectId("_id")
+                                    quizId, userTokenInfo.getId()
                             );
 
-        boolean isStudent = Authorization.isPureStudent(user.getList("accesses", String.class));
+        boolean isStudent = Authorization.isPureStudent(userTokenInfo.getAccesses());
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
             return OnlineStandingController.reviewQuiz(
-                    quizId, user.getObjectId("_id"), !isAdmin
+                    quizId, userTokenInfo.getId(), !isAdmin
             );
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
             return EscapeQuizController.reviewQuiz(
-                    quizId, user.getObjectId("_id"), !isAdmin
+                    quizId, userTokenInfo.getId(), !isAdmin
             );
 
         return StudentQuizController.reviewQuiz(
@@ -170,9 +173,8 @@ public class StudentQuizAPIRoutes extends Router {
                                 onlineStandQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ?
                                         openQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id"), isStudent
+                quizId, isAdmin ? null : userTokenInfo.getId(), isStudent
         );
-
     }
 
 
@@ -242,11 +244,11 @@ public class StudentQuizAPIRoutes extends Router {
             );
 
         if (mode.contains("pdf")) {
-            Document user = getUser(request);
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
             return StudentQuizController.launchPDFQuiz(
-                    Authorization.isAdmin(user.getList("accesses", String.class)) ?
+                    Authorization.isAdmin(userTokenInfo.getAccesses()) ?
                             iryscQuizRepository : schoolQuizRepository,
-                    quizId, user.getObjectId("_id")
+                    quizId, userTokenInfo.getId()
             );
         }
 
@@ -486,10 +488,9 @@ public class StudentQuizAPIRoutes extends Router {
     @ResponseBody
     public String leftTeam(HttpServletRequest request,
                            @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return OnlineStandingController.leftTeam(
-                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
-                quizId
+                getUserId(request), quizId
         );
     }
 
@@ -503,12 +504,12 @@ public class StudentQuizAPIRoutes extends Router {
                                                   optionals = {"members"},
                                                   optionalsType = {JSONArray.class}
                                           ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
         return StudentQuizController.updateOnlineQuizProfile(
-                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                getUserId(request),
                 id, jsonObject.getString("teamName"),
                 jsonObject.has("members") ? jsonObject.getJSONArray("members") :
                         new JSONArray()

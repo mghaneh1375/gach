@@ -13,7 +13,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -25,8 +24,10 @@ public class StudentCertificateAPIRoutes extends Router {
 
     @GetMapping(path = "/issueMyCert/{certificateId}/{NID}")
     @ResponseBody
-    public ResponseEntity<InputStreamResource> issueMyCert(@PathVariable @ObjectIdConstraint ObjectId certificateId,
-                                                           @PathVariable @NotBlank String NID) {
+    public ResponseEntity<InputStreamResource> issueMyCert(
+            @PathVariable @ObjectIdConstraint ObjectId certificateId,
+            @PathVariable @NotBlank String NID
+    ) {
 
         File f = StudentCertification.issueMyCert(certificateId, NID);
         if (f == null)
@@ -57,8 +58,10 @@ public class StudentCertificateAPIRoutes extends Router {
 
     @GetMapping(path = "/issueCert/{certificateId}/{id}")
     @ResponseBody
-    public ResponseEntity<InputStreamResource> issueCert(@PathVariable @ObjectIdConstraint ObjectId certificateId,
-                                                         @PathVariable @ObjectIdConstraint ObjectId id) {
+    public ResponseEntity<InputStreamResource> issueCert(
+            @PathVariable @ObjectIdConstraint ObjectId certificateId,
+            @PathVariable @ObjectIdConstraint ObjectId id
+    ) {
         File f = StudentCertification.issueCert(certificateId, id);
         if (f == null)
             return null;

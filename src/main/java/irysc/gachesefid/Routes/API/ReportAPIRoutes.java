@@ -4,7 +4,6 @@ import irysc.gachesefid.Controllers.Quiz.AdminReportController;
 import irysc.gachesefid.Controllers.Quiz.EscapeQuizController;
 import irysc.gachesefid.Controllers.Quiz.OnlineStandingController;
 import irysc.gachesefid.Controllers.Quiz.StudentReportController;
-import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -26,12 +25,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import java.io.ByteArrayInputStream;
 
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 
 @Controller
@@ -39,12 +35,12 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 @Validated
 public class ReportAPIRoutes extends Router {
 
-
     @GetMapping(value = "/stateReport/{quizMode}/{quizId}")
     @ResponseBody
-    public String getStateReport(HttpServletRequest request,
-                                 @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId) {
+    public String getStateReport(
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
         return AdminReportController.getStateReport(quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                 quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                         schoolQuizRepository, quizId);
@@ -52,9 +48,10 @@ public class ReportAPIRoutes extends Router {
 
     @GetMapping(value = "/cityReport/{quizMode}/{quizId}")
     @ResponseBody
-    public String cityReport(HttpServletRequest request,
-                             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
-                             @PathVariable @ObjectIdConstraint ObjectId quizId) {
+    public String cityReport(
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
         return AdminReportController.getCityReport(quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                 quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                         schoolQuizRepository, quizId);
@@ -62,9 +59,10 @@ public class ReportAPIRoutes extends Router {
 
     @GetMapping(value = "/schoolReport/{quizMode}/{quizId}")
     @ResponseBody
-    public String getSchoolReport(HttpServletRequest request,
-                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
-                                  @PathVariable @ObjectIdConstraint ObjectId quizId) {
+    public String getSchoolReport(
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
         return AdminReportController.getSchoolReport(
                 quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
@@ -73,9 +71,10 @@ public class ReportAPIRoutes extends Router {
 
     @GetMapping(value = "/genderReport/{quizMode}/{quizId}")
     @ResponseBody
-    public String genderReport(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
+    public String genderReport(
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
         return AdminReportController.getGenderReport(
                 quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
@@ -84,9 +83,10 @@ public class ReportAPIRoutes extends Router {
 
     @GetMapping(value = "/authorReport/{quizMode}/{quizId}")
     @ResponseBody
-    public String authorReport(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId) {
+    public String authorReport(
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String quizMode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
         return AdminReportController.getAuthorReport(
                 quizMode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         quizMode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
@@ -113,7 +113,6 @@ public class ReportAPIRoutes extends Router {
                      @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                      @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
@@ -129,10 +128,16 @@ public class ReportAPIRoutes extends Router {
     @ResponseBody
     public String showRanking(HttpServletRequest request,
                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                              @PathVariable @ObjectIdConstraint ObjectId quizId) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+                              @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) {
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        }
+        catch (Exception ignore) {}
 
         if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
             return OnlineStandingController.getOnlineQuizRankingTableDetail(quizId, isAdmin);
@@ -143,16 +148,16 @@ public class ReportAPIRoutes extends Router {
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return StudentReportController.getRanking(iryscQuizRepository, isAdmin, null, quizId);
 
-        if (user == null)
+        if (userId == null)
             return JSON_NOT_ACCESS;
 
         if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
-            return StudentReportController.getRanking(openQuizRepository, isAdmin, user.getObjectId("_id"), quizId);
+            return StudentReportController.getRanking(openQuizRepository, isAdmin, userId, quizId);
 
         return StudentReportController.getRanking(
                 schoolQuizRepository,
                 isAdmin,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userId,
                 quizId
         );
     }
@@ -164,25 +169,30 @@ public class ReportAPIRoutes extends Router {
                                  @PathVariable @ObjectIdConstraint ObjectId quizId,
                                  @PathVariable @ObjectIdConstraint ObjectId userId
     ) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
+        ObjectId studentId = null;
+        boolean isAdmin = false;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            studentId = userTokenInfo.getId();
+        }
+        catch (Exception ignore) {}
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return AdminReportController.getStudentStat(
-                    iryscQuizRepository, isAdmin ? null : "", quizId, userId, user == null
+                    iryscQuizRepository, isAdmin ? null : "", quizId, userId, studentId == null
             );
 
-        if (user == null)
+        if (studentId == null)
             return JSON_NOT_ACCESS;
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
-            return AdminReportController.getStudentStatCustomQuiz(quizId, user.getObjectId("_id"));
+            return AdminReportController.getStudentStatCustomQuiz(quizId, studentId);
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CONTENT.getName()))
-            return AdminReportController.getStudentStatContentQuiz(quizId, user.getObjectId("_id"));
+            return AdminReportController.getStudentStatContentQuiz(quizId, studentId);
 
-        if (!Authorization.hasAccessToThisStudent(userId, user.getObjectId("_id")))
+        if (!Authorization.hasAccessToThisStudent(userId, studentId))
             return JSON_NOT_ACCESS;
 
         return AdminReportController.getStudentStat(
@@ -201,7 +211,7 @@ public class ReportAPIRoutes extends Router {
             @PathVariable @ObjectIdConstraint ObjectId quizId
     ) {
         try {
-
+            //todo: consideration needed
 //            Document user = getPrivilegeUser(request);
 //            boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
             boolean isAdmin = true;
@@ -227,7 +237,6 @@ public class ReportAPIRoutes extends Router {
             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
             @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 

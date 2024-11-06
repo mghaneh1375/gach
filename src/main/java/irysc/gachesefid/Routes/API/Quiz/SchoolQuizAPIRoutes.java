@@ -1,12 +1,14 @@
 package irysc.gachesefid.Routes.API.Quiz;
 
 
-import irysc.gachesefid.Controllers.Quiz.*;
+import irysc.gachesefid.Controllers.Quiz.QuizController;
+import irysc.gachesefid.Controllers.Quiz.SchoolQuizController;
+import irysc.gachesefid.Controllers.Quiz.TashrihiQuizController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Models.*;
+import irysc.gachesefid.Models.GeneralKindQuiz;
+import irysc.gachesefid.Models.HWAnswerType;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
@@ -27,8 +29,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
+import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
@@ -89,16 +91,21 @@ public class SchoolQuizAPIRoutes extends Router {
                                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
                                                   @PathVariable @ObjectIdConstraint ObjectId studentId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) {
 
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
 
         return TashrihiQuizController.getMyMarkListForSpecificStudent(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
-                quizId, studentId
+                isAdmin ? null : userId, quizId, studentId
         );
     }
 
@@ -108,7 +115,7 @@ public class SchoolQuizAPIRoutes extends Router {
     public String getMyMarks(HttpServletRequest request,
                              @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                              @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TashrihiQuizController.getMyMarks(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
@@ -147,15 +154,20 @@ public class SchoolQuizAPIRoutes extends Router {
                                                    @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                                    @PathVariable @ObjectIdConstraint ObjectId quizId,
                                                    @PathVariable @ObjectIdConstraint ObjectId questionId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+    ) {
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
 
         return TashrihiQuizController.getMyMarkListForSpecificQuestion(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ?
                         iryscQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userId,
                 quizId, questionId
         );
     }
@@ -183,14 +195,13 @@ public class SchoolQuizAPIRoutes extends Router {
                                   optionals = {"description"},
                                   optionalsType = {String.class}
                           ) @NotBlank String jsonStr
-    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
 
         return TashrihiQuizController.setMark(
                 mode.equals(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId, questionId, studentId, Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -292,29 +303,29 @@ public class SchoolQuizAPIRoutes extends Router {
 
     @PostMapping(value = "/createHW")
     @ResponseBody
-    public String createHW(HttpServletRequest request,
-                           @RequestBody @StrongJSONConstraint(
-                                   params = {
-                                           "title", "start",
-                                           "end", "showResultsAfterCorrection",
-                                           "answerType", "maxUploadSize"
-                                   },
-                                   paramsType = {
-                                           String.class, Long.class,
-                                           Long.class, Boolean.class,
-                                           HWAnswerType.class, Positive.class
-                                   },
-                                   optionals = {
-                                           "desc", "descAfter",
-                                           "delayPenalty", "delayEnd"
-                                   },
-                                   optionalsType = {
-                                           String.class, String.class,
-                                           Positive.class, Long.class
-                                   }
-                           ) @NotBlank String jsonStr
+    public String createHW(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "title", "start",
+                            "end", "showResultsAfterCorrection",
+                            "answerType", "maxUploadSize"
+                    },
+                    paramsType = {
+                            String.class, Long.class,
+                            Long.class, Boolean.class,
+                            HWAnswerType.class, Positive.class
+                    },
+                    optionals = {
+                            "desc", "descAfter",
+                            "delayPenalty", "delayEnd"
+                    },
+                    optionalsType = {
+                            String.class, String.class,
+                            Positive.class, Long.class
+                    }
+            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getQuizUser(request);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 

@@ -1,8 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
 import irysc.gachesefid.Controllers.Level.LevelController;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import org.springframework.stereotype.Controller;

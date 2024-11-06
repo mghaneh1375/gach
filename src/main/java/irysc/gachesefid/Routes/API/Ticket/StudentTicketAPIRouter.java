@@ -1,7 +1,6 @@
 package irysc.gachesefid.Routes.API.Ticket;
 
 import irysc.gachesefid.Controllers.Ticket.TicketController;
-import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TicketPriority;
 import irysc.gachesefid.Models.TicketSection;
@@ -11,7 +10,6 @@ import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 import org.springframework.validation.annotation.Validated;
@@ -27,7 +25,6 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 @Validated
 public class StudentTicketAPIRouter extends Router {
 
-
     @GetMapping(value = "/getMyRequests")
     @ResponseBody
     public String getMyRequests(HttpServletRequest request,
@@ -40,18 +37,18 @@ public class StudentTicketAPIRouter extends Router {
                                 @RequestParam(value = "studentId", required = false) ObjectId studentId,
                                 @RequestParam(value = "priority", required = false) String priority,
                                 @RequestParam(value = "status", required = false) String status
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
 
         return TicketController.getRequests(
                 null, status,
                 null, null,
-                isAdvisor && studentId != null ? studentId : user.getObjectId("_id"),
-                null, isAdvisor && studentId != null ? user.getObjectId("_id") : advisorId,
+                isAdvisor && studentId != null ? studentId : userTokenInfo.getId(),
+                null, isAdvisor && studentId != null ? userTokenInfo.getId() : advisorId,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,
                 null, null, section, priority, true,
-                Authorization.isAdvisor(user.getList("accesses", String.class))
+                Authorization.isAdvisor(userTokenInfo.getAccesses())
         );
     }
 
@@ -75,11 +72,11 @@ public class StudentTicketAPIRouter extends Router {
                                          ObjectId.class
                                  }
                          ) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         return TicketController.insert(
-                user.getList("accesses", String.class),
-                user.getObjectId("_id"),
+                userTokenInfo.getAccesses(),
+                userTokenInfo.getId(),
                 Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -90,20 +87,20 @@ public class StudentTicketAPIRouter extends Router {
     public String setAnswer(HttpServletRequest request,
                             @PathVariable @ObjectIdConstraint ObjectId requestId,
                             @RequestBody @JSONConstraint(params = {"answer"}) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
 
         if (
-                Authorization.isAdvisor(user.getList("accesses", String.class)) ||
-                        Authorization.isEditor(user.getList("accesses", String.class))
+                Authorization.isAdvisor(userTokenInfo.getAccesses()) ||
+                        Authorization.isEditor(userTokenInfo.getAccesses())
         )
             return TicketController.setRequestAnswer(
-                    requestId, user.getObjectId("_id"),
+                    requestId, userTokenInfo.getId(),
                     new JSONObject(jsonStr)
             );
 
         return TicketController.setRequestAnswerUser(
-                requestId, user.getObjectId("_id"),
+                requestId, userTokenInfo.getId(),
                 new JSONObject(jsonStr).getString("answer")
         );
     }
@@ -113,15 +110,15 @@ public class StudentTicketAPIRouter extends Router {
     public String addFileToRequest(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId requestId,
                                    @RequestBody MultipartFile file)
-            throws UnAuthException, NotActivateAccountException {
+            throws UnAuthException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getUser(request);
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         return TicketController.addFileToRequest(
-                user.getList("accesses", String.class),
-                user.getObjectId("_id"),
+                userTokenInfo.getAccesses(),
+                userTokenInfo.getId(),
                 requestId, file);
     }
 

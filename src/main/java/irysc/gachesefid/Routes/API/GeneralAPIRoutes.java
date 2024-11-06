@@ -57,7 +57,6 @@ import static irysc.gachesefid.Utility.Utility.getToday;
 @Validated
 public class GeneralAPIRoutes extends Router {
 
-
     @PostMapping(value = "clearVideoCache/{contentId}")
     @ResponseBody
     public String clearVideoCache(HttpServletRequest request,
@@ -74,7 +73,6 @@ public class GeneralAPIRoutes extends Router {
                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
                                   @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         getAdminPrivilegeUserVoid(request);
 
         if(mode.equals(GeneralKindQuiz.IRYSC.getName()))
@@ -97,24 +95,19 @@ public class GeneralAPIRoutes extends Router {
                                         optionalsType = {Number.class}
                                 ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
-
         Document user = getUserWithAdminAccess(request, false, false, userId);
-
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
         if (userId != null) {
-
             Document doc = user.get("user", Document.class);
 
             if(Authorization.isPureStudent(doc.getList("accesses", String.class))) {
-
                 doc.put("money", (double) jsonObject.getInt("amount"));
 
                 if (jsonObject.has("coin"))
                     doc.put("coin", jsonObject.getNumber("coin").doubleValue());
             }
             else {
-
                 doc.put("money", ((Number)doc.get("money")).doubleValue() + (double) jsonObject.getInt("amount"));
 
                 if (jsonObject.has("coin")) {
@@ -122,7 +115,6 @@ public class GeneralAPIRoutes extends Router {
                             jsonObject.getNumber("coin").doubleValue();
                     doc.put("coin", Math.round((d * 100.0)) / 100.0);
                 }
-
             }
 
             userRepository.replaceOne(doc.getObjectId("_id"), doc);
@@ -170,7 +162,6 @@ public class GeneralAPIRoutes extends Router {
         Long saleOrderId = null, saleReferenceId = null;
 
         for (String key : name.keySet()) {
-
             if (key.equalsIgnoreCase("RefId"))
                 refId = name.get(key).toString();
             else if (key.equalsIgnoreCase("ResCode"))
@@ -182,7 +173,6 @@ public class GeneralAPIRoutes extends Router {
         }
 
         ModelAndView modelAndView = new ModelAndView();
-
         String frontEndUrl = "https://e.irysc.com/";
 
         if (refId == null || resCode == null) {
@@ -296,7 +286,7 @@ public class GeneralAPIRoutes extends Router {
     @ResponseBody
     public String fetchInvoice(HttpServletRequest request,
                                @PathVariable @ObjectIdConstraint ObjectId refId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TransactionController.fetchInvoice(
                 getUserId(request), refId
         );
@@ -365,7 +355,6 @@ public class GeneralAPIRoutes extends Router {
     public void getQuestionTagsExcel(
             HttpServletResponse response
     ) {
-
         try {
             ByteArrayInputStream byteArrayInputStream = QuestionController.getQuestionTagsExcel();
             response.setContentType("application/octet-stream");
@@ -379,9 +368,7 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/getAllFlags")
     @ResponseBody
-    public String getAllFlags(HttpServletRequest request
-    ) throws UnAuthException {
-        checkAuth(request);
+    public String getAllFlags() {
         return QuestionController.getAllFlags();
     }
 
@@ -395,7 +382,7 @@ public class GeneralAPIRoutes extends Router {
                                           @RequestParam(required = false, value = "subjectId") ObjectId subjectId,
                                           @RequestParam(required = false, value = "author") String author,
                                           @RequestParam(required = false, value = "tag") String tag
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return QuestionController.checkAvailableQuestions(
                 getUserId(request),
                 tag, gradeId, lessonId, subjectId, qNo, level, author
@@ -479,7 +466,7 @@ public class GeneralAPIRoutes extends Router {
     @GetMapping(value = "/giveMyGifts")
     @ResponseBody
     public String giveMyGifts(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return GiftController.giveMyGifts(getUserId(request));
     }
 
@@ -525,22 +512,13 @@ public class GeneralAPIRoutes extends Router {
                                        params = {"code", "for"},
                                        paramsType = {String.class, OffCodeSections.class}
                                ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         JSONObject jsonObject = new JSONObject(jsonStr);
         return OffCodeController.check(
                 getUserId(request),
                 jsonObject.getString("code"),
                 jsonObject.getString("for")
         );
-    }
-
-    @GetMapping(value = "/getRecp")
-    @ResponseBody
-    public String getRecp(HttpServletRequest request,
-                          @RequestParam(required = false) @NotBlank @EnumValidator(enumClazz = OffCodeSections.class) String payFor,
-                          @RequestParam(required = false) @NotBlank String refId
-    ) {
-        return "Ad";
     }
 
     @GetMapping(value = "/rss")
@@ -575,9 +553,9 @@ public class GeneralAPIRoutes extends Router {
     @GetMapping(value = "/myOffs")
     @ResponseBody
     public String myOffs(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return OffCodeController.offs(
-                getUserWithOutCheckCompleteness(request).getObjectId("_id"),
+                getUserId(request),
                 null, false, false,
                 null, null,
                 null, null,

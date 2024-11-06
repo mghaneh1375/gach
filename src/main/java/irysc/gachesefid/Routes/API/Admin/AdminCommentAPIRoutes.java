@@ -4,9 +4,7 @@ import irysc.gachesefid.Controllers.CommentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
-import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Controller;
@@ -39,7 +37,7 @@ public class AdminCommentAPIRoutes extends Router {
     public String toggleTopStatus(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId commentId
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+    ) throws UnAuthException, NotAccessException {
         getEditorPrivilegeUserVoid(request);
         return CommentController.toggleTopStatus(commentId);
     }

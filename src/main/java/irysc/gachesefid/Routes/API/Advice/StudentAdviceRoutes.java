@@ -143,11 +143,11 @@ public class StudentAdviceRoutes extends Router {
     public String myAdvisorHistory(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
         return StudentAdviceController.myAdvisorHistory(
-                user.getObjectId("_id"), id, isAdvisor
+                userTokenInfo.getId(), id, isAdvisor
         );
     }
 
@@ -155,7 +155,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String myLifeStyle(HttpServletRequest request,
                               @PathVariable(required = false) String studentId
-    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
+    ) throws UnAuthException, InvalidFieldsException {
         Document result = getUserWithAdvisorAccess(request, true, studentId);
         return StudentAdviceController.myLifeStyle(
                 result.get("user", Document.class).getObjectId("_id"),
@@ -174,9 +174,9 @@ public class StudentAdviceRoutes extends Router {
                                                        JSONArray.class
                                                }
                                        ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        return StudentAdviceController.setMyExamInLifeStyle(getStudentUser(request).getObjectId("_id"),
-                new JSONObject(jsonStr).getJSONArray("exams")
+    ) throws UnAuthException {
+        return StudentAdviceController.setMyExamInLifeStyle(
+                getUserId(request), new JSONObject(jsonStr).getJSONArray("exams")
         );
     }
 
@@ -199,8 +199,10 @@ public class StudentAdviceRoutes extends Router {
                                                        String.class
                                                }
                                        ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        return StudentAdviceController.addItemToMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+    ) throws UnAuthException {
+        return StudentAdviceController.addItemToMyLifeStyle(
+                getUserId(request), new JSONObject(jsonStr)
+        );
     }
 
 
@@ -215,8 +217,10 @@ public class StudentAdviceRoutes extends Router {
                                                             String.class, String.class
                                                     }
                                             ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        return StudentAdviceController.removeItemFromMyLifeStyle(getStudentUser(request).getObjectId("_id"), new JSONObject(jsonStr));
+    ) throws UnAuthException {
+        return StudentAdviceController.removeItemFromMyLifeStyle(
+                getUserId(request), new JSONObject(jsonStr)
+        );
     }
 
 
@@ -239,7 +243,7 @@ public class StudentAdviceRoutes extends Router {
         if (rate < 1 || rate > 5)
             return JSON_NOT_VALID_PARAMS;
 
-        if(!user.getList("my_advisors", ObjectId.class).contains(advisorId))
+        if (!user.getList("my_advisors", ObjectId.class).contains(advisorId))
             return JSON_NOT_ACCESS;
 
         return StudentAdviceController.rate(
@@ -251,8 +255,9 @@ public class StudentAdviceRoutes extends Router {
 
     @GetMapping(value = "getMySchedules")
     @ResponseBody
-    public String getMySchedules(HttpServletRequest request,
-                                      @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
+    public String getMySchedules(
+            HttpServletRequest request,
+            @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
     ) throws UnAuthException {
         return AdvisorController.getStudentSchedules(
                 null, getUserId(request), notReturnPassed
@@ -262,7 +267,7 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "getMySchedulesDigest")
     @ResponseBody
     public String getMySchedulesDigest(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return AdvisorController.getStudentSchedulesDigest(
                 getUserId(request)
         );
@@ -272,12 +277,9 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String getMyLessonsInSchedule(HttpServletRequest request,
                                          @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException {
-
-        ObjectId studentId = getUserId(request);
-
+    ) throws UnAuthException {
         return AdvisorController.lessonsInSchedule(
-                studentId, id, false
+                getUserId(request), id, false
         );
     }
 
@@ -285,7 +287,7 @@ public class StudentAdviceRoutes extends Router {
     @GetMapping(value = "getMyCurrentRoom")
     @ResponseBody
     public String getMyCurrentRoom(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException {
+    ) throws UnAuthException {
         return StudentAdviceController.getMyCurrentRoom(getUserId(request));
     }
 
@@ -302,13 +304,14 @@ public class StudentAdviceRoutes extends Router {
 
     @GetMapping(value = "exportPDF/{id}")
     @ResponseBody
-    public ResponseEntity<InputStreamResource> exportPDF(HttpServletRequest request,
-                                                         @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException {
+    public ResponseEntity<InputStreamResource> exportPDF(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id
+    ) throws UnAuthException {
 
-        Document user = getUser(request);
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
-        ObjectId userId = user.getObjectId("_id");
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
+        ObjectId userId = userTokenInfo.getId();
 
         File f = AdvisorController.exportPDF(id, isAdvisor ? userId : null, isAdvisor ? null : userId);
         if (f == null)
@@ -345,7 +348,7 @@ public class StudentAdviceRoutes extends Router {
                                               Boolean.class
                                       },
                                       optionals = {
-                                            "duration", "additional"
+                                              "duration", "additional"
                                       },
                                       optionalsType = {
                                               Positive.class, Positive.class
@@ -361,9 +364,8 @@ public class StudentAdviceRoutes extends Router {
     @PostMapping(value = "notifyAdvisorForSchedule/{id}")
     @ResponseBody
     public String notifyAdvisorForSchedule(HttpServletRequest request,
-                              @PathVariable @ObjectIdConstraint ObjectId id
+                                           @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException, NotActivateAccountException {
-
         Document user = getUser(request);
         return StudentAdviceController.notifyAdvisorForSchedule(
                 id,

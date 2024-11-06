@@ -34,21 +34,23 @@ public class OffCodeAPIRoutes extends Router {
 
     @Value("${front_ip}")
     private String frontIP;
+
     @PostMapping(value = "storeFromShop")
     @ResponseBody
-    public String storeFromShop(HttpServletRequest request,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {
-                                                "token", "firstName", "lastName",
-                                                "email", "phone", "orderId",
-                                                "total"
-                                        },
-                                        paramsType = {
-                                                String.class, String.class, String.class,
-                                                String.class, String.class, Positive.class,
-                                                Object.class
-                                        }
-                                ) @NotBlank String jsonStr) {
+    public String storeFromShop(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "token", "firstName", "lastName",
+                            "email", "phone", "orderId",
+                            "total"
+                    },
+                    paramsType = {
+                            String.class, String.class, String.class,
+                            String.class, String.class, Positive.class,
+                            Object.class
+                    }
+            ) @NotBlank String jsonStr) {
         if (!HttpReqRespUtils.getClientIpAddressIfServletRequestExist(request).equals(frontIP))
             return JSON_NOT_ACCESS;
 
@@ -59,44 +61,40 @@ public class OffCodeAPIRoutes extends Router {
 
     @GetMapping(value = "getShopCopunReport")
     @ResponseBody
-    public String getShopCopunReport(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+    public String getShopCopunReport() {
         return OffCodeController.getShopCopunReport();
     }
 
     @GetMapping(value = "getShopCopunRevReport")
     @ResponseBody
-    public String getShopCopunRevReport(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+    public String getShopCopunRevReport() {
         return OffCodeController.getShopCopunRevReport();
     }
 
     @PostMapping(value = "/storeWithExcel")
     @ResponseBody
-    public String store(HttpServletRequest request,
-                        @RequestPart MultipartFile file,
-                        @RequestPart @StrongJSONConstraint(
-                                params = {"expireAt", "type", "amount"
-                                },
-                                paramsType = {Long.class, String.class,
-                                        Positive.class
-                                },
-                                optionals = {
-                                        "section", "code"
-                                },
-                                optionalsType = {
-                                        String.class, String.class
-                                }
+    public String store(
+            @RequestPart MultipartFile file,
+            @RequestPart @StrongJSONConstraint(
+                    params = {"expireAt", "type", "amount"},
+                    paramsType = {
+                            Long.class, String.class,
+                            Positive.class
+                    },
+                    optionals = {
+                            "section", "code"
+                    },
+                    optionalsType = {
+                            String.class, String.class
+                    }
 
-                        ) @NotBlank String json
+            ) @NotBlank String json
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        JSONObject jsonObject = new JSONObject(json);
-
-        getAdminPrivilegeUserVoid(request);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
         return OffCodeController.store(file,
                 jsonObject.getString("code"),
                 jsonObject.getString("type"),
@@ -110,47 +108,45 @@ public class OffCodeAPIRoutes extends Router {
 
     @PutMapping(value = "/update/{id}")
     @ResponseBody
-    public String update(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId id,
-                         @RequestBody @StrongJSONConstraint(
-                                 params = {}, paramsType = {},
-                                 optionals = {
-                                         "type", "expireAt", "amount",
-                                         "section", "code",
-                                 },
-                                 optionalsType = {
-                                         String.class, Long.class, Positive.class,
-                                         String.class, String.class
-                                 }
-                         ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
-        return OffCodeController.update(id, new JSONObject(json));
+    public String update(
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestBody @StrongJSONConstraint(
+                    params = {}, paramsType = {},
+                    optionals = {
+                            "type", "expireAt", "amount",
+                            "section", "code",
+                    },
+                    optionalsType = {
+                            String.class, Long.class, Positive.class,
+                            String.class, String.class
+                    }
+            ) String json
+    ) {
+        return OffCodeController.update(id, Utility.convertPersian(new JSONObject(json)));
     }
 
 
     @PutMapping(value = "/store")
     @ResponseBody
-    public String storeJSONArr(HttpServletRequest request,
-                               @RequestBody @StrongJSONConstraint(
-                                       params = {"expireAt",
-                                               "type", "amount"
-                                       },
-                                       paramsType = {Long.class,
-                                               String.class, Positive.class
-                                       },
-                                       optionals = {
-                                               "items", "section",
-                                               "code", "isPublic"
-                                       },
-                                       optionalsType = {
-                                               JSONArray.class, String.class,
-                                               String.class, Boolean.class
-                                       }
+    public String storeJSONArr(
+            @RequestBody @StrongJSONConstraint(
+                    params = {"expireAt",
+                            "type", "amount"
+                    },
+                    paramsType = {Long.class,
+                            String.class, Positive.class
+                    },
+                    optionals = {
+                            "items", "section",
+                            "code", "isPublic"
+                    },
+                    optionalsType = {
+                            JSONArray.class, String.class,
+                            String.class, Boolean.class
+                    }
 
-                               ) @NotBlank String json
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+            ) @NotBlank String json
+    ) {
         return OffCodeController.store(
                 Utility.convertPersian(new JSONObject(json))
         );
@@ -158,27 +154,24 @@ public class OffCodeAPIRoutes extends Router {
 
     @GetMapping(value = "/offs")
     @ResponseBody
-    public String getOffs(HttpServletRequest request,
-                          @RequestParam(value = "userId", required = false) ObjectId userId,
-                          @RequestParam(value = "used", required = false) Boolean used,
-                          @RequestParam(value = "createdAt", required = false) Long createdAt,
-                          @RequestParam(value = "createdAtEndLimit", required = false) Long createdAtEndLimit,
-                          @RequestParam(value = "usedAt", required = false) Long usedAt,
-                          @RequestParam(value = "usedAtEndLimit", required = false) Long usedAtEndLimit,
-                          @RequestParam(value = "expiredAt", required = false) Long expiredAt,
-                          @RequestParam(value = "expiredAtEndLimit", required = false) Long expiredAtEndLimit,
-                          @RequestParam(value = "minValue", required = false) Integer minValue,
-                          @RequestParam(value = "maxValue", required = false) Integer maxValue,
-                          @RequestParam(value = "type", required = false) String type,
-                          @RequestParam(value = "withCode", required = false) String withCode,
-                          @RequestParam(value = "code", required = false) String code,
-                          @RequestParam(value = "isPublic", required = false) Boolean isPublic,
-                          @RequestParam(value = "hasExpired", required = false) Boolean expired,
-                          @RequestParam(value = "section", required = false) String section
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUserVoid(request);
-
+    public String getOffs(
+            @RequestParam(value = "userId", required = false) ObjectId userId,
+            @RequestParam(value = "used", required = false) Boolean used,
+            @RequestParam(value = "createdAt", required = false) Long createdAt,
+            @RequestParam(value = "createdAtEndLimit", required = false) Long createdAtEndLimit,
+            @RequestParam(value = "usedAt", required = false) Long usedAt,
+            @RequestParam(value = "usedAtEndLimit", required = false) Long usedAtEndLimit,
+            @RequestParam(value = "expiredAt", required = false) Long expiredAt,
+            @RequestParam(value = "expiredAtEndLimit", required = false) Long expiredAtEndLimit,
+            @RequestParam(value = "minValue", required = false) Integer minValue,
+            @RequestParam(value = "maxValue", required = false) Integer maxValue,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "withCode", required = false) String withCode,
+            @RequestParam(value = "code", required = false) String code,
+            @RequestParam(value = "isPublic", required = false) Boolean isPublic,
+            @RequestParam(value = "hasExpired", required = false) Boolean expired,
+            @RequestParam(value = "section", required = false) String section
+    ) {
         return OffCodeController.offs(userId,
                 section, used, expired,
                 createdAt, createdAtEndLimit,
@@ -192,13 +185,12 @@ public class OffCodeAPIRoutes extends Router {
 
     @DeleteMapping(value = "/remove")
     @ResponseBody
-    public String deleteOffCode(HttpServletRequest request,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {"items"},
-                                        paramsType = {JSONArray.class}
-                                ) @NotBlank String jsonStr)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+    public String deleteOffCode(
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items"},
+                    paramsType = {JSONArray.class}
+            ) @NotBlank String jsonStr
+    ) {
         return CommonController.removeAll(offcodeRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
                 ne("used", true)
@@ -207,10 +199,9 @@ public class OffCodeAPIRoutes extends Router {
 
     @DeleteMapping(value = "/deleteByUserId/{userId}")
     @ResponseBody
-    public String deleteByUserId(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId userId)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+    public String deleteByUserId(
+            @PathVariable @ObjectIdConstraint ObjectId userId
+    ) {
         OffCodeController.deleteByUserId(userId);
         return JSON_OK;
     }

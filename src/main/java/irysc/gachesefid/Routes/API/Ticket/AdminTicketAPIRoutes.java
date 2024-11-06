@@ -4,13 +4,11 @@ import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Ticket.TicketController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
-import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -46,7 +44,7 @@ public class AdminTicketAPIRoutes extends Router {
                               @RequestParam(value = "studentId", required = false) ObjectId studentId,
                               @RequestParam(value = "refId", required = false) ObjectId refId,
                               @RequestParam(value = "id", required = false) ObjectId id
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+    ) throws UnAuthException, NotAccessException {
 
 //        ArrayList<String> dates = Utility.checkDatesConstriant(
 //                sendDateSolar, answerDateSolar,
@@ -71,12 +69,12 @@ public class AdminTicketAPIRoutes extends Router {
     @ResponseBody
     public String getRequest(HttpServletRequest request,
                              @PathVariable @ObjectIdConstraint ObjectId ticketId
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         return TicketController.getRequest(ticketId,
-                Authorization.isEditor(user.getList("accesses", String.class))
+                Authorization.isEditor(userTokenInfo.getAccesses())
                         ? null
-                        : user.getObjectId("_id")
+                        : userTokenInfo.getId()
         );
     }
 
@@ -88,14 +86,14 @@ public class AdminTicketAPIRoutes extends Router {
                                  paramsType = {JSONArray.class}
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
-        boolean isAdmin = Authorization.isEditor(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isEditor(userTokenInfo.getAccesses());
 
         return CommonController.removeAll(ticketRepository,
                 new JSONObject(jsonStr).getJSONArray("items"),
                 isAdmin ? null : or(
-                        eq("user_id", user.getObjectId("_id")),
-                        eq("advisor_id", user.getObjectId("_id"))
+                        eq("user_id", userTokenInfo.getId()),
+                        eq("advisor_id", userTokenInfo.getId())
                 )
         );
     }
@@ -107,7 +105,7 @@ public class AdminTicketAPIRoutes extends Router {
                                          params = "items",
                                          paramsType = {JSONArray.class}
                                  ) @NotBlank String jsonStr)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
+            throws UnAuthException, NotAccessException, NotActivateAccountException {
         return TicketController.rejectRequests(
                 getPrivilegeUser(request).getObjectId("_id"),
                 new JSONObject(jsonStr).getJSONArray("items")

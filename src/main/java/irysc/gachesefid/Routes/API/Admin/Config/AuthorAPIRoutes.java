@@ -119,7 +119,6 @@ public class AuthorAPIRoutes extends Router {
     public String getLastTransaction(
             @PathVariable @ObjectIdConstraint ObjectId authorId
     ) {
-
         Document doc = authorRepository.findById(authorId);
         if (doc == null)
             return JSON_NOT_VALID_ID;
