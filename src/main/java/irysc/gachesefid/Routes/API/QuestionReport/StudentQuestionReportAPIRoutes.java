@@ -20,9 +20,7 @@ public class StudentQuestionReportAPIRoutes extends Router {
 
     @GetMapping(value = "getAllTags")
     @ResponseBody
-    public String getAllTags(HttpServletRequest request
-    ) throws UnAuthException {
-        checkAuth(request);
+    public String getAllTags() {
         return QuestionReportController.getAllTags(false);
     }
 

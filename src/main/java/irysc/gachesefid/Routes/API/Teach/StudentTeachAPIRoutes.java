@@ -63,7 +63,7 @@ public class StudentTeachAPIRoutes extends Router {
             @RequestParam(value = "activeMode", required = false) String activeMode,
             @RequestParam(value = "statusMode", required = false) String statusMode,
             @RequestParam(value = "scheduleActiveMode", required = false) String scheduleActiveMode
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentTeachController.myScheduleRequests(
                 getUserId(request),
                 activeMode, statusMode, scheduleActiveMode
@@ -73,10 +73,8 @@ public class StudentTeachAPIRoutes extends Router {
     @GetMapping(value = "getSchedules/{teacherId}")
     @ResponseBody
     public String getSchedules(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws UnAuthException {
-        checkAuth(request);
+    ) {
         return StudentTeachController.getSchedules(teacherId);
     }
 
@@ -117,23 +115,11 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMySchedules(
             HttpServletRequest request,
             @RequestParam(value = "activeMode", required = false) String activeMode
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentTeachController.getMySchedules(
                 getUserId(request), activeMode
         );
     }
-
-//    @PutMapping(value = "rateToTeacher/{teacherId}")
-//    @ResponseBody
-//    public String rateToTeacher(
-//            HttpServletRequest request,
-//            @PathVariable @ObjectIdConstraint ObjectId teacherId,
-//            @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-//    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-//        return StudentTeachController.rateToTeacher(
-//                getStudentUser(request).getObjectId("_id"), teacherId, rate
-//        );
-//    }
 
     @PutMapping(value = "rateToSchedule/{scheduleId}")
     @ResponseBody
@@ -141,7 +127,7 @@ public class StudentTeachAPIRoutes extends Router {
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId,
             @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentTeachController.rateToSchedule(
                 getUserId(request), scheduleId, rate
         );
@@ -174,7 +160,7 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMyRate(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentTeachController.getMyRate(
                 getUserId(request), teacherId
         );
@@ -185,7 +171,7 @@ public class StudentTeachAPIRoutes extends Router {
     public String getMyTeachScheduleReportProblems(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentTeachController.getMyTeachScheduleReportProblems(
                 getUserId(request), scheduleId, true
         );
@@ -200,7 +186,7 @@ public class StudentTeachAPIRoutes extends Router {
                     params = {}, paramsType = {},
                     optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
             ) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         JSONObject jsonObject;
         if (jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
         else jsonObject = new JSONObject(jsonStr);

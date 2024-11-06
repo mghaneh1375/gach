@@ -2,13 +2,10 @@ package irysc.gachesefid.Routes.API.Teach;
 
 import irysc.gachesefid.Controllers.Teaching.StudentTeachController;
 import irysc.gachesefid.Controllers.Teaching.TeachController;
-import irysc.gachesefid.Controllers.Teaching.TeachTagReportController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.TeachMode;
-import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
@@ -153,9 +150,9 @@ public class TeacherAPIRoutes extends Router {
                                                Long.class, Long.class
                                        }
                                ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.copySchedule(
-                getAdvisorUser(request).getObjectId("_id"),
+                getUserId(request),
                 scheduleId, convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -187,9 +184,9 @@ public class TeacherAPIRoutes extends Router {
                             Boolean.class
                     }
             ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.updateSchedule(
-                getAdvisorUser(request).getObjectId("_id"), id,
+                getUserId(request), id,
                 convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -205,9 +202,9 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(required = false, value = "teachMode") String teachMode,
             @RequestParam(required = false, value = "activeMode") String activeMode,
             @RequestParam(required = false, value = "justMultiSessions") Boolean justMultiSessions
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.getSchedules(
-                getAdvisorUser(request).getObjectId("_id"), from, to,
+                getUserId(request), from, to,
                 activeMode, justHasStudents, justHasRequests, teachMode,
                 justMultiSessions
         );
@@ -218,10 +215,9 @@ public class TeacherAPIRoutes extends Router {
     public String getSchedule(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.getSchedule(
-                getAdvisorUser(request).getObjectId("_id"),
-                scheduleId
+                getUserId(request), scheduleId
         );
     }
 
@@ -230,11 +226,11 @@ public class TeacherAPIRoutes extends Router {
     public String getScheduleStudents(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getAdvisorUser(request);
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         return TeachController.getScheduleStudents(
-                Authorization.isAdmin(user.getList("accesses", String.class)) ?
-                        null : user.getObjectId("_id"), scheduleId
+                Authorization.isAdmin(userTokenInfo.getAccesses()) ?
+                        null : userTokenInfo.getId(), scheduleId
         );
     }
 
@@ -257,9 +253,9 @@ public class TeacherAPIRoutes extends Router {
     public String removeSchedule(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.removeSchedule(
-                getAdvisorUser(request).getObjectId("_id"), scheduleId
+                getUserId(request), scheduleId
         );
     }
 
@@ -286,30 +282,31 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(required = false, value = "statusMode") String statusMode,
             @RequestParam(required = false, value = "expireMode") String expireMode,
             @RequestParam(required = false, value = "teachMode") String teachMode
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.getRequests(
                 expireMode, statusMode, teachMode,
-                getAdvisorUser(request).getObjectId("_id")
+                getUserId(request)
         );
     }
 
 
-    @GetMapping(value = "getAllReportTags")
-    @ResponseBody
-    public String getAllReportTags() {
-        return TeachTagReportController.getAllReportTags(
-                TeachReportTagMode.TEACHER.getName(), false
-        );
-    }
+    //todo: not used in UI
+//    @GetMapping(value = "getAllReportTags")
+//    @ResponseBody
+//    public String getAllReportTags() {
+//        return TeachTagReportController.getAllReportTags(
+//                TeachReportTagMode.TEACHER.getName(), false
+//        );
+//    }
 
     @GetMapping(value = "getMyTeachScheduleReportProblems/{scheduleId}")
     @ResponseBody
     public String getMyTeachScheduleReportProblems(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId scheduleId
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+    ) throws UnAuthException {
         return StudentTeachController.getMyTeachScheduleReportProblems(
-                getAdvisorUser(request).getObjectId("_id"), scheduleId, false
+                getUserId(request), scheduleId, false
         );
     }
 
@@ -323,13 +320,13 @@ public class TeacherAPIRoutes extends Router {
                     params = {}, paramsType = {},
                     optionals = {"tagIds", "desc"}, optionalsType = {JSONArray.class, String.class}
             ) String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+    ) throws UnAuthException {
         JSONObject jsonObject;
         if(jsonStr == null || jsonStr.isEmpty()) jsonObject = new JSONObject();
         else jsonObject = new JSONObject(jsonStr);
 
         return TeachController.setTeachScheduleReportProblems(
-                getAdvisorUser(request).getObjectId("_id"), scheduleId, studentId,
+                getUserId(request), scheduleId, studentId,
                 jsonObject.has("tagIds") ? jsonObject.getJSONArray("tagIds") : null,
                 jsonObject.has("desc") ? jsonObject.getString("desc") : null
         );
@@ -343,7 +340,7 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(required = false, value = "from") Long from,
             @RequestParam(required = false, value = "to") Long to,
             @RequestParam(required = false, value = "justSettlements") Boolean justSettlements
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.getMyTransactions(
                 getUserId(request),
                 from, to, justSettlements, needCanRequestSettlement
@@ -353,19 +350,15 @@ public class TeacherAPIRoutes extends Router {
     @PostMapping(value = "settlementRequest")
     @ResponseBody
     public String settlementRequest(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return TeachController.settlementRequest(
-                getAdvisorUser(request).getObjectId("_id")
-        );
+    ) throws UnAuthException {
+        return TeachController.settlementRequest(getUserId(request));
     }
 
     @DeleteMapping(value = "cancelSettlementRequest")
     @ResponseBody
     public String cancelSettlementRequest(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return TeachController.cancelSettlementRequest(
-                getAdvisorUser(request).getObjectId("_id")
-        );
+    ) throws UnAuthException {
+        return TeachController.cancelSettlementRequest(getUserId(request));
     }
 
     @GetMapping(value = "getMySettledRequests")
@@ -377,9 +370,9 @@ public class TeacherAPIRoutes extends Router {
             @RequestParam(value = "createdTo", required = false) Long createdTo,
             @RequestParam(value = "answerFrom", required = false) Long answerFrom,
             @RequestParam(value = "answerTo", required = false) Long answerTo
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.getMySettledRequests(
-                getAdvisorUser(request).getObjectId("_id"),
+                getUserId(request),
                 status, createdFrom, createdTo, answerFrom, answerTo
         );
     }
@@ -391,9 +384,9 @@ public class TeacherAPIRoutes extends Router {
             @PathVariable @ObjectIdConstraint ObjectId scheduleId,
             @PathVariable @ObjectIdConstraint ObjectId studentId,
             @RequestParam(value = "rate") @Min(1) @Max(5) Integer rate
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return TeachController.rateToSchedule(
-                getAdvisorUser(request).getObjectId("_id"), scheduleId,
+                getUserId(request), scheduleId,
                 studentId, rate
         );
     }

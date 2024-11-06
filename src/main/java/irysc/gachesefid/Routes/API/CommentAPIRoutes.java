@@ -1,9 +1,6 @@
 package irysc.gachesefid.Routes.API;
 
-
 import irysc.gachesefid.Controllers.CommentController;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Routes.Router;
@@ -36,7 +33,7 @@ public class CommentAPIRoutes extends Router {
                     params = {"comment"},
                     paramsType = {String.class}
             ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return CommentController.writeComment(
                 getUserId(request), refId, section,
                 new JSONObject(jsonStr).getString("comment")

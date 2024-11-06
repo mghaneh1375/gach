@@ -61,11 +61,8 @@ public class QuestionAPIRoutes extends Router {
                                    @RequestParam(required = false) ObjectId lessonId,
                                    @RequestParam(required = false) ObjectId gradeId,
                                    @RequestParam(required = false) String organizationCode
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
-
+    ) throws UnAuthException {
+        boolean isAdmin = Authorization.isWeakAdmin(getUserTokenInfo(request).getAccesses());
         return QuestionController.subjectQuestions(
                 isQuestionNeeded, criticalThresh, organizationCode != null && organizationCode.isEmpty() ? null : organizationCode,
                 subjectId, lessonId, gradeId, isAdmin
@@ -79,7 +76,7 @@ public class QuestionAPIRoutes extends Router {
                                           params = {"items"},
                                           paramsType = {JSONArray.class}
                                   ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws NotAccessException, UnAuthException {
         getEditorPrivilegeUserVoid(request);
         PairValue p = CommonController.removeAllReturnDocs(
                 questionRepository,
@@ -130,8 +127,7 @@ public class QuestionAPIRoutes extends Router {
                                                    params = {"items"},
                                                    paramsType = {JSONArray.class}
                                            ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
+    ) throws NotAccessException, UnAuthException {
         getEditorPrivilegeUserVoid(request);
         PairValue p = CommonController.removeAllReturnDocs(
                 escapeQuizQuestionRepository,

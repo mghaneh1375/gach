@@ -40,10 +40,15 @@ public class StudentContentAPIRoutes extends Router {
                          @RequestParam(required = false, value = "minDuration") Integer minDuration,
                          @RequestParam(required = false, value = "maxDuration") Integer maxDuration
     ) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return StudentContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
+        return StudentContentController.getAll(userId, isAdmin,
                 tag, title, teacher, visibility, hasCert, minPrice, maxPrice, minDuration, maxDuration
         );
     }
@@ -51,7 +56,7 @@ public class StudentContentAPIRoutes extends Router {
     @GetMapping(value = "getMy")
     @ResponseBody
     public String getMy(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentContentController.getMy(getUserId(request));
     }
 
@@ -81,7 +86,7 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String startFinalQuiz(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentContentController.startFinalQuiz(id, getUserId(request));
     }
 
@@ -90,7 +95,7 @@ public class StudentContentAPIRoutes extends Router {
     public String startSessionQuiz(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId id,
                                    @PathVariable @ObjectIdConstraint ObjectId sessionId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentContentController.startSessionQuiz(id, sessionId, getUserId(request));
     }
 
@@ -99,7 +104,7 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String reviewFinalQuiz(HttpServletRequest request,
                                   @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentContentController.reviewFinalQuiz(id, getUserId(request));
     }
 
@@ -108,7 +113,7 @@ public class StudentContentAPIRoutes extends Router {
     public String reviewSessionQuiz(HttpServletRequest request,
                                   @PathVariable @ObjectIdConstraint ObjectId id,
                                   @PathVariable @ObjectIdConstraint ObjectId sessionId
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return StudentContentController.reviewSessionQuiz(id, sessionId, getUserId(request));
     }
 
@@ -144,10 +149,8 @@ public class StudentContentAPIRoutes extends Router {
     @GetMapping(value = "getTeacherContents/{teacherId}")
     @ResponseBody
     public String getTeacherContents(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws UnAuthException {
-        checkAuth(request);
+    ) {
         return StudentContentController.getTeacherContents(teacherId);
     }
 
@@ -167,10 +170,16 @@ public class StudentContentAPIRoutes extends Router {
                               @PathVariable @NotBlank String slug,
                               @PathVariable @ObjectIdConstraint ObjectId sessionId
     ) {
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
-        return StudentContentController.getSessions(isAdmin, user == null ? null : user.getObjectId("_id"),
-                slug, sessionId
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
+        return StudentContentController.getSessions(
+                isAdmin, userId, slug, sessionId
         );
     }
 

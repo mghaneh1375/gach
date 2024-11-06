@@ -35,6 +35,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.util.List;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
@@ -134,17 +135,15 @@ public class QuizAPIRoutes extends Router {
         )
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getQuizUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin) {
-
             if (mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName()))
-                return OnlineStandingController.create(user.getObjectId("_id"), jsonObject);
+                return OnlineStandingController.create(userTokenInfo.getId(), jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
-                return EscapeQuizController.create(user.getObjectId("_id"), jsonObject);
+                return EscapeQuizController.create(userTokenInfo.getId(), jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())) {
 
@@ -152,36 +151,33 @@ public class QuizAPIRoutes extends Router {
                         jsonObject.getString("kind").equalsIgnoreCase(KindQuiz.TASHRIHI.getName())
                 )
                     return TashrihiQuizController.create(
-                            user.getObjectId("_id"),
+                            userTokenInfo.getId(),
                             jsonObject, mode
                     );
 
                 return RegularQuizController.create(
-                        user.getObjectId("_id"),
+                        userTokenInfo.getId(),
                         jsonObject, mode, false,
                         jsonObject.has("kind") && jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
                 );
-
             }
 
-
             if (mode.equals(AllKindQuiz.OPEN.getName()))
-                return OpenQuizController.create(user.getObjectId("_id"),
+                return OpenQuizController.create(userTokenInfo.getId(),
                         jsonObject
                 );
 
             if (mode.equals(AllKindQuiz.CONTENT.getName()))
-                return ContentQuizController.create(user.getObjectId("_id"),
+                return ContentQuizController.create(userTokenInfo.getId(),
                         jsonObject
                 );
-
         }
 
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
             return RegularQuizController.create(
-                    user.getObjectId("_id"),
+                    userTokenInfo.getId(),
                     jsonObject, mode,
-                    !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class)),
+                    !isAdmin && Authorization.isAdvisor(userTokenInfo.getAccesses()),
                     jsonObject.has("kind") && jsonObject.getString("kind").equalsIgnoreCase("regularWithPDF")
             );
         }
@@ -195,15 +191,14 @@ public class QuizAPIRoutes extends Router {
                                       @PathVariable @ObjectIdConstraint ObjectId quizId,
                                       @PathVariable @Min(1) @Max(100) int qNo,
                                       @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.setPDFQuizQuestions(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
                 quizId, qNo, file,
-                isAdmin ? null : user.getObjectId("_id")
+                isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -215,14 +210,13 @@ public class QuizAPIRoutes extends Router {
                                          params = {"info"},
                                          paramsType = {JSONArray.class}
                                  ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.setPDFQuizInfo(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id"), new JSONObject(jsonStr).getJSONArray("info")
+                quizId, isAdmin ? null : userTokenInfo.getId(), new JSONObject(jsonStr).getJSONArray("info")
         );
     }
 
@@ -230,14 +224,13 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getGradesAndBranches(HttpServletRequest request,
                                        @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.getGradesAndBranches(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id")
+                quizId, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -245,14 +238,13 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getPDFQuizInfo(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.getPDFQuizInfo(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id")
+                quizId, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -261,14 +253,13 @@ public class QuizAPIRoutes extends Router {
     public String setPDFQuizSubjectsAndChoicesCount(HttpServletRequest request,
                                                     @PathVariable @ObjectIdConstraint ObjectId quizId,
                                                     @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.setPDFQuizSubjectsAndChoicesCount(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, file, isAdmin ? null : user.getObjectId("_id")
+                quizId, file, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -276,37 +267,36 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getPDFQuizAnswerSheet(HttpServletRequest request,
                                         @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.getPDFQuizAnswerSheet(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id")
+                quizId, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
     @PutMapping(value = "setPDFQuizAnswerSheet/{quizId}")
     @ResponseBody
-    public String setPDFQuizAnswerSheet(HttpServletRequest request,
-                                        @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                        @RequestBody @StrongJSONConstraint(
-                                                params = {
-                                                        "answers"
-                                                },
-                                                paramsType = {
-                                                        JSONArray.class
-                                                }
-                                        ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    public String setPDFQuizAnswerSheet(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "answers"
+                    },
+                    paramsType = {
+                            JSONArray.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.setPDFQuizAnswerSheet(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id"),
+                quizId, isAdmin ? null : userTokenInfo.getId(),
                 new JSONObject(jsonStr).getJSONArray("answers")
         );
     }
@@ -315,14 +305,13 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getQuizQuestions(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.getPDFQuizQuestions(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id")
+                quizId, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -330,14 +319,13 @@ public class QuizAPIRoutes extends Router {
     @ResponseBody
     public String getPDFQuizSubjects(HttpServletRequest request,
                                      @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.getPDFQuizSubjects(
                 isAdmin ? iryscQuizRepository : schoolQuizRepository,
-                quizId, isAdmin ? null : user.getObjectId("_id")
+                quizId, isAdmin ? null : userTokenInfo.getId()
         );
     }
 
@@ -397,9 +385,9 @@ public class QuizAPIRoutes extends Router {
         )
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getQuizUser(request);
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.update(
                     selectDB(mode), null, quizId,
@@ -409,10 +397,10 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.update(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId,
                 Utility.convertPersian(new JSONObject(jsonStr)),
-                !isAdmin && Authorization.isAdvisor(user.getList("accesses", String.class))
+                !isAdmin && Authorization.isAdvisor(userTokenInfo.getAccesses())
         );
     }
 
@@ -428,12 +416,10 @@ public class QuizAPIRoutes extends Router {
                          @RequestParam(required = false, value = "startRegistrySolarEndLimit") Long startRegistrySolarEndLimit
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin) {
-
             if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()))
                 return QuizController.getAll(iryscQuizRepository, null,
                         name, startDateSolar, startDateSolarEndLimit,
@@ -475,7 +461,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.getAll(
                 mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()) ? schoolQuizRepository : hwRepository,
-                user.getObjectId("_id"),
+                userTokenInfo.getId(),
                 name, startDateSolar, startDateSolarEndLimit,
                 startRegistryDateSolar, startRegistrySolarEndLimit, kind
         );
@@ -487,19 +473,24 @@ public class QuizAPIRoutes extends Router {
                       @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                       @PathVariable @ObjectIdConstraint ObjectId quizId
     ) {
-
-        Document user = getUserIfLogin(request);
-        boolean isAdmin = user != null && Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        boolean isAdmin = false;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
 
         if (isIRYSCQuiz(mode))
             return QuizController.get(selectDB(mode), isAdmin ? null : "", quizId);
 
-        if (user == null)
+        if (userId == null)
             return JSON_NOT_ACCESS;
 
         return QuizController.get(
                 mode.equals(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId
+                isAdmin ? null : userId, quizId
         );
     }
 
@@ -528,13 +519,14 @@ public class QuizAPIRoutes extends Router {
 
     @PostMapping(value = "/toggleVisibility/{mode}/{quizId}")
     @ResponseBody
-    public String toggleVisibility(HttpServletRequest request,
-                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String toggleVisibility(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException {
 
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.toggleVisibility(iryscQuizRepository, null, quizId);
@@ -542,7 +534,7 @@ public class QuizAPIRoutes extends Router {
         return QuizController.toggleVisibility(
                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ?
                         hwRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId
+                isAdmin ? null : userTokenInfo.getId(), quizId
         );
     }
 
@@ -559,12 +551,11 @@ public class QuizAPIRoutes extends Router {
                                                JSONArray.class
                                        }
                                ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isEditor(userTokenInfo.getAccesses());
 
-        Document user = getUserWithOutCheckCompleteness(request);
-        boolean isAdmin = Authorization.isEditor(user.getList("accesses", String.class));
-
-        return OnlineStandingController.removeMember(isAdmin ? null : user.getObjectId("_id"),
+        return OnlineStandingController.removeMember(isAdmin ? null : userTokenInfo.getId(),
                 quizId, currMainMember, new JSONObject(jsonStr).getJSONArray("items")
         );
     }
@@ -582,12 +573,11 @@ public class QuizAPIRoutes extends Router {
                                                           JSONArray.class
                                                   }
                                           ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isEditor(userTokenInfo.getAccesses());
 
-        Document user = getUserWithOutCheckCompleteness(request);
-        boolean isAdmin = Authorization.isEditor(user.getList("accesses", String.class));
-
-        return OnlineStandingController.addMember(isAdmin ? null : user.getObjectId("_id"),
+        return OnlineStandingController.addMember(isAdmin ? null : userTokenInfo.getId(),
                 quizId, currMainMember, new JSONObject(jsonStr).getJSONArray("items")
         );
     }
@@ -605,9 +595,7 @@ public class QuizAPIRoutes extends Router {
                                                    JSONArray.class
                                            }
                                    ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getEditorPrivilegeUserVoid(request);
-
+    ) {
         JSONObject jsonObject = new JSONObject(jsonStr);
         if (jsonObject.getJSONArray("items").length() != 1)
             return generateErr("لطفا تنها یک دانش آموز را انتخاب کنید");
@@ -621,18 +609,14 @@ public class QuizAPIRoutes extends Router {
 
     @PutMapping(value = "/onlineStandingForceRegistry/{quizId}")
     @ResponseBody
-    public String onlineStandingForceRegistry(HttpServletRequest request,
-                                              @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                              @RequestBody @StrongJSONConstraint(
-                                                      params = {"items", "paid", "teamName"},
-                                                      paramsType = {JSONArray.class, Positive.class, String.class}
-                                              ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getEditorPrivilegeUserVoid(request);
-
+    public String onlineStandingForceRegistry(
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items", "paid", "teamName"},
+                    paramsType = {JSONArray.class, Positive.class, String.class}
+            ) @NotBlank String jsonStr
+    ) {
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
-
         return OnlineStandingController.forceRegistry(quizId, jsonObject.getJSONArray("items"),
                 jsonObject.getInt("paid"), jsonObject.getString("teamName")
         );
@@ -648,13 +632,11 @@ public class QuizAPIRoutes extends Router {
                                         paramsType = {JSONArray.class, Positive.class}
                                 ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user;
 
         try {
             user = getQuizUser(request);
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             user = getEditorPrivilegeUser(request);
         }
 
@@ -692,8 +674,7 @@ public class QuizAPIRoutes extends Router {
 
         try {
             user = getQuizUser(request);
-        }
-        catch (Exception x) {
+        } catch (Exception x) {
             user = getEditorPrivilegeUser(request);
         }
 
@@ -720,10 +701,9 @@ public class QuizAPIRoutes extends Router {
                                  paramsType = {JSONArray.class}
                          ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
 
-        Document user = getQuizUser(request);
-
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
         if (isAdmin && isIRYSCQuiz(mode))
@@ -731,7 +711,7 @@ public class QuizAPIRoutes extends Router {
 
         if (mode.equals(AllKindQuiz.SCHOOL.getName()))
             return QuizController.remove(schoolQuizRepository,
-                    isAdmin ? null : user.getObjectId("_id"), jsonArray
+                    isAdmin ? null : userTokenInfo.getId(), jsonArray
             );
 
         return JSON_NOT_VALID_PARAMS;
@@ -751,21 +731,20 @@ public class QuizAPIRoutes extends Router {
 
     @PutMapping(path = "setCorrectorByStudentMode/{mode}/{quizId}/{correctorId}")
     @ResponseBody
-    public String setCorrectorByStudentMode(HttpServletRequest request,
-                                            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                            @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                            @PathVariable @ObjectIdConstraint ObjectId correctorId,
-                                            @RequestBody @StrongJSONConstraint(
-                                                    params = {},
-                                                    paramsType = {},
-                                                    optionals = {"students"},
-                                                    optionalsType = {JSONArray.class}
-                                            ) String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
-
+    public String setCorrectorByStudentMode(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @PathVariable @ObjectIdConstraint ObjectId correctorId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {},
+                    paramsType = {},
+                    optionals = {"students"},
+                    optionalsType = {JSONArray.class}
+            ) String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
         JSONArray jsonArray;
 
         if (jsonStr == null || jsonStr.isEmpty())
@@ -779,12 +758,14 @@ public class QuizAPIRoutes extends Router {
         }
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return TashrihiQuizController.setCorrectorByStudentMode(iryscQuizRepository, null, quizId,
-                    correctorId, jsonArray);
+            return TashrihiQuizController.setCorrectorByStudentMode(
+                    iryscQuizRepository, null, quizId,
+                    correctorId, jsonArray
+            );
 
         return TashrihiQuizController.setCorrectorByStudentMode(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, correctorId,
-                jsonArray
+                isAdmin ? null : userTokenInfo.getId(),
+                quizId, correctorId, jsonArray
         );
 
     }
@@ -802,10 +783,9 @@ public class QuizAPIRoutes extends Router {
                                                      optionals = {"questions"},
                                                      optionalsType = {JSONArray.class}
                                              ) String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         JSONArray jsonArray;
 
@@ -820,12 +800,13 @@ public class QuizAPIRoutes extends Router {
         }
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
-            return TashrihiQuizController.setCorrectorByQuestionMode(iryscQuizRepository, null, quizId,
-                    correctorId, jsonArray);
+            return TashrihiQuizController.setCorrectorByQuestionMode(
+                    iryscQuizRepository, null, quizId, correctorId, jsonArray
+            );
 
         return TashrihiQuizController.setCorrectorByQuestionMode(schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, correctorId,
-                jsonArray
+                isAdmin ? null : userTokenInfo.getId(),
+                quizId, correctorId, jsonArray
         );
 
     }
@@ -851,9 +832,9 @@ public class QuizAPIRoutes extends Router {
                                   @RequestParam(value = "justPresence", required = false) Boolean justPresence,
                                   @RequestParam(value = "justMarked", required = false) Boolean justMarked,
                                   @RequestParam(value = "justNotMarked", required = false) Boolean justNotMarked
-    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin &&
                 mode.equalsIgnoreCase(AllKindQuiz.ONLINESTANDING.getName())
@@ -883,14 +864,14 @@ public class QuizAPIRoutes extends Router {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.HW.getName()))
             return SchoolQuizController.getParticipants(
-                    isAdmin ? null : user.getObjectId("_id"),
+                    isAdmin ? null : userTokenInfo.getId(),
                     quizId, justMarked,
                     justNotMarked, justAbsents, justPresence
             );
 
         return QuizController.getParticipants(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId, studentId, justMarked,
                 justNotMarked, justAbsents, justPresence
         );
@@ -940,54 +921,57 @@ public class QuizAPIRoutes extends Router {
 
     @PutMapping(path = "addAttach/{mode}/{quizId}")
     @ResponseBody
-    public String addAttach(HttpServletRequest request,
-                            @PathVariable @ObjectIdConstraint ObjectId quizId,
-                            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                            @RequestBody(required = false) MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String addAttach(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @RequestBody(required = false) MultipartFile file
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.addAttach(selectDB(mode), null, quizId, file);
 
         return QuizController.addAttach(
                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, file
+                isAdmin ? null : userTokenInfo.getId(), quizId, file
         );
     }
 
     @DeleteMapping(path = "removeAttach/{mode}/{quizId}")
     @ResponseBody
-    public String removeAttach(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId,
-                               @RequestParam(name = "attach") @NotBlank String attach
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    public String removeAttach(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestParam(name = "attach") @NotBlank String attach
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         return QuizController.removeAttach(
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository :
                                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ? hwRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, attach
+                isAdmin ? null : userTokenInfo.getId(), quizId, attach
         );
     }
 
     @PutMapping(value = "/arrangeQuestions/{mode}/{quizId}")
     @ResponseBody
-    public String arrangeQuestions(HttpServletRequest request,
-                                   @PathVariable @NotBlank @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                   @RequestBody @StrongJSONConstraint(params = {"questionIds"},
-                                           paramsType = JSONArray.class) @NotBlank String jsonStr)
-            throws UnAuthException, NotActivateAccountException, NotAccessException {
-
-        Document user = getQuizUser(request);
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    public String arrangeQuestions(
+            HttpServletRequest request,
+            @PathVariable @NotBlank @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"questionIds"},
+                    paramsType = JSONArray.class
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
             return QuizController.arrangeEscapeQuizQuestions(quizId, new JSONObject(jsonStr));
@@ -999,23 +983,23 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.arrangeQuestions(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
+                isAdmin ? null : userTokenInfo.getId(), quizId, new JSONObject(jsonStr)
         );
     }
 
     @DeleteMapping(value = "/removeQuestionFromQuiz/{mode}/{quizId}")
     @ResponseBody
-    public String removeQuestionFromQuiz(HttpServletRequest request,
-                                         @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                         @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                         @RequestBody @StrongJSONConstraint(
-                                                 params = {"items"}, paramsType = {JSONArray.class}
-                                         ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String removeQuestionFromQuiz(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items"}, paramsType = {JSONArray.class}
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
         JSONArray jsonArray = new JSONObject(jsonStr).getJSONArray("items");
 
         if (isAdmin && isIRYSCQuiz(mode)) {
@@ -1025,6 +1009,7 @@ public class QuizAPIRoutes extends Router {
             return QuizController.removeQuestions(selectDB(mode), quizId, jsonArray);
         }
 
+        // todo: consideration: userId ???
         return QuizController.removeQuestions(
                 schoolQuizRepository, quizId, jsonArray
         );
@@ -1032,44 +1017,47 @@ public class QuizAPIRoutes extends Router {
 
     @PostMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
     @ResponseBody
-    public String addBatchQuestionsToQuiz(HttpServletRequest request,
-                                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                          @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                          @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
+    public String addBatchQuestionsToQuiz(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody MultipartFile file
+    ) throws UnAuthException {
+        // todo: test authorization because same name
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.addBatchQuestionsToQuiz(selectDB(mode), null, quizId, file);
 
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
-            return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, file);
+            return QuizController.addBatchQuestionsToQuiz(
+                    schoolQuizRepository,
+                    isAdmin ? null : userTokenInfo.getId(),
+                    quizId, file
+            );
 
         return JSON_NOT_VALID_PARAMS;
     }
 
     @PutMapping(value = "/addBatchQuestionsToQuiz/{mode}/{quizId}")
     @ResponseBody
-    public String addBatchQuestionsToQuiz(HttpServletRequest request,
-                                          @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                          @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                          @RequestBody @StrongJSONConstraint(
-                                                  params = {"items"}, paramsType = {JSONArray.class},
-                                                  optionals = {"mark"}, optionalsType = {Positive.class}
-                                          ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String addBatchQuestionsToQuiz(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items"}, paramsType = {JSONArray.class},
+                    optionals = {"mark"}, optionalsType = {Positive.class}
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
         JSONObject jsonObject = new JSONObject(jsonStr);
-
         JSONArray jsonArray = jsonObject.getJSONArray("items");
         double mark = jsonObject.has("mark") ? jsonObject.getNumber("mark").doubleValue() : 3;
 
@@ -1077,7 +1065,11 @@ public class QuizAPIRoutes extends Router {
             return QuizController.addBatchQuestionsToQuiz(selectDB(mode), null, quizId, jsonArray, mark);
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.SCHOOL.getName()))
-            return QuizController.addBatchQuestionsToQuiz(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, jsonArray, mark);
+            return QuizController.addBatchQuestionsToQuiz(
+                    schoolQuizRepository,
+                    isAdmin ? null : userTokenInfo.getId(),
+                    quizId, jsonArray, mark
+            );
 
         return JSON_NOT_VALID_PARAMS;
     }
@@ -1085,18 +1077,19 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(path = "generateQuestionPDF/{mode}/{quizId}")
     @ResponseBody
-    public ResponseEntity<InputStreamResource> generateQuestionPDF(HttpServletRequest request,
-                                                                   @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                                                   @PathVariable @ObjectIdConstraint ObjectId quizId)
-            throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public ResponseEntity<InputStreamResource> generateQuestionPDF(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
         File f;
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             f = QuizController.generateQuestionPDF(iryscQuizRepository, null, quizId);
         else
-            f = QuizController.generateQuestionPDF(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
+            f = QuizController.generateQuestionPDF(schoolQuizRepository, isAdmin ? null : userTokenInfo.getId(), quizId);
 
         if (f == null)
             return null;
@@ -1119,20 +1112,19 @@ public class QuizAPIRoutes extends Router {
 
     @PutMapping(value = "/addQuestionToQuizzes/{mode}/{organizationCode}/{mark}")
     @ResponseBody
-    public String addQuestionToQuizzes(HttpServletRequest request,
-                                       @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                       @PathVariable @NotBlank String organizationCode,
-                                       @PathVariable Number mark,
-                                       @RequestBody @StrongJSONConstraint(
-                                               params = {"items"}, paramsType = {JSONArray.class}
-                                       ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String addQuestionToQuizzes(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @NotBlank String organizationCode,
+            @PathVariable Number mark,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items"}, paramsType = {JSONArray.class}
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
-        Document user = getQuizUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
         JSONObject jsonObject = new JSONObject(jsonStr);
-
         JSONArray jsonArray = jsonObject.getJSONArray("items");
 
         if (isAdmin && (
@@ -1145,40 +1137,47 @@ public class QuizAPIRoutes extends Router {
             );
 
         if (mode.equalsIgnoreCase(GeneralKindQuiz.SCHOOL.getName()))
-            return QuizController.addQuestionToQuizzes(organizationCode, schoolQuizRepository, user.getObjectId("_id"), jsonArray, mark.doubleValue());
+            return QuizController.addQuestionToQuizzes(
+                    organizationCode, schoolQuizRepository, userTokenInfo.getId(),
+                    jsonArray, mark.doubleValue()
+            );
 
         return JSON_NOT_VALID_PARAMS;
     }
 
     @PutMapping(value = "/updateQuestionMark/{mode}/{quizId}/{questionId}/{mark}")
     @ResponseBody
-    public String updateQuestionMark(HttpServletRequest request,
-                                     @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                     @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                     @PathVariable @ObjectIdConstraint ObjectId questionId,
-                                     @PathVariable Number mark,
-                                     @RequestParam(required = false, value = "canUpload") String canUpload
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getQuizUser(request);
+    public String updateQuestionMark(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @PathVariable @ObjectIdConstraint ObjectId questionId,
+            @PathVariable Number mark,
+            @RequestParam(required = false, value = "canUpload") String canUpload
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
         if (isAdmin && isIRYSCQuiz(mode))
             return QuizController.updateQuestionMark(selectDB(mode), null, quizId, questionId, mark, canUpload);
 
-        return QuizController.updateQuestionMark(schoolQuizRepository, user.getObjectId("_id"), quizId, questionId, mark, canUpload);
+        return QuizController.updateQuestionMark(
+                schoolQuizRepository, userTokenInfo.getId(),
+                quizId, questionId, mark, canUpload
+        );
     }
 
 
     @GetMapping(value = "/getCorrectors/{mode}/{quizId}")
     @ResponseBody
-    public String getCorrectors(HttpServletRequest request,
-                                @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String getCorrectors(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
@@ -1193,7 +1192,10 @@ public class QuizAPIRoutes extends Router {
                     quizId
             );
 
-        return TashrihiQuizController.correctors(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
+        return TashrihiQuizController.correctors(
+                schoolQuizRepository,
+                isAdmin ? null : userTokenInfo.getId(), quizId
+        );
     }
 
 
@@ -1203,11 +1205,9 @@ public class QuizAPIRoutes extends Router {
                                @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                @PathVariable @ObjectIdConstraint ObjectId quizId,
                                @PathVariable @ObjectIdConstraint ObjectId correctorId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
@@ -1222,21 +1222,24 @@ public class QuizAPIRoutes extends Router {
                     quizId, correctorId
             );
 
-        return TashrihiQuizController.corrector(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId, correctorId);
+        return TashrihiQuizController.corrector(
+                schoolQuizRepository,
+                isAdmin ? null : userTokenInfo.getId(), quizId, correctorId
+        );
     }
 
 
     @PostMapping(value = "/addCorrector/{mode}/{quizId}/{NID}")
     @ResponseBody
-    public String addCorrector(HttpServletRequest request,
-                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                               @PathVariable @ObjectIdConstraint ObjectId quizId,
-                               @PathVariable @NotBlank String NID
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String addCorrector(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @PathVariable @NotBlank String NID
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
@@ -1252,25 +1255,24 @@ public class QuizAPIRoutes extends Router {
             );
 
         return TashrihiQuizController.addCorrector(
-                schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId,
-                NID
+                schoolQuizRepository, isAdmin ? null : userTokenInfo.getId(),
+                quizId, NID
         );
     }
 
     @DeleteMapping(value = "/removeCorrectors/{mode}/{quizId}")
     @ResponseBody
-    public String removeCorrectors(HttpServletRequest request,
-                                   @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                   @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                   @RequestBody @StrongJSONConstraint(
-                                           params = {"items"},
-                                           paramsType = {JSONArray.class}
-                                   ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+    public String removeCorrectors(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"items"},
+                    paramsType = {JSONArray.class}
+            ) @NotBlank String jsonStr
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && (
                 mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ||
@@ -1286,7 +1288,7 @@ public class QuizAPIRoutes extends Router {
             );
 
         return TashrihiQuizController.removeCorrectors(
-                schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId,
+                schoolQuizRepository, isAdmin ? null : userTokenInfo.getId(), quizId,
                 new JSONObject(jsonStr).getJSONArray("items")
         );
     }
@@ -1297,14 +1299,12 @@ public class QuizAPIRoutes extends Router {
     public String fetchQuestions(HttpServletRequest request,
                                  @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                  @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin && isIRYSCQuiz(mode)) {
-
             if (mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
                 return EscapeQuizController.fetchQuestions(quizId);
 
@@ -1313,7 +1313,10 @@ public class QuizAPIRoutes extends Router {
             );
         }
 
-        return QuizController.fetchQuestions(schoolQuizRepository, isAdmin ? null : user.getObjectId("_id"), quizId);
+        return QuizController.fetchQuestions(
+                schoolQuizRepository,
+                isAdmin ? null : userTokenInfo.getId(), quizId
+        );
     }
 
     @PostMapping(value = "/createPackage")
@@ -1415,11 +1418,17 @@ public class QuizAPIRoutes extends Router {
                               @RequestParam(required = false, value = "gradeId") ObjectId gradeId,
                               @RequestParam(required = false, value = "lessonId") ObjectId lessonId
     ) {
-        Document user = getUserIfLogin(request);
+        List<String> accesses = null;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            accesses = userTokenInfo.getAccesses();
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
 
         return PackageController.getPackages(
-                user == null ? null : user.getList("accesses", String.class),
-                user == null ? null : user.getObjectId("_id"),
+                accesses, userId,
                 gradeId, lessonId, null, quizId
         );
     }
@@ -1427,14 +1436,20 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(value = "/getPackage/{id}")
     @ResponseBody
-    public String getPackages(HttpServletRequest request,
-                              @PathVariable @ObjectIdConstraint ObjectId id
+    public String getPackage(HttpServletRequest request,
+                             @PathVariable @ObjectIdConstraint ObjectId id
     ) {
-        Document user = getUserIfLogin(request);
+        List<String> accesses = null;
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            accesses = userTokenInfo.getAccesses();
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
 
         return PackageController.getPackages(
-                user == null ? null : user.getList("accesses", String.class),
-                user == null ? null : user.getObjectId("_id"),
+                accesses, userId,
                 null, null, id, null
         );
     }
@@ -1456,10 +1471,14 @@ public class QuizAPIRoutes extends Router {
     public String getPackageQuizzes(HttpServletRequest request,
                                     @PathVariable @ObjectIdConstraint ObjectId packageId
     ) {
-        Document user = getUserIfLogin(request);
+        boolean isWeakAdmin = false;
+        try {
+            isWeakAdmin = Authorization.isWeakAdmin(getUserTokenInfo(request).getAccesses());
+        } catch (Exception ignore) {
+        }
+
         return PackageController.getPackageQuizzes(
-                packageId,
-                user != null && Authorization.isWeakAdmin(user.getList("accesses", String.class))
+                packageId, isWeakAdmin
         );
     }
 
@@ -1505,15 +1524,15 @@ public class QuizAPIRoutes extends Router {
 
     @GetMapping(value = "/getQuizAnswerSheets/{mode}/{quizId}")
     @ResponseBody
-    public String getQuizAnswerSheets(HttpServletRequest request,
-                                      @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
-                                      @RequestParam(required = false, value = "studentId") ObjectId studentId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String getQuizAnswerSheets(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestParam(required = false, value = "studentId") ObjectId studentId
+    ) throws UnAuthException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         if (isAdmin && isIRYSCQuiz(mode))
             return AdminReportController.getQuizAnswerSheets(
@@ -1522,25 +1541,24 @@ public class QuizAPIRoutes extends Router {
 
         return AdminReportController.getQuizAnswerSheets(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId, studentId
         );
     }
 
     @GetMapping(value = "/getQuizAnswerSheet/{mode}/{quizId}")
     @ResponseBody
-    public String getQuizAnswerSheet(HttpServletRequest request,
-                                     @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
-                                     @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isWeakAdmin(user.getList("accesses", String.class));
+    public String getQuizAnswerSheet(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isWeakAdmin(userTokenInfo.getAccesses());
 
         return QuizController.getQuizAnswerSheet(
                 selectDB(mode),
-                isAdmin ? null : user.getObjectId("_id"), quizId
+                isAdmin ? null : userTokenInfo.getId(), quizId
         );
     }
 
@@ -1551,14 +1569,13 @@ public class QuizAPIRoutes extends Router {
                                      @PathVariable @ObjectIdConstraint ObjectId quizId,
                                      @PathVariable @ObjectIdConstraint ObjectId userId,
                                      @RequestBody MultipartFile file
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.setQuizAnswerSheet(
@@ -1567,7 +1584,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.setQuizAnswerSheet(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId, userId, file
         );
     }
@@ -1583,10 +1600,8 @@ public class QuizAPIRoutes extends Router {
                                        paramsType = {JSONArray.class}
                                ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.storeAnswers(
@@ -1596,7 +1611,7 @@ public class QuizAPIRoutes extends Router {
 
         return QuizController.storeAnswers(
                 schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"),
+                isAdmin ? null : userTokenInfo.getId(),
                 quizId, userId, new JSONObject(jsonStr).getJSONArray("answers")
         );
     }
@@ -1606,13 +1621,14 @@ public class QuizAPIRoutes extends Router {
     public String createTaraz(HttpServletRequest request,
                               @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                               @PathVariable @ObjectIdConstraint ObjectId quizId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document user = getPrivilegeUser(request);
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+
         return QuizController.createTaraz(
                 mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                         mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) ? openQuizRepository : schoolQuizRepository,
-                isAdmin ? null : user.getObjectId("_id"), quizId
+                isAdmin ? null : userTokenInfo.getId(), quizId
         );
     }
 
@@ -1625,9 +1641,8 @@ public class QuizAPIRoutes extends Router {
                                             @PathVariable @ObjectIdConstraint ObjectId userId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
 
-        Document user = getPrivilegeUser(request);
-
-        boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
         if (isAdmin && mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()))
             return QuizController.resetStudentQuizEntryTime(
@@ -1644,7 +1659,7 @@ public class QuizAPIRoutes extends Router {
         if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
             return QuizController.resetStudentQuizEntryTime(
                     schoolQuizRepository,
-                    isAdmin ? null : user.getObjectId("_id"),
+                    isAdmin ? null : userTokenInfo.getId(),
                     quizId, userId
             );
 

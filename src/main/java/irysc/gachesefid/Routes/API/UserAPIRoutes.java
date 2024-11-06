@@ -10,11 +10,12 @@ import irysc.gachesefid.Controllers.ManageUserController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.DB.Repository;
-import irysc.gachesefid.Exception.*;
-import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Exception.InvalidFieldsException;
+import irysc.gachesefid.Exception.NotAccessException;
+import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.AuthVia;
-import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Models.Sex;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Security.JwtTokenFilter;
@@ -26,11 +27,11 @@ import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.bson.Document;
-import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -39,17 +40,12 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
@@ -62,255 +58,14 @@ public class UserAPIRoutes extends Router {
     @Autowired
     UserService userService;
 
-    private static String token = "LYqPozxUPrpDVAxqBs7vXp1knTnEgEYUrnbpqKtggn1DHDQofCn=?aAdh6Mo/5I8qTcJSkAQppUCB/pzfD2G-0PNkl-R3Ub42BAv4QHFUlWgAfu6SwyRH!O3jUF426jw33EMCGJmYWSApEbCg?t4dRGowUX-ixRMUjqoCF/6s8IcyTQHtOYK9OD/xBGKjq/yzA/AEfz6xP3A7k-CBElUbTRU=3WyZaOjZnANV6EUE3PiK9g-5XKvos-qPP?Pcau=o8li6fDopR/L1ccV9SHlGEGxIMM7V5ZyKCKgxbc4J7lx0nyd0DCI?ddiWHXqAYbe2!oIZT-o4pEdJF2IVYj-jpyJI?VOwMrVR4P-4hrj2fyvW5fFhlgrpBVe6CpwGYdmcx7QxMyjwb5vAh!1tDM=jcVP/AL2a-JzbdtGhYCgkbxexHoZYFjV5goTGjTMXB?yQJrn!ABGC?BYV0B59NNi!0n/u/tbIqTant-FixPJ5otO4h6278ZHpiL9llIg9t0Rk3Sym=fnhEkE4GkfaM6jVTMaSC2iVc9jMg2ug2pXoK1NMaNA/LW77kiJTfrmnobzbPSK7fX84Klk7QtE53i-CdD=a=gB2NnWXKwqX7dic=S289OeaNlP705GZ9-6wvF!HvFTBtlyckzaAVXR2zjip7JLTvnwqrIWKd=P3Hs/!r3Rdmp7OTJgYw85Wq4dIX=Aa/lAc77n0wRyQ5AtaocYAYhstBoF2U96QTcUofNWOn1j6hJAUhboqd99L2dWykVtreRi7E7PYWNef1qrV/yUQbPKaNH4EKvppN03D3Rd1iCq1Kq8N=5ayyx=hOvrvqZ3EoT-x3RA-CY7m0i452xbKSP4nJLzT-/t!uB1/VlxDUoK8XdoGMZo0DMjUWbV8t5j9Kk/w7ta5vcPELszuqA-JkAnDlly?Tg=XBnbhJEyUTndjXrW3Y09BLn/hS7dcF2pU7Az6OleSnuMWGcBO2qPtwrUf2EgcwgPrqG4EwWzdx5IfeoKSbhC?BKi-mFcBV/bv!mnSZi7?BiLG?e1srXRJx?uY??lFXf3B2Lh-?R?d2BB7PV0x!UPgqwnRLCc8noaw0dqbrl6ab7U?Sl7CGlS2R4oeDIM=?jWBUL659cYQ/SdKJ-0xw9jWGWo?fx?qUzwbnrDgPvls2PdWot9ybfuuBJU7Kh2EgW?DbYBaU8MSfqnMLxTD1GKWVIGBFhCL-6n=oczCtLObrwz3j1g15ua2Igiuhf4s?LaRGtB1nFgD3q!5DRsye6IFK15PCS-TaQGFcNSXvh8woN4cOfSWhslDTKrlY5oiZN05qWu25?FI-2gWekEFKuZw3dMPIohxA2wlnx4ILk9Q6Y0iacefvPUm=zMHFot8jP5mFgZoLQRha-Q=6Xvl2ooUlqSdwMi83uoSfJgKAdMK2fa=NP?BT1vOdraDGZoXlQFmL4=2?FnN3Pa8iXVp/ZpNJ?DXnhGzsa624PkH5!HhsBS=YD?9qsX6y=XILOhuGrwub?sokmEVK0IKzd0AvHVpD1m96nlwXqO1KXmPjUodjBiZb/RQHH0?JzjydqV-AQmAdBWM-nel/In8wpRqkqsOHq!l5B6eNlCbqVjVB-?y8PHPorDL0?C1a9z0p7befPM?RaRD9Y127EWyqFgsrSzMJ-!chcC0CtKebR5uiopTQM=eI1jsiiXI5KNB7gIj95tGP=TcWy=HSr6mmfEhw1mUky-7!5m9ZUxYl9ghU6AvCQ!Yl?piMJZyYVVsrz07dELveO6pppGu0hEZ8qL-yfL2fGeR6MmCWdEsAkGg4cfTzQRp3?wfSAtziJ-49=U3XA7E?QS4hA?ZInmx!vTAFN?VvMDgg1LC9xzj8l2Dkzz?!=3TYHRLfAJVvgBBhS!WJkJSscQia-QEBAeKwe0347X6uwefT?0bo!9=iP0/vWgSF-DQ0=WgT/yARdniodePw!T-CAZlF1bfU/Z1O!RFJ2hunLYkdFWNyoepO?bFMCAV6h3hEhjSZkxtQy?fiV-BtX!Sh?-?jZBOa4Cecjj0eqaXehVB!G8WZEu";
+    @Value("${shop.security.token}")
+    private String token;
 
-    @GetMapping(value = "tmp")
+    @GetMapping(value = "ttt")
     @ResponseBody
-    public void tmp() {
-//        Document quiz = iryscQuizRepository.findById(new ObjectId("635ec560bd4f373a83e3d232"));
-//        quiz.getList("students", Document.class)
-//                .stream().map(document -> document.getObjectId("_id"))
-//                .forEach(studentId -> {
-//                    Document studentGeneralStat = searchInDocumentsKeyVal(
-//                            quiz.getList("ranking_list", Document.class),
-//                            "_id", studentId
-//                    );
-//
-//                    System.out.println(
-//                            QuizAbstract.decodeFormatGeneral(
-//                                    studentGeneralStat.get("stat", Binary.class).getData()
-//                            )[1]
-//                    );
-//        });
-//        ObjectId userId = new ObjectId("6368d02700f8935a08dcb16b");
-//        long count = iryscQuizRepository.find(and(
-//                                exists("ranking_list"),
-//                                eq("students._id", userId)
-//                        ), new BasicDBObject("ranking_list", 1)
-//                ).stream()
-//                .map(document -> document.getList("ranking_list", Document.class))
-//                .flatMap(Collection::stream)
-//                .filter(rankDoc -> rankDoc.getObjectId("_id").equals(userId))
-//                .map(rankDoc ->
-//                        QuizAbstract.decodeFormatGeneral(
-//                                rankDoc.get("stat", Binary.class).getData()
-//                        )
-//                )
-//                .mapToInt(objects -> objects.length > 1 ? (int) objects[1] : 100)
-//                .filter(rank -> rank < 4)
-//                .count();
-//        System.out.println(count);
-//        List<Document> users = userRepository.find(null, null);
-//        Random random = new Random();
-//        for(int i = 0; i < 200; i++) {
-//            int rand = Math.abs(random.nextInt()) % users.size();
-//               Document user = users.get(rand);
-////        Document user = userRepository.findById(new ObjectId("6367c969af39c2289d676384"));
-//            System.out.println(user.getString("NID"));
-//            System.out.println(user.get("coin"));
-//            Arrays.stream(Action.values()).forEach(action -> {
-//                BadgeController.checkForUpgrade(
-//                        user.getObjectId("_id"),
-//                        action
-//                );
-//            });
-////                BadgeController.checkForUpgrade(
-////                        user.getObjectId("_id"),
-////                        Action.RANK_IN_QUIZ
-////                );
-//        }
-    }
-
-
-    @GetMapping(value = "/gifts")
-    @ResponseBody
-    public void gifts() {
-
-        AtomicInteger hits = new AtomicInteger();
-        AtomicInteger miss = new AtomicInteger();
-
-        HashMap<ObjectId, Document> gifts = new HashMap<>();
-
-        userGiftRepository.find(and(
-                eq("status", "finish")
-        ), null).forEach(document -> {
-
-            document.getList("gifts", Document.class).stream().filter(gift -> gift.getBoolean("selected").equals(true))
-                    .findFirst().ifPresent(selectedGift -> {
-
-                        if (!selectedGift.getString("label").contains("تخفیف"))
-                            return;
-
-                        boolean isPercent = selectedGift.getString("label").contains("%");
-                        Document off = offcodeRepository.findOne(and(
-                                eq("user_id", document.getObjectId("user_id")),
-                                eq("type", isPercent ? "percent" : "value"),
-                                eq("amount", Integer.parseInt(
-                                                selectedGift.getString("label")
-                                                        .replaceAll("[^0-9]", "")
-                                        )
-                                )), null
-                        );
-
-                        if (off != null) {
-
-                            Document wantedGift;
-
-                            if (gifts.containsKey(document.getObjectId("gift")))
-                                wantedGift = gifts.get(document.getObjectId("gift"));
-                            else {
-                                wantedGift = giftRepository.findById(document.getObjectId("gift"));
-                                gifts.put(document.getObjectId("gift"), wantedGift);
-                            }
-
-                            off.put("expire_at", wantedGift.getLong("expire_at"));
-                            offcodeRepository.replaceOne(off.getObjectId("_id"), off);
-                        } else {
-                            miss.getAndIncrement();
-                            System.out.println(selectedGift);
-                        }
-
-                    });
-        });
-
-        System.out.println(hits);
-        System.out.println(miss);
-
-    }
-
-    @GetMapping(value = "/fixQuiz")
-    @ResponseBody
-    public String fixQuiz() throws ParseException {
-
-        if (1 == 1) {
-            return "";
-        }
-
-        Document quiz = iryscQuizRepository.findById(new ObjectId("651a49d52cd29b3fcd1114a0"));
-        List<Document> students = quiz.getList("students", Document.class);
-        List<Document> questions = questionRepository.findByIds(
-                quiz.get("questions", Document.class).getList("_ids", ObjectId.class), true
-        );
-
-        List<QuestionType> types = questions.stream().map(document -> document.getString("kind_question")).map(String::toUpperCase).map(QuestionType::valueOf)
-                .collect(Collectors.toList());
-
-        List<Object> answers = questions.stream().map(document -> document.get("answer")).collect(Collectors.toList());
-
-        byte[] answersByte = new byte[0];
-        int idx = -1;
-
-        for (Document question : questions) {
-            idx++;
-            answersByte = irysc.gachesefid.Controllers.Quiz.Utility.addAnswerToByteArr(answersByte, question.getOrDefault("kind_question", "test").toString(),
-                    types.get(idx).equals(QuestionType.TEST) ?
-                            new PairValue(question.getInteger("choices_count"), question.get("answer")) :
-                            question.get("answer")
-            );
-        }
-
-        quiz.get("questions", Document.class).put("answers", answersByte);
-
-        for (Document student : students) {
-
-            if (student == null)
-                continue;
-
-            Object tmp = student.getOrDefault("answers", null);
-            if (tmp != null)
-                tmp = ((Binary) tmp).getData();
-            else
-                tmp = new byte[0];
-
-            ArrayList<PairValue> oldStdAnswers = tmp == null ? new ArrayList<>() : irysc.gachesefid.Controllers.Quiz.Utility.getAnswers((byte[]) tmp);
-            List<QuestionType> stdTypes = oldStdAnswers.stream().map(pairValue -> pairValue.getKey().toString())
-                    .map(String::toUpperCase)
-                    .map(QuestionType::valueOf).collect(Collectors.toList());
-
-            if (stdTypes.size() != types.size()) {
-                System.out.println("err1");
-            } else {
-
-                boolean hasErr = false;
-
-                for (int i = 0; i < types.size(); i++) {
-                    System.out.println(stdTypes.get(i) + " " + types.get(i));
-                    if (!stdTypes.get(i).equals(types.get(i))) {
-                        System.out.println("err2 in " + i);
-                        hasErr = true;
-                    }
-                }
-
-                if (!hasErr) continue;
-
-                ArrayList<PairValue> newStdAnswers = new ArrayList<>();
-
-                idx = -1;
-                for (PairValue p : oldStdAnswers) {
-
-                    idx++;
-                    String stdAns = p.getValue() instanceof PairValue ?
-                            ((PairValue) p.getValue()).getValue().toString() : p.getValue().toString();
-
-                    Object stdAnsAfterFilter;
-                    QuestionType type = types.get(idx);
-
-                    if (stdAns.isEmpty()) {
-                        if (type.equals(QuestionType.TEST)) {
-                            newStdAnswers.add(new PairValue(
-                                    type.getName(),
-                                    new PairValue(((PairValue) p.getValue()).getKey(),
-                                            0)
-                            ));
-                        } else if (type.equals(QuestionType.SHORT_ANSWER))
-                            newStdAnswers.add(new PairValue(type.getName(), null));
-                        else if (type.equals(QuestionType.MULTI_SENTENCE)) {
-
-                            String s = "";
-                            for (int z = 0; z < p.getValue().toString().length(); z++)
-                                s += "_";
-
-                            newStdAnswers.add(new PairValue(type.getName(), s.toCharArray()));
-                        }
-                        continue;
-                    }
-
-                    if (type.equals(QuestionType.TEST)) {
-                        int s = NumberFormat.getInstance().parse(stdAns).intValue();
-                        stdAnsAfterFilter = new PairValue(4, s);
-                    } else if (type.equals(QuestionType.SHORT_ANSWER))
-                        stdAnsAfterFilter = Double.parseDouble(stdAns);
-                    else if (type.equals(QuestionType.MULTI_SENTENCE)) {
-
-                        if (p.getValue().toString().length() != stdAns.length())
-                            return JSON_NOT_VALID_PARAMS;
-
-                        if (!stdAns.matches("^[01_]+$"))
-                            return JSON_NOT_VALID_PARAMS;
-
-                        stdAnsAfterFilter = stdAns.toCharArray();
-                    } else
-                        stdAnsAfterFilter = stdAns;
-
-                    newStdAnswers.add(new PairValue(type.getName(), stdAnsAfterFilter));
-                }
-
-                student.put("answers", irysc.gachesefid.Controllers.Quiz.Utility.getStdAnswersByteArr(newStdAnswers));
-
-            }
-
-//                        System.out.println("err2 " + i);
-//                        System.out.println("real ans " + answers.get(i));
-//                        System.out.println("std ans " + ((stdAnswers.get(i).getValue() instanceof PairValue) ?
-//                                ((PairValue)stdAnswers.get(i).getValue()).getValue() : stdAnswers.get(i).getValue()
-//                        ));
-
-        }
-
-        iryscQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
-//                }
-//            }
-        return "";
+    public String v(HttpServletRequest request) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        return userTokenInfo.getAccesses().toString();
     }
 
     @PostMapping(value = "/createOpenCardOff")
@@ -321,7 +76,6 @@ public class UserAPIRoutes extends Router {
                                             paramsType = {Number.class, String.class}
                                     ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException {
-
         Document user = getUser(request);
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
         String mode = jsonObject.getString("mode");
@@ -431,7 +185,6 @@ public class UserAPIRoutes extends Router {
     public String signIn(@RequestBody @JSONConstraint(
             params = {"username", "password"}
     ) @NotBlank String jsonStr) {
-
         try {
             JSONObject jsonObject =
                     Utility.convertPersian(new JSONObject(jsonStr));
@@ -450,11 +203,9 @@ public class UserAPIRoutes extends Router {
 
     @PostMapping(value = "/logout")
     @ResponseBody
-    public String logout(HttpServletRequest request)
-            throws NotActivateAccountException, UnAuthException {
-
+    public String logout(HttpServletRequest request
+    ) throws NotActivateAccountException, UnAuthException {
         getUserWithOutCheckCompleteness(request);
-
         try {
             String token = request.getHeader("Authorization");
             userService.logout(token);
@@ -494,7 +245,8 @@ public class UserAPIRoutes extends Router {
 
     @GetMapping(value = "getMyFields")
     @ResponseBody
-    public String getMyFields(HttpServletRequest request) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    public String getMyFields(HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         return UserController.getMyFields(getAdvisorUser(request));
     }
 
@@ -539,7 +291,6 @@ public class UserAPIRoutes extends Router {
                     String.class, AuthVia.class
             }
     ) @NotBlank String json) {
-
         try {
             JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
@@ -609,7 +360,6 @@ public class UserAPIRoutes extends Router {
             params = {"token", "NID", "code"},
             paramsType = {String.class, String.class, Positive.class}
     ) String json) {
-
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(json));
 
         int code = jsonObject.getInt("code");
@@ -718,7 +468,6 @@ public class UserAPIRoutes extends Router {
             paramsType = {String.class, String.class, Positive.class,
                     String.class, String.class}
     ) String json) {
-
         JSONObject jsonObject = new JSONObject(json);
         Utility.convertPersian(jsonObject);
 
@@ -861,13 +610,13 @@ public class UserAPIRoutes extends Router {
         jsonObject.put("mail", jsonObject.getString("mail").toLowerCase());
 
         if (jsonObject.getString("token").length() != 20)
-            return new JSONObject().put("status", "nok").put("msg", "invalid token").toString();
+            return generateErr("invalid token");
 
         if (jsonObject.getInt("code") < 10000 || jsonObject.getInt("code") > 99999)
-            return new JSONObject().put("status", "nok").put("msg", "invalid code").toString();
+            return generateErr("invalid code");
 
         if (!Utility.isValidMail(jsonObject.getString("mail")))
-            return new JSONObject().put("status", "nok").put("msg", "mail is incorrect").toString();
+            return generateErr("mail is incorrect");
 
         Document doc = activationRepository.findOne(and(
                         eq("token", jsonObject.getString("token")),
@@ -879,7 +628,7 @@ public class UserAPIRoutes extends Router {
             return JSON_NOT_VALID_TOKEN;
 
         if (doc.getLong("created_at") < System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC)
-            return new JSONObject().put("status", "nok").put("msg", "token has been expired").toString();
+            return generateErr("token has been expired");
 
         return JSON_OK;
     }
@@ -980,7 +729,7 @@ public class UserAPIRoutes extends Router {
     @GetMapping(value = "/myTransactions")
     @ResponseBody
     public String myTransactions(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return PayPing.myTransactions(getUserId(request));
     }
 
@@ -989,7 +738,6 @@ public class UserAPIRoutes extends Router {
     public String getEducationalHistory(HttpServletRequest request,
                                         @PathVariable @ObjectIdConstraint ObjectId userId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
         if (!Authorization.hasWeakAccessToThisStudent(userId, user.getObjectId("_id")))
             return JSON_NOT_ACCESS;
@@ -997,22 +745,12 @@ public class UserAPIRoutes extends Router {
         return UserController.getEducationalHistory(userId);
     }
 
-//    @GetMapping(value = "/myTransaction/{referenceId}")
-//    @ResponseBody
-//    public String myTransaction(HttpServletRequest request,
-//                                @PathVariable @ObjectIdConstraint ObjectId referenceId
-//    ) throws UnAuthException, NotActivateAccountException, NotAccessException, NotCompleteAccountException {
-//        return PayPing.myTransaction(getStudentUser(request).getObjectId("_id"), referenceId);
-//    }
-
 
     @GetMapping(value = "getTeacherProfile/{teacherId}")
     @ResponseBody
     public String getTeacherProfile(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) throws UnAuthException {
-        checkAuth(request);
+    ) {
         return UserController.getTeacherProfile(teacherId);
     }
 }

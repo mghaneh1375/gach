@@ -2,7 +2,6 @@ package irysc.gachesefid.Security;
 
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -66,8 +65,9 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             }
 
             try {
-                Authentication auth = jwtTokenProvider.getAuthentication(token);
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                SecurityContextHolder.getContext().setAuthentication(
+                        jwtTokenProvider.getAuthentication(token)
+                );
                 return true;
             } catch (Exception ex) {
                 SecurityContextHolder.clearContext();

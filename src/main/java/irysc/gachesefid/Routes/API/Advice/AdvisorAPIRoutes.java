@@ -41,9 +41,7 @@ public class AdvisorAPIRoutes extends Router {
     public String requestMeeting(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId studentId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document advisor = getAdvisorUser(request);
-
         if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
             return JSON_NOT_ACCESS;
 
@@ -58,23 +56,21 @@ public class AdvisorAPIRoutes extends Router {
     @GetMapping(value = "getMyCurrentRoomForAdvisor")
     @ResponseBody
     public String getMyCurrentRoomForAdvisor(HttpServletRequest request
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return AdvisorController.getMyCurrentRoomForAdvisor(getAdvisorUser(request).getObjectId("_id"));
+    ) throws UnAuthException {
+        return AdvisorController.getMyCurrentRoomForAdvisor(getUserId(request));
     }
 
     @GetMapping(value = "getMyCurrentRoomForAdvisorForSpecificStudent/{studentId}")
     @ResponseBody
     public String getMyCurrentRoomForAdvisor(HttpServletRequest request,
                                              @PathVariable @ObjectIdConstraint ObjectId studentId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document advisor = getAdvisorUser(request);
-
-        if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
+    ) throws UnAuthException {
+        ObjectId advisorId = getUserId(request);
+        if (!Authorization.hasAccessToThisStudent(studentId, advisorId))
             return JSON_NOT_ACCESS;
 
         return AdvisorController.getMyCurrentRoomForAdvisor(
-                advisor.getObjectId("_id"), studentId
+                advisorId, studentId
         );
     }
 
@@ -82,21 +78,19 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String getStudentDigest(HttpServletRequest request,
                                    @PathVariable @ObjectIdConstraint ObjectId studentId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        Document advisor = getAdvisorUser(request);
-        if (!Authorization.hasAccessToThisStudent(studentId, advisor.getObjectId("_id")))
+    ) throws UnAuthException {
+        ObjectId advisorId = getUserId(request);
+        if (!Authorization.hasAccessToThisStudent(studentId, advisorId))
             return JSON_NOT_ACCESS;
 
-        return AdvisorController.getStudentDigest(advisor.getObjectId("_id"), studentId);
+        return AdvisorController.getStudentDigest(advisorId, studentId);
     }
 
     @GetMapping(value = "getStudentsDigest")
     @ResponseBody
     public String getStudentsDigest(HttpServletRequest request
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        Document advisor = getAdvisorUser(request);
-        return AdvisorController.getStudentsDigest(advisor);
+        return AdvisorController.getStudentsDigest(getAdvisorUser(request));
     }
 
     @PostMapping(value = "createNewOffer")
@@ -120,9 +114,9 @@ public class AdvisorAPIRoutes extends Router {
                                                  Positive.class, String.class
                                          }
                                  ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return AdvisorController.createNewOffer(getAdvisorUser(request).getObjectId("_id"),
-                convertPersian(new JSONObject(jsonStr))
+    ) throws UnAuthException {
+        return AdvisorController.createNewOffer(
+                getUserId(request), convertPersian(new JSONObject(jsonStr))
         );
     }
 
@@ -137,9 +131,9 @@ public class AdvisorAPIRoutes extends Router {
                                                JSONArray.class
                                        }
                                ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        return AdvisorController.removeOffers(getAdvisorUser(request).getObjectId("_id"),
-                new JSONObject(jsonStr).getJSONArray("items")
+    ) throws UnAuthException {
+        return AdvisorController.removeOffers(
+                getUserId(request), new JSONObject(jsonStr).getJSONArray("items")
         );
     }
 
@@ -165,8 +159,7 @@ public class AdvisorAPIRoutes extends Router {
                                               Positive.class, String.class
                                       }
                               ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdvisorUser(request);
+    ) {
         return AdvisorController.updateOffer(id, convertPersian(new JSONObject(jsonStr)));
     }
 
@@ -174,10 +167,10 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String getOffers(HttpServletRequest request,
                             @PathVariable(required = false) ObjectId advisorId
-    ) throws UnAuthException, NotActivateAccountException {
-        Document user = getUser(request);
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
-        return AdvisorController.getOffers(isAdvisor ? user.getObjectId("_id") : null, advisorId);
+    ) throws UnAuthException {
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
+        return AdvisorController.getOffers(isAdvisor ? userTokenInfo.getId() : null, advisorId);
     }
 
     @PostMapping(value = "toggleStdAcceptance")
@@ -212,8 +205,8 @@ public class AdvisorAPIRoutes extends Router {
     @GetMapping(value = "myRequests")
     @ResponseBody
     public String myRequests(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-        return AdvisorController.myStudentRequests(getAdvisorUser(request).getObjectId("_id"));
+    ) throws UnAuthException {
+        return AdvisorController.myStudentRequests(getUserId(request));
     }
 
     @PostMapping(value = "copy/{scheduleId}")
@@ -230,11 +223,9 @@ public class AdvisorAPIRoutes extends Router {
                                }
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
-
         return AdvisorController.copy(
-                getAdvisorUser(request).getObjectId("_id"),
+                getUserId(request),
                 scheduleId, jsonObject.getJSONArray("users"),
                 jsonObject.getInt("scheduleFor")
         );
@@ -250,9 +241,9 @@ public class AdvisorAPIRoutes extends Router {
                                           params = {"description"},
                                           paramsType = {String.class}
                                   ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return AdvisorController.setScheduleDesc(
-                getAdvisorUser(request).getObjectId("_id"), id,
+                getUserId(request), id,
                 new JSONObject(jsonStr).getString("description")
         );
     }
@@ -276,9 +267,9 @@ public class AdvisorAPIRoutes extends Router {
                                                      String.class, String.class,
                                                      Positive.class
                                              }
-                                     ) @NotBlank String jsonStr) throws NotAccessException, UnAuthException, NotActivateAccountException {
+                                     ) @NotBlank String jsonStr) throws UnAuthException {
         return AdvisorController.updateScheduleItem(
-                getAdvisorUser(request).getObjectId("_id"),
+                getUserId(request),
                 id, convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -307,10 +298,9 @@ public class AdvisorAPIRoutes extends Router {
                                                     Positive.class
                                             }
                                     ) @NotBlank String jsonStr
-    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+    ) throws UnAuthException {
         return AdvisorController.addItemToSchedule(
-                getAdvisorUser(request).getObjectId("_id"),
-                userId,
+                getUserId(request), userId,
                 convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -320,10 +310,9 @@ public class AdvisorAPIRoutes extends Router {
     public String removeItemFromSchedule(HttpServletRequest request,
                                          @PathVariable @ObjectIdConstraint ObjectId userId,
                                          @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return AdvisorController.removeItemFromSchedule(
-                getAdvisorUser(request).getObjectId("_id"),
-                userId, id
+                getUserId(request), userId, id
         );
     }
 
@@ -331,10 +320,9 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String removeSchedule(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         return AdvisorController.removeSchedule(
-                getAdvisorUser(request).getObjectId("_id"),
-                id
+                getUserId(request), id
         );
     }
 
@@ -372,10 +360,8 @@ public class AdvisorAPIRoutes extends Router {
     public String getStudentSchedules(HttpServletRequest request,
                                       @PathVariable @ObjectIdConstraint ObjectId userId,
                                       @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
-
+    ) throws UnAuthException {
+        ObjectId advisorId = getUserId(request);
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
@@ -389,9 +375,8 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String getStudentSchedulesDigest(HttpServletRequest request,
                                             @PathVariable @ObjectIdConstraint ObjectId userId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+    ) throws UnAuthException {
+        ObjectId advisorId = getUserId(request);
 
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
@@ -402,12 +387,9 @@ public class AdvisorAPIRoutes extends Router {
     @GetMapping(value = "getAdvisorTags/{id}")
     @ResponseBody
     public String getAdvisorTags(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id,
             @RequestParam(value = "mode") String mode
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUser(request);
+    ) {
         Document advisor = userRepository.findById(id);
 
         if (advisor == null)
@@ -428,18 +410,15 @@ public class AdvisorAPIRoutes extends Router {
 
     @PutMapping(value = "addAdvisorTag/{id}")
     @ResponseBody
-    public String addAdvisorTag(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId id,
-                                @RequestParam(value = "mode") String mode,
-                                @RequestBody @StrongJSONConstraint(
-                                        params = {"tags"},
-                                        paramsType = {JSONArray.class}
-                                ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        getAdminPrivilegeUser(request);
+    public String addAdvisorTag(
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestParam(value = "mode") String mode,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"tags"},
+                    paramsType = {JSONArray.class}
+            ) @NotBlank String jsonStr
+    ) {
         Document advisor = userRepository.findById(id);
-
         if (advisor == null)
             return JSON_NOT_VALID_ID;
 
@@ -461,17 +440,14 @@ public class AdvisorAPIRoutes extends Router {
     @DeleteMapping(value = "removeAdvisorTag/{id}")
     @ResponseBody
     public String removeAdvisorTag(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id,
             @RequestParam(value = "mode") String mode,
             @RequestBody @StrongJSONConstraint(
                     params = {"tag"},
                     paramsType = {String.class}
             ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUser(request);
+    ) {
         Document advisor = userRepository.findById(id);
-
         if (advisor == null)
             return JSON_NOT_VALID_ID;
 
@@ -492,12 +468,9 @@ public class AdvisorAPIRoutes extends Router {
     @ResponseBody
     public String lessonsInSchedule(HttpServletRequest request,
                                     @PathVariable @ObjectIdConstraint ObjectId id
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
-
+    ) throws UnAuthException {
         return AdvisorController.lessonsInSchedule(
-                advisorId, id, true
+                getUserId(request), id, true
         );
     }
 
@@ -507,9 +480,8 @@ public class AdvisorAPIRoutes extends Router {
                            @PathVariable @ObjectIdConstraint ObjectId userId,
                            @RequestParam(required = false, value = "start") Long start,
                            @RequestParam(required = false, value = "end") Long end
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
-        ObjectId advisorId = getAdvisorUser(request).getObjectId("_id");
+    ) throws UnAuthException {
+        ObjectId advisorId = getUserId(request);
 
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
@@ -543,17 +515,16 @@ public class AdvisorAPIRoutes extends Router {
         if (scheduleFor != null && (scheduleFor < 0 || scheduleFor > 4))
             return JSON_NOT_VALID_PARAMS;
 
-        Document user = getUser(request);
-
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
         ObjectId advisorId = null;
 
         if (isAdvisor) {
-            advisorId = user.getObjectId("_id");
+            advisorId = userTokenInfo.getId();
             if (userId != null && !Authorization.hasAccessToThisStudent(new ObjectId(userId), advisorId))
                 return JSON_NOT_ACCESS;
         } else
-            userId = user.getObjectId("_id").toString();
+            userId = userTokenInfo.getId().toString();
 
         return StudentAdviceController.mySchedule(
                 advisorId, userId != null ? new ObjectId(userId) : null,
@@ -567,9 +538,7 @@ public class AdvisorAPIRoutes extends Router {
     public String notifyStudentForSchedule(HttpServletRequest request,
                                            @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-
         Document user = getAdvisorUser(request);
-
         return AdvisorController.notifyStudentForSchedule(
                 id,
                 user.getString("first_name") + " " + user.getString("last_name"),

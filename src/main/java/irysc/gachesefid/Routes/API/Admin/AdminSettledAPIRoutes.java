@@ -1,9 +1,6 @@
 package irysc.gachesefid.Routes.API.Admin;
 
 import irysc.gachesefid.Controllers.Finance.AdminSettlementController;
-import irysc.gachesefid.Exception.NotAccessException;
-import irysc.gachesefid.Exception.NotActivateAccountException;
-import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.SettledStatus;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Positive;
@@ -16,7 +13,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
 @Controller
@@ -27,7 +23,6 @@ public class AdminSettledAPIRoutes extends Router {
     @PutMapping(value = "changeSettlementRequestStatus/{id}")
     @ResponseBody
     public String changeSettlementRequestStatus(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id,
             @RequestBody @StrongJSONConstraint(
                     params = {"status"},
@@ -35,8 +30,7 @@ public class AdminSettledAPIRoutes extends Router {
                     optionals = {"desc"},
                     optionalsType = {String.class}
             ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+    ) {
         return AdminSettlementController.changeSettlementRequestStatus(
                 id, new JSONObject(jsonStr)
         );
@@ -45,14 +39,12 @@ public class AdminSettledAPIRoutes extends Router {
     @GetMapping(value = "getSettledRequests")
     @ResponseBody
     public String getSettledRequests(
-            HttpServletRequest request,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "createdFrom", required = false) Long createdFrom,
             @RequestParam(value = "createdTo", required = false) Long createdTo,
             @RequestParam(value = "answerFrom", required = false) Long answerFrom,
             @RequestParam(value = "answerTo", required = false) Long answerTo
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+    ) {
         return AdminSettlementController.getSettledRequests(
                 status, createdFrom, createdTo, answerFrom, answerTo
         );

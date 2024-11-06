@@ -18,8 +18,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
@@ -77,17 +80,65 @@ public class Router {
         throw new UnAuthException("Token is not valid");
     }
 
-    protected void checkAuth(HttpServletRequest request
+    public class UserTokenInfo {
+        private ObjectId id;
+        private List<String> accesses;
+
+        public ObjectId getId() {
+            return id;
+        }
+
+        public List<String> getAccesses() {
+            return accesses;
+        }
+
+        public UserTokenInfo(ObjectId id, List<String> accesses) {
+            this.id = id;
+            this.accesses = accesses;
+        }
+    }
+    protected UserTokenInfo getUserTokenInfo(HttpServletRequest request
     ) throws UnAuthException {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             String token = bearerToken.substring(7);
+            Claims claims;
+
             try {
-                Jwts.parser()
+                claims = Jwts.parser()
                         .setSigningKey(myUserDetailsService.getSharedKeyBytes())
                         .parseClaimsJws(token)
                         .getBody();
-                return;
+
+                if(claims == null || !claims.containsKey("id"))
+                    throw new UnAuthException("Token is not valid");
+
+                return new UserTokenInfo(
+                        new ObjectId(claims.get("id").toString()),
+                        ((List<HashMap<?, ?>>)claims.get("roles")).stream().map(hashMap -> {
+                            switch (Role.valueOf(hashMap.get("authority").toString().toUpperCase())) {
+                                case ROLE_SUPER_ADMIN:
+                                    return Access.SUPERADMIN.getName();
+                                case ROLE_ADMIN:
+                                    return Access.ADMIN.getName();
+                                case ROLE_ADVISOR:
+                                    return Access.ADVISOR.getName();
+                                case ROLE_EDITOR:
+                                    return Access.EDITOR.getName();
+                                case ROLE_CONTENT:
+                                    return Access.CONTENT.getName();
+                                case ROLE_AGENT:
+                                    return Access.AGENT.getName();
+                                case ROLE_SCHOOL:
+                                    return Access.SCHOOL.getName();
+                                case ROLE_TEACHER:
+                                    return Access.TEACHER.getName();
+                                case ROLE_CLIENT:
+                                default:
+                                    return Access.STUDENT.getName();
+                            }
+                        }).collect(Collectors.toList())
+                );
             } catch (Exception x) {
                 x.printStackTrace();
             }
@@ -222,14 +273,11 @@ public class Router {
     }
 
     protected Document getUserIfLogin(HttpServletRequest request) {
-
         boolean auth = jwtTokenFilter.isAuth(request);
-
         Document u;
         if (auth) {
             u = userService.whoAmI(request);
             if (u != null) {
-
                 if (!u.getString("status").equals("active"))
                     return null;
 
@@ -252,10 +300,9 @@ public class Router {
                 if(claims == null || !claims.containsKey("roles"))
                     throw new UnAuthException("Token is not valid");
 
-                if(!Objects.equals(
-                        Role.valueOf(((HashMap<?, ?>)claims.get("roles")).get("authority").toString()),
-                        wantedRole
-                ))
+                if(((List<HashMap<?, ?>>)claims.get("roles"))
+                        .stream().map(hashMap -> Role.valueOf(hashMap.get("authority").toString()))
+                        .noneMatch(role -> Objects.equals(role, wantedRole)))
                     throw new NotAccessException("not access");
 
                 return;
@@ -421,13 +468,13 @@ public class Router {
     protected Document getUserWithAdvisorAccess(HttpServletRequest request,
                                                boolean weakAccess,
                                                String userId
-    ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
+    ) throws UnAuthException, InvalidFieldsException {
 
-        Document user = getUserWithOutCheckCompleteness(request);
+        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
 
-        boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
-        boolean isAdvisor = Authorization.isAdvisor(user.getList("accesses", String.class));
-
+        boolean isAdmin = Authorization.isAdmin(userTokenInfo.getAccesses());
+        boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
+        Document user;
 
         if (userId != null && !isAdmin && !isAdvisor)
             throw new InvalidFieldsException("no access");
@@ -440,13 +487,15 @@ public class Router {
             ObjectId oId = new ObjectId(userId);
 
             if(isAdvisor && !isAdmin &&
-                    (weakAccess && !Authorization.hasWeakAccessToThisStudent(oId, user.getObjectId("_id"))) ||
-                    (!weakAccess && !Authorization.hasAccessToThisStudent(oId, user.getObjectId("_id")))
+                    (weakAccess && !Authorization.hasWeakAccessToThisStudent(oId, userTokenInfo.getId())) ||
+                    (!weakAccess && !Authorization.hasAccessToThisStudent(oId, userTokenInfo.getId()))
             )
                 throw new InvalidFieldsException("Access denied");
 
             user = userRepository.findById(oId);
         }
+        else
+            user = userService.whoAmI(request);
 
         if (user == null)
             throw new InvalidFieldsException("invalid userId");

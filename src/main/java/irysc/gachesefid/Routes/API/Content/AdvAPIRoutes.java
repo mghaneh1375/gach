@@ -14,7 +14,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
@@ -27,56 +26,51 @@ public class AdvAPIRoutes extends Router {
 
     @PostMapping(value = "store")
     @ResponseBody
-    public String store(HttpServletRequest request,
-                        @RequestPart(value = "file") MultipartFile file,
-                        @RequestPart(value = "json") @StrongJSONConstraint(
-                                params = {
-                                        "title", "visibility"
-                                },
-                                paramsType = {
-                                        String.class, Boolean.class
-                                }
-                        ) @NotBlank String jsonStr)
+    public String store(
+            @RequestPart(value = "file") MultipartFile file,
+            @RequestPart(value = "json") @StrongJSONConstraint(
+                    params = {
+                            "title", "visibility"
+                    },
+                    paramsType = {
+                            String.class, Boolean.class
+                    }
+            ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
 
         if (file == null)
             return JSON_NOT_VALID_PARAMS;
 
-        getAdminPrivilegeUserVoid(request);
         return ContentConfigController.storeAdv(file, convertPersian(new JSONObject(jsonStr)));
     }
 
     @PutMapping(value = "update/{id}")
     @ResponseBody
-    public String update(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId id,
-                         @RequestBody @StrongJSONConstraint(
-                                 params = {
-                                         "title", "visibility"
-                                 },
-                                 paramsType = {
-                                         String.class, Boolean.class
-                                 }
-                         ) @NotBlank String jsonStr)
+    public String update(
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "title", "visibility"
+                    },
+                    paramsType = {
+                            String.class, Boolean.class
+                    }
+            ) @NotBlank String jsonStr)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
         return ContentConfigController.updateAdv(id, convertPersian(new JSONObject(jsonStr)));
     }
 
     @DeleteMapping(value = "remove/{id}")
     @ResponseBody
-    public String remove(HttpServletRequest request,
-                         @PathVariable @ObjectIdConstraint ObjectId id)
-            throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
+    public String remove(@PathVariable @ObjectIdConstraint ObjectId id
+    ) throws NotActivateAccountException, UnAuthException, NotAccessException {
         return ContentConfigController.removeAdv(id);
     }
 
     @GetMapping(value = "getAll")
     @ResponseBody
-    public String getAll(HttpServletRequest request)
+    public String getAll()
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        getAdminPrivilegeUserVoid(request);
         return ContentConfigController.getAdv();
     }
 
