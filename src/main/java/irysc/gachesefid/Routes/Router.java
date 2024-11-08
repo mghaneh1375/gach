@@ -18,10 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
@@ -172,7 +169,7 @@ public class Router {
 
     protected void getAdminPrivilegeUserVoid(HttpServletRequest request)
             throws NotActivateAccountException, UnAuthException, NotAccessException {
-        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_ADMIN);
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_SUPER_ADMIN, Role.ROLE_ADMIN);
     }
 
     protected void getWeakAdminPrivilegeUserVoid(HttpServletRequest request)
@@ -181,7 +178,7 @@ public class Router {
     }
     protected void getEditorPrivilegeUserVoid(HttpServletRequest request)
             throws UnAuthException, NotAccessException {
-        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_EDITOR);
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_SUPER_ADMIN, Role.ROLE_ADMIN, Role.ROLE_EDITOR);
     }
 
     protected Document getEditorPrivilegeUser(HttpServletRequest request)
@@ -191,7 +188,7 @@ public class Router {
 
     protected void getContentPrivilegeUserVoid(HttpServletRequest request)
             throws UnAuthException, NotAccessException {
-        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_CONTENT);
+        isWantedAccess(request.getHeader("Authorization"), Role.ROLE_SUPER_ADMIN, Role.ROLE_ADMIN, Role.ROLE_CONTENT);
     }
 
     protected Document getAdminPrivilegeUser(HttpServletRequest request)
@@ -288,7 +285,7 @@ public class Router {
         return null;
     }
 
-    protected void isWantedAccess(String bearerToken, Role wantedRole
+    protected void isWantedAccess(String bearerToken, Role ...wantedRoles
     ) throws UnAuthException, NotAccessException {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             String token = bearerToken.substring(7);
@@ -302,7 +299,7 @@ public class Router {
 
                 if(((List<HashMap<?, ?>>)claims.get("roles"))
                         .stream().map(hashMap -> Role.valueOf(hashMap.get("authority").toString()))
-                        .noneMatch(role -> Objects.equals(role, wantedRole)))
+                        .noneMatch(role -> Arrays.asList(wantedRoles).contains(role)))
                     throw new NotAccessException("not access");
 
                 return;
