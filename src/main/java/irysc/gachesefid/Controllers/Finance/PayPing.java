@@ -21,8 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Finance.TransactionController.getTransactionTitle;
 import static irysc.gachesefid.Controllers.Teaching.Utility.completePrePayForSemiPrivateSchedule;
@@ -154,8 +153,23 @@ public class PayPing {
                     }).start();
                     Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
                     if (request != null && studentId.equals(request.getObjectId("user_id"))) {
+                        long curr = System.currentTimeMillis();
                         request.put("paid", transaction.getInteger("amount"));
-                        request.put("paid_at", System.currentTimeMillis());
+                        request.put("paid_at", curr);
+
+                        Document olderAdvisorRequest = advisorRequestsRepository.findOne(and(
+                                eq("user_id", user.getObjectId("_id")),
+                                eq("advisor_id", request.getObjectId("advisor_id")),
+                                eq("answer", "accept"),
+                                exists("active_at"),
+                                lte("active_at", curr - 24 * ONE_DAY_MIL_SEC),
+                                gt("active_at", curr - 31 * ONE_DAY_MIL_SEC)
+                        ), new BasicDBObject("active_at", 1), Sorts.descending("created_at"));
+                        if (olderAdvisorRequest != null)
+                            request.put("active_at", 31 * ONE_DAY_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
+                        else
+                            request.put("active_at", curr);
+
                         advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
                         AdvisorController.setAdvisor(user, userRepository.findById(request.getObjectId("advisor_id")));
                     }

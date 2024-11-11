@@ -2054,7 +2054,8 @@ public class UserController {
                                     and(
                                             eq("advisor_id", user),
                                             eq("answer", "accept"),
-                                            gt("paid_at", curr - ONE_DAY_MIL_SEC * 30)
+                                            exists("active_at"),
+                                            gt("active_at", curr - ONE_DAY_MIL_SEC * 31)
                                     )
                             )
                     );

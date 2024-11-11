@@ -85,12 +85,12 @@ public class Jobs implements Runnable {
                             eq("advisor_id", advisorId),
                             eq("answer", "accept"),
                             exists("paid_at")
-                    ), new BasicDBObject("paid_at", 1), Sorts.descending("paid_at"));
+                    ), new BasicDBObject("active_at", 1), Sorts.descending("paid_at"));
 
                     if (adviceRequest == null)
                         continue;
 
-                    int r = (int) ((curr - adviceRequest.getLong("paid_at")) / ONE_DAY_MIL_SEC);
+                    int r = (int) ((curr - adviceRequest.getLong("active_at")) / ONE_DAY_MIL_SEC);
                     if (r > 31) {
                         if (expiredAdvisors == null) expiredAdvisors = new ArrayList<>();
                         expiredAdvisors.add(advisorId);
@@ -194,9 +194,9 @@ public class Jobs implements Runnable {
                             eq("advisor_id", advisorId),
                             eq("answer", "accept"),
                             exists("paid_at")
-                    ), new BasicDBObject("paid_at", 1).append("advisor_id", 1), Sorts.descending("paid_at"));
+                    ), new BasicDBObject("active_at", 1).append("advisor_id", 1), Sorts.descending("paid_at"));
 
-                    int r = (int) ((curr - adviceRequest.getLong("paid_at")) / ONE_DAY_MIL_SEC);
+                    int r = (int) ((curr - adviceRequest.getLong("active_at")) / ONE_DAY_MIL_SEC);
                     if ((r >= 30 && r <= 31) || (r >= 28 && r <= 29) || (r >= 14 && r <= 15)) {
                         if (!advisors.containsKey(adviceRequest.getObjectId("advisor_id"))) {
                             Document advisor = userRepository.findById(adviceRequest.getObjectId("advisor_id"));

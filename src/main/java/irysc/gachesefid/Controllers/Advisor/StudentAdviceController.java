@@ -106,12 +106,10 @@ public class StudentAdviceController {
             if (request == null)
                 return JSON_NOT_UNKNOWN;
 
-            JSONObject tmp = new JSONObject();
-
-            tmp
+            JSONObject tmp = new JSONObject()
                     .put("id", "-1")
-                    .put("createdAt", getSolarDate(request.getLong("paid_at")))
-                    .put("finishAt", getSolarDate(request.getLong("paid_at") + ONE_DAY_MIL_SEC * 30))
+                    .put("createdAt", getSolarDate(request.getLong("active_at")))
+                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_DAY_MIL_SEC * 30))
                     .put("title", request.getString("title"))
                     .put("videoCalls", request.getInteger("video_calls"))
                     .put("maxKarbarg", request.getOrDefault("max_karbarg", -1))
@@ -207,12 +205,10 @@ public class StudentAdviceController {
             return JSON_NOT_ACCESS;
 
         int shouldPay = doc.getInteger("price");
-
         Document off = null;
         long curr = System.currentTimeMillis();
 
         if (jsonObject != null && jsonObject.has("off")) {
-
             off = validateOffCode(
                     jsonObject.getString("off"), userId, curr,
                     OffCodeSections.COUNSELING.getName()
@@ -220,7 +216,6 @@ public class StudentAdviceController {
 
             if (off == null)
                 return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
-
         }
 
         if (jsonObject == null || !jsonObject.has("off")) {
@@ -230,7 +225,6 @@ public class StudentAdviceController {
         }
 
         double offAmount = 0;
-
         if (off != null) {
             offAmount +=
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
@@ -269,6 +263,19 @@ public class StudentAdviceController {
 
             Document advisorRequest = advisorRequestsRepository.findById(doc.getObjectId("_id"));
             advisorRequest.put("paid", shouldPay);
+            Document olderAdvisorRequest = advisorRequestsRepository.findOne(and(
+                    eq("user_id", userId),
+                    eq("advisor_id", advisorId),
+                    eq("answer", "accept"),
+                    exists("active_at"),
+                    lte("active_at", curr - 24 * ONE_DAY_MIL_SEC),
+                    gt("active_at", curr - 31 * ONE_DAY_MIL_SEC)
+            ), new BasicDBObject("active_at", 1), Sorts.descending("created_at"));
+            if (olderAdvisorRequest != null)
+                advisorRequest.put("active_at", 31 * ONE_DAY_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
+            else
+                advisorRequest.put("active_at", curr);
+
             advisorRequest.put("paid_at", curr);
             advisorRequestsRepository.replaceOne(advisorRequest.getObjectId("_id"), advisorRequest);
 
@@ -501,10 +508,10 @@ public class StudentAdviceController {
                         eq("advisors", userId),
                         eq("user_id", req.getObjectId("user_id"))
                 ) :
-                and(
-                        eq("advisors", req.getObjectId("advisor_id")),
-                        eq("user_id", userId)
-                ), new BasicDBObject("week_start_at", true)
+                        and(
+                                eq("advisors", req.getObjectId("advisor_id")),
+                                eq("user_id", userId)
+                        ), new BasicDBObject("week_start_at", true)
         ).forEach(document -> jsonArray.put(
                 new JSONObject()
                         .put("weekStartAt", document.getString("week_start_at"))
@@ -530,7 +537,7 @@ public class StudentAdviceController {
             else if (!schedule.getObjectId("user_id").equals(userId))
                 return JSON_NOT_ACCESS;
 
-            if(advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId))
+            if (advisorId != null && !schedule.getList("advisors", ObjectId.class).contains(advisorId))
                 return JSON_NOT_ACCESS;
 //            if (advisorId != null && !Authorization.hasAccessToThisStudent(userId, advisorId))
 //                return JSON_NOT_ACCESS;

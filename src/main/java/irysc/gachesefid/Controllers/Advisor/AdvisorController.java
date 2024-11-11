@@ -140,8 +140,8 @@ public class AdvisorController {
                     .put("planTitle", request.getString("title"))
                     .put("maxChats", request.getOrDefault("max_chat", "نامحدود"))
                     .put("maxExam", request.getOrDefault("max_exam", "نامحدود"))
-                    .put("createdAt", getSolarDate(request.getLong("paid_at")))
-                    .put("finishAt", getSolarDate(request.getLong("paid_at") + ONE_DAY_MIL_SEC * 30));
+                    .put("createdAt", getSolarDate(request.getLong("active_at")))
+                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_DAY_MIL_SEC * 30));
         }
 
 
@@ -651,8 +651,16 @@ public class AdvisorController {
             return JSON_NOT_VALID_ID;
 
         if (user.containsKey("my_advisors") &&
-                user.getList("my_advisors", ObjectId.class).contains(advisorId))
-            return generateErr("مشاور موردنظر هم اکنون به عنوان مشاور شما می باشد");
+                user.getList("my_advisors", ObjectId.class).contains(advisorId)) {
+            if (advisorRequestsRepository.exist(and(
+                    eq("user_id", user.getObjectId("_id")),
+                    eq("advisor_id", advisorId),
+                    eq("answer", "accept"),
+                    exists("active_at"),
+                    gt("active_at", System.currentTimeMillis() - 24 * ONE_DAY_MIL_SEC)
+            )))
+                return generateErr("مشاور موردنظر هم اکنون به عنوان مشاور شما می باشد");
+        }
 
         if (advisorRequestsRepository.count(and(
                 eq("answer", "pending"),
@@ -665,9 +673,7 @@ public class AdvisorController {
             return JSON_NOT_ACCESS;
 
         Document plan;
-
         if (planOId == null) {
-
             if (advisorFinanceOfferRepository.count(
                     and(
                             eq("advisor_id", advisorId),
@@ -677,15 +683,12 @@ public class AdvisorController {
                 return generateErr("لطفا یکی از بسته\u200Cهای پیشنهادی را انتخاب نمایید");
 
             Document config = getConfig();
-
             plan = new Document("price", config.getInteger("min_advice_price"))
                     .append("title", "پیش فرض")
                     .append("video_calls", config.getInteger("max_video_call_per_month"));
 
         } else {
-
             plan = advisorFinanceOfferRepository.findById(planOId);
-
             if (plan == null || !plan.getObjectId("advisor_id").equals(advisorId))
                 return JSON_NOT_VALID_PARAMS;
         }
@@ -708,7 +711,6 @@ public class AdvisorController {
             newReq.append("max_karbarg", plan.getInteger("max_karbarg"));
 
         ObjectId id = advisorRequestsRepository.insertOneWithReturnId(newReq);
-
         createNotifAndSendSMS(advisor,
                 user.getString("first_name") + " " + user.getString("last_name"),
                 "request"
@@ -720,7 +722,6 @@ public class AdvisorController {
                 .put("answer", "pending");
 
         return generateSuccessMsg("data", jsonObject);
-
     }
 
     private static boolean cancelAdvisor(Document student, Document advisor,
@@ -772,10 +773,11 @@ public class AdvisorController {
     public static void setAdvisor(Document student, Document advisor) {
 
         List<ObjectId> myAdvisors = (List<ObjectId>) student.getOrDefault("my_advisors", new ArrayList<>());
-        myAdvisors.add(advisor.getObjectId("_id"));
-
-        student.put("my_advisors", myAdvisors);
-        userRepository.replaceOneWithoutClearCache(student.getObjectId("_id"), student);
+        if (!myAdvisors.contains(advisor.getObjectId("_id"))) {
+            myAdvisors.add(advisor.getObjectId("_id"));
+            student.put("my_advisors", myAdvisors);
+            userRepository.replaceOneWithoutClearCache(student.getObjectId("_id"), student);
+        }
 
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
 
@@ -788,13 +790,12 @@ public class AdvisorController {
             students.add(new Document("_id", student.getObjectId("_id"))
                     .append("created_at", System.currentTimeMillis())
             );
+            advisor.put("students", students);
         }
         //todo : extend advisor
 //        else {
 //            students.get(idx).put("created_at", );
 //        }
-
-        advisor.put("students", students);
         userRepository.replaceOneWithoutClearCache(advisor.getObjectId("_id"), advisor);
     }
 
@@ -833,12 +834,9 @@ public class AdvisorController {
 
 
     public static String toggleStdAcceptance(Document user) {
-
         user.put("accept_std", !(boolean) user.getOrDefault("accept_std", true));
         userRepository.replaceOne(user.getObjectId("_id"), user);
-
         return JSON_OK;
-
     }
 
     public static String getAllAdvisors(
@@ -894,13 +892,13 @@ public class AdvisorController {
         boolean b1 = sortBy == null ||
                 sortBy.equalsIgnoreCase("rate") ||
                 sortBy.equalsIgnoreCase("age");
-        List<Document> advisors = b1
-                ? userRepository.find(
+        List<Document> advisors = b1 ?
+                userRepository.find(
                         and(filters),
                         ADVISOR_PUBLIC_DIGEST,
                         Sorts.descending(Objects.equals(sortBy, "age") ? "birth_day" : "rate")
-                )
-                : userRepository.find(
+                ) :
+                userRepository.find(
                         and(filters),
                         ADVISOR_PUBLIC_DIGEST
                 );
@@ -987,7 +985,7 @@ public class AdvisorController {
             docs.add(jsonObject);
         }
 
-        if(!b1) {
+        if (!b1) {
             docs.sort((o1, o2) -> {
                 int a = o1.has("stdCount") ? o1.getInt("stdCount") : -1;
                 int b = o2.has("stdCount") ? o2.getInt("stdCount") : -1;
