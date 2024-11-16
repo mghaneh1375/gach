@@ -53,7 +53,6 @@ public class AdminSettledAPIRoutes extends Router {
     @PostMapping(value = "createSettlementRequest/{userId}/{refId}")
     @ResponseBody
     public String createSettlementRequest(
-            HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId userId,
             @PathVariable @ObjectIdConstraint ObjectId refId,
             @RequestBody @StrongJSONConstraint(
@@ -64,8 +63,7 @@ public class AdminSettledAPIRoutes extends Router {
                     optionals = {"desc"},
                     optionalsType = {String.class}
             ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+    ) {
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
         return AdminSettlementController.createSettlementRequest(
                 jsonObject.getString("section"), userId,
