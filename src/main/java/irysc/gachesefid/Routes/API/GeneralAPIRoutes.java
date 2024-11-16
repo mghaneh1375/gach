@@ -101,26 +101,17 @@ public class GeneralAPIRoutes extends Router {
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
 
         if (userId != null) {
-
             Document doc = user.get("user", Document.class);
 
             if(Authorization.isPureStudent(doc.getList("accesses", String.class))) {
-
                 doc.put("money", (double) jsonObject.getInt("amount"));
-
                 if (jsonObject.has("coin"))
-                    doc.put("coin", jsonObject.getNumber("coin").doubleValue());
+                    doc.put("coin", Math.round((jsonObject.getNumber("coin").doubleValue() * 100.0)) / 100.0);
             }
             else {
-
-                doc.put("money", ((Number)doc.get("money")).doubleValue() + (double) jsonObject.getInt("amount"));
-
-                if (jsonObject.has("coin")) {
-                    double d = ((Number)doc.get("coin")).doubleValue() +
-                            jsonObject.getNumber("coin").doubleValue();
-                    doc.put("coin", Math.round((d * 100.0)) / 100.0);
-                }
-
+                doc.put("money", (double) jsonObject.getInt("amount"));
+                if (jsonObject.has("coin"))
+                    doc.put("coin", Math.round((jsonObject.getNumber("coin").doubleValue() * 100.0)) / 100.0);
             }
 
             userRepository.replaceOne(doc.getObjectId("_id"), doc);
