@@ -42,12 +42,23 @@ public class NotifController {
             "تعریف آزمون توسط مدرسه",
             "تعریف تمرین توسط مدرسه",
             "به روزرسانی برنامه توسط مشاور",
+            "تولدت مبارک",
+            "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به نقره\u200Cای رسید.",
+            "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به برنزی رسید.",
+            "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به طلایی رسید.",
+            "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به پلاتینی رسید.",
+            "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به گچی رسید.",
     };
 
-    public static String getAll(String sendVia, Long from, Long to) {
+    public static String getAll(
+            String sendVia, Long from, Long to,
+            Integer minUsersCount
+    ) {
 
         ArrayList<Bson> filter = new ArrayList<>();
         filter.add(eq("send_via", sendVia));
+        if(minUsersCount != null)
+            filter.add(gte("users_count", minUsersCount));
         filter.add(or(
                         gt("users_count", 1),
                         nin("title", systemNotifs)
@@ -160,6 +171,12 @@ public class NotifController {
         if (filtersJSON.getString("via").equalsIgnoreCase(NotifVia.SMS.toString()))
             filters.add(exists("phone", true));
 
+        if(filtersJSON.has("fromCreatedAt"))
+            filters.add(gte("created_at", filtersJSON.getLong("fromCreatedAt")));
+
+        if(filtersJSON.has("toCreatedAt"))
+            filters.add(lte("created_at", filtersJSON.getLong("toCreatedAt")));
+
         if (filtersJSON.has("cities"))
             processFilter(filters, filtersJSON, "cities", "city._id");
 
@@ -191,12 +208,10 @@ public class NotifController {
             filters.add(eq("sex", filtersJSON.getString("sex")));
 
         if (filtersJSON.has("nids")) {
-
             JSONArray jsonArray = filtersJSON.getJSONArray("nids");
             ArrayList<String> validatedNids = new ArrayList<>();
 
             for (int i = 0; i < jsonArray.length(); i++) {
-
                 String nid = Utility.convertPersianDigits(jsonArray.getString(i));
 
                 if (!Utility.validationNationalCode(nid))
@@ -204,17 +219,14 @@ public class NotifController {
 
                 validatedNids.add(nid);
             }
-
             filters.add(in("NID", validatedNids));
         }
 
         if (filtersJSON.has("phones")) {
-
             JSONArray jsonArray = filtersJSON.getJSONArray("phones");
             ArrayList<String> validatedPhones = new ArrayList<>();
 
             for (int i = 0; i < jsonArray.length(); i++) {
-
                 String phone = Utility.convertPersianDigits(jsonArray.getString(i));
 
                 if (!PhoneValidator.isValid(phone))
@@ -227,12 +239,10 @@ public class NotifController {
         }
 
         if (filtersJSON.has("accesses")) {
-
             JSONArray jsonArray = filtersJSON.getJSONArray("accesses");
             ArrayList<Bson> orFilter = new ArrayList<>();
 
             for (int i = 0; i < jsonArray.length(); i++) {
-
                 if (!EnumValidatorImp.isValid(jsonArray.getString(i), Access.class))
                     continue;
 
@@ -406,7 +416,6 @@ public class NotifController {
         ArrayList<Document> users = userRepository.find(and(fetchFilters(filtersJSON)),
                 neededFields
         );
-
         boolean checkZero = !sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) || users.size() != 0 || list == null;
 
         if (checkZero && users.size() == 0)

@@ -535,8 +535,8 @@ public class QuizAPIRoutes extends Router {
         Document user = getQuizUser(request);
         boolean isAdmin = Authorization.isContent(user.getList("accesses", String.class));
 
-        if (isAdmin && mode.equals(GeneralKindQuiz.IRYSC.getName()))
-            return QuizController.toggleVisibility(iryscQuizRepository, null, quizId);
+        if (isAdmin && isIRYSCQuiz(mode))
+            return QuizController.toggleVisibility(selectDB(mode), null, quizId);
 
         return QuizController.toggleVisibility(
                 mode.equalsIgnoreCase(AllKindQuiz.HW.getName()) ?

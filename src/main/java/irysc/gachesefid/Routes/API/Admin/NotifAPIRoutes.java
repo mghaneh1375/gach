@@ -32,10 +32,11 @@ public class NotifAPIRoutes extends Router {
     public String getAll(HttpServletRequest request,
                          @RequestParam(value = "sendVia") @EnumValidator(enumClazz = NotifVia.class) String sendVia,
                          @RequestParam(required = false, value = "from") Long from,
-                         @RequestParam(required = false, value = "to") Long to
+                         @RequestParam(required = false, value = "to") Long to,
+                         @RequestParam(required = false, value = "minUsersCount") Integer minUsersCount
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUser(request);
-        return NotifController.getAll(sendVia, from, to);
+        return NotifController.getAll(sendVia, from, to, minUsersCount);
     }
 
 
@@ -86,7 +87,8 @@ public class NotifAPIRoutes extends Router {
                                         "branches", "sex", "schools", "grades",
                                         "quizzes", "packages", "accesses",
                                         "minCoin", "maxCoin", "minMoney",
-                                        "maxMoney", "minRank", "maxRank"
+                                        "maxMoney", "minRank", "maxRank",
+                                        "fromCreatedAt", "toCreatedAt"
                                 },
                                 optionalsType = {
                                         JSONArray.class, JSONArray.class,
@@ -95,7 +97,7 @@ public class NotifAPIRoutes extends Router {
                                         JSONArray.class, JSONArray.class, JSONArray.class,
                                         JSONArray.class, Number.class, Number.class,
                                         Positive.class, Positive.class, Positive.class,
-                                        Positive.class
+                                        Positive.class, Long.class, Long.class
                                 }
                         ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
@@ -117,7 +119,8 @@ public class NotifAPIRoutes extends Router {
                                               "branches", "sex", "schools", "grades",
                                               "quizzes", "packages", "accesses",
                                               "minCoin", "maxCoin", "minMoney",
-                                              "maxMoney", "minRank", "maxRank"
+                                              "maxMoney", "minRank", "maxRank",
+                                              "fromCreatedAt", "toCreatedAt"
                                       },
                                       optionalsType = {
                                               JSONArray.class, JSONArray.class,
@@ -126,7 +129,7 @@ public class NotifAPIRoutes extends Router {
                                               JSONArray.class, JSONArray.class, JSONArray.class,
                                               JSONArray.class, Number.class, Number.class,
                                               Positive.class, Positive.class, Positive.class,
-                                              Positive.class
+                                              Positive.class, Long.class, Long.class
                                       }
                               ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {

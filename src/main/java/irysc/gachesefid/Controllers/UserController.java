@@ -2,6 +2,7 @@ package irysc.gachesefid.Controllers;
 
 
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Strings;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Badge.BadgeController;
@@ -19,12 +20,15 @@ import org.bson.conversions.Bson;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
 import java.text.DecimalFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
@@ -2075,5 +2079,108 @@ public class UserController {
 
         jsonObject.put("tags", tags);
         return generateSuccessMsg("data", jsonObject);
+    }
+
+    public static ByteArrayInputStream getUsersReport(
+            String nid, String phone,
+            String firstname, String lastname,
+            ObjectId gradeId, ObjectId branchId,
+            String level, String additionalLevel,
+            Long from, Long to
+    ) {
+        List<Bson> filters = new ArrayList<>();
+        filters.add(exists("remove_at", false));
+        if (nid != null)
+            filters.add(eq("NID", nid));
+        if (phone != null)
+            filters.add(eq("phone", phone));
+        if (firstname != null)
+            filters.add(regex("first_name", Pattern.compile(Pattern.quote(firstname), Pattern.CASE_INSENSITIVE)));
+        if (lastname != null)
+            filters.add(regex("last_name", Pattern.compile(Pattern.quote(lastname), Pattern.CASE_INSENSITIVE)));
+        if (gradeId != null)
+            filters.add(and(
+                    exists("grade"),
+                    eq("grade._id", gradeId)
+            ));
+        if (branchId != null)
+            filters.add(and(
+                    exists("branches"),
+                    eq("branches._id", branchId)
+            ));
+
+        if (level != null) {
+            if (!EnumValidatorImp.isValid(level, Access.class) &&
+                    !level.equalsIgnoreCase("all")
+            )
+                return null;
+
+            if (!level.equalsIgnoreCase("all"))
+                filters.add(eq("accesses", level));
+
+            if (additionalLevel != null && additionalLevel.equals("teach"))
+                filters.add(eq("teach", true));
+            else if (additionalLevel != null && additionalLevel.equals("advice"))
+                filters.add(eq("advice", true));
+        }
+        if (from != null)
+            filters.add(gte("created_at", from));
+        if (to != null)
+            filters.add(lte("created_at", to));
+
+        JSONArray jsonArray = new JSONArray();
+        ArrayList<Document> docs = userRepository.find(
+                and(filters),
+                USER_MANAGEMENT_INFO_DIGEST
+        );
+        int counter = 1;
+        for (Document doc : docs) {
+            JSONObject jsonObject = new JSONObject() {
+                @Override
+                public JSONObject put(String key, Object value) throws JSONException {
+                    try {
+                        Field map = JSONObject.class.getDeclaredField("map");
+                        map.setAccessible(true);
+                        Object mapValue = map.get(this);
+                        if (!(mapValue instanceof LinkedHashMap)) {
+                            map.set(this, new LinkedHashMap<>());
+                        }
+                    } catch (NoSuchFieldException | IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return super.put(key, value);
+                }
+            };
+            jsonArray.put(jsonObject
+                    .put("ردیف", counter++)
+                    .put("نام", doc.getString("first_name") + " " + doc.getString("last_name"))
+                    .put("کد ملی", doc.getString("NID"))
+                    .put("شماره همراه", doc.containsKey("phone") ? doc.getString("phone") : "")
+                    .put("ایمیل", doc.containsKey("mail") ? doc.getString("mail") : "")
+                    .put("سطح", doc.getList("accesses", String.class)
+                            .stream()
+                            .map(s -> Access.valueOf(s.toUpperCase()).getTranslateFa())
+                            .collect(Collectors.joining(" - "))
+                    )
+                    .put("مقطع", doc.containsKey("grade")
+                            ? doc.get("grade", Document.class).getString("name")
+                            : ""
+                    )
+                    .put("رشته", doc.containsKey("branches")
+                            ? doc.get("branches", List.class)
+                                .stream().map(o -> ((Document) o).getString("name"))
+                                .collect(Collectors.joining(" - "))
+                            : ""
+                    )
+                    .put("جنسیت", doc.containsKey("sex") ? doc.getString("sex").equalsIgnoreCase("male") ? "آقا" : "خانم" : "")
+                    .put("مقدار کیف پول", doc.get("money"))
+                    .put("مقدار ایکس پول", doc.get("coin"))
+                    .put("شهر", doc.containsKey("city") ? doc.get("city", Document.class).getString("name") : "")
+                    .put("مدرسه", doc.containsKey("school") ? doc.get("school", Document.class).getString("name") : "")
+                    .put("تاریخ عضویت", getSolarDate(doc.getLong("created_at")))
+            );
+        }
+
+        return Excel.write(jsonArray);
     }
 }

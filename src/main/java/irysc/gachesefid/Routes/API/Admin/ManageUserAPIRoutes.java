@@ -1,6 +1,7 @@
 package irysc.gachesefid.Routes.API.Admin;
 
 import irysc.gachesefid.Controllers.ManageUserController;
+import irysc.gachesefid.Controllers.UserController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.NotCompleteAccountException;
@@ -17,6 +18,7 @@ import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
+import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
@@ -28,10 +30,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -126,13 +130,16 @@ public class ManageUserAPIRoutes extends Router {
                                 @RequestParam(value = "NID", required = false) String NID,
                                 @RequestParam(value = "additionalLevel", required = false) String additionalLevel,
                                 @RequestParam(value = "justSettled", required = false) Boolean justSettled,
-                                @RequestParam(value = "pageIndex", required = false) @Min(0) @Max(10000) Integer pageIndex
+                                @RequestParam(value = "pageIndex", required = false) @Min(0) @Max(10000) Integer pageIndex,
+                                @RequestParam(required = false, value = "from") Long from,
+                                @RequestParam(required = false, value = "to") Long to
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getEditorPrivilegeUserVoid(request);
         return ManageUserController.fetchTinyUser(
                 level, name, lastname,
                 phone, mail, NID, gradeId, branchId,
-                additionalLevel, justSettled, pageIndex
+                additionalLevel, justSettled, pageIndex,
+                from, to
         );
     }
 
@@ -496,4 +503,36 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.getMyStudents((List<ObjectId>) school.getOrDefault("students", new ArrayList<ObjectId>()));
     }
 
+    @GetMapping(value = "getUsersReport")
+    @ResponseBody
+    public void getUsersReport(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @RequestParam(required = false, value = "NID") String NID,
+            @RequestParam(required = false, value = "phone") String phone,
+            @RequestParam(required = false, value = "firstname") String firstname,
+            @RequestParam(required = false, value = "lastname") String lastname,
+            @RequestParam(required = false, value = "level") String level,
+            @RequestParam(required = false, value = "additionalLevel") String additionalLevel,
+            @RequestParam(required = false, value = "gradeId") ObjectId gradeId,
+            @RequestParam(required = false, value = "branchId") ObjectId branchId,
+            @RequestParam(required = false, value = "from") Long from,
+            @RequestParam(required = false, value = "to") Long to
+    ) throws UnAuthException, NotActivateAccountException, NotAccessException {
+        getAdminPrivilegeUserVoid(request);
+        try {
+            ByteArrayInputStream byteArrayInputStream = UserController.getUsersReport(
+                    NID, phone, firstname, lastname,
+                    gradeId, branchId, level, additionalLevel,
+                    from, to
+            );
+            if(byteArrayInputStream != null) {
+                response.setContentType("application/octet-stream");
+                response.setHeader("Content-Disposition", "attachment; filename=users.xlsx");
+                IOUtils.copy(byteArrayInputStream, response.getOutputStream());
+            }
+        } catch (Exception x) {
+            System.out.println(x.getMessage());
+        }
+    }
 }

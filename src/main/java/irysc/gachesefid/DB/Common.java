@@ -496,6 +496,17 @@ public abstract class Common extends Repository {
         return infos;
     }
 
+    public ArrayList<Document> findByIdsWithNull(List<ObjectId> objectIds) {
+        ArrayList<Document> infos = new ArrayList<>();
+        FindIterable<Document> cursor =
+                documentMongoCollection.find(in("_id", objectIds));
+
+        for (Document doc : cursor)
+            infos.add(doc);
+
+        return infos;
+    }
+
     public void bulkWrite(List<WriteModel<Document>> writes) {
         documentMongoCollection.bulkWrite(writes);
     }

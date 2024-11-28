@@ -11,10 +11,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -255,11 +252,8 @@ public class PackageController {
             }
 
             if(isOnlineStanding) {
-
                 boolean registered = false;
-
                 for(Document student : quiz.getList("students", Document.class)) {
-
                     if(student.getObjectId("_id").equals(userId))
                         registered = true;
                     else if(student.getList("team", ObjectId.class).contains(userId))
@@ -267,9 +261,7 @@ public class PackageController {
 
                     if(registered)
                         break;
-
                 }
-
                 if(registered)
                     return generateSuccessMsg("data",
                             new OnlineStandingController().convertDocToJSON(quiz, true, false,
@@ -291,7 +283,6 @@ public class PackageController {
         boolean isSchool = !isAdmin && accesses != null && Authorization.isSchool(accesses);
 
         ArrayList<Bson> filters = new ArrayList<>();
-
         filters.add(gt("expire_at", System.currentTimeMillis()));
 
         if (id != null)
@@ -320,15 +311,20 @@ public class PackageController {
         JSONObject data = new JSONObject();
 
         ArrayList<String> allMonth = new ArrayList<>();
+        List<Document> packagesQuizzes = iryscQuizRepository.findByIdsWithNull(
+                packages.stream().map(document -> document.getList("quizzes", ObjectId.class)).collect(Collectors.toList())
+                        .stream().flatMap(Collection::stream).collect(Collectors.toList())
+        );
+
+        if(packagesQuizzes == null)
+            return JSON_NOT_UNKNOWN;
 
         for (Document packageDoc : packages) {
-
             Document grade = gradeRepository.findById(packageDoc.getObjectId("grade_id"));
             if (grade == null)
                 continue;
 
             Document lesson = null;
-
             if(packageDoc.containsKey("lesson_id"))
                 lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                         grade.getList("lessons", Document.class),
@@ -380,12 +376,15 @@ public class PackageController {
             int registrable = 0;
             ArrayList<String> packageMonth = new ArrayList<>();
 
+            fetched.addAll(quizzes);
+
             for (ObjectId quizId : quizzes) {
+                Optional<Document> optionalDocument = packagesQuizzes.stream().filter(document -> document.getObjectId("_id").equals(quizId)).findFirst();
+                if(optionalDocument.isEmpty())
+                    continue;
+                Document quiz = optionalDocument.get();
 
-                Document quiz = iryscQuizRepository.findById(quizId);
-                fetched.add(quizId);
-
-                if (quiz == null || quiz.getLong("start_registry") > curr ||
+                if (quiz.getLong("start_registry") > curr ||
                         (quiz.containsKey("end_registry") &&
                                 quiz.getLong("end_registry") < curr
                         ) ||
@@ -459,7 +458,6 @@ public class PackageController {
         }
 
         if (!isAdmin) {
-
             Document off = offcodeRepository.findOne(and(
                     exists("code", false),
                     eq("user_id", userId),
@@ -517,9 +515,7 @@ public class PackageController {
                 );
 
                 if (!isSchool) {
-
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();
-
                     openQuizFilter.add(eq("visibility", true));
 
                     if(quizIdFilter != null)
@@ -560,9 +556,7 @@ public class PackageController {
                 OnlineStandingController onlineStandingController = new OnlineStandingController();
                 EscapeQuizController escapeQuizController = new EscapeQuizController();
 
-
                 for (Document doc : docs) {
-
                     String month = getMonthSolarDate(doc.getLong("created_at"));
 
                     if(!allMonth.contains(month))
