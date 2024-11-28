@@ -23,9 +23,7 @@ public class OpenQuiz extends QuizAbstract {
                                    String mail, List<ObjectId> quizIds, int paid,
                                    ObjectId transactionId, String stdName
     ) {
-
         ArrayList<Document> added = new ArrayList<>();
-
         for (ObjectId quizId : quizIds) {
 
             try {
@@ -82,6 +80,7 @@ public class OpenQuiz extends QuizAbstract {
                 .put("generalMode", AllKindQuiz.OPEN.getName())
                 .put("tags", quiz.getList("tags", String.class))
                 .put("rate", quiz.getOrDefault("rate", 5))
+                .put("visibility", quiz.getBoolean("visibility"))
                 .put("reportStatus", quiz.getOrDefault("report_status", "not_ready"))
                 .put("id", quiz.getObjectId("_id").toString());
 

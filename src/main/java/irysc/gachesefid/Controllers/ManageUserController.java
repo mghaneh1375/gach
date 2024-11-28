@@ -74,7 +74,8 @@ public class ManageUserController {
             String mail, String NID,
             ObjectId gradeId, ObjectId branchId,
             String additionalLevel, Boolean justSettled,
-            Integer pageIndex
+            Integer pageIndex,
+            Long from, Long to
     ) {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(exists("remove_at", false));
@@ -120,6 +121,12 @@ public class ManageUserController {
                     exists("grade"),
                     eq("grade._id", branchId)
             ));
+
+        if (from != null)
+            filters.add(gte("created_at", from));
+
+        if (to != null)
+            filters.add(lte("created_at", to));
 
         List<Document> docs = pageIndex == null ?
                 userRepository.find(

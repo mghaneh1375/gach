@@ -422,8 +422,8 @@ public class PackageController {
 
                 if (
                         !quiz.containsKey("start_registry") ||
-                        (quiz.containsKey("end_registry") && quiz.getLong("end_registry") > curr) ||
-                        (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
+                                (quiz.containsKey("end_registry") && quiz.getLong("end_registry") > curr) ||
+                                (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
                 ) {
                     quizDoc.put("registrable", true);
                     totalPrice += quiz.getInteger("price");
