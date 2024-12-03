@@ -62,7 +62,9 @@ public class StudentQuizAPIRoutes extends Router {
                       @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                       @RequestParam(required = false) String tag,
                       @RequestParam(required = false) Boolean finishedIsNeeded,
-                      @RequestParam(required = false) Boolean justRegistrable
+                      @RequestParam(required = false) Boolean justRegistrable,
+                      @RequestParam(required = false) Integer pageIndex,
+                      @RequestParam(required = false) Integer pageSize
     ) {
         boolean isAdmin = false;
         try {
@@ -72,7 +74,8 @@ public class StudentQuizAPIRoutes extends Router {
 
         if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
                 mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
-                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())
+        )
             return QuizController.getRegistrable(
                     mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ? escapeQuizRepository :
@@ -80,8 +83,11 @@ public class StudentQuizAPIRoutes extends Router {
                     isAdmin, tag, finishedIsNeeded
             );
 
-//        if(mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
-//            return OpenQuizController.getAll(isAdmin, user != null ? user.getObjectId("_id") : null);
+        if(isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())) {
+//            if(pageIndex == null || pageSize == null)
+//                return JSON_NOT_VALID_PARAMS;
+            return OpenQuizController.getAllForAdmin(tag, pageIndex, pageSize);
+        }
 
         return JSON_NOT_VALID_PARAMS;
     }
@@ -560,7 +566,6 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
         Document user = getSchoolUser(request);
-
         JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
         );

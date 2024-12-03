@@ -290,6 +290,7 @@ public class PayPing {
                     if (thePackage != null) {
                         thePackage.put("buyers", (int) thePackage.getOrDefault("buyers", 0) + 1);
                         packageRepository.updateOne(thePackage.getObjectId("_id"), set("buyers", thePackage.get("buyers")));
+                        packageRepository.clearFromCache(thePackage.getObjectId("_id"));
                     }
                 }
 

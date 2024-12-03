@@ -1198,12 +1198,13 @@ public class StudentQuizController {
 
         if (packageId != null) {
             quizPackage = packageRepository.findById(packageId);
-            if (quizPackage == null || quizPackage.getLong("expire_at") < curr)
+            if (quizPackage == null ||
+                    (quizPackage.containsKey("expire_at") && quizPackage.getLong("expire_at") < curr)
+            )
                 return JSON_NOT_VALID_PARAMS;
         }
 
         if (offcode != null) {
-
             off = validateOffCode(
                     offcode, userId, curr,
                     OffCodeSections.GACH_EXAM.getName()
@@ -1215,7 +1216,6 @@ public class StudentQuizController {
 
         ArrayList<ObjectId> quizIds = new ArrayList<>();
         for (int i = 0; i < ids.length(); i++) {
-
             if (!ObjectId.isValid(ids.getString(i)))
                 return JSON_NOT_VALID_PARAMS;
 
@@ -1254,11 +1254,10 @@ public class StudentQuizController {
                 ), null
         );
 
-
         if (quizzes.size() + openQuizzes.size() + escapeQuizzes.size() != quizIds.size() ||
-                (studentIds != null && escapeQuizzes.size() > 0) ||
-                (studentIds != null && openQuizzes.size() > 0) ||
-                (packageId != null && openQuizzes.size() > 0)
+                (studentIds != null &&
+                        (escapeQuizzes.size() > 0 || openQuizzes.size() > 0)
+                )
         )
             return JSON_NOT_VALID_PARAMS;
 
@@ -1271,7 +1270,6 @@ public class StudentQuizController {
             ArrayList<ObjectId> studentOIds = new ArrayList<>();
 
             for (int i = 0; i < studentIds.length(); i++) {
-
                 if (!ObjectId.isValid(studentIds.getString(i)))
                     return JSON_NOT_VALID_PARAMS;
 
@@ -1676,7 +1674,6 @@ public class StudentQuizController {
         int totalPrice = 0;
 
         if (studentIds == null) {
-
             for (Document quiz : quizzes)
                 totalPrice += quiz.getInteger("price");
 
@@ -1699,7 +1696,7 @@ public class StudentQuizController {
         boolean usePackageOff = false;
 
         if (quizPackage != null) {
-            if (quizzes.size() >= quizPackage.getInteger("min_select")) {
+            if (quizzes.size() + openQuizzes.size() >= quizPackage.getInteger("min_select")) {
                 packageOff = quizPackage.getInteger("off_percent");
                 usePackageOff = true;
             }
@@ -1724,7 +1721,6 @@ public class StudentQuizController {
         }
 
         int shouldPay = (int) shouldPayDouble;
-
         ArrayList<ObjectId> quizIds = new ArrayList<>();
         for (Document quiz : quizzes)
             quizIds.add(quiz.getObjectId("_id"));
@@ -1771,16 +1767,12 @@ public class StudentQuizController {
                 }
 
                 transactionRepository.insertOne(doc);
-
                 if (studentIds != null) {
-
                     new RegularQuizController()
                             .registry(studentIds, phone, mail, quizIds, 0);
 
                     //todo: group registration for tashrihi quiz
-
                 } else {
-
                     new TashrihiQuizController()
                             .registry(studentId, phone, mail, quizIds, 0, doc.getObjectId("_id"), stdName);
 
@@ -1795,7 +1787,6 @@ public class StudentQuizController {
                 }
 
                 if (finalOff != null) {
-
                     BasicDBObject update;
 
                     if (finalOff.containsKey("is_public") &&
