@@ -14,7 +14,6 @@ import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
-import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
@@ -41,7 +40,6 @@ import java.io.File;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
-import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 @Controller
 @RequestMapping(path = "/api/quiz/public/")
@@ -65,14 +63,17 @@ public class StudentQuizAPIRoutes extends Router {
                       @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                       @RequestParam(required = false) String tag,
                       @RequestParam(required = false) Boolean finishedIsNeeded,
-                      @RequestParam(required = false) Boolean justRegistrable
+                      @RequestParam(required = false) Boolean justRegistrable,
+                      @RequestParam(required = false) Integer pageIndex,
+                      @RequestParam(required = false) Integer pageSize
     ) {
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
                 mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
-                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName()))
+                mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())
+        )
             return QuizController.getRegistrable(
                     mode.equalsIgnoreCase(GeneralKindQuiz.IRYSC.getName()) ? iryscQuizRepository :
                             mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ? escapeQuizRepository :
@@ -80,8 +81,11 @@ public class StudentQuizAPIRoutes extends Router {
                     isAdmin, tag, finishedIsNeeded
             );
 
-//        if(mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
-//            return OpenQuizController.getAll(isAdmin, user != null ? user.getObjectId("_id") : null);
+        if(isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())) {
+//            if(pageIndex == null || pageSize == null)
+//                return JSON_NOT_VALID_PARAMS;
+            return OpenQuizController.getAllForAdmin(tag, pageIndex, pageSize);
+        }
 
         return JSON_NOT_VALID_PARAMS;
     }
@@ -576,7 +580,6 @@ public class StudentQuizAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
 
         Document user = getSchoolUser(request);
-
         JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
         );

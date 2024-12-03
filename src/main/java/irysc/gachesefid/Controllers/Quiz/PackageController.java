@@ -28,7 +28,6 @@ public class PackageController {
     public static String createPackage(JSONObject jsonObject) {
 
         ObjectId gradeId = new ObjectId(jsonObject.getString("gradeId"));
-
         Document grade = gradeRepository.findById(gradeId);
 
         if (grade == null)
@@ -36,7 +35,7 @@ public class PackageController {
 
         ObjectId lessonId = null;
 
-        if(jsonObject.has("lessonId")) {
+        if (jsonObject.has("lessonId")) {
             lessonId = new ObjectId(jsonObject.getString("lessonId"));
 
             if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
@@ -53,10 +52,9 @@ public class PackageController {
                 .append("description", jsonObject.has("description") ? jsonObject.getString("description") : "")
                 .append("quizzes", new ArrayList<>())
                 .append("grade_id", gradeId)
-                .append("buyers", 0)
-                .append("expire_at", System.currentTimeMillis());
+                .append("buyers", 0);
 
-        if(lessonId != null)
+        if (lessonId != null)
             newDoc.append("lesson_id", lessonId);
 
         return packageRepository.insertOneWithReturn(newDoc);
@@ -69,16 +67,13 @@ public class PackageController {
             return JSON_NOT_VALID_ID;
 
         if (jsonObject.has("lessonId") && jsonObject.has("gradeId")) {
-
             ObjectId gradeId = new ObjectId(jsonObject.getString("gradeId"));
-
             Document grade = gradeRepository.findById(gradeId);
 
             if (grade == null)
                 return JSON_NOT_VALID_PARAMS;
 
             ObjectId lessonId = new ObjectId(jsonObject.getString("lessonId"));
-
             if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                     grade.getList("lessons", Document.class),
                     "_id", lessonId
@@ -87,10 +82,9 @@ public class PackageController {
 
             packageDoc.put("lesson_id", lessonId);
             packageDoc.put("grade_id", gradeId);
-
         }
 
-        if(!jsonObject.has("lessonId"))
+        if (!jsonObject.has("lessonId"))
             packageDoc.remove("lesson_id");
 
         if (jsonObject.has("title"))
@@ -120,157 +114,149 @@ public class PackageController {
 
         List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
         long curr = System.currentTimeMillis();
+        boolean hasAnyOpenQuiz = false;
 
         for (int i = 0; i < jsonArray.length(); i++) {
-
             String id = jsonArray.getString(i);
-
             if (!ObjectId.isValid(id))
                 continue;
 
             ObjectId quizId = new ObjectId(id);
-
             Document quiz = iryscQuizRepository.findById(quizId);
-            if (quiz == null)
-                continue;
+            if (quiz == null) {
+                quiz = openQuizRepository.findById(quizId);
+                if (quiz == null)
+                    continue;
+                hasAnyOpenQuiz = true;
+            }
 
-            long endRegistry = quiz.containsKey("end_registry") ?
-                    quiz.getLong("end_registry") : quiz.getLong("end");
+            if(hasAnyOpenQuiz)
+                packageDoc.remove("expire_at");
+            else {
+                Long endRegistry = quiz.containsKey("end_registry")
+                        ? quiz.getLong("end_registry")
+                        : quiz.containsKey("end")
+                        ? quiz.getLong("end")
+                        : null;
 
-            if (endRegistry < curr)
-                continue;
-//                return generateErr("زمان ثبت نام آزمون موردنظر به اتمام رسیده است.");
+                if (endRegistry != null && endRegistry < curr)
+                    continue;
 
-            if (quizzes.contains(quizId))
-                continue;
-//                return JSON_OK;
+                if (quizzes.contains(quizId))
+                    continue;
 
-            if (endRegistry > packageDoc.getLong("expire_at"))
-                packageDoc.put("expire_at", endRegistry);
+                if (endRegistry != null && (
+                        !packageDoc.containsKey("expire_at") ||
+                                endRegistry > packageDoc.getLong("expire_at")
+                ))
+                    packageDoc.put("expire_at", endRegistry);
+            }
 
             quizzes.add(quizId);
         }
 
         packageDoc.put("quizzes", quizzes);
-        packageRepository.replaceOne(packageId, packageDoc);
+        packageRepository.replaceOneWithoutClearCache(packageId, packageDoc);
 
         return getPackageQuizzes(packageId, true);
     }
 
     public static String removeQuizzesFromPackage(ObjectId packageId, JSONArray jsonArray) {
-
         Document packageDoc = packageRepository.findById(packageId);
         if (packageDoc == null)
             return JSON_NOT_VALID_ID;
 
         List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
-
+        List<ObjectId> wantedQuizzes = new ArrayList<>();
         for (int i = 0; i < jsonArray.length(); i++) {
-
             String id = jsonArray.getString(i);
-
             if (!ObjectId.isValid(id))
-                continue;
+                return JSON_NOT_VALID_PARAMS;
 
             ObjectId quizId = new ObjectId(id);
-
-            Document quiz = iryscQuizRepository.findById(quizId);
-            if (quiz == null)
-                continue;
-
             if (!quizzes.contains(quizId))
-                continue;
+                return JSON_NOT_VALID_PARAMS;
+            wantedQuizzes.add(quizId);
+        }
 
-            long max = 13000000;
+        quizzes.removeAll(wantedQuizzes);
+        if(packageDoc.containsKey("expire_at") &&
+                openQuizRepository.count(in("_id", quizzes)) > 0
+        )
+            packageDoc.remove("expire_at");
 
-            for (ObjectId qId : quizzes) {
+        if(packageDoc.containsKey("expire_at")) {
+            Optional<Long> maxIryscQuizEndTime = iryscQuizRepository.findByIdsWithNull(quizzes)
+                    .stream()
+                    .filter(q -> !wantedQuizzes.contains(q.getObjectId("_id")))
+                    .map(q -> q.containsKey("end_registry") ?
+                            q.getLong("end_registry") :
+                            q.getLong("end"))
+                    .reduce(Long::max);
 
-                if (qId.equals(quizId))
-                    continue;
-
-                Document q = iryscQuizRepository.findById(qId);
-
-                long e = q.containsKey("end_registry") ?
-                        q.getLong("end_registry") :
-                        q.getLong("end");
-
-                if (e > max)
-                    max = e;
-            }
-
-            packageDoc.put("expire_at", max);
-            quizzes.remove(quizId);
+            maxIryscQuizEndTime.ifPresent(aLong -> packageDoc.put("expire_at", aLong));
+            if (maxIryscQuizEndTime.isEmpty())
+                packageDoc.remove("expire_at");
         }
 
         packageDoc.put("quizzes", quizzes);
-        packageRepository.replaceOne(packageId, packageDoc);
+        packageRepository.replaceOneWithoutClearCache(packageId, packageDoc);
         return getPackageQuizzes(packageId, true);
     }
 
-    public final static Map<String, String> tagsColor = Stream.of(new String[][] {
-            { "شیمی", "#FF5722" },
-            { "کامپیوتر", "#607D8B" },
-            { "نجوم", "#03A9F4" },
-            { "اقتصاد", "#FFC107" },
-            { "تفکر", "#9E9E9E" },
-            { "جغرافیا", "#CDDC39" },
-            { "زمین", "#009688" },
-            { "ریاضی", "#f44336" },
-            { "فیزیک", "#00BCD4" },
-            { "زیست", "#4CAF50" },
-            { "ادبی", "#FF9800" },
-            { "default", "#ffefce" },
+    public final static Map<String, String> tagsColor = Stream.of(new String[][]{
+            {"شیمی", "#FF5722"},
+            {"کامپیوتر", "#607D8B"},
+            {"نجوم", "#03A9F4"},
+            {"اقتصاد", "#FFC107"},
+            {"تفکر", "#9E9E9E"},
+            {"جغرافیا", "#CDDC39"},
+            {"زمین", "#009688"},
+            {"ریاضی", "#f44336"},
+            {"فیزیک", "#00BCD4"},
+            {"زیست", "#4CAF50"},
+            {"ادبی", "#FF9800"},
+            {"default", "#ffefce"},
     }).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
     public static String getPackages(List<String> accesses, ObjectId userId,
-                              ObjectId gradeId, ObjectId lessonId, ObjectId id,
-                              ObjectId quizIdFilter
+                                     ObjectId gradeId, ObjectId lessonId, ObjectId id,
+                                     ObjectId quizIdFilter
     ) {
-
         boolean isOnlineStanding = false;
-
-        if(quizIdFilter != null) {
-
+        if (quizIdFilter != null) {
             Document quiz = iryscQuizRepository.findById(quizIdFilter);
-            if(quiz == null) {
-
+            if (quiz == null) {
                 quiz = openQuizRepository.findById(quizIdFilter);
-                if(quiz == null) {
-
+                if (quiz == null) {
                     quiz = onlineStandQuizRepository.findById(quizIdFilter);
                     if (quiz == null) {
-
                         quiz = escapeQuizRepository.findById(quizIdFilter);
                         if (quiz == null)
                             return JSON_NOT_VALID_PARAMS;
-                    }
-                    else
+                    } else
                         isOnlineStanding = true;
-
                 }
-
             }
 
-            if(isOnlineStanding) {
+            if (isOnlineStanding) {
                 boolean registered = false;
-                for(Document student : quiz.getList("students", Document.class)) {
-                    if(student.getObjectId("_id").equals(userId))
+                for (Document student : quiz.getList("students", Document.class)) {
+                    if (student.getObjectId("_id").equals(userId))
                         registered = true;
-                    else if(student.getList("team", ObjectId.class).contains(userId))
+                    else if (student.getList("team", ObjectId.class).contains(userId))
                         registered = true;
 
-                    if(registered)
+                    if (registered)
                         break;
                 }
-                if(registered)
+                if (registered)
                     return generateSuccessMsg("data",
                             new OnlineStandingController().convertDocToJSON(quiz, true, false,
                                     true, true
                             )
                     );
-            }
-
-            else if(searchInDocumentsKeyValIdx(
+            } else if (searchInDocumentsKeyValIdx(
                     quiz.getList("students", Document.class), "_id", userId
             ) != -1) {
                 return generateSuccessMsg("data", new JSONObject()
@@ -279,11 +265,18 @@ public class PackageController {
             }
         }
 
+        long curr = System.currentTimeMillis();
         boolean isAdmin = accesses != null && Authorization.isAdmin(accesses);
         boolean isSchool = !isAdmin && accesses != null && Authorization.isSchool(accesses);
 
         ArrayList<Bson> filters = new ArrayList<>();
-        filters.add(gt("expire_at", System.currentTimeMillis()));
+        filters.add(or(
+                exists("expire_at", false),
+                and(
+                        exists("expire_at"),
+                        gt("expire_at", curr)
+                )
+        ));
 
         if (id != null)
             filters.add(eq("_id", id));
@@ -302,22 +295,25 @@ public class PackageController {
         );
 
         JSONArray jsonArray = new JSONArray();
-        long curr = System.currentTimeMillis();
-
-//        HashMap<String, ArrayList<String>> tags = new HashMap<>();
-
         ArrayList<String> tags = new ArrayList<>();
         ArrayList<ObjectId> fetched = new ArrayList<>();
         JSONObject data = new JSONObject();
-
         ArrayList<String> allMonth = new ArrayList<>();
-        List<Document> packagesQuizzes = iryscQuizRepository.findByIdsWithNull(
-                packages.stream().map(document -> document.getList("quizzes", ObjectId.class)).collect(Collectors.toList())
-                        .stream().flatMap(Collection::stream).collect(Collectors.toList())
-        );
+        List<ObjectId> allQuizzesIds = packages.stream().map(document -> document.getList("quizzes", ObjectId.class)).collect(Collectors.toList())
+                .stream().flatMap(Collection::stream).collect(Collectors.toList());
 
-        if(packagesQuizzes == null)
-            return JSON_NOT_UNKNOWN;
+        List<Document> packagesQuizzes = iryscQuizRepository.findByIdsWithNull(
+                allQuizzesIds
+        );
+        packagesQuizzes.addAll(openQuizRepository.findByIdsWithNull(
+                allQuizzesIds
+        ));
+
+        RegularQuizController regularQuizController = new RegularQuizController();
+        TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
+        OpenQuiz openQuiz = new OpenQuiz();
+        OnlineStandingController onlineStandingController = new OnlineStandingController();
+        EscapeQuizController escapeQuizController = new EscapeQuizController();
 
         for (Document packageDoc : packages) {
             Document grade = gradeRepository.findById(packageDoc.getObjectId("grade_id"));
@@ -325,7 +321,7 @@ public class PackageController {
                 continue;
 
             Document lesson = null;
-            if(packageDoc.containsKey("lesson_id"))
+            if (packageDoc.containsKey("lesson_id"))
                 lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                         grade.getList("lessons", Document.class),
                         "_id", packageDoc.getObjectId("lesson_id")
@@ -344,15 +340,12 @@ public class PackageController {
                     .put("offPercent", packageDoc.getInteger("off_percent"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
 
-            if(lesson != null) {
+            if (lesson != null) {
                 jsonObject.put("lesson", new JSONObject()
                         .put("id", lesson.getObjectId("_id").toString())
                         .put("name", lesson.getString("name"))
                 );
             }
-
-            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
-
 //            ArrayList<String> subTags;
 //            if (tags.containsKey(grade.getString("name")))
 //                subTags = tags.get(grade.getString("name"));
@@ -375,52 +368,60 @@ public class PackageController {
             int totalPrice = 0;
             int registrable = 0;
             ArrayList<String> packageMonth = new ArrayList<>();
+            List<ObjectId> packageQuizzes = packageDoc.getList("quizzes", ObjectId.class);
+            fetched.addAll(packageQuizzes);
 
-            fetched.addAll(quizzes);
-
-            for (ObjectId quizId : quizzes) {
-                Optional<Document> optionalDocument = packagesQuizzes.stream().filter(document -> document.getObjectId("_id").equals(quizId)).findFirst();
-                if(optionalDocument.isEmpty())
+            for (ObjectId quizId : packageQuizzes) {
+                Optional<Document> optionalDocument =
+                        packagesQuizzes
+                                .stream()
+                                .filter(document -> document.getObjectId("_id").equals(quizId))
+                                .findFirst();
+                if (optionalDocument.isEmpty())
                     continue;
                 Document quiz = optionalDocument.get();
 
-                if (quiz.getLong("start_registry") > curr ||
-                        (quiz.containsKey("end_registry") &&
-                                quiz.getLong("end_registry") < curr
-                        ) ||
-                        (!quiz.containsKey("end_registry") &&
-                                quiz.getLong("end") < curr
-                        )
-                )
+                if (quiz.containsKey("start_registry") && (
+                        quiz.getLong("start_registry") > curr ||
+                                (quiz.containsKey("end_registry") &&
+                                        quiz.getLong("end_registry") < curr
+                                ) ||
+                                (!quiz.containsKey("end_registry") &&
+                                        quiz.getLong("end") < curr
+                                )
+                ))
                     continue;
 
-                if(userId != null && searchInDocumentsKeyValIdx(
+                if (userId != null && searchInDocumentsKeyValIdx(
                         quiz.getList("students", Document.class),
                         "_id", userId
                 ) != -1)
                     continue;
 
-                String month = getMonthSolarDate(quiz.getLong("start"));
+                if(quiz.containsKey("start")) {
+                    String month = getMonthSolarDate(quiz.getLong("start"));
+                    if (!packageMonth.contains(month))
+                        packageMonth.add(month);
 
-                if(!packageMonth.contains(month))
-                    packageMonth.add(month);
-
-                if(!allMonth.contains(month))
-                    allMonth.add(month);
+                    if (!allMonth.contains(month))
+                        allMonth.add(month);
+                }
 
                 QuizAbstract quizAbstract;
-
-                if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
-                    quizAbstract = new RegularQuizController();
+                if(!quiz.containsKey("start_registry"))
+                    quizAbstract = openQuiz;
+                else if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
+                    quizAbstract = regularQuizController;
                 else
-                    quizAbstract = new TashrihiQuizController();
+                    quizAbstract = tashrihiQuizController;
 
                 JSONObject quizDoc = quizAbstract.convertDocToJSON(quiz, true, false,
                         false, true
                 );
 
-                if ((quiz.containsKey("end_registry") &&
-                        quiz.getLong("end_registry") > curr) ||
+                if (
+                        !quiz.containsKey("start_registry") ||
+                        (quiz.containsKey("end_registry") && quiz.getLong("end_registry") > curr) ||
                         (!quiz.containsKey("end_registry") && quiz.getLong("end") > curr)
                 ) {
                     quizDoc.put("registrable", true);
@@ -440,10 +441,10 @@ public class PackageController {
                     .put("realPrice", totalPrice * ((100.0 - packageDoc.getInteger("off_percent")) / 100.0))
                     .put("quizzesDoc", quizzesDoc);
 
-            if(jsonObject.has("registrable") &&
+            if (jsonObject.has("registrable") &&
                     jsonObject.getInt("registrable") > 0) {
 
-                if(!tags.contains(grade.getString("name"))) {
+                if (!tags.contains(grade.getString("name"))) {
                     tags.add(grade.getString("name"));
                     jsonObject.put("tags", new ArrayList<>() {{
                         add(grade.getString("name"));
@@ -451,9 +452,7 @@ public class PackageController {
                 }
 
                 jsonArray.put(jsonObject.put("type", "package"));
-
-            }
-            else if(!jsonObject.has("registrable"))
+            } else if (!jsonObject.has("registrable"))
                 jsonArray.put(jsonObject);
         }
 
@@ -475,22 +474,22 @@ public class PackageController {
                         .put("amount", off.getInteger("amount"))
                 );
 
-            if(isSchool) {
+            if (isSchool) {
                 data.put("groupRegistrationOff",
                         Utility.getConfig().getInteger("school_off_percent")
                 );
             }
 
-            if(id == null) {
+            if (id == null) {
                 ArrayList<Bson> filtersForQuizzes = new ArrayList<>();
 
-                if(fetched.size() > 0)
+                if (fetched.size() > 0)
                     filtersForQuizzes.add(nin("_id", fetched));
 
                 filtersForQuizzes.add(eq("visibility", true));
                 filtersForQuizzes.add(lte("start_registry", curr));
 
-                if(quizIdFilter != null)
+                if (quizIdFilter != null)
                     filtersForQuizzes.add(eq("_id", quizIdFilter));
 
                 filtersForQuizzes.add(or(
@@ -518,10 +517,10 @@ public class PackageController {
                     ArrayList<Bson> openQuizFilter = new ArrayList<>();
                     openQuizFilter.add(eq("visibility", true));
 
-                    if(quizIdFilter != null)
+                    if (quizIdFilter != null)
                         openQuizFilter.add(eq("_id", quizIdFilter));
 
-                    if(userId != null)
+                    if (userId != null)
                         openQuizFilter.add(nin("students._id", userId));
 
                     ArrayList<Bson> onlineStandingQuizFilter = new ArrayList<>();
@@ -530,10 +529,10 @@ public class PackageController {
                     onlineStandingQuizFilter.add(lte("start_registry", curr));
                     onlineStandingQuizFilter.add(gte("end_registry", curr));
 
-                    if(userId != null)
+                    if (userId != null)
                         onlineStandingQuizFilter.add(nin("students._id", userId));
 
-                    if(quizIdFilter != null)
+                    if (quizIdFilter != null)
                         onlineStandingQuizFilter.add(eq("_id", quizIdFilter));
 
                     docs.addAll(onlineStandQuizRepository.find(
@@ -550,16 +549,10 @@ public class PackageController {
 
                 }
 
-                RegularQuizController quizController = new RegularQuizController();
-                OpenQuiz openQuiz = new OpenQuiz();
-                TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
-                OnlineStandingController onlineStandingController = new OnlineStandingController();
-                EscapeQuizController escapeQuizController = new EscapeQuizController();
-
                 for (Document doc : docs) {
                     String month = getMonthSolarDate(doc.getLong("created_at"));
 
-                    if(!allMonth.contains(month))
+                    if (!allMonth.contains(month))
                         allMonth.add(month);
 
                     String backColor = tagsColor.get("default");
@@ -568,8 +561,8 @@ public class PackageController {
                         List<String> t = doc.getList("tags", String.class);
                         if (t.size() > 0) {
 
-                            for(String key : tagsColor.keySet()) {
-                                if(t.get(0).contains(key)) {
+                            for (String key : tagsColor.keySet()) {
+                                if (t.get(0).contains(key)) {
                                     backColor = tagsColor.get(key);
                                     break;
                                 }
@@ -596,20 +589,20 @@ public class PackageController {
                         }
                     }
                     JSONObject object;
-                    if(doc.containsKey("max_teams"))
+                    if (doc.containsKey("max_teams"))
                         object = onlineStandingController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
                     else if (doc.containsKey("launch_mode"))
-                        object = quizController.convertDocToJSON(
+                        object = regularQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
-                    else if(doc.containsKey("mode") && doc.get("mode") != null &&
+                    else if (doc.containsKey("mode") && doc.get("mode") != null &&
                             doc.getString("mode").equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
                         object = tashrihiQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
-                    else if(!doc.containsKey("duration") && !doc.containsKey("minus_mark"))
+                    else if (!doc.containsKey("duration") && !doc.containsKey("minus_mark"))
                         object = escapeQuizController.convertDocToJSON(
                                 doc, true, false, false, true
                         ).put("type", "quiz");
@@ -631,14 +624,12 @@ public class PackageController {
         }
 
         data.put("items", jsonArray);
-
         return generateSuccessMsg("data", data);
     }
 
     public static String getPackagesDigest(ObjectId gradeId, ObjectId lessonId) {
 
         ArrayList<Bson> filters = new ArrayList<>();
-
         if (gradeId != null)
             filters.add(eq("grade_id", gradeId));
 
@@ -653,16 +644,13 @@ public class PackageController {
         );
 
         JSONArray jsonArray = new JSONArray();
-        JSONObject data = new JSONObject();
-
         for (Document packageDoc : packages) {
-
             Document grade = gradeRepository.findById(packageDoc.getObjectId("grade_id"));
             if (grade == null)
                 continue;
 
             Document lesson = null;
-            if(packageDoc.containsKey("lesson_id"))
+            if (packageDoc.containsKey("lesson_id"))
                 lesson = irysc.gachesefid.Utility.Utility.searchInDocumentsKeyVal(
                         grade.getList("lessons", Document.class),
                         "_id", packageDoc.getObjectId("lesson_id")
@@ -682,21 +670,19 @@ public class PackageController {
                     .put("priority", packageDoc.getInteger("priority"))
                     .put("minSelect", packageDoc.getInteger("min_select"));
 
-            if(lesson != null) {
+            if (lesson != null) {
                 jsonObject.put("lesson", new JSONObject()
                         .put("id", lesson.getObjectId("_id").toString())
                         .put("name", lesson.getString("name"))
                 );
             }
 
-            List<ObjectId> quizzes = packageDoc.getList("quizzes", ObjectId.class);
             jsonObject
-                    .put("quizzes", quizzes.size());
+                    .put("quizzes", packageDoc.getList("quizzes", ObjectId.class).size());
             jsonArray.put(jsonObject);
         }
 
-        data.put("items", jsonArray);
-        return generateSuccessMsg("data", data);
+        return generateSuccessMsg("data", new JSONObject().put("items", jsonArray));
     }
 
     public static String getPackageQuizzes(ObjectId packageId, boolean isAdmin) {
@@ -706,23 +692,32 @@ public class PackageController {
             return JSON_NOT_VALID_ID;
 
         JSONArray jsonArray = new JSONArray();
-        for (ObjectId quizId : packageDoc.getList("quizzes", ObjectId.class)) {
+        List<Document> iryscQuizzes = iryscQuizRepository.findByIdsWithNull(
+                packageDoc.getList("quizzes", ObjectId.class)
+        );
+        List<Document> openQuizzes = openQuizRepository.findByIdsWithNull(
+                packageDoc.getList("quizzes", ObjectId.class)
+        );
+        RegularQuizController regularQuizController = new RegularQuizController();
+        TashrihiQuizController tashrihiQuizController = new TashrihiQuizController();
 
-            Document quiz = iryscQuizRepository.findById(quizId);
-
-            if (quiz == null)
-                continue;
-
+        for (Document quiz : iryscQuizzes) {
             QuizAbstract quizAbstract;
-
             if (KindQuiz.REGULAR.getName().equals(quiz.getOrDefault("mode", "regular").toString()))
-                quizAbstract = new RegularQuizController();
+                quizAbstract = regularQuizController;
             else
-                quizAbstract = new TashrihiQuizController();
+                quizAbstract = tashrihiQuizController;
 
             jsonArray.put(quizAbstract.convertDocToJSON(quiz, true, isAdmin,
                     false, false
             ));
+        }
+        if (openQuizzes.size() > 0) {
+            OpenQuiz openQuiz = new OpenQuiz();
+            for (Document quiz : openQuizzes)
+                jsonArray.put(openQuiz.convertDocToJSON(quiz, true, isAdmin,
+                        false, false
+                ));
         }
 
         return generateSuccessMsg("data", jsonArray);

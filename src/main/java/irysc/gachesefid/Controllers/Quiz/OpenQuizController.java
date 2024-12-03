@@ -1,15 +1,21 @@
 package irysc.gachesefid.Controllers.Quiz;
 
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
+import static com.mongodb.client.model.Filters.exists;
+import static com.mongodb.client.model.Filters.regex;
 import static irysc.gachesefid.Controllers.Quiz.Utility.checkFields;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 public class OpenQuizController {
 
@@ -45,7 +51,7 @@ public class OpenQuizController {
 
             openQuizRepository.insertOne(newDoc);
 
-            return irysc.gachesefid.Utility.Utility.generateSuccessMsg(
+            return generateSuccessMsg(
                     "quiz", new OpenQuiz()
                             .convertDocToJSON(newDoc, false, true,
                                     false, false
@@ -60,7 +66,7 @@ public class OpenQuizController {
     public static String createFromIRYSCQuiz(ObjectId quizId) {
 
         Document quiz = iryscQuizRepository.findById(quizId);
-        if(quiz == null)
+        if (quiz == null)
             return JSON_NOT_VALID_ID;
 
         Document newQuiz = new Document("created_at", System.currentTimeMillis())
@@ -74,7 +80,7 @@ public class OpenQuizController {
 
         for (String key : quiz.keySet()) {
 
-            if(forbiddenKeys.contains(key))
+            if (forbiddenKeys.contains(key))
                 continue;
 
             newQuiz.append(key, quiz.get(key));
@@ -85,4 +91,24 @@ public class OpenQuizController {
         return JSON_OK;
     }
 
+    public static String getAllForAdmin(String tag, Integer pageIndex, Integer pageSize) {
+        ArrayList<Document> quizzes = pageIndex != null && pageSize != null ?
+                openQuizRepository.findLimited(
+                        tag != null ? regex("tag", Pattern.compile(Pattern.quote(tag), Pattern.CASE_INSENSITIVE)) : exists("_id"),
+                        QUIZ_DIGEST, Sorts.ascending("created_at"),
+                        (pageIndex - 1) * pageIndex,
+                        pageSize
+                ) :
+                openQuizRepository.find(
+                        tag != null ? regex("tag", Pattern.compile(Pattern.quote(tag), Pattern.CASE_INSENSITIVE)) : null,
+                        QUIZ_DIGEST
+                );
+        OpenQuiz openQuiz = new OpenQuiz();
+        JSONArray jsonArray = new JSONArray();
+        quizzes.forEach(document -> jsonArray.put(openQuiz.convertDocToJSON(document, true, true, false, false)));
+        return generateSuccessMsg("data", new JSONObject()
+                .put("items", jsonArray)
+                .put("tags", openQuizRepository.distinctTags("tags"))
+        );
+    }
 }
