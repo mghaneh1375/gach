@@ -77,6 +77,39 @@ public class QuizAPIRoutes extends Router {
         return OpenQuizController.createFromIRYSCQuiz(quizId);
     }
 
+    @PostMapping(value = "/copy/{mode}/{quizId}")
+    @ResponseBody
+    public String copy(
+            HttpServletRequest request,
+            @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            @RequestBody @StrongJSONConstraint(
+                    params = {"title"},
+                    paramsType = {String.class},
+                    optionals = {
+                            "start", "end", "startRegistry", "endRegistry",
+                            "description"
+                    },
+                    optionalsType = {
+                            Long.class, Long.class, Long.class, Long.class,
+                            String.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        if (!mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()) &&
+                !mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName())
+        )
+            return JSON_NOT_ACCESS;
+
+        Document user = getAdminPrivilegeUser(request);
+        if (mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName()))
+            return OpenQuizController.copy(user.getObjectId("_id"), quizId, new JSONObject(jsonStr));
+
+        return RegularQuizController.copy(
+                user.getObjectId("_id"), quizId, new JSONObject(jsonStr)
+        );
+    }
+
     @PostMapping(value = "/store/{mode}")
     @ResponseBody
     public String store(HttpServletRequest request,

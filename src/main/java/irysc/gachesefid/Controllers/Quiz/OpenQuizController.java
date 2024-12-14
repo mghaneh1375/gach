@@ -38,7 +38,14 @@ public class OpenQuizController {
             "permute", "visibility", "back_en", "mysql_id", "created_by",
             "created_at", "top_students_count", "students", "registered",
             "ranking_list", "report_status", "general_stat", "question_stat",
-            "isRegistrable", "isUploadable", "kind"
+            "isRegistrable", "isUploadable", "kind",
+            "is_registrable", "is_uploadable"
+    };
+
+    private final static String[] forbiddenCopyFields = {
+            "rate", "rate_count", "removed_questions",
+            "questions", "last_build_at", "last_finished_at",
+            "title"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject) {
@@ -86,6 +93,36 @@ public class OpenQuizController {
             newQuiz.append(key, quiz.get(key));
         }
 
+        newQuiz.put("visibility", true);
+        openQuizRepository.insertOne(newQuiz);
+        return JSON_OK;
+    }
+    public static String copy(ObjectId userId, ObjectId quizId, JSONObject data) {
+
+        Document quiz = openQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        Document newQuiz = new Document("created_at", System.currentTimeMillis())
+                .append("students", new ArrayList<>())
+                .append("last_build_at", null)
+                .append("last_finished_at", null)
+                .append("questions", new Document())
+                .append("title", data.getString("title"))
+                .append("created_by", userId)
+                .append("registered", 0);
+
+        List<String> forbiddenKeys = Arrays.asList(forbiddenTransferFields);
+        forbiddenKeys.addAll(Arrays.asList(forbiddenCopyFields));
+
+        for (String key : quiz.keySet()) {
+            if (forbiddenKeys.contains(key))
+                continue;
+            newQuiz.append(key, quiz.get(key));
+        }
+
+        if(data.has("description"))
+            newQuiz.put("description", data.getString("description"));
         newQuiz.put("visibility", true);
         openQuizRepository.insertOne(newQuiz);
         return JSON_OK;
