@@ -659,11 +659,8 @@ public class QuizController {
 
     public static Document store(ObjectId userId, JSONObject data, String mode
     ) throws InvalidFieldsException {
-
         Document newDoc = new Document();
-
         for (String key : data.keySet()) {
-
             if (key.equalsIgnoreCase("tags") || key.equalsIgnoreCase("kind"))
                 continue;
 
@@ -674,9 +671,7 @@ public class QuizController {
         }
 
         ArrayList<String> tagsArr = new ArrayList<>();
-
         if (data.has("tags")) {
-
             JSONArray tags = data.getJSONArray("tags");
 
             for (int i = 0; i < tags.length(); i++)

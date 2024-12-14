@@ -1131,7 +1131,7 @@ public class Utility {
             return "";
 
         Date d = new Date(time);
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm::ss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String[] dateTime = simpleDateFormat.format(d).split(" ");
         String[] splited = dateTime[0].split("-");
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/") + " - " + dateTime[1];

@@ -40,7 +40,6 @@ public class Utility {
         for (String mandatoryFiled : mandatoryFields) {
 
             if (!keys.contains(mandatoryFiled)) {
-                System.out.println(mandatoryFiled);
                 error = true;
                 break;
             }
@@ -51,13 +50,10 @@ public class Utility {
             throw new InvalidFieldsException(JSON_NOT_VALID_PARAMS);
 
         for (String forbiddenField : forbiddenFields) {
-
             if (keys.contains(forbiddenField)) {
-                System.out.println(forbiddenField);
                 error = true;
                 break;
             }
-
         }
 
         if (error)

@@ -19,10 +19,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.and;
@@ -70,6 +67,13 @@ public class RegularQuizController extends QuizAbstract {
             "startRegistry", "endRegistry", "price",
             "priority", "showResultsAfterCorrectionNotLoginUsers",
             "perTeam", "maxTeams", "maxTry", "shouldComplete"
+    };
+
+    private final static String[] forbiddenTransferFields = {
+            "_id", "created_by", "removed_questions",
+            "created_at", "students", "registered",
+            "ranking_list", "report_status", "general_stat", "question_stat",
+            "rate", "rate_count", "questions", "title"
     };
 
     public static String create(ObjectId userId, JSONObject jsonObject,
@@ -133,6 +137,60 @@ public class RegularQuizController extends QuizAbstract {
 
     }
 
+    public static String copy(ObjectId userId, ObjectId quizId, JSONObject data) {
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if (quiz == null)
+            return JSON_NOT_VALID_ID;
+
+        long start = data.has("start") ? data.getLong("start") : quiz.getLong("start");
+        long end = data.has("end") ? data.getLong("end") : quiz.getLong("end");
+        long startRegistry = data.has("startRegistry") ? data.getLong("startRegistry") : quiz.getLong("start_registry");
+        Long endRegistry = data.has("endRegistry") ? data.getLong("endRegistry") : (Long) quiz.getOrDefault("end_registry", null);
+
+        if (start < System.currentTimeMillis())
+            return generateErr("زمان شروع آزمون باید از امروز بزرگتر باشد");
+
+        if (end < start)
+            return generateErr("زمان پایان آزمون باید بزرگ تر از زمان آغاز آن باشد");
+
+        if(startRegistry > start)
+            return generateErr("زمان شروع ثبت نام باید قبل از شروع باشد");
+
+        if(endRegistry != null && endRegistry < startRegistry)
+            return generateErr("زمان شروع ثبت نام باید قبل از اتمام آن باشد");
+
+        Document newQuiz = new Document("created_at", System.currentTimeMillis())
+                .append("students", new ArrayList<>())
+                .append("registered", 0)
+                .append("removed_questions", new ArrayList<>())
+                .append("attaches", new ArrayList<>())
+                .append("created_by", userId)
+                .append("questions", new Document())
+                .append("visibility", true)
+                .append("title", data.getString("title"));
+
+        List<String> forbiddenKeys = Arrays.asList(forbiddenTransferFields);
+        for (String key : quiz.keySet()) {
+            if (forbiddenKeys.contains(key))
+                continue;
+            newQuiz.append(key, quiz.get(key));
+        }
+        if(data.has("description"))
+            newQuiz.put("description", data.getString("description"));
+
+        newQuiz.put("start", start);
+        newQuiz.put("end", end);
+        newQuiz.put("start_registry", startRegistry);
+        newQuiz.put("end_registry", endRegistry);
+        iryscQuizRepository.insertOne(newQuiz);
+        QuizAbstract quizAbstract;
+        if (quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase(KindQuiz.TASHRIHI.getName()))
+            quizAbstract = new TashrihiQuizController();
+        else
+            quizAbstract = new RegularQuizController();
+
+        return generateSuccessMsg("quiz", quizAbstract.convertDocToJSON(newQuiz, true, true, false, false));
+    }
     public static String delete(ObjectId quizId, ObjectId userId) {
 
         Document quiz = iryscQuizRepository.findOneAndDelete(and(
@@ -451,7 +509,6 @@ public class RegularQuizController extends QuizAbstract {
                     .put("questionsCount", questionsCount)
                     .put("capacity", quiz.getInteger("capacity"));
         }
-
 
         if (!isDigest || isDescNeeded)
             jsonObject
