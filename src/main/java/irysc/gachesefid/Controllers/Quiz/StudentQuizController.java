@@ -647,7 +647,6 @@ public class StudentQuizController {
         }
 
 
-
         return generateSuccessMsg("data", data);
     }
 
@@ -1139,7 +1138,7 @@ public class StudentQuizController {
                 result = saveStudentTashrihiAnswers(a.quiz, answers,
                         a.student.getList("answers", Document.class), db
                 );
-            else if((boolean)a.quiz.getOrDefault("pdf_quiz", false))
+            else if ((boolean) a.quiz.getOrDefault("pdf_quiz", false))
                 result = saveStudentAnswersInPDFQuiz(a.quiz, answers, a.student, db);
             else
                 result = saveStudentAnswers(a.quiz, answers, a.student, db);
@@ -1191,7 +1190,6 @@ public class StudentQuizController {
                              JSONArray ids, JSONArray studentIds,
                              double money, String phone, String mail,
                              String name, String offcode) {
-
         Document quizPackage = null;
         Document off = null;
         long curr = System.currentTimeMillis();
@@ -1261,35 +1259,53 @@ public class StudentQuizController {
         )
             return JSON_NOT_VALID_PARAMS;
 
+        ArrayList<ObjectId> studentOIds = null;
         if (studentIds != null) {
             Document school = schoolRepository.findOne(eq("user_id", userId), JUST_ID);
             if (school == null)
                 return JSON_NOT_ACCESS;
 
             ObjectId schoolId = school.getObjectId("_id");
-            ArrayList<ObjectId> studentOIds = new ArrayList<>();
+            studentOIds = new ArrayList<>();
 
             for (int i = 0; i < studentIds.length(); i++) {
                 if (!ObjectId.isValid(studentIds.getString(i)))
                     return JSON_NOT_VALID_PARAMS;
-
-                ObjectId studentId = new ObjectId(studentIds.getString(i));
-                Document user = userRepository.findById(studentId);
-                if (user == null || !user.containsKey("school") ||
-                        !user.get("school", Document.class).get("_id").equals(schoolId)
-                )
-                    return JSON_NOT_ACCESS;
-
-                studentOIds.add(studentId);
+                studentOIds.add(new ObjectId(studentIds.getString(i)));
             }
 
-            return doBuy(userId, phone, mail, name, money,
-                    quizPackage, off, quizzes, null, null, studentOIds
-            );
+            //todo: check group registration
+            if (userRepository.count(and(
+                    in("_id", studentOIds),
+                    exists("school"),
+                    eq("school._id", schoolId)
+            )) != studentOIds.size())
+                return JSON_NOT_ACCESS;
+        }
+
+        int totalNeededCap = studentOIds != null ? studentOIds.size() : 1;
+        if(quizzes.size() > 0) {
+            for(Document quiz : quizzes) {
+                if(Math.max(
+                        (int)quiz.getOrDefault("capacity", 10000) - (int)quiz.getOrDefault("registered", 0), 0
+                ) < totalNeededCap)
+                    return generateErr("ظرفیت باقی مانده در آزمون " + quiz.getString("title") + " کمتر از ظرفیت مدنظر شما می باشد");
+            }
+        }
+        if(escapeQuizzes.size() > 0) {
+            for(Document quiz : escapeQuizzes) {
+                if(Math.max(
+                        (int)quiz.getOrDefault("capacity", 10000) - (int)quiz.getOrDefault("registered", 0), 0
+                ) < totalNeededCap)
+                    return generateErr("ظرفیت باقی مانده در آزمون " + quiz.getString("title") + " کمتر از ظرفیت مدنظر شما می باشد");
+            }
         }
 
         return doBuy(userId, phone, mail, name, money,
-                quizPackage, off, quizzes, openQuizzes, escapeQuizzes, null
+                quizPackage, off, quizzes,
+                studentOIds != null ? null : openQuizzes,
+                studentOIds != null ? null : escapeQuizzes,
+                studentOIds
         );
     }
 
@@ -1452,10 +1468,10 @@ public class StudentQuizController {
                 }
 
                 memberIds.forEach(memberId ->
-                        PointController.addPointForAction(memberId, Action.BUY_EXAM, id, null)
+                                PointController.addPointForAction(memberId, Action.BUY_EXAM, id, null)
                         // todo: check badge
                 );
-                if(!memberIds.contains(userId)) {
+                if (!memberIds.contains(userId)) {
                     PointController.addPointForAction(userId, Action.BUY_EXAM, id, null);
                     // todo: check badge
                 }
@@ -1960,7 +1976,7 @@ public class StudentQuizController {
                 "choices_counts", new ArrayList<Integer>()
         );
 
-        if(answers.size() == 0)
+        if (answers.size() == 0)
             return generateErr("لطفا ابتدا پاسخ سوالات را مشخص نمایید");
 
         Object tmp = null;
@@ -2004,8 +2020,8 @@ public class StudentQuizController {
 
         String base =
                 isSchoolQuiz ?
-                SchoolQuizRepository.FOLDER :
-                IRYSCQuizRepository.FOLDER;
+                        SchoolQuizRepository.FOLDER :
+                        IRYSCQuizRepository.FOLDER;
 
         jsonObject.put("file", STATICS_SERVER + base + "/" + quiz.getString("question_file"));
 
@@ -2061,8 +2077,7 @@ public class StudentQuizController {
                         question.put("stdAns", ((PairValue) stdAnswers.get(i).getValue()).getValue());
                     else
                         question.put("stdAns", stdAnswers.get(i).getValue());
-                }
-                catch (Exception x) {
+                } catch (Exception x) {
                     question.put("stdAns", "");
                 }
             }
