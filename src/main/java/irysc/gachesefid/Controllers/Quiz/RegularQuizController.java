@@ -491,14 +491,12 @@ public class RegularQuizController extends QuizAbstract {
                 jsonObject.put("status", "notStart");
 
         } else {
-
             jsonObject.put("startRegistry", quiz.getLong("start_registry"))
                     .put("endRegistry", quiz.getOrDefault("end_registry", ""))
                     .put("price", quiz.get("price"));
 
             if (quiz.containsKey("capacity"))
                 jsonObject.put("reminder", Math.max(quiz.getInteger("capacity") - quiz.getInteger("registered"), 0));
-
         }
 
         if (isAdmin) {
@@ -552,11 +550,8 @@ public class RegularQuizController extends QuizAbstract {
                                    String mail, List<ObjectId> quizIds,
                                    int paid, ObjectId transactionId, String stdName
     ) {
-
         ArrayList<Document> added = new ArrayList<>();
-
         for (ObjectId quizId : quizIds) {
-
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
 
@@ -660,11 +655,8 @@ public class RegularQuizController extends QuizAbstract {
                                    String mail, List<ObjectId> quizIds,
                                    int paid
     ) {
-
         ArrayList<Document> added = new ArrayList<>();
-
         for (ObjectId quizId : quizIds) {
-
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
                 List<Document> students = quiz.getList("students", Document.class);
