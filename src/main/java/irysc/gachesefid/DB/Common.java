@@ -84,23 +84,22 @@ public abstract class Common extends Repository {
 
     synchronized
     public ArrayList<Document> find(Bson filter, Bson project, Bson orderBy) {
-
         FindIterable<Document> cursor;
 
         if (project == null) {
             if (filter == null)
-                cursor = documentMongoCollection.find().sort(orderBy);
+                cursor = documentMongoCollection.find();
             else
-                cursor = documentMongoCollection.find(filter).sort(orderBy);
+                cursor = documentMongoCollection.find(filter);
         } else {
             if (filter == null)
-                cursor = documentMongoCollection.find().projection(project).sort(orderBy);
+                cursor = documentMongoCollection.find().projection(project);
             else
-                cursor = documentMongoCollection.find(filter).projection(project).sort(orderBy);
+                cursor = documentMongoCollection.find(filter).projection(project);
         }
+        cursor.sort(orderBy);
 
         ArrayList<Document> result = new ArrayList<>();
-
         for (Document doc : cursor)
             result.add(doc);
 

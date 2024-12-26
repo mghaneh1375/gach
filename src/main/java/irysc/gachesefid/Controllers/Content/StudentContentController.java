@@ -258,7 +258,7 @@ public class StudentContentController {
         ArrayList<Document> docs = contentRepository.find(
                 filters.size() == 0 ? null : and(filters),
                 isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST,
-                Sorts.ascending("priority")
+                Sorts.orderBy(new BasicDBObject("priority", 1), new BasicDBObject("created_at", -1))
         );
 
         if (!isAdmin && filters.size() <= 2) {
