@@ -134,7 +134,7 @@ public class Utility {
         ArrayList<Document> buyers = userRepository.findByIds(
                 students
                         .stream()
-                        .sorted(Collections.reverseOrder())
+                        .sorted((o1, o2) -> o2.getLong("register_at").compareTo(o1.getLong("register_at")))
                         .limit(4)
                         .map(document -> document.getObjectId("_id"))
                         .collect(Collectors.toList()),
