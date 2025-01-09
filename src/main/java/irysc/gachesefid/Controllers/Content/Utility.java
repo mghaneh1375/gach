@@ -13,6 +13,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -131,8 +132,14 @@ public class Utility {
 
         JSONArray lastBuyers = new JSONArray();
         ArrayList<Document> buyers = userRepository.findByIds(
-                students.stream().limit(4).map(document -> document.getObjectId("_id")).collect(Collectors.toList()),
-                false, new BasicDBObject("first_name", 1).append("last_name", 1).append("pic", 1)
+                students
+                        .stream()
+                        .sorted(Collections.reverseOrder())
+                        .limit(4)
+                        .map(document -> document.getObjectId("_id"))
+                        .collect(Collectors.toList()),
+                false,
+                new BasicDBObject("first_name", 1).append("last_name", 1).append("pic", 1)
         );
 
         if(buyers != null) {
