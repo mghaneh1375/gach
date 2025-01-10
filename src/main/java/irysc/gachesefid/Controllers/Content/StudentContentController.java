@@ -213,10 +213,19 @@ public class StudentContentController {
                 exists("teacher_bio")
         ), new BasicDBObject("teacher_bio", 1));
 
+        String teacherBio = "";
+        if(doc == null) {
+            Document teacherBioDoc = teacherBioRepository.findBySecKey(teacher);
+            if(teacherBioDoc != null)
+                teacherBio = teacherBioDoc.getString("bio");
+        }
+        else
+            teacherBio = doc.getString("teacher_bio");
+
         return generateSuccessMsg("data",
                 new JSONObject()
                         .put("packages", data)
-                        .put("bio", doc == null ? "" : doc.getString("teacher_bio"))
+                        .put("bio", teacherBio)
         );
     }
 
