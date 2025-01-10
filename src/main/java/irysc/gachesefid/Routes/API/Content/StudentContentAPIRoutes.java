@@ -199,11 +199,16 @@ public class StudentContentAPIRoutes extends Router {
 
     @PostMapping(value = "getTeacherBio")
     @ResponseBody
-    public String getTeacherBio(@RequestBody @StrongJSONConstraint(
-            params = {"teacher"},
-            paramsType = {String.class}
+    public String getTeacherBio(
+            @RequestBody @StrongJSONConstraint(
+                    params = {"teacher"},
+                    paramsType = {String.class},
+                    optionals = {"contentName"},
+                    optionalsType = {String.class}
     ) @NotBlank String jsonStr) {
-        return StudentContentController.getTeacherBio(new JSONObject(jsonStr).getString("teacher"));
+        return StudentContentController.getTeacherBio(
+                new JSONObject(jsonStr)
+        );
     }
 
     @GetMapping(value = "distinctTags")
@@ -221,23 +226,26 @@ public class StudentContentAPIRoutes extends Router {
 
     @PostMapping(value = "changeTeacherName")
     @ResponseBody
-    public String changeTeacherName(HttpServletRequest request,
-                                    @RequestBody @StrongJSONConstraint(
-                                            params = {
-                                                    "oldName", "newName"
-                                            },
-                                            paramsType = {
-                                                    String.class, String.class
-                                            },
-                                            optionals = {
-                                                    "NID"
-                                            },
-                                            optionalsType = {
-                                                    String.class
-                                            }
-                                    ) @NotBlank String jsonStr
+    public String changeTeacherName(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "oldName", "newName"
+                    },
+                    paramsType = {
+                            String.class, String.class
+                    },
+                    optionals = {
+                            "NID", "bio"
+                    },
+                    optionalsType = {
+                            String.class, String.class
+                    }
+            ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
-        return StudentContentController.changeTeacherName(convertPersian(new JSONObject(jsonStr)));
+        return StudentContentController.changeTeacherName(
+                convertPersian(new JSONObject(jsonStr))
+        );
     }
 }
