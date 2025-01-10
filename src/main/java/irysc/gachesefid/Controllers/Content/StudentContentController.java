@@ -24,7 +24,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -98,6 +98,23 @@ public class StudentContentController {
             ids.add(doc.getObjectId("_id"));
         }
 
+        if(jsonObject.has("bio")) {
+            Document teacherBio = teacherBioRepository.findBySecKey(oldName);
+            if (teacherBio != null) {
+                teacherBio.put("name", newName);
+                teacherBio.put("bio", jsonObject.getString("bio"));
+                teacherBioRepository.replaceOne(
+                        eq("name", oldName), teacherBio
+                );
+                teacherBioRepository.clearFromCache(oldName);
+            }
+            else {
+                teacherBioRepository.insertOne(
+                        new Document("name", newName)
+                                .append("bio", jsonObject.getString("bio"))
+                );
+            }
+        }
         contentRepository.bulkWrite(writes);
         contentRepository.clearBatchFromCache(ids);
         return JSON_OK;
@@ -132,11 +149,13 @@ public class StudentContentController {
 
     public static String distinctTeachersForAdmin() {
         List<Document> contents = contentRepository.find(null, new BasicDBObject("teacher", 1)
-                .append("nids", 1)
+                .append("nids", 1).append("teacher_bio", 1)
         );
 
         List<String> distinctTeachers = new ArrayList<>();
         List<String> distinctNIDS = new ArrayList<>();
+        List<String> distinctBios = new ArrayList<>();
+        HashMap<String, String> teacherBios = new HashMap<>();
 
         contents.forEach(content -> {
             String[] splited = content.getString("teacher").split("__");
@@ -148,6 +167,16 @@ public class StudentContentController {
                 distinctTeachers.add(splited[i]);
                 distinctNIDS.add(nidSplited.length > i && !nidSplited[i].equals("*") ? nidSplited[i] : "");
             }
+            if(splited.length > 0 && !teacherBios.containsKey(splited[0]) &&
+                    content.containsKey("teacher_bio") && !content.getString("teacher_bio").isEmpty()
+            )
+                teacherBios.put(splited[0], content.getString("teacher_bio"));
+        });
+        distinctTeachers.forEach(s -> {
+            Document teacherBio = teacherBioRepository.findBySecKey(s);
+            if(teacherBio != null)
+                distinctBios.add(teacherBio.getString("bio"));
+            else distinctBios.add(teacherBios.getOrDefault(s, ""));
         });
 
         JSONArray jsonArray = new JSONArray();
@@ -155,6 +184,7 @@ public class StudentContentController {
             jsonArray.put(new JSONObject()
                     .put("teacher", distinctTeachers.get(i))
                     .put("nid", distinctNIDS.get(i))
+                    .put("bio", distinctBios.get(i))
             );
         }
 
@@ -190,18 +220,31 @@ public class StudentContentController {
         );
     }
 
-    public static String getTeacherBio(String teacher) {
+    public static String getTeacherBio(JSONObject jsonObject) {
+        String teacherName = jsonObject.getString("teacher");
+        String contentName = jsonObject.has("contentName")
+                ? jsonObject.getString("contentName")
+                : null;
 
-        Document doc = contentRepository.findOne(and(
-                regex("teacher", Pattern.compile("^" + teacher + "(__|$)")),
+        Bson filter = and(
+                regex("teacher", Pattern.compile("^" + teacherName + "(__|$)")),
                 eq("visibility", true),
                 exists("teacher_bio")
-        ), new BasicDBObject("teacher_bio", 1));
+        );
+        Document doc = contentRepository.findOne(
+                contentName == null ? filter : and(filter, eq("title", contentName)),
+                new BasicDBObject("teacher_bio", 1));
+        String bio = "";
 
-        if (doc == null)
-            return generateSuccessMsg("data", "");
+        if (doc == null) {
+            Document bioDoc = teacherBioRepository.findBySecKey(teacherName);
+            if(bioDoc != null)
+                bio = bioDoc.getString("bio");
+        }
+        else
+            bio = doc.getString("teacher_bio");
 
-        return generateSuccessMsg("data", doc.getString("teacher_bio"));
+        return generateSuccessMsg("data", bio);
     }
 
     public static String getAll(ObjectId userId,
