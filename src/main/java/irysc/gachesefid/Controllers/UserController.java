@@ -306,10 +306,9 @@ public class UserController {
         return wantedList;
     }
 
-    public static String setRole(Document user, JSONObject jsonObject) {
+    public static String setRole(Document user, JSONObject jsonObject, boolean isAdmin) {
 
         String role = jsonObject.getString("role");
-
         if (!EnumValidatorImp.isValid(role, Access.class) ||
                 role.equals(Access.ADMIN.getName()) ||
                 role.equals(Access.SUPERADMIN.getName())
@@ -325,7 +324,6 @@ public class UserController {
             if (field.isMandatory && !keys.contains(field.key))
                 return generateErr("لطفا تمام اطلاعات لازم را پر نمایید.");
             if (keys.contains(field.key) && field.pairValues != null) {
-
                 boolean find = false;
                 for (PairValue p : field.pairValues) {
                     if (jsonObject.get(field.key).equals(p.getKey())) {
@@ -339,7 +337,6 @@ public class UserController {
         }
 
         if (role.equals(Access.STUDENT.getName())) {
-
             if (user.containsKey("invitor"))
                 return generateErr("شما قبلا معرف خود را انتخاب کرده اید.");
 
@@ -352,7 +349,6 @@ public class UserController {
                 return generateErr("کد معرف وارد شده معتبر نمی باشد.");
 
             int invitorCount = userRepository.count(eq("invitor", invitor.getObjectId("_id")));
-
             if (invitor.getOrDefault("phone", "").toString().length() < 4)
                 invitorCount = 100;
 
@@ -360,9 +356,7 @@ public class UserController {
                 invitor = userRepository.findById(invitor.getObjectId("_id"));
 
             Document config = Utility.getConfig();
-
             if (config.containsKey("invite_coin")) {
-
                 if (invitorCount < 20) {
                     invitor.put("coin",
                             ((Number) config.get("invite_coin")).doubleValue() +
@@ -377,7 +371,6 @@ public class UserController {
             }
 
             if (config.containsKey("invite_money")) {
-
                 if (invitorCount < 20) {
                     invitor.put("money",
                             config.getInteger("invite_money") +
@@ -402,12 +395,10 @@ public class UserController {
             userRepository.replaceOne(
                     user.getObjectId("_id"), user
             );
-
             return JSON_OK;
         }
 
         Document form = new Document("role", role);
-
         for (String key : keys)
             form.put(
                     CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key),
@@ -434,26 +425,27 @@ public class UserController {
                 user
         );
 
-        long curr = System.currentTimeMillis();
+        if(!isAdmin) {
+            long curr = System.currentTimeMillis();
+            ArrayList<Document> chats = new ArrayList<>();
+            chats.add(new Document("msg", "")
+                    .append("created_at", curr)
+                    .append("is_for_user", true)
+                    .append("files", new ArrayList<>())
+            );
 
-        ArrayList<Document> chats = new ArrayList<>();
-        chats.add(new Document("msg", "")
-                .append("created_at", curr)
-                .append("is_for_user", true)
-                .append("files", new ArrayList<>())
-        );
-
-        ticketRepository.insertOne(
-                new Document("title", "درخواست ارتقای سطح به " + translateRole(role))
-                        .append("created_at", curr)
-                        .append("send_date", curr)
-                        .append("is_for_teacher", false)
-                        .append("chats", chats)
-                        .append("status", "pending")
-                        .append("priority", TicketPriority.HIGH.getName())
-                        .append("section", TicketSection.UPGRADELEVEL.getName())
-                        .append("user_id", user.getObjectId("_id"))
-        );
+            ticketRepository.insertOne(
+                    new Document("title", "درخواست ارتقای سطح به " + translateRole(role))
+                            .append("created_at", curr)
+                            .append("send_date", curr)
+                            .append("is_for_teacher", false)
+                            .append("chats", chats)
+                            .append("status", "pending")
+                            .append("priority", TicketPriority.HIGH.getName())
+                            .append("section", TicketSection.UPGRADELEVEL.getName())
+                            .append("user_id", user.getObjectId("_id"))
+            );
+        }
 
         return JSON_OK;
     }

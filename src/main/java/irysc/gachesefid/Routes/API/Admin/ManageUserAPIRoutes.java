@@ -15,6 +15,7 @@ import irysc.gachesefid.Service.UserService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Digit;
 import irysc.gachesefid.Utility.Positive;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
@@ -216,7 +217,7 @@ public class ManageUserAPIRoutes extends Router {
                                  ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getPrivilegeUser(request);
-        JSONObject jsonObject = new JSONObject(jsonStr);
+        JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
         return ManageUserController.checkDuplicate(
                 jsonObject.getString("phone"),
                 jsonObject.get("NID").toString()
@@ -275,6 +276,29 @@ public class ManageUserAPIRoutes extends Router {
         }
 
         return ManageUserController.addSchool(
+                jsonObject,
+                user.getObjectId("_id"),
+                user.getString("first_name") + " " + user.getString("last_name")
+        );
+    }
+
+    @PostMapping(value = "/addExistSchool")
+    @ResponseBody
+    public String addExistSchool(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "NID", "phone",
+                    },
+                    paramsType = {
+                            String.class, Digit.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        Document user = getAgentUser(request);
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
+
+        return ManageUserController.addExistSchool(
                 jsonObject,
                 user.getObjectId("_id"),
                 user.getString("first_name") + " " + user.getString("last_name")
@@ -478,14 +502,11 @@ public class ManageUserAPIRoutes extends Router {
             return JSON_NOT_ACCESS;
 
         Document school;
-
         if (schoolId != null) {
-
             if (!ObjectId.isValid(schoolId))
                 return JSON_NOT_VALID_PARAMS;
 
             school = userRepository.findById(new ObjectId(schoolId));
-
             if (school == null)
                 return JSON_NOT_VALID_ID;
 
@@ -526,7 +547,7 @@ public class ManageUserAPIRoutes extends Router {
                     gradeId, branchId, level, additionalLevel,
                     from, to
             );
-            if(byteArrayInputStream != null) {
+            if (byteArrayInputStream != null) {
                 response.setContentType("application/octet-stream");
                 response.setHeader("Content-Disposition", "attachment; filename=users.xlsx");
                 IOUtils.copy(byteArrayInputStream, response.getOutputStream());

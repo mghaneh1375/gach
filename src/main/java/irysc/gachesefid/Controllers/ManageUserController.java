@@ -263,14 +263,11 @@ public class ManageUserController {
     public static String addAccess(ObjectId userId, String newAccess, String schoolId) {
 
         Document user = userRepository.findById(userId);
-
         if (user == null)
             return JSON_NOT_VALID_ID;
 
         Document school = null;
-
         if (newAccess.equalsIgnoreCase(Access.SCHOOL.getName())) {
-
             if (schoolId == null || !ObjectId.isValid(schoolId))
                 return JSON_NOT_VALID_PARAMS;
 
@@ -283,7 +280,6 @@ public class ManageUserController {
         }
 
         Document schoolRoleForm = null;
-
         if (school != null) {
 
             if (!user.containsKey("form_list"))
@@ -456,11 +452,14 @@ public class ManageUserController {
     }
 
     public static String checkDuplicate(String phone, String NID) {
-        return generateSuccessMsg("exist",
-                userRepository.exist(or(
-                        eq("phone", phone),
-                        eq("NID", NID)
-                ))
+        Document u = userRepository.findOne(and(
+                eq("phone", phone),
+                eq("NID", NID)
+        ), new BasicDBObject("accesses", true));
+        return generateSuccessMsg("data",
+                new JSONObject()
+                        .put("exist", u != null)
+                        .put("isSchool", u != null && Authorization.isSchool(u.getList("accesses", String.class)))
         );
     }
 
@@ -470,8 +469,10 @@ public class ManageUserController {
         filters.add(in("accesses", Access.SCHOOL.getName()));
         filters.add(exists("form_list"));
         filters.add(eq("form_list.role", "school"));
-        if (agentId != null)
-            filters.add(eq("form_list.agent_id", agentId));
+        if (agentId != null) {
+//            filters.add(eq("form_list.agent_id", agentId));
+            filters.add(eq("agent_id", agentId));
+        }
 
         ArrayList<Document> docs = userRepository.find(and(filters), new BasicDBObject("form_list", 1)
                 .append("NID", 1)
@@ -563,10 +564,11 @@ public class ManageUserController {
 
     }
 
-    public static String addSchool(JSONObject jsonObject,
-                                   ObjectId agentId,
-                                   String agentName) {
-
+    public static String addSchool(
+            JSONObject jsonObject,
+            ObjectId agentId,
+            String agentName
+    ) {
         String phone = jsonObject.getString("phone");
         String NID = jsonObject.getString("NID");
 
@@ -588,9 +590,7 @@ public class ManageUserController {
         Document user = users.size() == 1 ? users.get(0) : null;
 
         long curr = System.currentTimeMillis();
-
         if (user == null) {
-
             if (!jsonObject.has("firstName") ||
                     !jsonObject.has("lastName") ||
                     !jsonObject.has("password") ||
@@ -629,7 +629,6 @@ public class ManageUserController {
                     .append("last_name", jsonObject.getString("lastName"));
 
             ArrayList<Document> forms = new ArrayList<>();
-
             Document form = new Document("role", "school")
                     .append("tel", jsonObject.get("tel").toString())
                     .append("address", jsonObject.getString("address"))
@@ -644,7 +643,11 @@ public class ManageUserController {
 
             ObjectId oId = userRepository.insertOneWithReturnId(user);
             ticketUpgradeRequest(oId);
-
+            Document finalUser = user;
+            new Thread(() -> {
+                createNotifAndSendSMS(finalUser, agentName, "agentJoin");
+                userRepository.replaceOneWithoutClearCache(finalUser.getObjectId("_id"), finalUser);
+            }).start();
             return JSON_OK;
 //            return generateSuccessMsg("id", oId.toString(),
 //                    new PairValue("school", convertSchoolToJSON(
@@ -690,7 +693,77 @@ public class ManageUserController {
                         .append("section", TicketSection.ACCESS.getName())
                         .append("user_id", user.getObjectId("_id"))
         );
+        Document finalUser1 = user;
+        new Thread(() -> {
+            createNotifAndSendSMS(finalUser1, agentName, "agentJoin");
+            userRepository.replaceOneWithoutClearCache(finalUser1.getObjectId("_id"), finalUser1);
+        }).start();
 
+        return JSON_OK;
+    }
+
+    public static String addExistSchool(
+            JSONObject jsonObject,
+            ObjectId agentId,
+            String agentName
+    ) {
+        String phone = jsonObject.getString("phone");
+        String NID = jsonObject.getString("NID");
+
+        if (!PhoneValidator.isValid(phone) ||
+                !Utility.validationNationalCode(NID)
+        )
+            return generateErr("کد ملی و یا شماره همراه وارد شده نامعتبر است.");
+
+        Document u = userRepository.findOne(
+                and(
+                        eq("phone", phone),
+                        eq("NID", NID)
+                ), null
+        );
+
+        if (u == null)
+            return generateErr("کد ملی و یا شماره همراه وارد شده نامعتبر است.");
+
+        if (!Authorization.isSchool(u.getList("accesses", String.class)))
+            return generateErr("دسترسی کاربر مدنظر مدرسه نمی باشد");
+
+        long curr = System.currentTimeMillis();
+        ObjectId reqId = accessRequestRepository.insertOneWithReturnId(
+                new Document("sender_id", agentId)
+                        .append("target_id", u.getObjectId("_id"))
+                        .append("phone", phone)
+                        .append("role", "school")
+                        .append("created_at", curr)
+        );
+
+        ArrayList<Document> chats = new ArrayList<>();
+        chats.add(new Document("msg",
+                        "<p>" + agentName + " از شما دعوت کرده است تا زیرمجموعه نمایندگی ایشان قرار گیرید. در صورت تمایل بر روی " +
+                                "<a href='" + SERVER + "acceptInvite/" + reqId + "'>" + "لینک" + "</a>" +
+                                " کلیک کنید. " + "</p>"
+                )
+                        .append("created_at", curr)
+                        .append("is_for_user", true)
+                        .append("files", new ArrayList<>())
+        );
+
+        ticketRepository.insertOne(
+                new Document("title", "درخواست اتصال به نمایندگی")
+                        .append("created_at", curr)
+                        .append("send_date", curr)
+                        .append("answer_date", curr)
+                        .append("is_for_teacher", false)
+                        .append("chats", chats)
+                        .append("status", "finish")
+                        .append("priority", TicketPriority.HIGH.getName())
+                        .append("section", TicketSection.ACCESS.getName())
+                        .append("user_id", u.getObjectId("_id"))
+        );
+        new Thread(() -> {
+            createNotifAndSendSMS(u, agentName, "agentJoin");
+            userRepository.replaceOneWithoutClearCache(u.getObjectId("_id"), u);
+        }).start();
         return JSON_OK;
     }
 
@@ -715,8 +788,10 @@ public class ManageUserController {
         }
 
         if (isAgent && filter != null) {
-            filter.add(exists("form_list.agent_id"));
-            filter.add(eq("form_list.agent_id", wantedId));
+//            filter.add(exists("form_list.agent_id"));
+//            filter.add(eq("form_list.agent_id", wantedId));
+            filter.add(exists("agent_id"));
+            filter.add(eq("agent_id", wantedId));
         }
 
         for (int i = 0; i < jsonArray.length(); i++) {
@@ -767,7 +842,6 @@ public class ManageUserController {
             }
 
             if (checked != null && filter != null && !checked.containsKey(schoolId)) {
-
                 Document schoolAccount = userRepository.findOne(
                         and(and(filter), eq("form_list.school_id", schoolId)), null
                 );
@@ -850,9 +924,7 @@ public class ManageUserController {
     }
 
     private static void ticketUpgradeRequest(ObjectId oId) {
-
         long curr = System.currentTimeMillis();
-
         ArrayList<Document> chats = new ArrayList<>();
         chats.add(new Document("msg", "")
                 .append("created_at", curr)
@@ -871,7 +943,6 @@ public class ManageUserController {
                         .append("section", TicketSection.UPGRADELEVEL.getName())
                         .append("user_id", oId)
         );
-
     }
 
     private static Document validateSchoolForAddStudent(
@@ -1101,9 +1172,10 @@ public class ManageUserController {
         return returnBatchResponse(excepts, null, "اضافه");
     }
 
-    public static String acceptInvite(Document user,
-                                      ObjectId reqId) {
-
+    public static String acceptInvite(
+            Document user,
+            ObjectId reqId
+    ) {
         Document doc = accessRequestRepository.findOne(
                 and(
                         eq("_id", reqId),
@@ -1117,43 +1189,64 @@ public class ManageUserController {
         if (doc.containsKey("response_at"))
             return generateErr("شما قبلا این دعوت را پذیرفته اید.");
 
+        Document agent = userRepository.findById(doc.getObjectId("sender_id"));
+
         doc.put("response_at", System.currentTimeMillis());
+        accessRequestRepository.replaceOne(reqId, doc);
 
-        if (!user.containsKey("phone"))
-            user.put("phone", doc.getString("phone"));
+        user.put("agent_id", doc.getObjectId("sender_id"));
 
-        List<Document> forms = user.containsKey("form_list") ?
-                user.getList("form_list", Document.class) :
-                new ArrayList<>();
+        if (!Authorization.isSchool(user.getList("accesses", String.class))) {
+            if (!user.containsKey("phone"))
+                user.put("phone", doc.getString("phone"));
 
-        Document form = new Document("role", doc.getString("role"));
+            List<Document> forms = user.containsKey("form_list") ?
+                    user.getList("form_list", Document.class) :
+                    new ArrayList<>();
 
-        if (doc.getString("role").equalsIgnoreCase("school")) {
-            form = new Document("role", "school")
-                    .append("tel", doc.getString("tel"))
-                    .append("address", doc.getString("address"))
-                    .append("name", doc.getString("name"))
-                    .append("manager_name", doc.getString("manager_name"))
-                    .append("school_sex", doc.getString("school_sex"))
-                    .append("agent_id", doc.getObjectId("sender_id"))
-                    .append("kind_school", doc.getString("kind_school"));
+            Document form = new Document("role", doc.getString("role"));
+
+            if (doc.getString("role").equalsIgnoreCase("school")) {
+                form = new Document("role", "school")
+                        .append("tel", doc.getString("tel"))
+                        .append("address", doc.getString("address"))
+                        .append("name", doc.getString("name"))
+                        .append("manager_name", doc.getString("manager_name"))
+                        .append("school_sex", doc.getString("school_sex"))
+                        .append("agent_id", doc.getObjectId("sender_id"))
+                        .append("kind_school", doc.getString("kind_school"));
+            }
+
+            int idx = searchInDocumentsKeyValIdx(forms, "role", doc.getString("role"));
+            if (idx == -1)
+                forms.add(form);
+            else
+                forms.set(idx, form);
+
+            user.put("accesses", new ArrayList<String>().add(Access.STUDENT.getName()));
+            user.put("level", false);
+            user.put("form_list", forms);
+
+            createNotifAndSendSMS(
+                    agent,
+                    user.getString("first_name") + " " + user.getString("last_name"),
+                    "schoolAcceptAgentInviteButPending"
+            );
+            userRepository.replaceOneWithoutClearCache(agent.getObjectId("_id"), agent);
+
+            userRepository.replaceOne(user.getObjectId("_id"), user);
+            ticketUpgradeRequest(user.getObjectId("_id"));
+            return generateSuccessMsg("msg", "درخواست شما برای تایید ادمین ارسال گردید.");
         }
 
-        int idx = searchInDocumentsKeyValIdx(forms, "role", doc.getString("role"));
-        if (idx == -1)
-            forms.add(form);
-        else
-            forms.set(idx, form);
-
-        user.put("accesses", new ArrayList<String>().add(Access.STUDENT.getName()));
-        user.put("level", false);
-        user.put("form_list", forms);
-
-        userRepository.replaceOne(user.getObjectId("_id"), user);
-        accessRequestRepository.replaceOne(reqId, doc);
-        ticketUpgradeRequest(user.getObjectId("_id"));
-
-        return generateSuccessMsg("msg", "درخواست شما برای تایید ادمین ارسال گردید.");
+        createNotifAndSendSMS(
+                agent,
+                user.getString("first_name") + " " + user.getString("last_name"),
+                "schoolAcceptAgentInvite"
+        );
+        userRepository.replaceOneWithoutClearCache(agent.getObjectId("_id"), agent);
+        userRepository.replaceOneWithoutClearCache(user.getObjectId("_id"), user);
+        return generateSuccessMsg("msg", "شما با موفقیت به یکی از زیرمجموعه های نمایندگی مدنظر اضافه شدید.");
     }
 
     public static String deleteStudents(JSONArray list) {

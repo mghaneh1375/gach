@@ -5,6 +5,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -74,22 +75,22 @@ public class Authorization {
 
     // todo : complete this section
     public static boolean hasAccessToThisSchool(Document user, ObjectId agentId) {
-
-        if(!user.containsKey("form_list"))
-            return false;
-
-        Document form = Utility.searchInDocumentsKeyVal(
-                user.getList("form_list", Document.class),
-                "role", "school"
-        );
-
-        if(form == null)
-            return false;
-
-        if(!form.containsKey("agent_id"))
-            return false;
-
-        return form.getObjectId("agent_id").equals(agentId);
+        return Objects.equals(user.getOrDefault("agent_id", null), agentId);
+//        if(!user.containsKey("form_list"))
+//            return false;
+//
+//        Document form = Utility.searchInDocumentsKeyVal(
+//                user.getList("form_list", Document.class),
+//                "role", "school"
+//        );
+//
+//        if(form == null)
+//            return false;
+//
+//        if(!form.containsKey("agent_id"))
+//            return false;
+//
+//        return form.getObjectId("agent_id").equals(agentId);
     }
 
     // todo : complete this section

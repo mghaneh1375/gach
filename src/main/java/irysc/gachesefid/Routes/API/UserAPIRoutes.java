@@ -658,10 +658,12 @@ public class UserAPIRoutes extends Router {
 
                                        }
                                ) String json
-    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException {
+    ) throws UnAuthException, NotActivateAccountException, NotCompleteAccountException, InvalidFieldsException, NotAccessException {
+        Document user = getPrivilegeUser(request);
         return UserController.setRole(
                 (Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
-                new JSONObject(json)
+                new JSONObject(json),
+                Authorization.isAdmin(user.getList("accesses", String.class))
         );
     }
 
