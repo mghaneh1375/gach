@@ -410,7 +410,8 @@ public class UserAPIRoutes extends Router {
     ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         return UserController.setRole(
                 (Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
-                new JSONObject(json)
+                new JSONObject(json),
+                Authorization.isAdmin(user.getList("accesses", String.class))
         );
     }
 
