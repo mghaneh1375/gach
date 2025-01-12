@@ -66,6 +66,13 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.setPriority(userId, new JSONObject(jsonStr));
     }
 
+//    public String createUser(
+//            HttpServletRequest request,
+//            @
+//    ) {
+//
+//    }
+
     @PutMapping(path = "/setCoins/{userId}/{newCoins}")
     @ResponseBody
     public String setCoins(HttpServletRequest request,

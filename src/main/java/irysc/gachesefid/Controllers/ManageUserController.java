@@ -146,10 +146,10 @@ public class ManageUserController {
         int count = level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName()) ?
                 userRepository.count(and(filters)) : userRepository.countUsersWithSettlementStatus(and(filters), justSettled);
 
-        try {
-            JSONArray jsonArray = new JSONArray();
-            for (Document user : docs) {
 
+        JSONArray jsonArray = new JSONArray();
+        for (Document user : docs) {
+            try {
                 StringBuilder branchBuilder = new StringBuilder();
                 String branch = "";
                 List<Document> branches = user.containsKey("branches") ?
@@ -212,18 +212,15 @@ public class ManageUserController {
                 }
 
                 jsonArray.put(jsonObject);
+            } catch (Exception x) {
+                x.printStackTrace();
             }
-
-            return generateSuccessMsg("data", new JSONObject()
-                    .put("users", jsonArray)
-                    .put("totalCount", count)
-            );
-        } catch (Exception x) {
-            return generateSuccessMsg("data", new JSONObject()
-                    .put("users", new JSONArray())
-                    .put("totalCount", 0)
-            );
         }
+
+        return generateSuccessMsg("data", new JSONObject()
+                .put("users", jsonArray)
+                .put("totalCount", count)
+        );
     }
 
     public static String setPriority(ObjectId userId, JSONObject jsonObject) {
