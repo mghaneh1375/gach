@@ -67,14 +67,13 @@ public class UserAPIRoutes extends Router {
 
     @GetMapping(value = "testMail")
     @ResponseBody
-    public void tmp(
+    public void testMail(
             HttpServletRequest request,
             @RequestParam(value = "to") String to
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-       getAdminPrivilegeUserVoid(request);
-       Utility.sendMail(to, "11111", "forget", "تست");
+        getAdminPrivilegeUserVoid(request);
+        Utility.sendMail(to, "11111", "forget", "تست");
     }
-
 
 
     @GetMapping(value = "/gifts")

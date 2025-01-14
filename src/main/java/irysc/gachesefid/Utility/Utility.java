@@ -456,7 +456,6 @@ public class Utility {
     }
 
     public static JSONObject convertPersian(JSONObject jsonObject) {
-
         for (String key : jsonObject.keySet()) {
             if (key.toLowerCase().contains("password") ||
                     key.toLowerCase().contains("newpass") ||
@@ -469,11 +468,10 @@ public class Utility {
                 jsonObject.put(key, Integer.parseInt(Utility.convertPersianDigits(jsonObject.getInt(key) + "")));
             else if (jsonObject.get(key) instanceof String) {
                 String str = Utility.convertPersianDigits(jsonObject.getString(key));
-                if ((str.charAt(0) == '0' &&
-                        (str.length() == 1 || str.charAt(1) != '.')) ||
+                if (str.charAt(0) == '0' && (
+                        str.length() == 1 || str.charAt(1) != '.') ||
                         key.equalsIgnoreCase("phone") ||
-                        key.equalsIgnoreCase("tel") ||
-                        key.equals("NID")
+                        key.equalsIgnoreCase("tel")
                 )
                     jsonObject.put(key, str);
                 else {
@@ -482,8 +480,7 @@ public class Utility {
                     } catch (Exception x) {
                         try {
                             jsonObject.put(key, Double.parseDouble(str));
-                        }
-                        catch (Exception ignore) {
+                        } catch (Exception ignore) {
                             jsonObject.put(key, str);
                         }
                     }
@@ -1126,6 +1123,7 @@ public class Utility {
         String[] splited = simpleDateFormat.format(d).split("-");
         return JalaliCalendar.gregorianToJalali(new JalaliCalendar.YearMonthDate(splited[0], splited[1], splited[2])).format("/");
     }
+
     public static String getSolarDateWithSecond(long time) {
         if (time < 1610494635)
             return "";
@@ -1616,7 +1614,7 @@ public class Utility {
         long curr = System.currentTimeMillis();
 
         String title;
-        String msg = "<p>" +  "سلام " + wantedUserName + "<br/>";
+        String msg = "<p>" + "سلام " + wantedUserName + "<br/>";
 
         switch (mode) {
             case "agentJoin":
@@ -1633,7 +1631,7 @@ public class Utility {
                 break;
             case "finalize":
                 title = "پرداخت و نهایی سازی مشاور توسط دانش آموز";
-                msg +=  "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
+                msg += "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
                 break;
             case "finalizeTeach":
                 title = "پرداخت کلاس " + studentName + " انجام شد.";
@@ -1680,11 +1678,11 @@ public class Utility {
                 break;
             case "createRoom":
                 title = "ایجاد اتاق جلسه";
-                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
                 break;
             case "createTeachRoom":
                 title = "ایجاد اتاق جلسه";
-                msg += "یک جلسه\u200Cی تدریس آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName  +  "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                msg += "یک جلسه\u200Cی تدریس آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
                 break;
             case "advisorQuiz":
                 title = "تعریف آزمون توسط مشاور";
@@ -1728,7 +1726,7 @@ public class Utility {
                 break;
             case "karbarg":
             case "karbargDone":
-                if(mode.equals("karbarg"))
+                if (mode.equals("karbarg"))
                     title = "به روزرسانی برنامه توسط مشاور";
                 else
                     title = "به روزرسانی برنامه توسط دانش\u200Cآموز";

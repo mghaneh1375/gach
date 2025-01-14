@@ -184,7 +184,6 @@ public class UserRepository extends Common {
     }
 
     public synchronized Document findByUsername(String username) {
-
         Document user = isInCache(table, username);
         if (user != null)
             return user;

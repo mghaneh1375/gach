@@ -66,12 +66,32 @@ public class ManageUserAPIRoutes extends Router {
         return ManageUserController.setPriority(userId, new JSONObject(jsonStr));
     }
 
-//    public String createUser(
-//            HttpServletRequest request,
-//            @
-//    ) {
-//
-//    }
+    @PostMapping(value = "createUser")
+    @ResponseBody
+    public String createUser(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "firstName", "lastName",
+                            "NID", "password"
+                    },
+                    paramsType = {
+                            String.class, String.class,
+                            String.class, String.class,
+                    },
+                    optionals = {
+                            "phone", "mail"
+                    },
+                    optionalsType = {
+                            String.class, String.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return UserController.createUserByAdmin(
+                Utility.convertPersian(new JSONObject(jsonStr))
+        );
+    }
 
     @PutMapping(path = "/setCoins/{userId}/{newCoins}")
     @ResponseBody
@@ -495,9 +515,7 @@ public class ManageUserAPIRoutes extends Router {
     public String getStudents(HttpServletRequest request,
                               @PathVariable(required = false) String schoolId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getPrivilegeUser(request);
-
         boolean isAdmin = Authorization.isAdmin(user.getList("accesses", String.class));
 
         if (schoolId != null && !Authorization.isAgent(user.getList("accesses", String.class)))

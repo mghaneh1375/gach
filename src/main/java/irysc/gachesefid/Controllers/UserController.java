@@ -2,7 +2,6 @@ package irysc.gachesefid.Controllers;
 
 
 import com.google.common.base.CaseFormat;
-import com.google.common.base.Strings;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Badge.BadgeController;
@@ -478,7 +477,6 @@ public class UserController {
         avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
 
         ArrayList<Bson> filters = new ArrayList<>();
-
         if (doc.getString("auth_via").equals(AuthVia.SMS.getName()))
             filters.add(eq("phone", username));
         else
@@ -522,6 +520,59 @@ public class UserController {
 
         STUDENTS++;
         return doc.getString("password");
+    }
+
+    public static String createUserByAdmin(JSONObject jsonObject) {
+        if(!jsonObject.has("phone") && !jsonObject.has("mail"))
+            return generateErr("لطفا یکی از فیلدهای شماره همراه و یا ایمیل را وارد نمایید");
+
+        if(jsonObject.has("phone") && !PhoneValidator.isValid(jsonObject.getString("phone")))
+            return generateErr("شماره همراه وارد شده نامعتبر است");
+
+        if(!validationNationalCode(jsonObject.getString("NID")))
+            return generateErr("کد ملی وارد شده نامعتبر است");
+
+        if(jsonObject.has("phone") && userRepository.exist(eq("phone", jsonObject.getString("phone"))))
+            return generateErr("شماره همراه وارد شده در سیستم موجود است");
+
+        if(jsonObject.has("mail") && userRepository.exist(eq("mail", jsonObject.getString("mail"))))
+            return generateErr("ایمیل وارد شده در سیستم موجود است");
+
+        if(userRepository.exist(eq("NID", jsonObject.getString("NID"))))
+            return generateErr("کدملی وارد شده در سیستم موجود است");
+
+        if(jsonObject.getString("firstName").length() < 3 ||
+                jsonObject.getString("lastName").length() < 3)
+            return generateErr("طول کاراکترهای نام و نام خانوادگی باید حداقل 3 کاراکتر باشد");
+
+        Document config = Utility.getConfig();
+        Document avatar = avatarRepository.findById(config.getObjectId("default_avatar"));
+        avatar.put("used", (int) avatar.getOrDefault("used", 0) + 1);
+        avatarRepository.replaceOne(config.getObjectId("default_avatar"), avatar);
+
+        Document newDoc = new Document("status", "active")
+                .append("level", false)
+                .append("first_name", jsonObject.getString("firstName"))
+                .append("last_name", jsonObject.getString("lastName"))
+                .append("NID", jsonObject.getString("NID"))
+                .append("money", (double) config.getInteger("init_money"))
+                .append("coin", ((Number) config.get("init_coin")).doubleValue())
+                .append("student_id", Utility.getRandIntForStudentId(Utility.getToday("/").substring(0, 6).replace("/", "")))
+                .append("events", new ArrayList<>())
+                .append("avatar_id", avatar.getObjectId("_id"))
+                .append("pic", avatar.getString("file"))
+                .append("invitation_code", Utility.simpleRandomString(5))
+                .append("created_at", System.currentTimeMillis())
+                .append("accesses", new ArrayList<>() {{add("student");}})
+                .append("password", jsonObject.getString("password"));
+
+        if (jsonObject.has("phone"))
+            newDoc.append("phone", jsonObject.getString("phone"));
+        if(jsonObject.has("mail"))
+            newDoc.append("mail", jsonObject.getString("mail"));
+
+        userRepository.insertOne(newDoc);
+        return JSON_OK;
     }
 
     public static JSONObject convertUser(Document user) {
