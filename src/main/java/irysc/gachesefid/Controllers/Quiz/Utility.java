@@ -278,7 +278,10 @@ public class Utility {
             //SHORT_ANSWER
             else if (bytes[currIdx] == 0x01) {
                 byte[] tmp = Arrays.copyOfRange(bytes, currIdx + 1, currIdx + 9);
-                numbers.add(new PairValue(QuestionType.SHORT_ANSWER.getName(), ByteBuffer.wrap(tmp).getDouble()));
+                if(Double.isNaN(ByteBuffer.wrap(tmp).getDouble()))
+                    numbers.add(new PairValue(QuestionType.SHORT_ANSWER.getName(), 0));
+                else
+                    numbers.add(new PairValue(QuestionType.SHORT_ANSWER.getName(), ByteBuffer.wrap(tmp).getDouble()));
                 next = currIdx + 9;
             }
             // MULTI_SENTENCE
