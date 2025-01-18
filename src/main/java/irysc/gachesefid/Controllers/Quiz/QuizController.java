@@ -3183,6 +3183,20 @@ public class QuizController {
         );
     }
 
+    public static void calcQuestionsAgain(ObjectId quizId) {
+        Document quiz = iryscQuizRepository.findById(quizId);
+        if(quiz == null)
+            return;
+
+        Document questions = quiz.get("questions", Document.class);
+        questions.put("answers",
+                Utility.getAnswersByteArr(questions.getList("_ids", ObjectId.class))
+        );
+
+        quiz.put("questions", questions);
+        iryscQuizRepository.replaceOne(quizId, quiz);
+    }
+
     public static String rates(Common db, ObjectId quizId) {
 
         Document quiz = db.findById(quizId);

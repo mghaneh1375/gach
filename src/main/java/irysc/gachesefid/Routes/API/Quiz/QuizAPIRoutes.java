@@ -66,6 +66,16 @@ public class QuizAPIRoutes extends Router {
                                         contentQuizRepository : iryscQuizRepository;
     }
 
+    @PostMapping(value = "calQuestionsAgain/{quizId}")
+    @ResponseBody
+    public void calQuestionsAgain(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId quizId
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        QuizController.calcQuestionsAgain(quizId);
+    }
+
     @PostMapping(value = "/createFromIRYSCQuiz/{quizId}")
     @ResponseBody
     public String createFromIRYSCQuiz(HttpServletRequest request,
