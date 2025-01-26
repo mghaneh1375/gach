@@ -1329,6 +1329,8 @@ public class Utility {
 
         if (!jsonObject1.has("branches"))
             jsonObject1.put("branches", "");
+
+        jsonObject1.put("rank", -1);
     }
     public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
 
