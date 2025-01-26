@@ -1333,6 +1333,50 @@ public class Utility {
         }
     }
 
+    private static void simpleFillJSONWithUserCommonInfo(JSONObject jsonObject1, Document user) {
+
+        if (user.containsKey("city")) {
+            Document city = (Document) user.get("city");
+            if (city != null && city.containsKey("name"))
+                jsonObject1.put("city", city.getString("name"));
+        }
+
+        if (!jsonObject1.has("city"))
+            jsonObject1.put("city", "");
+
+        if (user.containsKey("school")) {
+            Document school = (Document) user.get("school");
+            if (school != null && school.containsKey("name"))
+                jsonObject1.put("school", school.getString("name"));
+        }
+
+        if (!jsonObject1.has("school"))
+            jsonObject1.put("school", "");
+
+        if (user.containsKey("grade")) {
+            Document grade = (Document) user.get("grade");
+            if (grade != null && grade.containsKey("name"))
+                jsonObject1.put("grade", grade.getString("name"));
+        }
+
+        if (!jsonObject1.has("grade"))
+            jsonObject1.put("grade", "");
+
+
+        if (user.containsKey("branches")) {
+            List<Document> branches = user.getList("branches", Document.class);
+            if (branches.size() > 0) {
+                StringBuilder sb = new StringBuilder();
+                for (Document branch : branches) {
+                    sb.append(branch.getString("name")).append(" - ");
+                }
+                jsonObject1.put("branches", sb.substring(0, sb.toString().length() - 3));
+            } else jsonObject1.put("branches", "");
+        }
+
+        if (!jsonObject1.has("branches"))
+            jsonObject1.put("branches", "");
+    }
     public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
 
         //todo: customize with common user info
@@ -1348,6 +1392,18 @@ public class Utility {
         jsonObject.put("student", jsonObject1);
     }
 
+    public static void simpleFillJSONWithUser(JSONObject jsonObject, Document user) {
+        JSONObject jsonObject1 = new JSONObject()
+                .put("id", user.getObjectId("_id").toString())
+                .put("name", user.getString("first_name") + " " + user.getString("last_name"))
+                .put("phone", user.getOrDefault("phone", ""))
+                .put("mail", user.getOrDefault("mail", ""))
+                .put("pic", StaticValues.STATICS_SERVER + UserRepository.FOLDER + "/" + user.getString("pic"))
+                .put("NID", user.getString("NID"));
+
+        simpleFillJSONWithUserCommonInfo(jsonObject1, user);
+        jsonObject.put("student", jsonObject1);
+    }
     public static JSONObject fillJSONWithUser(Document user) {
         //todo: customize with common user info
         JSONObject jsonObject1 = new JSONObject()

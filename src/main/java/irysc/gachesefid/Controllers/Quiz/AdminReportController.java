@@ -480,7 +480,7 @@ public class AdminReportController {
                 data.put("conditions", conditions);
             }
 
-            irysc.gachesefid.Utility.Utility.fillJSONWithUser(data, studentDoc);
+            irysc.gachesefid.Utility.Utility.simpleFillJSONWithUser(data, studentDoc);
 
             return generateSuccessMsg(
                     "data", data
