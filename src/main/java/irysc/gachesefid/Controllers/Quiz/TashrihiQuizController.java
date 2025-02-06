@@ -1076,48 +1076,53 @@ public class TashrihiQuizController extends QuizAbstract {
     @Override
     public List<Document> registry(ObjectId studentId, String phone, String mail,
                                    List<ObjectId> quizIds, int paid, ObjectId transactionId, String stdName) {
-
         ArrayList<Document> added = new ArrayList<>();
+        List<Document> registrableQuizzes = new ArrayList<>();
+        int totalPrice = 0;
 
         for (ObjectId quizId : quizIds) {
-
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
-
                 if (quiz == null || !quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
-
                 if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                         students, "_id", studentId
                 ) != -1)
                     continue;
 
-                Document stdDoc = new Document("_id", studentId)
-                        .append("paid", paid / quizIds.size())
-                        .append("register_at", System.currentTimeMillis())
-                        .append("finish_at", null)
-                        .append("start_at", null)
-                        .append("all_marked", false)
-                        .append("answers", new ArrayList<>());
-
-                students.add(stdDoc);
-                added.add(stdDoc);
-                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
-
-                iryscQuizRepository.replaceOne(
-                        quizId, quiz
-                );
-
-                if (transactionId != null && mail != null) {
-                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
-                }
-
-                //todo : send notif
+                registrableQuizzes.add(quiz);
+                totalPrice += quiz.getInteger("price");
             } catch (Exception ignore) {
             }
         }
+
+        double offPercent = totalPrice == 0 ? 0 : Math.max(((totalPrice - paid) * 1.0) / totalPrice, 0);
+        long curr = System.currentTimeMillis();
+        registrableQuizzes.forEach(quiz -> {
+            Document stdDoc = new Document("_id", studentId)
+                    .append("paid", (int) ((1.0 - offPercent) * quiz.getInteger("price")))
+                    .append("register_at", System.currentTimeMillis())
+                    .append("finish_at", null)
+                    .append("start_at", null)
+                    .append("all_marked", false)
+                    .append("answers", new ArrayList<>());
+
+            quiz.getList("students", Document.class).add(stdDoc);
+            added.add(stdDoc);
+            quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
+            iryscQuizRepository.replaceOne(
+                    quiz.getObjectId("_id"), quiz
+            );
+
+            if (transactionId != null && mail != null) {
+                new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
+            }
+
+            //todo : send notif
+        });
 
         return added;
     }

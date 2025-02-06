@@ -4,7 +4,6 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
-import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -12,7 +11,6 @@ import irysc.gachesefid.Models.AllKindQuiz;
 import irysc.gachesefid.Models.KindQuiz;
 import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
@@ -153,10 +151,10 @@ public class RegularQuizController extends QuizAbstract {
         if (end < start)
             return generateErr("زمان پایان آزمون باید بزرگ تر از زمان آغاز آن باشد");
 
-        if(startRegistry > start)
+        if (startRegistry > start)
             return generateErr("زمان شروع ثبت نام باید قبل از شروع باشد");
 
-        if(endRegistry != null && endRegistry < startRegistry)
+        if (endRegistry != null && endRegistry < startRegistry)
             return generateErr("زمان شروع ثبت نام باید قبل از اتمام آن باشد");
 
         Document newQuiz = new Document("created_at", System.currentTimeMillis())
@@ -175,7 +173,7 @@ public class RegularQuizController extends QuizAbstract {
                 continue;
             newQuiz.append(key, quiz.get(key));
         }
-        if(data.has("description"))
+        if (data.has("description"))
             newQuiz.put("description", data.getString("description"));
 
         newQuiz.put("start", start);
@@ -191,6 +189,7 @@ public class RegularQuizController extends QuizAbstract {
 
         return generateSuccessMsg("quiz", quizAbstract.convertDocToJSON(newQuiz, true, true, false, false));
     }
+
     public static String delete(ObjectId quizId, ObjectId userId) {
 
         Document quiz = iryscQuizRepository.findOneAndDelete(and(
@@ -546,52 +545,58 @@ public class RegularQuizController extends QuizAbstract {
     }
 
     @Override
-    public List<Document> registry(ObjectId studentId, String phone,
-                                   String mail, List<ObjectId> quizIds,
-                                   int paid, ObjectId transactionId, String stdName
+    public List<Document> registry(
+            ObjectId studentId, String phone,
+            String mail, List<ObjectId> quizIds,
+            int paid, ObjectId transactionId, String stdName
     ) {
         ArrayList<Document> added = new ArrayList<>();
+        List<Document> registrableQuizzes = new ArrayList<>();
+        int totalPrice = 0;
         for (ObjectId quizId : quizIds) {
             try {
                 Document quiz = iryscQuizRepository.findById(quizId);
-
                 if (quiz == null || quiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
                     continue;
 
                 List<Document> students = quiz.getList("students", Document.class);
-
                 if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
                         students, "_id", studentId
                 ) != -1)
                     continue;
 
-                Document stdDoc = new Document("_id", studentId)
-                        .append("paid", paid / quizIds.size())
-                        .append("register_at", System.currentTimeMillis())
-                        .append("finish_at", null)
-                        .append("start_at", null)
-                        .append("answers", new byte[0]);
-
-                if ((boolean) quiz.getOrDefault("permute", false))
-                    stdDoc.put("question_indices", new ArrayList<>());
-
-                students.add(stdDoc);
-                added.add(stdDoc);
-                quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
-
-                iryscQuizRepository.replaceOne(
-                        quizId, quiz
-                );
-
-                if (transactionId != null && mail != null) {
-                    new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
-                }
-
-                //todo : send notif
+                registrableQuizzes.add(quiz);
+                totalPrice += quiz.getInteger("price");
             } catch (Exception ignore) {
             }
         }
 
+        double offPercent = totalPrice == 0 ? 0 : Math.max(((totalPrice - paid) * 1.0) / totalPrice, 0);
+        long curr = System.currentTimeMillis();
+        registrableQuizzes.forEach(quiz -> {
+            Document stdDoc = new Document("_id", studentId)
+                    .append("paid", (int) ((1.0 - offPercent) * quiz.getInteger("price")))
+                    .append("register_at", curr)
+                    .append("finish_at", null)
+                    .append("start_at", null)
+                    .append("answers", new byte[0]);
+
+            if ((boolean) quiz.getOrDefault("permute", false))
+                stdDoc.put("question_indices", new ArrayList<>());
+
+            quiz.getList("students", Document.class).add(stdDoc);
+            added.add(stdDoc);
+            quiz.put("registered", (int) quiz.getOrDefault("registered", 0) + 1);
+
+            iryscQuizRepository.replaceOne(
+                    quiz.getObjectId("_id"), quiz
+            );
+
+            if (transactionId != null && mail != null) {
+                new Thread(() -> sendMail(mail, SERVER + "recp/" + transactionId, "successQuiz", stdName)).start();
+            }
+            //todo : send notif
+        });
         return added;
     }
 
