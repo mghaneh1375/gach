@@ -18,6 +18,7 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -348,15 +349,37 @@ public class PayPing {
                         List<ObjectId> iryscQuizIds = new ArrayList<>();
                         List<ObjectId> openQuizIds = new ArrayList<>();
                         List<ObjectId> escapeQuizIds = new ArrayList<>();
+                        int totalIryscRegularQuizPrice = 0;
+                        int totalIryscTashrihiQuizPrice = 0;
+                        int totalOpenQuizPrice = 0;
+                        int totalEscapeQuizPrice = 0;
 
                         for (ObjectId id : products) {
-                            if (iryscQuizRepository.findById(id) != null)
+                            Document tmpQuiz = iryscQuizRepository.findById(id);
+                            if (tmpQuiz != null) {
+                                if(tmpQuiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
+                                    totalIryscTashrihiQuizPrice += tmpQuiz.getInteger("price");
+                                else
+                                    totalIryscRegularQuizPrice += tmpQuiz.getInteger("price");
                                 iryscQuizIds.add(id);
-                            else if (openQuizRepository.findById(id) != null)
-                                openQuizIds.add(id);
-                            else if (escapeQuizRepository.findById(id) != null)
-                                escapeQuizIds.add(id);
+                            }
+                            else {
+                                tmpQuiz = openQuizRepository.findById(id);
+                                if (tmpQuiz != null) {
+                                    totalOpenQuizPrice += tmpQuiz.getInteger("price");
+                                    openQuizIds.add(id);
+                                }
+                                else {
+                                    tmpQuiz = escapeQuizRepository.findById(id);
+                                    if (tmpQuiz != null) {
+                                        totalEscapeQuizPrice += tmpQuiz.getInteger("price");
+                                        escapeQuizIds.add(id);
+                                    }
+                                }
+                            }
                         }
+                        int totalPrices = totalOpenQuizPrice + totalIryscRegularQuizPrice +
+                                totalIryscTashrihiQuizPrice + totalEscapeQuizPrice;
 
                         if (iryscQuizIds.size() > 0) {
                             regularQuizController
@@ -364,7 +387,7 @@ public class PayPing {
                                             user.getString("phone"),
                                             user.getString("mail"),
                                             iryscQuizIds,
-                                            transaction.getInteger("amount"),
+                                            (int)(((totalIryscRegularQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
                                             transaction.getObjectId("_id"),
                                             user.getString("first_name") + " " + user.getString("last_name")
                                     );
@@ -373,28 +396,29 @@ public class PayPing {
                                     user.getString("phone"),
                                     user.getString("mail"),
                                     iryscQuizIds,
-                                    transaction.getInteger("amount"),
+                                    (int)(((totalIryscTashrihiQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
                                     transaction.getObjectId("_id"),
                                     user.getString("first_name") + " " + user.getString("last_name")
                             );
                         }
 
-                        if (openQuizIds.size() > 0)
+                        if (openQuizIds.size() > 0) {
                             openQuiz.registry(studentId,
                                     user.getString("phone"),
                                     user.getString("mail"),
                                     openQuizIds,
-                                    transaction.getInteger("amount"),
+                                    (int)(transaction.getInteger("amount") * ((totalOpenQuizPrice * 1.0) / totalPrices)),
                                     transaction.getObjectId("_id"),
                                     user.getString("first_name") + " " + user.getString("last_name")
                             );
+                        }
 
                         if (escapeQuizIds.size() > 0)
                             escapeQuizController.registry(studentId,
                                     user.getString("phone"),
                                     user.getString("mail"),
                                     escapeQuizIds,
-                                    transaction.getInteger("amount"),
+                                    (int)(transaction.getInteger("amount") * ((totalEscapeQuizPrice * 1.0) / totalPrices)),
                                     transaction.getObjectId("_id"),
                                     user.getString("first_name") + " " + user.getString("last_name")
                             );
