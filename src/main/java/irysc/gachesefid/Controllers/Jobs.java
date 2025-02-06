@@ -31,7 +31,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
+import static irysc.gachesefid.Utility.Utility.*;
 
 public class Jobs implements Runnable {
 
@@ -370,6 +370,13 @@ public class Jobs implements Runnable {
         }
     }
 
+    private static class RejectExpiredRSS extends TimerTask {
+        @Override
+        public void run() {
+            int today = getPast(5);
+            rssRepository.deleteMany(lt("today", today));
+        }
+    }
     private static class RejectExpiredTeachRequests extends TimerTask {
         @Override
         public void run() {
