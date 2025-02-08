@@ -571,7 +571,7 @@ public class RegularQuizController extends QuizAbstract {
             }
         }
 
-        double offPercent = totalPrice == 0 ? 0 : Math.max(((totalPrice - paid) * 1.0) / totalPrice, 0);
+        double offPercent = totalPrice == 0 ? 1.0 : Math.max(((totalPrice - paid) * 1.0) / totalPrice, 0);
         long curr = System.currentTimeMillis();
         registrableQuizzes.forEach(quiz -> {
             Document stdDoc = new Document("_id", studentId)

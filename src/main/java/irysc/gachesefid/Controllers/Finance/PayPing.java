@@ -118,384 +118,377 @@ public class PayPing {
     }
 
     private static void completePay(Document transaction) {
-
         ObjectId studentId = transaction.getObjectId("user_id");
         Document user = userRepository.findById(studentId);
+        if(user == null) return;
 
-        if (user != null) {
-            if (transaction.getString("section").equalsIgnoreCase("charge")) {
+        if (transaction.getString("section").equalsIgnoreCase("charge")) {
+            if (user.containsKey("mail")) {
+                new Thread(() -> sendMail(
+                        user.getString("mail"),
+                        SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+                        "successTransaction",
+                        user.getString("first_name") + " " + user.getString("last_name")
+                )).start();
+            }
+            user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
+        } else {
+            user.put("money", (double) 0);
+        }
 
-                if (user.containsKey("mail")) {
-                    new Thread(() -> sendMail(
-                            user.getString("mail"),
-                            SERVER + "recp/" + transaction.getObjectId("_id").toString(),
-                            "successTransaction",
-                            user.getString("first_name") + " " + user.getString("last_name")
-                    )).start();
+        userRepository.replaceOneWithoutClearCache(
+                user.getObjectId("_id"), user
+        );
+
+        if (transaction.containsKey("products")) {
+
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
+            ) {
+                new Thread(() -> {
+                    BadgeController.checkForUpgrade(studentId, Action.SET_ADVISOR);
+                    PointController.addPointForAction(studentId, Action.SET_ADVISOR, transaction.getObjectId("products"), null);
+                }).start();
+                Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
+                if (request != null && studentId.equals(request.getObjectId("user_id"))) {
+                    long curr = System.currentTimeMillis();
+                    request.put("paid", transaction.getInteger("amount"));
+                    request.put("paid_at", curr);
+
+                    Document olderAdvisorRequest = advisorRequestsRepository.findOne(and(
+                            eq("user_id", user.getObjectId("_id")),
+                            eq("advisor_id", request.getObjectId("advisor_id")),
+                            eq("answer", "accept"),
+                            exists("active_at"),
+                            lte("active_at", curr - 24 * ONE_DAY_MIL_SEC),
+                            gt("active_at", curr - 31 * ONE_DAY_MIL_SEC)
+                    ), new BasicDBObject("active_at", 1), Sorts.descending("created_at"));
+                    if (olderAdvisorRequest != null)
+                        request.put("active_at", 31 * ONE_DAY_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
+                    else
+                        request.put("active_at", curr);
+
+                    advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
+                    AdvisorController.setAdvisor(user, userRepository.findById(request.getObjectId("advisor_id")));
                 }
-
-                user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
-            } else {
-                user.put("money", (double) 0);
             }
 
-            userRepository.replaceOneWithoutClearCache(
-                    user.getObjectId("_id"), user
-            );
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.SCHOOL_QUIZ.getName())
+            ) {
 
-            if (transaction.containsKey("products")) {
+                Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
 
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.COUNSELING.getName())
-                ) {
-                    new Thread(() -> {
-                        BadgeController.checkForUpgrade(studentId, Action.SET_ADVISOR);
-                        PointController.addPointForAction(studentId, Action.SET_ADVISOR, transaction.getObjectId("products"), null);
-                    }).start();
-                    Document request = advisorRequestsRepository.findById(transaction.getObjectId("products"));
-                    if (request != null && studentId.equals(request.getObjectId("user_id"))) {
-                        long curr = System.currentTimeMillis();
-                        request.put("paid", transaction.getInteger("amount"));
-                        request.put("paid_at", curr);
-
-                        Document olderAdvisorRequest = advisorRequestsRepository.findOne(and(
-                                eq("user_id", user.getObjectId("_id")),
-                                eq("advisor_id", request.getObjectId("advisor_id")),
-                                eq("answer", "accept"),
-                                exists("active_at"),
-                                lte("active_at", curr - 24 * ONE_DAY_MIL_SEC),
-                                gt("active_at", curr - 31 * ONE_DAY_MIL_SEC)
-                        ), new BasicDBObject("active_at", 1), Sorts.descending("created_at"));
-                        if (olderAdvisorRequest != null)
-                            request.put("active_at", 31 * ONE_DAY_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
-                        else
-                            request.put("active_at", curr);
-
-                        advisorRequestsRepository.replaceOne(request.getObjectId("_id"), request);
-                        AdvisorController.setAdvisor(user, userRepository.findById(request.getObjectId("advisor_id")));
-                    }
+                if (quiz != null) {
+                    quiz.put("status", "finish");
+                    schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                 }
+            }
 
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.SCHOOL_QUIZ.getName())
-                ) {
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.CLASSES.getName())
+            ) {
+                new Thread(() -> {
+                    BadgeController.checkForUpgrade(studentId, Action.GET_TEACH_CLASS);
+                    PointController.addPointForAction(studentId, Action.GET_TEACH_CLASS, transaction.getObjectId("products"), null);
+                }).start();
 
-                    Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
+                Document schedule = teachScheduleRepository.findById(transaction.getObjectId("products"));
+                if (schedule != null && schedule.containsKey("students")) {
+                    Document studentRequest = searchInDocumentsKeyVal(
+                            schedule.getList("requests", Document.class),
+                            "_id", user.getObjectId("_id")
+                    );
 
-                    if (quiz != null) {
-                        quiz.put("status", "finish");
+                    new Thread(() -> {
+                        Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
+                        createNotifAndSendSMS(
+                                advisor,
+                                user.getString("first_name") + " " + user.getString("last_name"),
+                                "finalizeTeach"
+                        );
+                    }).start();
+
+                    teachScheduleRepository.updateOne(
+                            transaction.getObjectId("products"),
+                            new BasicDBObject(
+                                    "$set",
+                                    register(
+                                            schedule, user.getObjectId("_id"),
+                                            System.currentTimeMillis(), studentRequest,
+                                            schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName())
+                                    )
+                            )
+                    );
+                }
+            }
+
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals("prePay")
+            ) {
+                try {
+                    Number n = (Number) transaction.get("account_money");
+                    completePrePayForSemiPrivateSchedule(
+                            transaction.getObjectId("products"), null, user,
+                            (int) (n.doubleValue() + transaction.getInteger("amount"))
+                    );
+                } catch (InvalidFieldsException ignore) {
+                }
+            }
+
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(AllKindQuiz.ONLINESTANDING.getName())
+            ) {
+                onlineStandingController.registry(studentId,
+                        user.getString("phone") + "__" + user.getString("mail"),
+                        transaction.get("products").toString() + "__" + transaction.getString("team_name"),
+                        transaction.getList("members", ObjectId.class),
+                        transaction.getInteger("amount"),
+                        transaction.getObjectId("_id"),
+                        user.getString("first_name") + " " + user.getString("last_name")
+                );
+                new Thread(() -> {
+                    transaction.getList("members", ObjectId.class).forEach(memberId -> {
+                        BadgeController.checkForUpgrade(memberId, Action.BUY_EXAM);
+                        PointController.addPointForAction(memberId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                    });
+                    if(!transaction.getList("members", ObjectId.class).contains(studentId)) {
+                        BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
+                        PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                    }
+                }).start();
+            }
+
+
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.COUNSELING_QUIZ.getName())
+            ) {
+
+                Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
+
+                if (quiz != null) {
+
+                    Document studentDoc = searchInDocumentsKeyVal(
+                            quiz.getList("students", Document.class),
+                            "_id", studentId
+                    );
+
+                    if (studentDoc != null) {
+                        studentDoc.put("pay_at", System.currentTimeMillis());
+                        studentDoc.put("paid", transaction.getInteger("amount"));
                         schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                     }
+
                 }
+            }
 
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.CLASSES.getName())
-                ) {
-                    new Thread(() -> {
-                        BadgeController.checkForUpgrade(studentId, Action.GET_TEACH_CLASS);
-                        PointController.addPointForAction(studentId, Action.GET_TEACH_CLASS, transaction.getObjectId("products"), null);
-                    }).start();
-
-                    Document schedule = teachScheduleRepository.findById(transaction.getObjectId("products"));
-                    if (schedule != null && schedule.containsKey("students")) {
-                        Document studentRequest = searchInDocumentsKeyVal(
-                                schedule.getList("requests", Document.class),
-                                "_id", user.getObjectId("_id")
-                        );
-
-                        new Thread(() -> {
-                            Document advisor = userRepository.findById(schedule.getObjectId("user_id"));
-                            createNotifAndSendSMS(
-                                    advisor,
-                                    user.getString("first_name") + " " + user.getString("last_name"),
-                                    "finalizeTeach"
-                            );
-                        }).start();
-
-                        teachScheduleRepository.updateOne(
-                                transaction.getObjectId("products"),
-                                new BasicDBObject(
-                                        "$set",
-                                        register(
-                                                schedule, user.getObjectId("_id"),
-                                                System.currentTimeMillis(), studentRequest,
-                                                schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.PRIVATE.getName())
-                                        )
-                                )
-                        );
-                    }
+            if (transaction.containsKey("package_id")) {
+                Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
+                if (thePackage != null) {
+                    thePackage.put("buyers", (int) thePackage.getOrDefault("buyers", 0) + 1);
+                    packageRepository.updateOne(thePackage.getObjectId("_id"), set("buyers", thePackage.get("buyers")));
+                    packageRepository.clearFromCache(thePackage.getObjectId("_id"));
                 }
+            }
 
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals("prePay")
-                ) {
-                    try {
-                        Number n = (Number) transaction.get("account_money");
-                        completePrePayForSemiPrivateSchedule(
-                                transaction.getObjectId("products"), null, user,
-                                (int) (n.doubleValue() + transaction.getInteger("amount"))
-                        );
-                    } catch (InvalidFieldsException ignore) {
-                    }
-                }
+            if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
+            ) {
+                new Thread(() -> {
+                    BadgeController.checkForUpgrade(studentId, Action.BUY_QUESTION);
+                    PointController.addPointForAction(studentId, Action.BUY_QUESTION, transaction.getObjectId("products"), null);
+                }).start();
+                Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
+                if (quiz != null) {
+                    quiz.put("status", "paid");
 
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(AllKindQuiz.ONLINESTANDING.getName())
-                ) {
-                    onlineStandingController.registry(studentId,
-                            user.getString("phone") + "__" + user.getString("mail"),
-                            transaction.get("products").toString() + "__" + transaction.getString("team_name"),
-                            transaction.getList("members", ObjectId.class),
-                            transaction.getInteger("amount"),
-                            transaction.getObjectId("_id"),
-                            user.getString("first_name") + " " + user.getString("last_name")
+                    PairValue p = irysc.gachesefid.Controllers.Quiz.Utility.getAnswersByteArrWithNeededTime(
+                            quiz.getList("questions", ObjectId.class)
                     );
+
+                    quiz.put("answers", p.getValue());
+                    quiz.put("duration", p.getKey());
+                    quiz.put("start_at", null);
+
+                    customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+
+                    if (user.containsKey("mail")) {
+                        new Thread(() -> sendMail(
+                                user.getString("mail"),
+                                SERVER + "recp/" + transaction.getObjectId("_id").toString(),
+                                "successQuiz",
+                                user.getString("first_name") + " " + user.getString("last_name")
+                        )).start();
+                    }
+
+                }
+            } else if (transaction.get("products") instanceof ObjectId &&
+                    transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
+            ) {
+                new Thread(() -> {
+                    BadgeController.checkForUpgrade(studentId, Action.BUY_CONTENT);
+                    PointController.addPointForAction(studentId, Action.BUY_CONTENT, transaction.getObjectId("products"), null);
+                }).start();
+                Document content = contentRepository.findById(transaction.getObjectId("products"));
+                if (content != null) {
+                    StudentContentController.registry(
+                            content.getObjectId("_id"),
+                            studentId, ((Number) transaction.get("amount")).intValue(),
+                            user.getOrDefault("phone", "").toString(),
+                            user.getOrDefault("mail", "").toString()
+                    );
+                }
+
+            } else if (transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
+                List<ObjectId> products = transaction.getList("products", ObjectId.class);
+                if (transaction.containsKey("student_ids")) {
+                    regularQuizController.registry(transaction.getList("student_ids", ObjectId.class),
+                            user.getString("phone"),
+                            user.getString("mail"),
+                            products,
+                            transaction.getInteger("amount"));
+                    // todo: group registration for tashrihi
                     new Thread(() -> {
-                        transaction.getList("members", ObjectId.class).forEach(memberId -> {
-                            BadgeController.checkForUpgrade(memberId, Action.BUY_EXAM);
-                            PointController.addPointForAction(memberId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
+                        transaction.getList("student_ids", ObjectId.class).forEach(stdId -> {
+                            BadgeController.checkForUpgrade(stdId, Action.BUY_EXAM);
+                            products.forEach(productId ->
+                                    PointController.addPointForAction(stdId, Action.BUY_EXAM, productId, null)
+                            );
                         });
-                        if(!transaction.getList("members", ObjectId.class).contains(studentId)) {
-                            BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
-                            PointController.addPointForAction(studentId, Action.BUY_EXAM, transaction.getObjectId("products"), null);
-                        }
                     }).start();
-                }
+                } else {
+                    List<ObjectId> iryscQuizIds = new ArrayList<>();
+                    List<ObjectId> openQuizIds = new ArrayList<>();
+                    List<ObjectId> escapeQuizIds = new ArrayList<>();
+                    int totalIryscRegularQuizPrice = 0;
+                    int totalIryscTashrihiQuizPrice = 0;
+                    int totalOpenQuizPrice = 0;
+                    int totalEscapeQuizPrice = 0;
 
-
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.COUNSELING_QUIZ.getName())
-                ) {
-
-                    Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
-
-                    if (quiz != null) {
-
-                        Document studentDoc = searchInDocumentsKeyVal(
-                                quiz.getList("students", Document.class),
-                                "_id", studentId
-                        );
-
-                        if (studentDoc != null) {
-                            studentDoc.put("pay_at", System.currentTimeMillis());
-                            studentDoc.put("paid", transaction.getInteger("amount"));
-                            schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
+                    for (ObjectId id : products) {
+                        Document tmpQuiz = iryscQuizRepository.findById(id);
+                        if (tmpQuiz != null) {
+                            if(tmpQuiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
+                                totalIryscTashrihiQuizPrice += tmpQuiz.getInteger("price");
+                            else
+                                totalIryscRegularQuizPrice += tmpQuiz.getInteger("price");
+                            iryscQuizIds.add(id);
                         }
-
-                    }
-                }
-
-
-                if (transaction.containsKey("package_id")) {
-                    Document thePackage = packageRepository.findById(transaction.getObjectId("package_id"));
-                    if (thePackage != null) {
-                        thePackage.put("buyers", (int) thePackage.getOrDefault("buyers", 0) + 1);
-                        packageRepository.updateOne(thePackage.getObjectId("_id"), set("buyers", thePackage.get("buyers")));
-                        packageRepository.clearFromCache(thePackage.getObjectId("_id"));
-                    }
-                }
-
-                if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.BANK_EXAM.getName())
-                ) {
-                    new Thread(() -> {
-                        BadgeController.checkForUpgrade(studentId, Action.BUY_QUESTION);
-                        PointController.addPointForAction(studentId, Action.BUY_QUESTION, transaction.getObjectId("products"), null);
-                    }).start();
-                    Document quiz = customQuizRepository.findById(transaction.getObjectId("products"));
-                    if (quiz != null) {
-                        quiz.put("status", "paid");
-
-                        PairValue p = irysc.gachesefid.Controllers.Quiz.Utility.getAnswersByteArrWithNeededTime(
-                                quiz.getList("questions", ObjectId.class)
-                        );
-
-                        quiz.put("answers", p.getValue());
-                        quiz.put("duration", p.getKey());
-                        quiz.put("start_at", null);
-
-                        customQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
-
-                        if (user.containsKey("mail")) {
-                            new Thread(() -> sendMail(
-                                    user.getString("mail"),
-                                    SERVER + "recp/" + transaction.getObjectId("_id").toString(),
-                                    "successQuiz",
-                                    user.getString("first_name") + " " + user.getString("last_name")
-                            )).start();
-                        }
-
-                    }
-                } else if (transaction.get("products") instanceof ObjectId &&
-                        transaction.getString("section").equals(OffCodeSections.CONTENT.getName())
-                ) {
-                    new Thread(() -> {
-                        BadgeController.checkForUpgrade(studentId, Action.BUY_CONTENT);
-                        PointController.addPointForAction(studentId, Action.BUY_CONTENT, transaction.getObjectId("products"), null);
-                    }).start();
-                    Document content = contentRepository.findById(transaction.getObjectId("products"));
-                    if (content != null) {
-                        StudentContentController.registry(
-                                content.getObjectId("_id"),
-                                studentId, ((Number) transaction.get("amount")).intValue(),
-                                user.getOrDefault("phone", "").toString(),
-                                user.getOrDefault("mail", "").toString()
-                        );
-                    }
-
-                } else if (transaction.getString("section").equals(OffCodeSections.GACH_EXAM.getName())) {
-                    List<ObjectId> products = transaction.getList("products", ObjectId.class);
-                    if (!transaction.containsKey("student_ids")) {
-                        List<ObjectId> iryscQuizIds = new ArrayList<>();
-                        List<ObjectId> openQuizIds = new ArrayList<>();
-                        List<ObjectId> escapeQuizIds = new ArrayList<>();
-                        int totalIryscRegularQuizPrice = 0;
-                        int totalIryscTashrihiQuizPrice = 0;
-                        int totalOpenQuizPrice = 0;
-                        int totalEscapeQuizPrice = 0;
-
-                        for (ObjectId id : products) {
-                            Document tmpQuiz = iryscQuizRepository.findById(id);
+                        else {
+                            tmpQuiz = openQuizRepository.findById(id);
                             if (tmpQuiz != null) {
-                                if(tmpQuiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi"))
-                                    totalIryscTashrihiQuizPrice += tmpQuiz.getInteger("price");
-                                else
-                                    totalIryscRegularQuizPrice += tmpQuiz.getInteger("price");
-                                iryscQuizIds.add(id);
+                                totalOpenQuizPrice += tmpQuiz.getInteger("price");
+                                openQuizIds.add(id);
                             }
                             else {
-                                tmpQuiz = openQuizRepository.findById(id);
+                                tmpQuiz = escapeQuizRepository.findById(id);
                                 if (tmpQuiz != null) {
-                                    totalOpenQuizPrice += tmpQuiz.getInteger("price");
-                                    openQuizIds.add(id);
-                                }
-                                else {
-                                    tmpQuiz = escapeQuizRepository.findById(id);
-                                    if (tmpQuiz != null) {
-                                        totalEscapeQuizPrice += tmpQuiz.getInteger("price");
-                                        escapeQuizIds.add(id);
-                                    }
+                                    totalEscapeQuizPrice += tmpQuiz.getInteger("price");
+                                    escapeQuizIds.add(id);
                                 }
                             }
                         }
-                        int totalPrices = totalOpenQuizPrice + totalIryscRegularQuizPrice +
-                                totalIryscTashrihiQuizPrice + totalEscapeQuizPrice;
+                    }
+                    int totalPrices = totalOpenQuizPrice + totalIryscRegularQuizPrice +
+                            totalIryscTashrihiQuizPrice + totalEscapeQuizPrice;
 
-                        if (iryscQuizIds.size() > 0) {
-                            regularQuizController
-                                    .registry(studentId,
-                                            user.getString("phone"),
-                                            user.getString("mail"),
-                                            iryscQuizIds,
-                                            (int)(((totalIryscRegularQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
-                                            transaction.getObjectId("_id"),
-                                            user.getString("first_name") + " " + user.getString("last_name")
-                                    );
+                    if (iryscQuizIds.size() > 0) {
+                        regularQuizController
+                                .registry(studentId,
+                                        user.getString("phone"),
+                                        user.getString("mail"),
+                                        iryscQuizIds,
+                                        (int)(((totalIryscRegularQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
+                                        transaction.getObjectId("_id"),
+                                        user.getString("first_name") + " " + user.getString("last_name")
+                                );
 
-                            tashrihiQuizController.registry(studentId,
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    iryscQuizIds,
-                                    (int)(((totalIryscTashrihiQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
-                                    transaction.getObjectId("_id"),
-                                    user.getString("first_name") + " " + user.getString("last_name")
-                            );
-                        }
-
-                        if (openQuizIds.size() > 0) {
-                            openQuiz.registry(studentId,
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    openQuizIds,
-                                    (int)(transaction.getInteger("amount") * ((totalOpenQuizPrice * 1.0) / totalPrices)),
-                                    transaction.getObjectId("_id"),
-                                    user.getString("first_name") + " " + user.getString("last_name")
-                            );
-                        }
-
-                        if (escapeQuizIds.size() > 0)
-                            escapeQuizController.registry(studentId,
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    escapeQuizIds,
-                                    (int)(transaction.getInteger("amount") * ((totalEscapeQuizPrice * 1.0) / totalPrices)),
-                                    transaction.getObjectId("_id"),
-                                    user.getString("first_name") + " " + user.getString("last_name")
-                            );
-                        new Thread(() -> {
-                            products.forEach(productId ->
-                                    PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
-                            );
-                            BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
-                        }).start();
-                    } else {
-                        regularQuizController.registry(transaction.getList("student_ids", ObjectId.class),
+                        tashrihiQuizController.registry(studentId,
                                 user.getString("phone"),
                                 user.getString("mail"),
-                                products,
-                                transaction.getInteger("amount"));
-                        // todo: group registration for tashrihi
-                        new Thread(() -> {
-                            transaction.getList("student_ids", ObjectId.class).forEach(stdId -> {
-                                BadgeController.checkForUpgrade(stdId, Action.BUY_EXAM);
-                                products.forEach(productId ->
-                                        PointController.addPointForAction(stdId, Action.BUY_EXAM, productId, null)
-                                );
-                            });
-                        }).start();
+                                iryscQuizIds,
+                                (int)(((totalIryscTashrihiQuizPrice * 1.0) / totalPrices) * transaction.getInteger("amount")),
+                                transaction.getObjectId("_id"),
+                                user.getString("first_name") + " " + user.getString("last_name")
+                        );
                     }
-                } else if (transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {
-                    List<ObjectId> products = transaction.getList("products", ObjectId.class);
-                    openQuiz
-                            .registry(studentId,
-                                    user.getString("phone"),
-                                    user.getString("mail"),
-                                    products,
-                                    transaction.getInteger("amount"),
-                                    transaction.getObjectId("_id"),
-                                    user.getString("first_name") + " " + user.getString("last_name")
-                            );
+
+                    if (openQuizIds.size() > 0) {
+                        openQuiz.registry(studentId,
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                openQuizIds,
+                                (int)(transaction.getInteger("amount") * ((totalOpenQuizPrice * 1.0) / totalPrices)),
+                                transaction.getObjectId("_id"),
+                                user.getString("first_name") + " " + user.getString("last_name")
+                        );
+                    }
+
+                    if (escapeQuizIds.size() > 0)
+                        escapeQuizController.registry(studentId,
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                escapeQuizIds,
+                                (int)(transaction.getInteger("amount") * ((totalEscapeQuizPrice * 1.0) / totalPrices)),
+                                transaction.getObjectId("_id"),
+                                user.getString("first_name") + " " + user.getString("last_name")
+                        );
                     new Thread(() -> {
-                        BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
                         products.forEach(productId ->
                                 PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
                         );
+                        BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
                     }).start();
-
                 }
-
-                if (transaction.containsKey("off_code") &&
-                        transaction.get("off_code") != null) {
-                    Document off = offcodeRepository.findById(
-                            transaction.getObjectId("off_code")
-                    );
-                    if (off != null) {
-
-                        BasicDBObject update;
-
-                        if (off.containsKey("is_public") &&
-                                off.getBoolean("is_public")
-                        ) {
-                            List<ObjectId> students = off.getList("students", ObjectId.class);
-                            students.add(studentId);
-                            update = new BasicDBObject("students", students);
-                        } else
-                            update = new BasicDBObject("used", true)
-                                    .append("used_at", System.currentTimeMillis())
-                                    .append("used_section", transaction.getString("section"))
-                                    .append("used_for", transaction.get("products"));
-
-                        offcodeRepository.updateOne(
-                                off.getObjectId("_id"),
-                                new BasicDBObject("$set", update)
+            } else if (transaction.getString("section").equals(OffCodeSections.OPEN_EXAM.getName())) {
+                List<ObjectId> products = transaction.getList("products", ObjectId.class);
+                openQuiz
+                        .registry(studentId,
+                                user.getString("phone"),
+                                user.getString("mail"),
+                                products,
+                                transaction.getInteger("amount"),
+                                transaction.getObjectId("_id"),
+                                user.getString("first_name") + " " + user.getString("last_name")
                         );
-                    }
-                }
+                new Thread(() -> {
+                    BadgeController.checkForUpgrade(studentId, Action.BUY_EXAM);
+                    products.forEach(productId ->
+                            PointController.addPointForAction(studentId, Action.BUY_EXAM, productId, null)
+                    );
+                }).start();
 
             }
 
-        }
+            if (transaction.containsKey("off_code") &&
+                    transaction.get("off_code") != null) {
+                Document off = offcodeRepository.findById(
+                        transaction.getObjectId("off_code")
+                );
+                if (off != null) {
 
+                    BasicDBObject update;
+
+                    if (off.containsKey("is_public") &&
+                            off.getBoolean("is_public")
+                    ) {
+                        List<ObjectId> students = off.getList("students", ObjectId.class);
+                        students.add(studentId);
+                        update = new BasicDBObject("students", students);
+                    } else
+                        update = new BasicDBObject("used", true)
+                                .append("used_at", System.currentTimeMillis())
+                                .append("used_section", transaction.getString("section"))
+                                .append("used_for", transaction.get("products"));
+
+                    offcodeRepository.updateOne(
+                            off.getObjectId("_id"),
+                            new BasicDBObject("$set", update)
+                    );
+                }
+            }
+
+        }
     }
 
     public static String[] checkPay(
