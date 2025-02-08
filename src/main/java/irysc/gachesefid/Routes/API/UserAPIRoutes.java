@@ -47,8 +47,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
@@ -75,6 +74,148 @@ public class UserAPIRoutes extends Router {
         Utility.sendMail(to, "11111", "forget", "تست");
     }
 
+    @GetMapping(value = "syncTransactions")
+    @ResponseBody
+    public void syncTransactions(
+            HttpServletRequest request
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+//        getAdminPrivilegeUserVoid(request);
+        ArrayList<Document> transactions = transactionRepository.find(and(
+                eq("section", "gach_exam"),
+                eq("status", "success"),
+                exists("package_id"),
+                exists("products"),
+                exists("products.1"),
+                exists("off_amount"),
+                gt("off_amount", 0)
+                , eq("ref_id", "9FE0D564AD3FBE64")
+        ), null);
+        HashMap<ObjectId, PairValue> neededQuizzes = new HashMap<>();
+        HashMap<ObjectId, PairValue> neededUpdates = new HashMap<>();
+
+        for (int i = 0; i < transactions.size(); i++) {
+            Document transaction = transactions.get(i);
+            ObjectId studentId = transaction.getObjectId("user_id");
+            List<ObjectId> products = transaction.getList("products", ObjectId.class);
+            List<ObjectId> iryscQuizIds = new ArrayList<>();
+            List<ObjectId> openQuizIds = new ArrayList<>();
+            List<ObjectId> escapeQuizIds = new ArrayList<>();
+            int totalIryscRegularQuizPrice = 0;
+            int totalIryscTashrihiQuizPrice = 0;
+            int totalOpenQuizPrice = 0;
+            int totalEscapeQuizPrice = 0;
+
+            for (ObjectId id : products) {
+                Document tmpQuiz = neededQuizzes.containsKey(id) &&
+                        neededQuizzes.get(id).getKey().toString().contains("irysc")
+                        ? (Document) neededQuizzes.get(id).getValue()
+                        : iryscQuizRepository.findById(id);
+
+                if (tmpQuiz != null) {
+                    if (tmpQuiz.getOrDefault("mode", "regular").toString().equalsIgnoreCase("tashrihi")) {
+                        if (!neededQuizzes.containsKey(id))
+                            neededQuizzes.put(id, new PairValue("tashrihi_irysc", tmpQuiz));
+                        totalIryscTashrihiQuizPrice += tmpQuiz.getInteger("price");
+                    } else {
+                        if (!neededQuizzes.containsKey(id))
+                            neededQuizzes.put(id, new PairValue("regular_irysc", tmpQuiz));
+                        totalIryscRegularQuizPrice += tmpQuiz.getInteger("price");
+                    }
+                    iryscQuizIds.add(id);
+                } else {
+                    tmpQuiz = neededQuizzes.containsKey(id) &&
+                            neededQuizzes.get(id).getKey().toString().contains("open")
+                            ? (Document) neededQuizzes.get(id).getValue()
+                            : openQuizRepository.findById(id);
+                    if (tmpQuiz != null) {
+                        totalOpenQuizPrice += tmpQuiz.getInteger("price");
+                        openQuizIds.add(id);
+                        if (!neededQuizzes.containsKey(id))
+                            neededQuizzes.put(id, new PairValue("open", tmpQuiz));
+                    } else {
+                        tmpQuiz = neededQuizzes.containsKey(id) &&
+                                neededQuizzes.get(id).getKey().toString().contains("escape")
+                                ? (Document) neededQuizzes.get(id).getValue()
+                                : escapeQuizRepository.findById(id);
+                        if (tmpQuiz != null) {
+                            totalEscapeQuizPrice += tmpQuiz.getInteger("price");
+                            escapeQuizIds.add(id);
+                            if (!neededQuizzes.containsKey(id))
+                                neededQuizzes.put(id, new PairValue("escape", tmpQuiz));
+                        }
+                    }
+                }
+            }
+
+//            System.out.println("totalOpenQuizPrice " + totalOpenQuizPrice);
+//            System.out.println("totalIryscRegularQuizPrice " + totalIryscRegularQuizPrice);
+//            System.out.println("totalIryscTashrihiQuizPrice " + totalIryscTashrihiQuizPrice);
+//            System.out.println("totalEscapeQuizPrice " + totalEscapeQuizPrice);
+
+            int totalPrices = totalOpenQuizPrice + totalIryscRegularQuizPrice +
+                    totalIryscTashrihiQuizPrice + totalEscapeQuizPrice;
+
+            for (ObjectId id : products) {
+                PairValue pairValue = neededQuizzes.get(id);
+                if (pairValue == null) {
+//                    System.out.println("null");
+                    continue;
+                }
+                int t = pairValue.getKey().toString().equalsIgnoreCase("regular_irysc")
+                        ? totalIryscRegularQuizPrice
+                        : neededQuizzes.get(id).getKey().toString().equalsIgnoreCase("tashrihi_irysc")
+                        ? totalIryscTashrihiQuizPrice
+                        : neededQuizzes.get(id).getKey().toString().equalsIgnoreCase("open")
+                        ? totalOpenQuizPrice
+                        : totalEscapeQuizPrice;
+
+                int paidPortion = (int) (((t * 1.0) / totalPrices) * transaction.getInteger("amount"));
+                Document tmpQuiz = (Document) neededQuizzes.get(id).getValue();
+                Document document = searchInDocumentsKeyVal(
+                        tmpQuiz.getList("students", Document.class),
+                        "_id", studentId
+                );
+                double offPercent = paidPortion == 0 ? 1.0 : Math.max(((t - paidPortion) * 1.0) / t, 0);
+                int paid = (int) ((1.0 - offPercent) * tmpQuiz.getInteger("price"));
+                if (document.getInteger("paid") != paid) {
+                    System.out.println(tmpQuiz.get("price"));
+                    System.out.println(transaction.get("ref_id"));
+                    System.out.println("corrected " + paid);
+                    System.out.println("incorrect: " + document.getInteger("paid"));
+                    System.out.println("total is " + t);
+                    System.out.println("paid is " + transaction.getInteger("amount"));
+                    document.put("paid", paid);
+                    if (!neededUpdates.containsKey(id))
+                        neededUpdates.put(id, new PairValue(pairValue.getKey(), tmpQuiz));
+                }
+            }
+        }
+
+        neededUpdates.keySet().forEach(objectId -> {
+            PairValue pairValue = neededUpdates.get(objectId);
+            switch (pairValue.getKey().toString()) {
+                case "tashrihi_irysc":
+                case "regular_irysc":
+                    iryscQuizRepository.replaceOneWithoutClearCache(
+                            objectId,
+                            (Document) pairValue.getValue()
+                    );
+                    break;
+                case "open":
+                    openQuizRepository.replaceOneWithoutClearCache(
+                            objectId,
+                            (Document) pairValue.getValue()
+                    );
+                    break;
+                case "escape":
+                    escapeQuizRepository.replaceOneWithoutClearCache(
+                            objectId,
+                            (Document) pairValue.getValue()
+                    );
+                    break;
+            }
+        });
+    }
 
     @GetMapping(value = "/gifts")
     @ResponseBody
