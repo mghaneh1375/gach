@@ -88,7 +88,7 @@ public class UserAPIRoutes extends Router {
                 exists("products.1"),
                 exists("off_amount"),
                 gt("off_amount", 0)
-                , eq("ref_id", "9FE0D564AD3FBE64")
+//                , eq("ref_id", "9FE0D564AD3FBE64")
         ), null);
         HashMap<ObjectId, PairValue> neededQuizzes = new HashMap<>();
         HashMap<ObjectId, PairValue> neededUpdates = new HashMap<>();
