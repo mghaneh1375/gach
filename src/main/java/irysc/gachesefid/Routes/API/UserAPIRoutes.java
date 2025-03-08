@@ -67,6 +67,16 @@ public class UserAPIRoutes extends Router {
         return userTokenInfo.getAccesses().toString();
     }
 
+    @GetMapping(value = "testAsanak")
+    @ResponseBody
+    public void testAsanak(
+            HttpServletRequest request,
+            @RequestParam(value = "to") String to
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        Utility.sendSMSWithoutTemplate(to, "تست");
+    }
+
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody
     public String createOpenCardOff(HttpServletRequest request,
