@@ -454,13 +454,11 @@ public abstract class QuizAbstract {
         }
 
         public static PairValue getStdMarkInMultiSentenceQuestion(String answer, String stdAns, double mark) {
-
             int t = answer.length();
             int c = 0;
             int inc = 0;
 
             for (int z = 0; z < t; z++) {
-
                 if (z >= stdAns.length() || stdAns.charAt(z) == '_')
                     continue;
 
@@ -468,28 +466,28 @@ public abstract class QuizAbstract {
                     c++;
                 else
                     inc++;
-
             }
 
             short status = (short) (c == t ? 1 : inc + c == 0 ? 0 : -1);
             double thisMark;
-
             if (c == t)
                 thisMark = mark;
             else {
-
                 int p = -10 * inc;
-
                 if (c > 1 && t <= 4) {
                     if (c == 2)
                         p += 20;
                     else if (c == 3)
                         p += 50;
                 } else if (c > 1) {
-                    if (c == 2)
-                        p += 10;
-                    else if (c == 3)
-                        p += 30;
+                    if (c == 2) {
+//                        p += 10;
+                        p += 20;
+                    }
+                    else if (c == 3) {
+//                        p += 30;
+                        p += 40;
+                    }
                     else if (c == 4)
                         p += 60;
                 }
