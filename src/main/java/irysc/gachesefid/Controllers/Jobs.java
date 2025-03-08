@@ -22,6 +22,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -833,7 +834,9 @@ public class Jobs implements Runnable {
 
         @Override
         public void run() {
-
+            LocalDateTime localDateTime = LocalDateTime.now();
+            if(localDateTime.getHour() <= 7)
+                return;
             ArrayList<Document> allSms =
                     smsQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
 
