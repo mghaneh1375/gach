@@ -205,7 +205,7 @@ public class GiftController {
         Document newDoc = id == null ?
                 new Document() : giftRepository.findById(id);
 
-        if(newDoc == null)
+        if (newDoc == null)
             return JSON_NOT_VALID_ID;
 
         for (String key : data.keySet()) {
@@ -217,7 +217,7 @@ public class GiftController {
 
         newDoc.put("reminder", data.getInt("count"));
 
-        if(id == null) {
+        if (id == null) {
             giftRepository.insertOne(newDoc);
             return generateSuccessMsg("data", convertDocToJSON(newDoc));
         }
@@ -255,7 +255,7 @@ public class GiftController {
 
             Object val = config.get(key);
 
-            if(
+            if (
                     key.equalsIgnoreCase("web_gift_days") ||
                             key.equalsIgnoreCase("app_gift_days")
             ) {
@@ -264,35 +264,34 @@ public class GiftController {
 
                 JSONArray finalList = new JSONArray();
 
-                for(Document itr : (List<Document>)val) {
+                for (Document itr : (List<Document>) val) {
 
                     JSONObject jsonObject1 = new JSONObject();
 
-                    if(itr.containsKey("ref_id")) {
+                    if (itr.containsKey("ref_id")) {
 
                         ObjectId id = itr.getObjectId("ref_id");
                         String title = null;
 
-                        if(itr.getString("target").equalsIgnoreCase(
+                        if (itr.getString("target").equalsIgnoreCase(
                                 GiftTarget.QUIZ.getName()
                         )) {
                             Document ref = iryscQuizRepository.findById(id);
-                            if(ref == null)
+                            if (ref == null)
                                 continue;
 
                             title = ref.getString("title");
-                        }
-                        else if(itr.getString("target").equalsIgnoreCase(
+                        } else if (itr.getString("target").equalsIgnoreCase(
                                 GiftTarget.PACKAGE.getName()
                         )) {
                             Document ref = contentRepository.findById(id);
-                            if(ref == null)
+                            if (ref == null)
                                 continue;
 
                             title = ref.getString("title");
                         }
 
-                        if(title == null)
+                        if (title == null)
                             continue;
 
                         jsonObject1.put("additional", new JSONObject()
@@ -313,8 +312,7 @@ public class GiftController {
                     jsonObject.put(Utility.camel(key, false), finalList);
                 else
                     jsonObject.put(key, finalList);
-            }
-            else {
+            } else {
 
                 if (hasLittleChar)
                     jsonObject.put(Utility.camel(key, false), val);
@@ -324,16 +322,16 @@ public class GiftController {
 
         }
 
-        if(!jsonObject.has("maxWebGiftSlot"))
+        if (!jsonObject.has("maxWebGiftSlot"))
             jsonObject.put("maxWebGiftSlot", 8);
 
-        if(!jsonObject.has("maxAppGiftSlot"))
+        if (!jsonObject.has("maxAppGiftSlot"))
             jsonObject.put("maxAppGiftSlot", 8);
 
-        if(!jsonObject.has("webGiftDays"))
+        if (!jsonObject.has("webGiftDays"))
             jsonObject.put("webGiftDays", new JSONArray());
 
-        if(!jsonObject.has("appGiftDays"))
+        if (!jsonObject.has("appGiftDays"))
             jsonObject.put("appGiftDays", new JSONArray());
 
         return Utility.generateSuccessMsg("data", jsonObject);
@@ -341,19 +339,18 @@ public class GiftController {
 
     public static String buildSpinner(String mode, ObjectId userId, double coin, ObjectId id) {
 
-        if(!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
+        if (!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
             return JSON_NOT_VALID_PARAMS;
 
         Document userGift = userGiftRepository.findById(id);
-
-        if(userGift == null ||
+        if (userGift == null ||
                 !userGift.getObjectId("user_id").equals(userId) ||
                 !userGift.getString("mode").equals(mode)
         )
             return JSON_NOT_VALID_ID;
 
         long curr = System.currentTimeMillis();
-        if(userGift.getString("status").equals("finish") ||
+        if (userGift.getString("status").equals("finish") ||
                 userGift.getLong("expire_at") < curr
         )
             return JSON_NOT_ACCESS;
@@ -361,17 +358,17 @@ public class GiftController {
         JSONObject data = new JSONObject();
         Document config = Utility.getConfig();
 
-        if(config.containsKey("coin_for_second_time") && coin > config.getDouble("coin_for_second_time")) {
+        if (config.containsKey("coin_for_second_time") && coin > config.getDouble("coin_for_second_time")) {
 
             data.put("coinForSecondTime", config.get("coin_for_second_time"));
 
-            if(config.containsKey("coin_for_third_time") && coin > config.getDouble("coin_for_third_time")) {
+            if (config.containsKey("coin_for_third_time") && coin > config.getDouble("coin_for_third_time")) {
                 data.put("coinForThirdTime", config.get("coin_for_third_time"));
 
-                if(config.containsKey("coin_for_forth_time") && coin > config.getDouble("coin_for_forth_time")) {
+                if (config.containsKey("coin_for_forth_time") && coin > config.getDouble("coin_for_forth_time")) {
                     data.put("coinForForthTime", config.get("coin_for_forth_time"));
 
-                    if(config.containsKey("coin_for_fifth_time") && coin > config.getDouble("coin_for_fifth_time"))
+                    if (config.containsKey("coin_for_fifth_time") && coin > config.getDouble("coin_for_fifth_time"))
                         data.put("coinForFifthTime", config.get("coin_for_fifth_time"));
 
                 }
@@ -383,19 +380,19 @@ public class GiftController {
         boolean isForSite = mode.equalsIgnoreCase("site");
         List<Document> docs;
 
-        if(!userGift.containsKey("gift"))
+        if (!userGift.containsKey("gift"))
             docs = calcSpins(config, isForSite, userGift, null);
         else
             docs = userGift.getList("gifts", Document.class);
 
         JSONArray jsonArray = new JSONArray();
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("label", doc.getString("label"));
 
-            if(doc.getBoolean("selected"))
+            if (doc.getBoolean("selected"))
                 jsonObject.put("created_at", curr - 400000);
             else
                 jsonObject.put("created_at", curr - getRandIntForGift(100000));
@@ -411,7 +408,6 @@ public class GiftController {
     private static List<Document> calcSpins(Document config, boolean isForSite,
                                             Document userGift,
                                             String repeat) {
-
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(exists("deleted_at", false));
         filters.add(gt("reminder", 0));
@@ -424,12 +420,9 @@ public class GiftController {
         ArrayList<Document> docs = new ArrayList<>();
 
         for (int i = 0; i < limit; i++) {
-
             Document gift = gifts.get(i);
-
             totalW += gift.getInteger("prob");
             upperBounds.add(totalW);
-
             docs.add(new Document("_id", gift.getObjectId("_id"))
                     .append("selected", false)
                     .append("label", getGiftString(gift)));
@@ -438,19 +431,18 @@ public class GiftController {
         int r = getRandIntForGift(totalW);
         int selectedGiftIdx = -1;
 
-        for(int i = 0; i < upperBounds.size(); i++) {
-            if(upperBounds.get(i) > r) {
+        for (int i = 0; i < upperBounds.size(); i++) {
+            if (upperBounds.get(i) > r) {
                 selectedGiftIdx = i;
                 break;
             }
         }
 
         docs.get(selectedGiftIdx).put("selected", true);
-        if(repeat == null) {
+        if (repeat == null) {
             userGift.put("gifts", docs);
             userGift.put("gift", gifts.get(selectedGiftIdx).getObjectId("_id"));
-        }
-        else {
+        } else {
             userGift.put("gifts_" + repeat, docs);
             userGift.put("gift_" + repeat, gifts.get(selectedGiftIdx).getObjectId("_id"));
         }
@@ -463,66 +455,60 @@ public class GiftController {
                                            double coin, ObjectId id,
                                            String repeat) {
 
-        if(!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
+        if (!mode.equalsIgnoreCase("site") && !mode.equalsIgnoreCase("app"))
             return JSON_NOT_VALID_PARAMS;
 
         Document userGift = userGiftRepository.findById(id);
 
-        if(userGift == null ||
+        if (userGift == null ||
                 !userGift.getObjectId("user_id").equals(userId) ||
                 !userGift.getString("mode").equals(mode)
         )
             return JSON_NOT_VALID_ID;
 
         long curr = System.currentTimeMillis();
-        if(!userGift.getString("status").equals("finish") ||
+        if (!userGift.getString("status").equals("finish") ||
                 userGift.getLong("expire_at") < curr
         )
             return JSON_NOT_ACCESS;
 
-        if(userGift.containsKey("finished_" + repeat))
+        if (userGift.containsKey("finished_" + repeat))
             return JSON_NOT_ACCESS;
 
         JSONObject data = new JSONObject();
         Document config = Utility.getConfig();
         double neededCoin = -1;
 
-        if(repeat.equalsIgnoreCase("second")) {
+        if (repeat.equalsIgnoreCase("second")) {
 
-            if(
-                !config.containsKey("coin_for_second_time") ||
-                        coin < config.getDouble("coin_for_second_time")
+            if (
+                    !config.containsKey("coin_for_second_time") ||
+                            coin < config.getDouble("coin_for_second_time")
             )
                 return JSON_NOT_ACCESS;
 
             neededCoin = config.getDouble("coin_for_second_time");
-        }
+        } else if (repeat.equalsIgnoreCase("third")) {
 
-        else if(repeat.equalsIgnoreCase("third")) {
-
-            if(
+            if (
                     !config.containsKey("coin_for_third_time") ||
                             coin < config.getDouble("coin_for_third_time")
             )
                 return JSON_NOT_ACCESS;
 
             neededCoin = config.getDouble("coin_for_third_time");
-        }
+        } else if (repeat.equalsIgnoreCase("forth")) {
 
-        else if(repeat.equalsIgnoreCase("forth")) {
-
-            if(
+            if (
                     !config.containsKey("coin_for_forth_time") ||
                             coin < config.getDouble("coin_for_forth_time")
             )
                 return JSON_NOT_ACCESS;
 
             neededCoin = config.getDouble("coin_for_forth_time");
-        }
+        } else if (repeat.equalsIgnoreCase("fifth")) {
 
-        else if(repeat.equalsIgnoreCase("fifth")) {
-
-            if(
+            if (
                     !config.containsKey("coin_for_fifth_time") ||
                             coin < config.getDouble("coin_for_fifth_time")
             )
@@ -531,7 +517,7 @@ public class GiftController {
             neededCoin = config.getDouble("coin_for_fifth_time");
         }
 
-        if(neededCoin < 0)
+        if (neededCoin < 0)
             return JSON_NOT_ACCESS;
 
         userGift.put("needed_for_" + repeat, neededCoin);
@@ -539,22 +525,22 @@ public class GiftController {
 
         List<Document> docs;
 
-        if(!userGift.containsKey("gift_" + repeat))
+        if (!userGift.containsKey("gift_" + repeat))
             docs = calcSpins(config, isForSite, userGift, repeat);
         else
             docs = userGift.getList("gifts", Document.class);
 
-        if(docs == null)
+        if (docs == null)
             return JSON_NOT_UNKNOWN;
 
         JSONArray jsonArray = new JSONArray();
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("label", doc.getString("label"));
 
-            if(doc.getBoolean("selected"))
+            if (doc.getBoolean("selected"))
                 jsonObject.put("created_at", curr - 400000);
             else
                 jsonObject.put("created_at", curr - getRandIntForGift(100000));
@@ -569,18 +555,18 @@ public class GiftController {
 
     private static String getGiftString(Document gift) {
 
-        if(gift.getString("type").equalsIgnoreCase("offcode")) {
-            if(gift.getString("off_code_type").equalsIgnoreCase("percent"))
+        if (gift.getString("type").equalsIgnoreCase("offcode")) {
+            if (gift.getString("off_code_type").equalsIgnoreCase("percent"))
                 return "کد تخفیف " + gift.getInteger("amount") + "% " + translateUseFor(gift.getString("use_for"));
 
             return "تخفیف " + gift.getInteger("amount") + " تومان " + translateUseFor(gift.getString("use_for"));
         }
 
-        if(gift.getString("type").equalsIgnoreCase("coin"))
-            return  gift.get("amount") + " ایکس پول";
+        if (gift.getString("type").equalsIgnoreCase("coin"))
+            return gift.get("amount") + " ایکس پول";
 
-        if(gift.getString("type").equalsIgnoreCase("money"))
-            return  gift.get("amount") + " تومان اعتبار";
+        if (gift.getString("type").equalsIgnoreCase("money"))
+            return gift.get("amount") + " تومان اعتبار";
 
         return "";
     }
@@ -597,69 +583,66 @@ public class GiftController {
         ObjectId userId = user.getObjectId("_id");
         long curr = System.currentTimeMillis();
 
-        if(doc == null ||
+        if (doc == null ||
                 !doc.getObjectId("user_id").equals(userId) ||
                 doc.getLong("expire_at") < curr
         )
             return JSON_NOT_ACCESS;
 
-        if(repeat == null && doc.getString("status").equalsIgnoreCase("finish"))
+        if (repeat == null && doc.getString("status").equalsIgnoreCase("finish"))
             return JSON_NOT_ACCESS;
 
         Document myGift;
         double neededCoin = 0;
 
-        if(repeat != null) {
+        if (repeat != null) {
 
-            if(
+            if (
                     !repeat.equalsIgnoreCase("second") &&
-                    !repeat.equalsIgnoreCase("third") &&
-                    !repeat.equalsIgnoreCase("forth") &&
-                    !repeat.equalsIgnoreCase("fifth")
+                            !repeat.equalsIgnoreCase("third") &&
+                            !repeat.equalsIgnoreCase("forth") &&
+                            !repeat.equalsIgnoreCase("fifth")
             )
                 return JSON_NOT_ACCESS;
 
-            if(
+            if (
                     !doc.containsKey("needed_for_" + repeat) ||
-                    !doc.containsKey("gift_" + repeat) ||
-                    doc.containsKey("status_" + repeat)
+                            !doc.containsKey("gift_" + repeat) ||
+                            doc.containsKey("status_" + repeat)
             )
                 return JSON_NOT_ACCESS;
 
             neededCoin = doc.getDouble("needed_for_" + repeat);
-            if(neededCoin > ((Number)user.get("coin")).doubleValue())
+            if (neededCoin > ((Number) user.get("coin")).doubleValue())
                 return JSON_NOT_ACCESS;
 
             myGift = giftRepository.findById(doc.getObjectId("gift_" + repeat));
-        }
-        else
+        } else
             myGift = giftRepository.findById(doc.getObjectId("gift"));
 
-        if(myGift == null)
+        if (myGift == null)
             return JSON_NOT_UNKNOWN;
 
         boolean changeUser = false;
 
-        if(myGift.getString("type").equalsIgnoreCase("coin")) {
+        if (myGift.getString("type").equalsIgnoreCase("coin")) {
             user.put("coin",
-                    Math.round((((Number)user.get("coin")).doubleValue() +
-                            ((Number)myGift.get("amount")).doubleValue() - neededCoin) * 100.0) / 100.0
+                    Math.round((((Number) user.get("coin")).doubleValue() +
+                            ((Number) myGift.get("amount")).doubleValue() - neededCoin) * 100.0) / 100.0
             );
             changeUser = true;
-        }
-        else if(myGift.getString("type").equalsIgnoreCase("money")) {
+        } else if (myGift.getString("type").equalsIgnoreCase("money")) {
 
-            if(neededCoin > 0)
-                user.put("coin", Math.round((((Number)user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0);
+            if (neededCoin > 0)
+                user.put("coin", Math.round((((Number) user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0);
 
             user.put("money", Math.round((
-                    ((Number)user.get("money")).doubleValue() +
-                    myGift.getInteger("amount")) * 100.0 / 100.0)
+                    ((Number) user.get("money")).doubleValue() +
+                            myGift.getInteger("amount")) * 100.0 / 100.0)
             );
 
             changeUser = true;
-        }
-        else if(myGift.getString("type").equalsIgnoreCase("offcode")) {
+        } else if (myGift.getString("type").equalsIgnoreCase("offcode")) {
 
             JSONObject res = new JSONObject(OffCodeController.store(new JSONObject()
                     .put("expireAt", myGift.containsKey("expire_at") ?
@@ -672,34 +655,34 @@ public class GiftController {
                     .put("items", new JSONArray().put(user.getString("NID")))
             ));
 
-            if(!res.getString("status").equalsIgnoreCase("ok"))
+            if (!res.getString("status").equalsIgnoreCase("ok"))
                 return JSON_NOT_UNKNOWN;
 
-            if(neededCoin > 0) {
+            if (neededCoin > 0) {
                 user.put("coin", Math.round((
-                        ((Number)user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0
+                        ((Number) user.get("coin")).doubleValue() - neededCoin) * 100.0) / 100.0
                 );
                 changeUser = true;
             }
         }
 
-        if(repeat == null)
+        if (repeat == null)
             doc.put("status", "finish");
         else
             doc.put("status_" + repeat, "finish");
 
         userGiftRepository.replaceOne(doc.getObjectId("_id"), doc);
 
-        if(changeUser)
+        if (changeUser)
             userRepository.replaceOne(userId, user);
 
         myGift.put("reminder", myGift.getInteger("reminder") - 1);
         giftRepository.replaceOne(myGift.getObjectId("_id"), myGift);
 
-        if(repeat == null)
+        if (repeat == null)
             return JSON_OK;
 
-        double coin = ((Number)user.get("coin")).doubleValue();
+        double coin = ((Number) user.get("coin")).doubleValue();
         Document config = Utility.getConfig();
         JSONObject data = new JSONObject();
 
@@ -708,13 +691,13 @@ public class GiftController {
                         repeat.equalsIgnoreCase("forth") ? 4 : 5;
 
 
-        if(counter < 3 && config.containsKey("coin_for_third_time") && coin > config.getDouble("coin_for_third_time"))
+        if (counter < 3 && config.containsKey("coin_for_third_time") && coin > config.getDouble("coin_for_third_time"))
             data.put("coinForThirdTime", config.get("coin_for_third_time"));
 
-        if(counter < 4 && config.containsKey("coin_for_forth_time") && coin > config.getDouble("coin_for_forth_time"))
+        if (counter < 4 && config.containsKey("coin_for_forth_time") && coin > config.getDouble("coin_for_forth_time"))
             data.put("coinForForthTime", config.get("coin_for_forth_time"));
 
-        if(counter < 5 && config.containsKey("coin_for_fifth_time") && coin > config.getDouble("coin_for_fifth_time"))
+        if (counter < 5 && config.containsKey("coin_for_fifth_time") && coin > config.getDouble("coin_for_fifth_time"))
             data.put("coinForFifthTime", config.get("coin_for_fifth_time"));
 
         return generateSuccessMsg("data", data);
@@ -732,60 +715,118 @@ public class GiftController {
     }
 
     public static String giveMyGifts(ObjectId userId) {
-
         ArrayList<Document> docs = userGiftRepository.find(and(
                 eq("user_id", userId),
                 eq("status", "finish")
         ), null);
 
         JSONArray jsonArray = new JSONArray();
-
-        for(Document doc : docs) {
-
-            Document gift = giftRepository.findById(doc.getObjectId("gift"));
-            if(gift == null)
-                continue;
-
-            if(gift.getString("type").equalsIgnoreCase("offcode"))
-                jsonArray.put(new JSONObject()
-                        .put("type", "off")
-                        .put("obj", offGift(gift))
-                );
-            else if(gift.getString("type").equalsIgnoreCase("coin"))
-                jsonArray.put(new JSONObject()
-                        .put("type", "coin")
-                        .put("createdAt", getSolarDate(doc.getLong("expire_at")))
-                        .put("label", getGiftString(gift))
-                );
-            else if(gift.getString("type").equalsIgnoreCase("money"))
-                jsonArray.put(new JSONObject()
-                        .put("type", "money")
-                        .put("createdAt", getSolarDate(doc.getLong("expire_at")))
-                        .put("label", getGiftString(gift))
-                );
+        for (Document doc : docs) {
+            doc.getList("gifts", Document.class)
+                    .stream()
+                    .filter(o -> o.getBoolean("selected"))
+                    .findFirst().ifPresent(gift -> fillJSONArr(gift, jsonArray, doc.getLong("expire_at")));
+            if(doc.containsKey("gifts_second") && doc.get("gifts_second") != null) {
+                doc.getList("gifts_second", Document.class)
+                        .stream()
+                        .filter(o -> o.getBoolean("selected"))
+                        .findFirst().ifPresent(gift -> fillJSONArr(gift, jsonArray, doc.getLong("expire_at")));
+            }
+            if(doc.containsKey("gifts_third") && doc.get("gifts_third") != null) {
+                doc.getList("gifts_third", Document.class)
+                        .stream()
+                        .filter(o -> o.getBoolean("selected"))
+                        .findFirst().ifPresent(gift -> fillJSONArr(gift, jsonArray, doc.getLong("expire_at")));
+            }
+            if(doc.containsKey("gifts_forth") && doc.get("gifts_forth") != null) {
+                doc.getList("gifts_forth", Document.class)
+                        .stream()
+                        .filter(o -> o.getBoolean("selected"))
+                        .findFirst().ifPresent(gift -> fillJSONArr(gift, jsonArray, doc.getLong("expire_at")));
+            }
+            if(doc.containsKey("gifts_fifth") && doc.get("gifts_fifth") != null) {
+                doc.getList("gifts_fifth", Document.class)
+                        .stream()
+                        .filter(o -> o.getBoolean("selected"))
+                        .findFirst().ifPresent(gift -> fillJSONArr(gift, jsonArray, doc.getLong("expire_at")));
+            }
         }
 
         return generateSuccessMsg("data", jsonArray);
+    }
+    private static Integer extractNumbers(String input) {
+        String[] words = input.split("\\s+");
+        for (String word : words) {
+            try {
+                return Integer.parseInt(word);
+            } catch (NumberFormatException ignore) {}
+        }
+        return null;
+    }
+    private static void fillJSONArr(Document gift, JSONArray jsonArray, long expireAt) {
+        String type = gift.getString("label").contains("تخفیف")
+                ? "off"
+                : gift.getString("label").contains("ایکس پول")
+                ? "coin"
+                : gift.getString("label").contains("اعتبار")
+                ? "money"
+                : null;
+        if(type == null) return;
+        Integer amount = extractNumbers(gift.getString("label"));
+        if(amount == null) return;
+
+        String title = gift.getString("label");
+        if(type.equals("off")) {
+            String sectionFa = gift.getString("label").contains("%")
+                    ? gift.getString("label").substring(gift.getString("label").indexOf("%") + 1)
+                    : gift.getString("label").substring(gift.getString("label").indexOf("تومان") + 5);
+            jsonArray.put(new JSONObject()
+                    .put("type", type)
+                    .put("obj", new JSONObject()
+                            .put("code", "")
+                            .put("amount", amount)
+                            .put("type", gift.getString("label").contains("%") ? "percent" : "value")
+                            .put("section", "")
+                            .put("sectionFa", sectionFa)
+                            .put("expireAtTs", expireAt)
+                            .put("expireAt", Utility.getSolarDate(expireAt))
+                    )
+            );
+        }
+        else if(type.equals("coin")) {
+            jsonArray.put(new JSONObject()
+                    .put("type", "coin")
+                    .put("createdAt", getSolarDate(expireAt))
+                    .put("label", title)
+            );
+        }
+        else {
+            jsonArray.put(new JSONObject()
+                    .put("type", "money")
+                    .put("createdAt", getSolarDate(expireAt))
+                    .put("label", title)
+            );
+        }
     }
 
     public static String updateConfig(JSONObject jsonObject) {
 
         Document config = Utility.getConfig();
 
-        if(jsonObject.has("maxWebGiftSlot")) {
+        if (jsonObject.has("maxWebGiftSlot")) {
 
             config.put("max_web_gift_slot", jsonObject.getInt("maxWebGiftSlot"));
 
-            if(jsonObject.has("webGiftDays")) {
+            if (jsonObject.has("webGiftDays")) {
 
                 JSONArray webGiftDays = jsonObject.getJSONArray("webGiftDays");
                 ArrayList<Document> validated = new ArrayList<>();
 
-                for(int i = 0; i < webGiftDays.length(); i++) {
+                for (int i = 0; i < webGiftDays.length(); i++) {
 
                     JSONObject info = webGiftDays.getJSONObject(i);
 
-                    if(!info.has("target") || !info.has("date"))
+                    if (!info.has("target") || !info.has("date"))
                         continue;
 
                     String target = info.getString("target");
@@ -801,19 +842,19 @@ public class GiftController {
                             if (!info.has("additional"))
                                 continue;
 
-                            if(!info.getJSONObject("additional").has("id"))
+                            if (!info.getJSONObject("additional").has("id"))
                                 continue;
 
                             String id = info.getJSONObject("additional").getString("id");
-                            if(!ObjectId.isValid(id))
+                            if (!ObjectId.isValid(id))
                                 continue;
 
-                            if(target.equalsIgnoreCase(GiftTarget.PACKAGE.getName()) &&
-                                contentRepository.findById(new ObjectId(id)) == null
+                            if (target.equalsIgnoreCase(GiftTarget.PACKAGE.getName()) &&
+                                    contentRepository.findById(new ObjectId(id)) == null
                             )
                                 continue;
 
-                            if(target.equalsIgnoreCase(GiftTarget.QUIZ.getName()) &&
+                            if (target.equalsIgnoreCase(GiftTarget.QUIZ.getName()) &&
                                     iryscQuizRepository.findById(new ObjectId(id)) == null
                             )
                                 continue;
@@ -828,28 +869,27 @@ public class GiftController {
                             newDoc.put("ref_id", new ObjectId(info.getJSONObject("additional").getString("id")));
 
                         validated.add(newDoc);
+                    } catch (Exception ignore) {
                     }
-                    catch (Exception ignore) {}
 
                 }
 
                 config.put("web_gift_days", validated);
-            }
-            else
+            } else
                 config.put("web_gift_days", new ArrayList<>());
 
         }
 
-        if(jsonObject.has("coinForSecondTime"))
+        if (jsonObject.has("coinForSecondTime"))
             config.put("coin_for_second_time", jsonObject.getNumber("coinForSecondTime").doubleValue());
 
-        if(jsonObject.has("coinForThirdTime"))
+        if (jsonObject.has("coinForThirdTime"))
             config.put("coin_for_third_time", jsonObject.getNumber("coinForThirdTime").doubleValue());
 
-        if(jsonObject.has("coinForForthTime"))
+        if (jsonObject.has("coinForForthTime"))
             config.put("coin_for_forth_time", jsonObject.getNumber("coinForForthTime").doubleValue());
 
-        if(jsonObject.has("coinForFifthTime"))
+        if (jsonObject.has("coinForFifthTime"))
             config.put("coin_for_fifth_time", jsonObject.getNumber("coinForFifthTime").doubleValue());
 
 
@@ -865,16 +905,16 @@ public class GiftController {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("status", "finish"));
 
-        if(from != null)
+        if (from != null)
             filters.add(gte("expire_at", from + ONE_DAY_MIL_SEC));
 
-        if(to != null)
+        if (to != null)
             filters.add(lte("expire_at", to + ONE_DAY_MIL_SEC));
 
-        if(userId != null)
+        if (userId != null)
             filters.add(eq("user_id", userId));
 
-        if(giftId != null)
+        if (giftId != null)
             filters.add(or(
                     eq("gift", giftId),
                     eq("gift_second", giftId),
@@ -883,8 +923,8 @@ public class GiftController {
                     eq("gift_fifth", giftId)
             ));
 
-        if(repeat != null) {
-            if(repeat.equalsIgnoreCase("second") ||
+        if (repeat != null) {
+            if (repeat.equalsIgnoreCase("second") ||
                     repeat.equalsIgnoreCase("third") ||
                     repeat.equalsIgnoreCase("forth") ||
                     repeat.equalsIgnoreCase("fifth")
@@ -896,29 +936,29 @@ public class GiftController {
         JSONArray jsonArray = new JSONArray();
         ArrayList<ObjectId> userIds = new ArrayList<>();
 
-        for(Document doc : docs)
+        for (Document doc : docs)
             userIds.add(doc.getObjectId("user_id"));
 
         ArrayList<Document> users = userRepository.findByIds(userIds, true);
-        if(users == null)
+        if (users == null)
             return JSON_NOT_UNKNOWN;
 
         int i = 0;
-        String[] repeats = new String[] {"second", "third", "forth", "fifth"};
-        String[] repeatsFa = new String[] {"دوم", "سوم", "چهارم", "پنجم"};
+        String[] repeats = new String[]{"second", "third", "forth", "fifth"};
+        String[] repeatsFa = new String[]{"دوم", "سوم", "چهارم", "پنجم"};
 
         HashMap<ObjectId, String> gifts = new HashMap<>();
         String g;
 
-        for(Document doc : docs) {
+        for (Document doc : docs) {
 
             JSONObject student = new JSONObject();
             Utility.fillJSONWithUser(student, users.get(i));
             String createdAt = Utility.getSolarDate(doc.getLong("expire_at") - ONE_DAY_MIL_SEC);
 
-            if(
+            if (
                     (giftId == null || giftId.equals(doc.getObjectId("gift"))) &&
-                    (repeat == null || repeat.equalsIgnoreCase("first"))
+                            (repeat == null || repeat.equalsIgnoreCase("first"))
             ) {
 
                 g = null;
@@ -943,27 +983,27 @@ public class GiftController {
             }
 
             int j = 0;
-            for(String r : repeats) {
-                if(doc.containsKey("status_" + r)) {
+            for (String r : repeats) {
+                if (doc.containsKey("status_" + r)) {
 
-                    if(
+                    if (
                             (giftId == null || giftId.equals(doc.getObjectId("gift_" + r))) &&
                                     (repeat == null || repeat.equalsIgnoreCase(repeats[j]))
                     ) {
 
                         g = null;
 
-                        if(gifts.containsKey(doc.getObjectId("gift_" + r)))
+                        if (gifts.containsKey(doc.getObjectId("gift_" + r)))
                             g = gifts.get(doc.getObjectId("gift_" + r));
                         else {
                             Document gift = giftRepository.findById(doc.getObjectId("gift_" + r));
-                            if(gift != null)
+                            if (gift != null)
                                 g = getGiftString(gift);
 
                             gifts.put(doc.getObjectId("gift_" + r), g);
                         }
 
-                        if(g != null)
+                        if (g != null)
                             jsonArray.put(new JSONObject()
                                     .put("student", student.getJSONObject("student"))
                                     .put("gift", g)
@@ -972,18 +1012,17 @@ public class GiftController {
                             );
                     }
 
-                }
-                else break;
+                } else break;
                 j++;
             }
 
             i++;
         }
 
-        if(filters.size() == 1) {
+        if (filters.size() == 1) {
 
             JSONArray allGifts = new JSONArray();
-            for(ObjectId id : gifts.keySet())
+            for (ObjectId id : gifts.keySet())
                 allGifts.put(new JSONObject()
                         .put("id", id.toString())
                         .put("item", gifts.get(id))
