@@ -572,13 +572,6 @@ public class GiftController {
     }
 
     public static String giveMyGift(ObjectId id, String repeat, Document user) {
-
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         Document doc = userGiftRepository.findById(id);
         ObjectId userId = user.getObjectId("_id");
         long curr = System.currentTimeMillis();
@@ -596,7 +589,6 @@ public class GiftController {
         double neededCoin = 0;
 
         if (repeat != null) {
-
             if (
                     !repeat.equalsIgnoreCase("second") &&
                             !repeat.equalsIgnoreCase("third") &&
@@ -643,7 +635,6 @@ public class GiftController {
 
             changeUser = true;
         } else if (myGift.getString("type").equalsIgnoreCase("offcode")) {
-
             JSONObject res = new JSONObject(OffCodeController.store(new JSONObject()
                     .put("expireAt", myGift.containsKey("expire_at") ?
                             myGift.getLong("expire_at") :
@@ -718,7 +709,7 @@ public class GiftController {
         ArrayList<Document> docs = userGiftRepository.find(and(
                 eq("user_id", userId),
                 eq("status", "finish")
-        ), null);
+        ), null, Sorts.descending("expire_at"));
 
         JSONArray jsonArray = new JSONArray();
         for (Document doc : docs) {
@@ -777,19 +768,17 @@ public class GiftController {
 
         String title = gift.getString("label");
         if(type.equals("off")) {
+
             String sectionFa = gift.getString("label").contains("%")
                     ? gift.getString("label").substring(gift.getString("label").indexOf("%") + 1)
                     : gift.getString("label").substring(gift.getString("label").indexOf("تومان") + 5);
             jsonArray.put(new JSONObject()
                     .put("type", type)
+                    .put("createdAt", getSolarDate(expireAt))
                     .put("obj", new JSONObject()
-                            .put("code", "")
                             .put("amount", amount)
                             .put("type", gift.getString("label").contains("%") ? "percent" : "value")
-                            .put("section", "")
                             .put("sectionFa", sectionFa)
-                            .put("expireAtTs", expireAt)
-                            .put("expireAt", Utility.getSolarDate(expireAt))
                     )
             );
         }
