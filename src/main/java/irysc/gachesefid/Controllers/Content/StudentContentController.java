@@ -98,7 +98,7 @@ public class StudentContentController {
             ids.add(doc.getObjectId("_id"));
         }
 
-        if(jsonObject.has("bio")) {
+        if (jsonObject.has("bio")) {
             Document teacherBio = teacherBioRepository.findBySecKey(oldName);
             if (teacherBio != null) {
                 teacherBio.put("name", newName);
@@ -107,8 +107,7 @@ public class StudentContentController {
                         eq("name", oldName), teacherBio
                 );
                 teacherBioRepository.clearFromCache(oldName);
-            }
-            else {
+            } else {
                 teacherBioRepository.insertOne(
                         new Document("name", newName)
                                 .append("bio", jsonObject.getString("bio"))
@@ -167,14 +166,14 @@ public class StudentContentController {
                 distinctTeachers.add(splited[i]);
                 distinctNIDS.add(nidSplited.length > i && !nidSplited[i].equals("*") ? nidSplited[i] : "");
             }
-            if(splited.length > 0 && !teacherBios.containsKey(splited[0]) &&
+            if (splited.length > 0 && !teacherBios.containsKey(splited[0]) &&
                     content.containsKey("teacher_bio") && !content.getString("teacher_bio").isEmpty()
             )
                 teacherBios.put(splited[0], content.getString("teacher_bio"));
         });
         distinctTeachers.forEach(s -> {
             Document teacherBio = teacherBioRepository.findBySecKey(s);
-            if(teacherBio != null)
+            if (teacherBio != null)
                 distinctBios.add(teacherBio.getString("bio"));
             else distinctBios.add(teacherBios.getOrDefault(s, ""));
         });
@@ -214,12 +213,11 @@ public class StudentContentController {
         ), new BasicDBObject("teacher_bio", 1));
 
         String teacherBio = "";
-        if(doc == null) {
+        if (doc == null) {
             Document teacherBioDoc = teacherBioRepository.findBySecKey(teacher);
-            if(teacherBioDoc != null)
+            if (teacherBioDoc != null)
                 teacherBio = teacherBioDoc.getString("bio");
-        }
-        else
+        } else
             teacherBio = doc.getString("teacher_bio");
 
         return generateSuccessMsg("data",
@@ -247,27 +245,28 @@ public class StudentContentController {
 
         if (doc == null) {
             Document bioDoc = teacherBioRepository.findBySecKey(teacherName);
-            if(bioDoc != null)
+            if (bioDoc != null)
                 bio = bioDoc.getString("bio");
-        }
-        else
+        } else
             bio = doc.getString("teacher_bio");
 
         return generateSuccessMsg("data", bio);
     }
 
-    public static String getAll(ObjectId userId,
-                                boolean isAdmin,
-                                String tag,
-                                String title,
-                                String teacher,
-                                Boolean visibility,
-                                Boolean hasCert,
-                                Integer minPrice,
-                                Integer maxPrice,
-                                Integer minDurationFilter,
-                                Integer maxDurationFilter) {
-
+    public static String getAll(
+            ObjectId userId,
+            boolean isAdmin,
+            String tag,
+            String title,
+            String teacher,
+            Boolean visibility,
+            Boolean hasCert,
+            Integer minPrice,
+            Integer maxPrice,
+            Integer minDurationFilter,
+            Integer maxDurationFilter,
+            String level
+    ) {
         ArrayList<Bson> filters = new ArrayList<>();
 
         if (!isAdmin)
@@ -300,13 +299,15 @@ public class StudentContentController {
         if (teacher != null)
             filters.add(regex("teacher", Pattern.compile(Pattern.quote(teacher))));
 
+        if(level != null)
+            filters.add(eq("level._id", new ObjectId(level)));
+
         if (isAdmin) {
             if (visibility != null)
                 filters.add(eq("visibility", visibility));
         }
 
         JSONArray data = new JSONArray();
-
         ArrayList<Document> docs = contentRepository.find(
                 filters.size() == 0 ? null : and(filters),
                 isAdmin ? CONTENT_DIGEST_FOR_ADMIN : CONTENT_DIGEST,
@@ -437,7 +438,6 @@ public class StudentContentController {
             return JSON_NOT_VALID_ID;
 
         Document stdDoc = null;
-
         ObjectId userId = user == null ? null : user.getObjectId("_id");
 
         if (!isAdmin && userId != null)
@@ -446,7 +446,6 @@ public class StudentContentController {
             );
 
         try {
-
             return generateSuccessMsg("data", Utility.convert(
                     content, isAdmin, isAdmin || stdDoc != null, true, stdDoc, true, user
             ));

@@ -32,6 +32,7 @@ public class StudentContentAPIRoutes extends Router {
     public String getAll(HttpServletRequest request,
                          @RequestParam(required = false, value = "tag") String tag,
                          @RequestParam(required = false, value = "title") String title,
+                         @RequestParam(required = false, value = "level") String level,
                          @RequestParam(required = false, value = "teacher") String teacher,
                          @RequestParam(required = false, value = "visibility") Boolean visibility,
                          @RequestParam(required = false, value = "hasCert") Boolean hasCert,
@@ -40,11 +41,10 @@ public class StudentContentAPIRoutes extends Router {
                          @RequestParam(required = false, value = "minDuration") Integer minDuration,
                          @RequestParam(required = false, value = "maxDuration") Integer maxDuration
     ) {
-
         Document user = getUserIfLogin(request);
         boolean isAdmin = user != null && Authorization.isAdmin(user.getList("accesses", String.class));
         return StudentContentController.getAll(user == null ? null : user.getObjectId("_id"), isAdmin,
-                tag, title, teacher, visibility, hasCert, minPrice, maxPrice, minDuration, maxDuration
+                tag, title, teacher, visibility, hasCert, minPrice, maxPrice, minDuration, maxDuration, level
         );
     }
 

@@ -171,6 +171,7 @@ public class StaticValues {
             .append("final_exam_id", 1).append("rate", 1)
             .append("off_type", 1).append("off", 1)
             .append("off_start", 1).append("off_expiration", 1)
+            .append("level", 1)
             .append("duration", 1).append("sessions_count", 1);
 
     public final static BasicDBObject CONTENT_DIGEST_FOR_ADMIN = new BasicDBObject("_id", 1)
@@ -180,6 +181,7 @@ public class StaticValues {
             .append("duration", 1).append("users", 1)
             .append("final_exam_id", 1).append("price", 1)
             .append("slug", 1).append("priority", 1)
+            .append("level", 1)
             .append("sessions_count", 1).append("visibility", 1);
 
     public final static BasicDBObject USER_DIGEST = new BasicDBObject("_id", 1)

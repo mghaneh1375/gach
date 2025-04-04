@@ -478,12 +478,8 @@ public class StudentQuizAPIRoutes extends Router {
                       )
                       @NotBlank String jsonStr
     ) throws UnAuthException, NotCompleteAccountException, NotActivateAccountException {
-
         Document user = getUser(request);
-
-        JSONObject jsonObject = convertPersian(
-                new JSONObject(jsonStr)
-        );
+        JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
         return StudentQuizController.buy(
                 user.getObjectId("_id"),
