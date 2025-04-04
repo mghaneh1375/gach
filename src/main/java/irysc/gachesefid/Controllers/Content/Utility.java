@@ -119,6 +119,7 @@ public class Utility {
                 .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("level", doc.containsKey("level") ? doc.get("level", Document.class).getString("title") : "")
+                .put("icon", doc.containsKey("level") ? doc.get("level", Document.class).getString("icon") : "")
                 .put("teacher", doc.getString("teacher").split("__"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
