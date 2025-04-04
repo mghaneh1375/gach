@@ -81,6 +81,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static OnlineStandQuizRepository onlineStandQuizRepository;
     public static OpenQuizRepository openQuizRepository;
     public static PackageRepository packageRepository;
+    public static PackageLevelRepository packageLevelRepository;
     public static PayLinkRepository payLinkRepository;
     public static PointRepository pointRepository;
     public static ProfileConfigRepository profileConfigRepository;
@@ -168,6 +169,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             onlineStandQuizRepository = new OnlineStandQuizRepository();
             openQuizRepository = new OpenQuizRepository();
             packageRepository = new PackageRepository();
+            packageLevelRepository = new PackageLevelRepository();
             payLinkRepository = new PayLinkRepository();
             profileConfigRepository = new ProfileConfigRepository();
             pointRepository = new PointRepository();

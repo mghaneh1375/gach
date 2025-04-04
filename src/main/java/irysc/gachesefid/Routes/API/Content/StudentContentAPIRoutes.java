@@ -32,6 +32,7 @@ public class StudentContentAPIRoutes extends Router {
     public String getAll(HttpServletRequest request,
                          @RequestParam(required = false, value = "tag") String tag,
                          @RequestParam(required = false, value = "title") String title,
+                         @RequestParam(required = false, value = "level") String level,
                          @RequestParam(required = false, value = "teacher") String teacher,
                          @RequestParam(required = false, value = "visibility") Boolean visibility,
                          @RequestParam(required = false, value = "hasCert") Boolean hasCert,
@@ -49,7 +50,9 @@ public class StudentContentAPIRoutes extends Router {
         } catch (Exception ignore) {
         }
         return StudentContentController.getAll(userId, isAdmin,
-                tag, title, teacher, visibility, hasCert, minPrice, maxPrice, minDuration, maxDuration
+                tag, title, teacher, visibility,
+                hasCert, minPrice, maxPrice,
+                minDuration, maxDuration, level
         );
     }
 
