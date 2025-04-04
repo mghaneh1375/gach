@@ -3,6 +3,7 @@ package irysc.gachesefid.Controllers.Content;
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
 import irysc.gachesefid.DB.ContentRepository;
+import irysc.gachesefid.DB.PackageLevelRepository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.OffCodeTypes;
@@ -119,7 +120,7 @@ public class Utility {
                 .put("tags", doc.getOrDefault("tags", new ArrayList<>()))
                 .put("id", doc.getObjectId("_id").toString())
                 .put("level", doc.containsKey("level") ? doc.get("level", Document.class).getString("title") : "")
-                .put("icon", doc.containsKey("level") ? doc.get("level", Document.class).getString("icon") : "")
+                .put("icon", doc.containsKey("level") ? STATICS_SERVER + PackageLevelRepository.PACKAGE_LEVEL_FOLDER + "/" + doc.get("level", Document.class).getString("icon") : "")
                 .put("teacher", doc.getString("teacher").split("__"))
                 .put("hasFinalExam", doc.containsKey("final_exam_id"))
                 .put("hasCert", doc.containsKey("cert_id"))
