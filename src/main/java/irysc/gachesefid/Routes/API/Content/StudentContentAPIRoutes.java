@@ -1,5 +1,6 @@
 package irysc.gachesefid.Routes.API.Content;
 
+import irysc.gachesefid.Controllers.Config.PackageLevelController;
 import irysc.gachesefid.Controllers.Content.StudentContentController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -122,6 +123,11 @@ public class StudentContentAPIRoutes extends Router {
         return StudentContentController.get(isAdmin, user, slug);
     }
 
+    @GetMapping(value = "getListOfPackageLevels")
+    @ResponseBody
+    public String getListOfPackageLevels() {
+        return PackageLevelController.list();
+    }
 
     @PutMapping(value = "rate/{id}")
     @ResponseBody
@@ -196,7 +202,7 @@ public class StudentContentAPIRoutes extends Router {
                     paramsType = {String.class},
                     optionals = {"contentName"},
                     optionalsType = {String.class}
-    ) @NotBlank String jsonStr) {
+            ) @NotBlank String jsonStr) {
         return StudentContentController.getTeacherBio(
                 new JSONObject(jsonStr)
         );
