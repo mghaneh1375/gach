@@ -51,7 +51,7 @@ public class AdminPackageLevelAPIRoutes extends Router {
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id,
             @RequestPart(name = "file", required = false) @NotNull MultipartFile file,
-            @RequestPart @StrongJSONConstraint(
+            @RequestPart(name = "data") @StrongJSONConstraint(
                     params = {"title"},
                     paramsType = {String.class}
             ) @NotNull @NotBlank String jsonStr
