@@ -50,7 +50,7 @@ public class AdminPackageLevelAPIRoutes extends Router {
     public String update(
             HttpServletRequest request,
             @PathVariable @ObjectIdConstraint ObjectId id,
-            @RequestPart(name = "file", required = false) @NotNull MultipartFile file,
+            @RequestPart(name = "file", required = false) MultipartFile file,
             @RequestPart(name = "data") @StrongJSONConstraint(
                     params = {"title"},
                     paramsType = {String.class}
