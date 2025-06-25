@@ -131,7 +131,15 @@ public class PayPing {
                         user.getString("first_name") + " " + user.getString("last_name")
                 )).start();
             }
-            user.put("money", ((Number) user.get("money")).doubleValue() + transaction.getInteger("amount"));
+            int chargeAmount = transaction.getInteger("amount");
+            if(chargeAmount > 4000000)
+                chargeAmount += 200000;
+            else if(chargeAmount > 2000000)
+                chargeAmount += 100000;
+            else if(chargeAmount > 1000000)
+                chargeAmount += 50000;
+
+            user.put("money", ((Number) user.get("money")).doubleValue() + chargeAmount);
         } else {
             user.put("money", (double) 0);
         }
@@ -569,13 +577,11 @@ public class PayPing {
     }
 
     public static String chargeAccount(ObjectId userId, int amount) {
-
         long orderId = Math.abs(new Random().nextLong());
         while (transactionRepository.exist(
                 eq("order_id", orderId)
-        )) {
+        ))
             orderId = Math.abs(new Random().nextLong());
-        }
 
         Document doc =
                 new Document("user_id", userId)

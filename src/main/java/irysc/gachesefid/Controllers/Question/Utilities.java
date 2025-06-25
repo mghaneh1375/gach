@@ -34,7 +34,6 @@ public class Utilities {
     public static void checkAnswer(JSONObject jsonObject) throws InvalidFieldsException {
 
         if (jsonObject.has("subjectId")) {
-
             if (!ObjectIdValidator.isValid(jsonObject.getString("subjectId")))
                 throw new InvalidFieldsException("آی دی مبحث نامعتبر است.");
 
@@ -47,7 +46,6 @@ public class Utilities {
         }
 
         if (jsonObject.has("authorId")) {
-
             if (!ObjectIdValidator.isValid(jsonObject.getString("authorId")))
                 throw new InvalidFieldsException("آی دی مولف نامعتبر است.");
 
@@ -69,24 +67,19 @@ public class Utilities {
         if (!jsonObject.has("kindQuestion") ||
                 jsonObject.getString("kindQuestion").equals(QuestionType.TEST.getName())
         ) {
-
             if (!(jsonObject.get("answer") instanceof Integer))
                 throw new InvalidFieldsException("پاسخ سوال باید گزینه صحیح باشد.");
 
             if (jsonObject.getInt("answer") < 1 || jsonObject.getInt("answer") > jsonObject.getInt("choicesCount"))
                 throw new InvalidFieldsException("پاسخ سوال باید گزینه صحیح باشد.");
-
         }
 
         if (jsonObject.has("kindQuestion") && jsonObject.getString("kindQuestion").equals(QuestionType.SHORT_ANSWER.getName())) {
-
             if (!(jsonObject.get("answer") instanceof Number))
                 throw new InvalidFieldsException("پاسخ سوال باید یک عدد باشد.");
-
         }
 
         if (jsonObject.has("kindQuestion") && jsonObject.getString("kindQuestion").equals(QuestionType.MULTI_SENTENCE.getName())) {
-
             if (!jsonObject.has("sentencesCount"))
                 throw new InvalidFieldsException("تعداد گزاره ها را تعیین کنید.");
 
@@ -102,8 +95,6 @@ public class Utilities {
 
             jsonObject.put("answer", jsonObject.get("answer").toString());
         }
-
-
     }
 
     public static JSONArray convertList(List<Document> docs,

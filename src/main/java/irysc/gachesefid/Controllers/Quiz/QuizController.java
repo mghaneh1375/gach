@@ -2184,11 +2184,8 @@ public class QuizController {
             int rowIdx = 0;
 
             for (Row row : rows) {
-
                 rowIdx++;
-
                 try {
-
                     if (row.getCell(0) == null)
                         break;
 
@@ -2202,7 +2199,6 @@ public class QuizController {
                                     .put("organizationId", Excel.getCellValue(row.getCell(0)).toString())
                                     .put("mark", Double.parseDouble(Excel.getCellValue(row.getCell(1)).toString()))
                     );
-
                 } catch (Exception x) {
                     excepts.put(rowIdx);
                 }
@@ -2257,9 +2253,7 @@ public class QuizController {
                                        JSONArray excepts,
                                        double mark, Boolean can_upload
     ) throws InvalidFieldsException {
-
         ArrayList<Document> addedItems = new ArrayList<>();
-
         Document questions = quiz.get("questions", Document.class);
 
         List<Double> marks = questions.containsKey("marks") ? questions.getList("marks", Double.class) : new ArrayList<>();
@@ -2274,15 +2268,11 @@ public class QuizController {
         HashMap<ObjectId, Integer> allUsed = new HashMap<>();
         List<Document> allQuestions = new ArrayList<>();
 
-
         if (questionsList instanceof JSONArray) {
-
             JSONArray jsonArray = (JSONArray) questionsList;
 
             for (int i = 0; i < jsonArray.length(); i++) {
-
                 try {
-
                     double tmpMark = mark;
                     String organizationId;
 
