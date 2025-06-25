@@ -629,7 +629,6 @@ public class QuestionController extends Utilities {
                     cell = row.getCell(i);
                     if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK) {
                         try {
-
                             int tagCode = (int) cell.getNumericCellValue();
 
                             Document t = questionTagRepository.findBySecKey(tagCode);
@@ -640,13 +639,11 @@ public class QuestionController extends Utilities {
                             }
 
                         } catch (Exception x) {
-
                             String t = cell.getStringCellValue();
                             if (!questionTagRepository.exist(
                                     eq("tag", t)
                             )) {
                                 int tagCode = getRandIntForTag();
-
                                 while (questionTagRepository.exist(
                                         eq("code", tagCode)
                                 ))
@@ -665,6 +662,12 @@ public class QuestionController extends Utilities {
                 checkAnswer(jsonObject);
                 jsonObject.put("tags", tags);
 
+                cell = row.getCell(21);
+                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
+                    jsonObject.put("is_public", cell.getBooleanCellValue());
+                else
+                    jsonObject.put("is_public", true);
+
                 questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionFilename, null);
 
                 if (questionFilename == null) {
@@ -682,12 +685,6 @@ public class QuestionController extends Utilities {
                         continue;
                     }
                 }
-
-                cell = row.getCell(21);
-                if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
-                    jsonObject.put("is_public", cell.getBooleanCellValue());
-                else
-                    jsonObject.put("is_public", true);
 
                 jsonObject.put("question_file", questionFilename);
                 jsonObject.put("answer_file", answerFilename);
