@@ -79,8 +79,10 @@ public class UserAPIRoutes extends Router {
             HttpServletRequest request,
             @RequestParam(value = "to") String to
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
+//        getAdminPrivilegeUserVoid(request);
         Utility.sendMail(to, "11111", "forget", "تست");
+//        Utility.sendSMS("09214915905", "11111", "", "", "activationCode");
+//        sendSMSWithTemplate("09214915905", 815, new PairValue("name", "ممد"));
     }
 
     @GetMapping(value = "syncTransactions")
