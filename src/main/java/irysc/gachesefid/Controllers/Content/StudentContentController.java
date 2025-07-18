@@ -432,7 +432,6 @@ public class StudentContentController {
 
 
     public static String get(boolean isAdmin, Document user, String slug) {
-
         Document content = contentRepository.findBySecKey(slug);
         if (content == null)
             return JSON_NOT_VALID_ID;

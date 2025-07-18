@@ -23,19 +23,22 @@ public class FAQAPIRoutes extends Router {
 
     @GetMapping(value = "get")
     @ResponseBody
-    public String get(HttpServletRequest request
+    public String get(
+            HttpServletRequest request,
+            @RequestParam(required = false, value = "contentId") ObjectId contentId
     ) {
         boolean isAdmin = false;
         try {
             isAdmin = Authorization.isAdmin(getUserTokenInfo(request).getAccesses());
         } catch (Exception ignore) {
         }
-        return ContentConfigController.getFAQ(isAdmin);
+        return ContentConfigController.getFAQ(isAdmin, contentId);
     }
 
     @PostMapping(value = "store")
     @ResponseBody
     public String store(
+            @RequestParam(required = false, value = "contentId") ObjectId contentId,
             @RequestBody @StrongJSONConstraint(
                     params = {
                             "question", "answer",
@@ -48,6 +51,7 @@ public class FAQAPIRoutes extends Router {
             ) String jsonStr
     ) {
         return ContentConfigController.store(
+                contentId,
                 Utility.convertPersian(new JSONObject(jsonStr))
         );
     }
@@ -56,6 +60,7 @@ public class FAQAPIRoutes extends Router {
     @ResponseBody
     public String update(
             @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestParam(required = false, name = "contentId") ObjectId contentId,
             @RequestBody @StrongJSONConstraint(
                     params = {
                             "question", "answer",
@@ -68,15 +73,16 @@ public class FAQAPIRoutes extends Router {
             ) String jsonStr
     ) {
         return ContentConfigController.update(
-                id, Utility.convertPersian(new JSONObject(jsonStr))
+                id, Utility.convertPersian(new JSONObject(jsonStr)), contentId
         );
     }
 
     @DeleteMapping(value = "remove/{id}")
     @ResponseBody
     public String remove(
-            @PathVariable @ObjectIdConstraint ObjectId id
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestParam(required = false, name = "contentId") ObjectId contentId
     ) {
-        return ContentConfigController.remove(id);
+        return ContentConfigController.remove(id, contentId);
     }
 }
