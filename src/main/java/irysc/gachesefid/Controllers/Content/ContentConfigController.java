@@ -12,6 +12,7 @@ import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -214,27 +215,38 @@ public class ContentConfigController {
     }
 
 
-    public static String getFAQ(boolean isAdmin) {
+    public static String getFAQ(boolean isAdmin, ObjectId contentId) {
+        Document config = contentId == null
+                ? contentConfigRepository.findBySecKey("first")
+                : contentRepository.findById(contentId);
+        List<Document> items = config.containsKey("faq")
+                ? config.getList("faq", Document.class)
+                : new ArrayList<>();
 
-        Document config = contentConfigRepository.findBySecKey("first");
-        List<Document> items = config.getList("faq", Document.class);
-
-        JSONArray jsonArray = new JSONArray();
-
+        List<JSONObject> jsonObjects = new ArrayList<>();
         for (Document item : items) {
             if (!isAdmin && !item.getBoolean("visibility"))
                 continue;
 
-            jsonArray.put(irysc.gachesefid.Controllers.Content.Utility.convertFAQDigest(item, isAdmin));
+            jsonObjects.add(irysc.gachesefid.Controllers.Content.Utility.convertFAQDigest(item, isAdmin));
         }
 
-        return generateSuccessMsg("data", jsonArray);
+        jsonObjects.sort((o1, o2) -> {
+            Integer age1 = o1.getInt("priority");
+            Integer age2 = o2.getInt("priority");
+            return age1.compareTo(age2);
+        });
+        return generateSuccessMsg("data", jsonObjects);
     }
 
-    public static String store(JSONObject data) {
+    public static String store(ObjectId contentId, JSONObject data) {
+        Document config = contentId == null
+                ? contentConfigRepository.findBySecKey("first")
+                : contentRepository.findById(contentId);
 
-        Document config = contentConfigRepository.findBySecKey("first");
-        List<Document> items = config.getList("faq", Document.class);
+        List<Document> items = config.containsKey("faq")
+                ? config.getList("faq", Document.class)
+                : new ArrayList<>();
         Document doc = new Document("_id", new ObjectId())
                 .append("question", data.getString("question"))
                 .append("priority", data.getInt("priority"))
@@ -242,16 +254,26 @@ public class ContentConfigController {
                 .append("answer", data.getString("answer"));
 
         items.add(doc);
-        contentConfigRepository.replaceOne(config.getObjectId("_id"), config);
+        if(!config.containsKey("faq"))
+            config.put("faq", items);
+
+        if(contentId == null)
+            contentConfigRepository.replaceOneWithoutClearCache(config.getObjectId("_id"), config);
+        else
+            contentRepository.replaceOneWithoutClearCache(contentId, config);
 
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertFAQDigest(doc, true));
     }
 
-    public static String update(ObjectId id, JSONObject data) {
+    public static String update(ObjectId id, JSONObject data, ObjectId contentId) {
 
-        Document config = contentConfigRepository.findBySecKey("first");
+        Document config = contentId == null
+                ? contentConfigRepository.findBySecKey("first")
+                : contentRepository.findById(contentId);
+        if(!config.containsKey("faq"))
+            return JSON_NOT_VALID_ID;
+
         List<Document> items = config.getList("faq", Document.class);
-
         Document faq = Utility.searchInDocumentsKeyVal(items, "_id", id);
         if (faq == null)
             return JSON_NOT_VALID_ID;
@@ -263,22 +285,32 @@ public class ContentConfigController {
 
         items.sort(Comparator.comparing(o -> o.getInteger("priority")));
 
-        contentConfigRepository.replaceOne(config.getObjectId("_id"), config);
+        if(contentId == null)
+            contentConfigRepository.replaceOneWithoutClearCache(config.getObjectId("_id"), config);
+        else
+            contentRepository.replaceOneWithoutClearCache(contentId, config);
 
         return generateSuccessMsg("data", irysc.gachesefid.Controllers.Content.Utility.convertFAQDigest(faq, true));
     }
 
-    public static String remove(ObjectId id) {
+    public static String remove(ObjectId id, ObjectId contentId) {
+        Document config = contentId == null
+                ? contentConfigRepository.findBySecKey("first")
+                : contentRepository.findById(contentId);
 
-        Document config = contentConfigRepository.findBySecKey("first");
+        if(!config.containsKey("faq"))
+            return JSON_NOT_ACCESS;
+
         List<Document> items = config.getList("faq", Document.class);
-
         int idx = Utility.searchInDocumentsKeyValIdx(items, "_id", id);
         if (idx == -1)
             return JSON_NOT_VALID_ID;
 
         items.remove(idx);
-        contentConfigRepository.replaceOne(config.getObjectId("_id"), config);
+        if(contentId == null)
+            contentConfigRepository.replaceOneWithoutClearCache(config.getObjectId("_id"), config);
+        else
+            contentRepository.replaceOneWithoutClearCache(contentId, config);
 
         return JSON_OK;
     }

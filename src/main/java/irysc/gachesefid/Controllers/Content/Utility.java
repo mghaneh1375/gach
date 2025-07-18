@@ -15,6 +15,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,14 +42,13 @@ public class Utility {
     }
 
     static JSONObject convertFAQDigest(Document item, boolean isAdmin) {
-
         JSONObject jsonObject = new JSONObject()
                 .put("question", item.get("question"))
+                .put("priority", item.get("priority"))
                 .put("answer", item.get("answer"));
 
         if (isAdmin) {
             jsonObject.put("id", item.getObjectId("_id").toString())
-                    .put("priority", item.get("priority"))
                     .put("visibility", item.get("visibility"));
         }
 
@@ -105,9 +105,10 @@ public class Utility {
         return jsonObject;
     }
 
-    static JSONObject convert(Document doc, boolean isAdmin, boolean afterBuy,
-                              boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded,
-                              Document user
+    static JSONObject convert(
+            Document doc, boolean isAdmin, boolean afterBuy,
+            boolean includeFAQ, Document stdDoc, boolean isSessionsNeeded,
+            Document user
     ) throws InvalidFieldsException {
 
         JSONObject jsonObject = new JSONObject()
@@ -146,7 +147,7 @@ public class Utility {
                 new BasicDBObject("first_name", 1).append("last_name", 1).append("pic", 1)
         );
 
-        if(buyers != null) {
+        if (buyers != null) {
             buyers.forEach(buyer ->
                     lastBuyers.put(new JSONObject()
                             .put("id", buyer.getObjectId("_id").toString())
@@ -158,33 +159,33 @@ public class Utility {
         jsonObject.put("lastBuyers", lastBuyers);
 
         if (includeFAQ) {
+            List<JSONObject> faqJSON = new ArrayList<>();
+
             Document config = contentConfigRepository.findBySecKey("first");
             if (config != null) {
-
-                List<Document> faqs = config.getList("faq", Document.class);
-                JSONArray faqJSON = new JSONArray();
-
-                for (Document faq : faqs) {
-
-                    if (!faq.getBoolean("visibility") && !isAdmin)
-                        continue;
-
-                    faqJSON.put(convertFAQDigest(faq, isAdmin));
-                }
-
-                jsonObject.put("faqs", faqJSON);
+                config.getList("faq", Document.class)
+                        .stream()
+                        .filter(faq -> isAdmin || faq.getBoolean("visibility"))
+                        .forEach(faq -> faqJSON.add(convertFAQDigest(faq, isAdmin)));
             }
+            if(doc.containsKey("faq") && doc.getList("faq", Document.class).size() > 0) {
+                doc.getList("faq", Document.class)
+                        .stream()
+                        .filter(faq -> isAdmin || faq.getBoolean("visibility"))
+                        .forEach(faq -> faqJSON.add(convertFAQDigest(faq, isAdmin)));
+            }
+
+            faqJSON.sort(Comparator.comparing(o1 -> o1.getInt("priority")));
+            jsonObject.put("faqs", faqJSON);
         }
 
         if (doc.containsKey("img"))
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
         if (!afterBuy && doc.containsKey("off")) {
-
             long curr = System.currentTimeMillis();
 
             if (doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
-
                 int val = doc.getInteger("off");
                 String type = doc.getString("off_type");
 
@@ -194,16 +195,13 @@ public class Utility {
                 jsonObject.put("off", val)
                         .put("offType", type)
                         .put("afterOff", doc.getInteger("price") - offAmount);
-
             }
-
         }
 
         if (afterBuy && stdDoc != null && stdDoc.containsKey("rate"))
             jsonObject.put("stdRate", stdDoc.get("rate"));
 
         if (afterBuy && doc.containsKey("final_exam_id") && stdDoc != null) {
-
             ObjectId quizId = doc.getObjectId("final_exam_id");
             long curr = System.currentTimeMillis();
 
@@ -211,7 +209,6 @@ public class Utility {
                     !stdDoc.containsKey("check_cert") &&
                     doc.containsKey("cert_id")
             ) {
-
                 boolean needCheck = true;
                 int diffDay = 0;
 
@@ -225,15 +222,11 @@ public class Utility {
                         contentRepository.replaceOne(doc.getObjectId("_id"), doc);
                         needCheck = false;
                     }
-
                 }
 
                 if (needCheck) {
-
                     double percent = -1;
-
                     if (doc.containsKey("final_exam_min_mark")) {
-
                         Document quiz = contentQuizRepository.findById(quizId);
                         if (quiz == null)
                             throw new InvalidFieldsException("unknown2");
@@ -294,12 +287,8 @@ public class Utility {
                             params.put("mark", String.format("%.2f", percent / 5));
 
                         addUserToContentCert(doc.getObjectId("cert_id"), params);
-
                     }
-
                 }
-
-
             }
 
             jsonObject
@@ -339,7 +328,6 @@ public class Utility {
             jsonObject.put("afterBuy", afterBuy);
 
         if (isSessionsNeeded) {
-
             List<Document> sessions = doc.getList("sessions", Document.class);
             JSONArray sessionsJSON = new JSONArray();
 
@@ -349,7 +337,6 @@ public class Utility {
                         sessionDigest(session, false, afterBuy, doc.getInteger("price") == 0, true, null)
                 );
             }
-
             jsonObject.put("sessions", sessionsJSON);
         }
 
