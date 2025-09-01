@@ -11,6 +11,7 @@ import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,11 +21,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.eq;
-import static irysc.gachesefid.Main.GachesefidApplication.rssRepository;
+import static com.mongodb.client.model.Filters.*;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 @Component
 public class Scheduler {
+
+    @Autowired
+    private GeneralCacheService generalCacheService;
 
     private final static String RSS_URL = "https://www.irysc.com/category/irysc-news/gachesefid/feed";
 
@@ -78,4 +83,43 @@ public class Scheduler {
         }
     }
 
+    @Scheduled(cron = "0 0 */2 * * ?")
+    public void refreshGeneralCache() {
+        generalCacheService.getInfo();
+    }
+
+    @Scheduled(cron = "0 0 4 * * ?")
+    public void removeExpiredAdviceRequests() {
+        long curr = System.currentTimeMillis();
+        contentRepository.deleteMany(and(
+                and(
+                        eq("answer", "accept"),
+                        exists("paid_at", false),
+                        lt("answer_at", curr - PAY_ADVICE_REQUEST_EXPIRATION_MSEC)
+                )
+        ));
+        contentRepository.deleteMany(and(
+                and(
+                        eq("answer", "pending"),
+                        lt("created_at", curr - ANSWER_ADVICE_REQUEST_EXPIRATION_MSEC)
+                )
+        ));
+    }
+
+    @Scheduled(cron = "0 30 4 * * ?")
+    public void removeExpiredTeachSchedules() {
+        teachScheduleRepository.deleteMany(and(
+                exists("students", false),
+                or(
+                        and(
+                                exists("start_at"),
+                                lte("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30)
+                        ),
+                        and(
+                                exists("end_date"),
+                                lte("end_date", System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30)
+                        )
+                )
+        ));
+    }
 }

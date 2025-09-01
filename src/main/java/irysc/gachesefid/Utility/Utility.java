@@ -131,43 +131,8 @@ public class Utility {
         return -1;
     }
 
-    public static String dayFormatter(String str) {
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
-    public static String dayFormatterDut(String str) {
-        switch (str.toLowerCase()) {
-            case "sun":
-                str = "son";
-                break;
-            case "tue":
-                str = "die";
-                break;
-            case "wed":
-                str = "mit";
-                break;
-            case "thu":
-                str = "don";
-        }
-
-        return camel(str.substring(0, 2), true);
-    }
-
-    public static String convertStringToDate(String date, String delimeter) {
-        return date.substring(0, 4) + delimeter + date.substring(4, 6) + delimeter + date.substring(6, 8);
-    }
-
     public static int convertStringToDate(String date) {
         return Integer.parseInt(date.substring(0, 4) + date.substring(5, 7) + date.substring(8, 10));
-    }
-
-    public static int convertTimeToInt(String time) {
-        return Integer.parseInt(time.replace(":", ""));
-    }
-
-    public static String convertIntToTime(int time) {
-        String timeStr = (time < 1000) ? "0" + time : time + "";
-        return timeStr.substring(0, 2) + ":" + timeStr.substring(2);
     }
 
     public static String getToday(String delimeter) {
@@ -240,25 +205,11 @@ public class Utility {
                 sc.month) + String.format(loc, "%02d", sc.date));
     }
 
-    public static int getTomorrow() {
-        Locale loc = new Locale("en_US");
-        SolarCalendar sc = new SolarCalendar((1000 * 60 * 60 * 24));
-        return Integer.parseInt(String.valueOf(sc.year) + String.format(loc, "%02d",
-                sc.month) + String.format(loc, "%02d", sc.date));
-    }
-
     public static String getPast(String delimeter, int days) {
         Locale loc = new Locale("en_US");
         SolarCalendar sc = new SolarCalendar(-ONE_DAY_MIL_SEC * days);
         return String.valueOf(sc.year) + delimeter + String.format(loc, "%02d",
                 sc.month) + delimeter + String.format(loc, "%02d", sc.date);
-    }
-
-    public static int getPast(int days) {
-        Locale loc = new Locale("en_US");
-        SolarCalendar sc = new SolarCalendar(-ONE_DAY_MIL_SEC * days);
-        return Integer.parseInt(String.valueOf(sc.year) + String.format(loc, "%02d",
-                sc.month) + String.format(loc, "%02d", sc.date));
     }
 
     public static String getPastMilady(int days) {

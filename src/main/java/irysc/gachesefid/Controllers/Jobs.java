@@ -40,7 +40,6 @@ public class Jobs implements Runnable {
         Timer timer = new Timer();
         timer.schedule(new TokenHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new QuizReminder(), ONE_MIN_MSEC * 12, ONE_HOUR_MIL_SEC); // 1 hour
-        timer.schedule(new SiteStatsHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
         timer.schedule(new RemoveRedundantCustomQuizzes(), ONE_MIN_MSEC * 15, ONE_DAY_MIL_SEC);
 
         timer.schedule(new RemoveExpiredNotifs(), 300000, ONE_DAY_MIL_SEC * 7); // delay: 5 min
@@ -61,7 +60,6 @@ public class Jobs implements Runnable {
 
     //todo remove redundant transactions
     //todo remove redundant school questions
-
     private static class InactiveExpiredAdvice extends TimerTask {
         @Override
         public void run() {
@@ -500,16 +498,6 @@ public class Jobs implements Runnable {
             }
 
             activationRepository.deleteMany(lt("created_at", System.currentTimeMillis() - SMS_VALIDATION_EXPIRATION_MSEC));
-        }
-    }
-
-    private static class SiteStatsHandler extends TimerTask {
-
-        public void run() {
-//            SCHOOLS = schoolRepository.count(exists("user_id"));
-            SCHOOLS = schoolRepository.count(null);
-            QUESTIONS = questionRepository.count(null);
-            STUDENTS = userRepository.count(eq("level", false));
         }
     }
 

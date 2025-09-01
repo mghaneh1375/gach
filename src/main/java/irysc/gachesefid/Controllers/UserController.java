@@ -7,6 +7,7 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
+import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -524,7 +525,6 @@ public class UserController {
                     doc.getString("first_name") + " " + doc.getString("last_name")
             );
 
-        STUDENTS++;
         return doc.getString("password");
     }
 
@@ -1223,70 +1223,6 @@ public class UserController {
 
         userRepository.replaceOne(user.getObjectId("_id"), user);
         return JSON_OK;
-    }
-
-    public static String getMySummary(Document user) {
-
-        long curr = System.currentTimeMillis();
-        Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
-        Document config = getConfig();
-
-        double exchangeRate = ((Number) config.get("coin_rate_coef")).doubleValue();
-        DecimalFormat decfor = new DecimalFormat("0.000");
-
-//        double a = (10000.0 / exchangeRate);
-//        String roundVal = decfor.format(a);
-
-        JSONObject jsonObject = new JSONObject()
-                .put("money", user.get("money"))
-                .put("coinToMoneyExchange", exchangeRate)
-//                .put("moneyToCoinExchange", roundVal)
-                .put("rank", rank == null ? "" : rank.getInteger("rank"))
-                .put("branchRank", 1)
-                .put("gradeRank", rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
-                .put("registrableQuizzes", iryscQuizRepository.count(
-                        and(
-                                lt("start_registry", curr),
-                                or(
-                                        and(
-                                                exists("end_registry", false),
-                                                gt("end", curr)
-                                        ),
-                                        and(
-                                                exists("end_registry", true),
-                                                gt("end_registry", curr)
-                                        )
-                                )
-                        )
-                ) + openQuizRepository.count(
-                        nin("students._id", user.getObjectId("_id"))
-                ))
-                .put("activeQuizzes", iryscQuizRepository.count(
-                        and(
-                                in("students._id", user.getObjectId("_id")),
-                                gt("start", curr)
-                        )
-                ))
-                .put("passedQuizzes", iryscQuizRepository.count(
-                        and(
-                                in("students._id", user.getObjectId("_id")),
-                                lt("end", curr)
-                        )
-                ))
-                .put("coin", user.get("coin"))
-                .put("totalQuizzes", iryscQuizRepository.count(
-                        in("students._id", user.getObjectId("_id"))
-                ));
-
-        return generateSuccessMsg("data", jsonObject);
-    }
-
-    public static String getSiteSummary() {
-        return generateSuccessMsg("data", new JSONObject()
-                .put("schools", SCHOOLS)
-                .put("students", STUDENTS)
-                .put("questions", QUESTIONS)
-        );
     }
 
     public static String blockNotif(Document user) {

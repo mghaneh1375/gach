@@ -11,14 +11,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Repository {
 
-    static ConcurrentHashMap<String, ArrayList<Cache>> generalCached = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<String, ArrayList<Cache>> generalCached = new ConcurrentHashMap<>();
 
     public static void clearCache(String table) {
         if (generalCached.containsKey(table))
             generalCached.put(table, new ArrayList<>());
     }
 
-    static Document isInCache(String section, Object id) {
+    public static Document isInCache(String section, Object id) {
 
         if (!generalCached.containsKey(section))
             return null;
@@ -41,7 +41,7 @@ public class Repository {
         return null;
     }
 
-    static void removeFromCache(String section, Object id) {
+    public static void removeFromCache(String section, Object id) {
 
         if (!generalCached.containsKey(section))
             return;
@@ -57,7 +57,6 @@ public class Repository {
 
         }
     }
-
 
     static void removeBatchFromCache(String section, List<Object> ids) {
 
@@ -77,7 +76,7 @@ public class Repository {
         cached.removeIf(itr -> ids.contains(itr.getKey()));
     }
 
-    static void addToCache(String section, Document doc, Object secKey, int limit, int expirationSec) {
+    public static void addToCache(String section, Document doc, Object secKey, int limit, int expirationSec) {
 
         if (!generalCached.containsKey(section))
             generalCached.put(section, new ArrayList<>());

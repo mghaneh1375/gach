@@ -8,7 +8,8 @@ import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Models.NewAlert;
-
+import irysc.gachesefid.Service.GeneralCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -18,21 +19,24 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.*;
+import javax.annotation.PostConstruct;
+import java.util.HashMap;
+import java.util.TimeZone;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Utility.Utility.printException;
-import static irysc.gachesefid.Utility.StaticValues.SCHOOLS;
-import static irysc.gachesefid.Utility.StaticValues.STUDENTS;
-import static irysc.gachesefid.Utility.StaticValues.QUESTIONS;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
-        "irysc.gachesefid.Security", "irysc.gachesefid.Service"})
+        "irysc.gachesefid.Security", "irysc.gachesefid.Service", "irysc.gachesefid.Controllers"})
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
 @EnableScheduling
 public class GachesefidApplication implements WebMvcConfigurer {
+
+    @Autowired
+    private GeneralCacheService generalCacheService;
+
     final static private ConnectionString connString = new ConnectionString(
             "mongodb://localhost:27017/gachesefid"
 
@@ -195,12 +199,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
             userLevelRepository = new UserLevelRepository();
             userPointRepository = new UserPointRepository();
             notifRepository = new NotifRepository();
-
-//            SCHOOLS = schoolRepository.count(exists("user_id"));
-            SCHOOLS = schoolRepository.count(null);
-            QUESTIONS = questionRepository.count(null);
-            STUDENTS = userRepository.count(eq("level", false));
-
         } catch (Exception x) {
             printException(x);
         }
@@ -234,4 +232,8 @@ public class GachesefidApplication implements WebMvcConfigurer {
                 .run(args);
     }
 
+    @PostConstruct
+    public void initCache() {
+        generalCacheService.getInfo();
+    }
 }

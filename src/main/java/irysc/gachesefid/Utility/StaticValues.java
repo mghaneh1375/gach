@@ -38,10 +38,6 @@ public class StaticValues {
     public final static int ONE_MB = 1024 * 1024;
     public final static int MAX_QUIZ_ATTACH_SIZE = 5 * ONE_MB; // MB
 
-    public static int STUDENTS = 0;
-    public static int QUESTIONS = 0;
-    public static int SCHOOLS = 0;
-
     public final static int SMS_RESEND_SEC = 60; // 300
     public final static int SMS_RESEND_MSEC = 1000 * SMS_RESEND_SEC;
     public final static int SMS_VALIDATION_EXPIRATION_MSEC = 1000 * SMS_RESEND_SEC;
@@ -49,6 +45,8 @@ public class StaticValues {
 
     public final static long PAY_SEMI_PRIVATE_CLASS_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 24;
     public final static long PAY_SCHEDULE_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
+    public final static long PAY_ADVICE_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 48;
+    public final static long ANSWER_ADVICE_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 144;
     public final static long SET_STATUS_TEACH_REQUEST_EXPIRATION_MSEC = ONE_HOUR_MIL_SEC * 3;
 
     public final static int CLASS_LIMIT_CACHE_SIZE = 300;
@@ -65,7 +63,7 @@ public class StaticValues {
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";

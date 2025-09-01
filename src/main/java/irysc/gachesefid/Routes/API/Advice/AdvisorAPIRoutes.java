@@ -498,7 +498,7 @@ public class AdvisorAPIRoutes extends Router {
                                       @PathVariable(required = false) String userId,
                                       @PathVariable(required = false) Integer scheduleFor,
                                       @PathVariable(required = false) String id
-    ) throws UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
         if (
                 ((userId == null) != (scheduleFor == null)) ||

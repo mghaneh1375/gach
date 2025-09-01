@@ -74,7 +74,6 @@ public class Utility {
             jsonObject.put("img", STATICS_SERVER + ContentRepository.FOLDER + "/" + doc.get("img"));
 
         if (doc.containsKey("off")) {
-
             long curr = System.currentTimeMillis();
 
             if (doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
@@ -90,7 +89,6 @@ public class Utility {
                         .put("afterOff", doc.getInteger("price") - offAmount);
 
             }
-
         }
 
         if (isAdmin) {

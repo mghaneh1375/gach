@@ -14,6 +14,7 @@ import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
+import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
@@ -21,6 +22,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Service.DashboardService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -32,7 +34,9 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -56,6 +60,9 @@ import static irysc.gachesefid.Utility.Utility.getToday;
 @RequestMapping(path = "/api/general")
 @Validated
 public class GeneralAPIRoutes extends Router {
+
+    @Autowired
+    private DashboardService dashboardService;
 
     @PostMapping(value = "clearVideoCache/{contentId}")
     @ResponseBody
@@ -318,15 +325,6 @@ public class GeneralAPIRoutes extends Router {
         return QuizController.getAllContentQuizzesDigest();
     }
 
-    @GetMapping(value = "/getMySummary")
-    @ResponseBody
-    public String getMySummary(HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
-        return UserController.getMySummary(
-                getUserWithOutCheckCompleteness(request)
-        );
-    }
-
     @GetMapping(value = "/getRankingList")
     @ResponseBody
     public String getRankingList(
@@ -346,8 +344,8 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/getSiteStats")
     @ResponseBody
-    public String getSiteStats() {
-        return UserController.getSiteSummary();
+    public ResponseEntity<ResponseDto> getSiteStats() {
+        return dashboardService.getSiteSummary();
     }
 
     @GetMapping(value = "/getQuestionTagsExcel")
