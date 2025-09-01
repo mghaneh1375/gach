@@ -77,6 +77,16 @@ public class UserAPIRoutes extends Router {
         Utility.sendSMSWithoutTemplate(to, "تست");
     }
 
+    @GetMapping(value = "testMail")
+    @ResponseBody
+    public void testMail(
+            HttpServletRequest request,
+            @RequestParam(value = "to") String to
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        Utility.sendMail(to, "11111", "forget", "تست");
+    }
+
     @PostMapping(value = "/createOpenCardOff")
     @ResponseBody
     public String createOpenCardOff(HttpServletRequest request,

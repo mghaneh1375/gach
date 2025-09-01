@@ -71,6 +71,33 @@ public class ManageUserAPIRoutes extends Router {
 //
 //    }
 
+    @PostMapping(value = "createUser")
+    @ResponseBody
+    public String createUser(
+            HttpServletRequest request,
+            @RequestBody @StrongJSONConstraint(
+                    params = {
+                            "firstName", "lastName",
+                            "NID", "password"
+                    },
+                    paramsType = {
+                            String.class, String.class,
+                            String.class, String.class,
+                    },
+                    optionals = {
+                            "phone", "mail"
+                    },
+                    optionalsType = {
+                            String.class, String.class
+                    }
+            ) @NotBlank String jsonStr
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        return UserController.createUserByAdmin(
+                Utility.convertPersian(new JSONObject(jsonStr))
+        );
+    }
+
     @PutMapping(path = "/setCoins/{userId}/{newCoins}")
     @ResponseBody
     public String setCoins(HttpServletRequest request,

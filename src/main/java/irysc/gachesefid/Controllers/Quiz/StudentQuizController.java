@@ -355,8 +355,9 @@ public class StudentQuizController {
 
         JSONArray data = new JSONArray();
         ArrayList<Bson> filters = new ArrayList<>();
-        if (isSchool)
+        if (isSchool) {
             filters.add(in("students._id", user.getList("students", ObjectId.class)));
+        }
         else
             filters.add(in("students._id", userId));
 
@@ -385,7 +386,10 @@ public class StudentQuizController {
             ), null));
         }
 
-        if (generalMode == null || generalMode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()))
+        if (!isSchool && (
+                generalMode == null ||
+                        generalMode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName())
+        ))
             quizzes.addAll(escapeQuizRepository.find(and(filters), null));
 
         if (!isSchool &&
@@ -410,7 +414,7 @@ public class StudentQuizController {
             ), null));
         }
 
-        if (generalMode == null)
+        if (!isSchool && generalMode == null)
             quizzes.addAll(openQuizRepository.find(and(filters), null));
 
         long zero = 0;
