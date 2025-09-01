@@ -375,7 +375,7 @@ public class Jobs implements Runnable {
     private static class RejectExpiredRSS extends TimerTask {
         @Override
         public void run() {
-            int today = getPast(5);
+            int today = Integer.parseInt(getPast("", 5));
             rssRepository.deleteMany(lt("today", today));
         }
     }
