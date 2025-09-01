@@ -411,7 +411,7 @@ public class UserAPIRoutes extends Router {
         return UserController.setRole(
                 (Document) getUserWithAdminAccess(request, false, false, userId).get("user"),
                 new JSONObject(json),
-                Authorization.isAdmin(user.getList("accesses", String.class))
+                Authorization.isAdmin(getUserTokenInfo(request).getAccesses())
         );
     }
 
