@@ -39,23 +39,23 @@ public class Jobs implements Runnable {
     public void run() {
         Timer timer = new Timer();
         timer.schedule(new TokenHandler(), ONE_DAY_MIL_SEC, ONE_DAY_MIL_SEC); // 1 day
-        timer.schedule(new QuizReminder(), ONE_MIN_MSEC * 12, ONE_HOUR_MIL_SEC); // 1 hour
-        timer.schedule(new RemoveRedundantCustomQuizzes(), ONE_MIN_MSEC * 15, ONE_DAY_MIL_SEC);
+//        timer.schedule(new QuizReminder(), ONE_MIN_MSEC * 12, ONE_HOUR_MIL_SEC); // 1 hour
+//        timer.schedule(new RemoveRedundantCustomQuizzes(), ONE_MIN_MSEC * 15, ONE_DAY_MIL_SEC);
 
-        timer.schedule(new RemoveExpiredNotifs(), 300000, ONE_DAY_MIL_SEC * 7); // delay: 5 min
-        timer.schedule(new RemoveExpiredCaches(), ONE_DAY_MIL_SEC + ONE_HOUR_MIL_SEC, ONE_DAY_MIL_SEC);
-        timer.schedule(new RemoveExpiredMeetings(), 600000, ONE_DAY_MIL_SEC * 7); // delay: 10 min
-        timer.schedule(new RejectExpiredTeachRequests(), 60000, ONE_HOUR_MIL_SEC); // delay: 1 min
+//        timer.schedule(new RemoveExpiredNotifs(), 300000, ONE_DAY_MIL_SEC * 7); // delay: 5 min
+//        timer.schedule(new RemoveExpiredCaches(), ONE_DAY_MIL_SEC + ONE_HOUR_MIL_SEC, ONE_DAY_MIL_SEC);
+//        timer.schedule(new RemoveExpiredMeetings(), 600000, ONE_DAY_MIL_SEC * 7); // delay: 10 min
+//        timer.schedule(new RejectExpiredTeachRequests(), 60000, ONE_HOUR_MIL_SEC); // delay: 1 min
 
-        timer.schedule(new CheckContentBuys(), 1200000, ONE_HOUR_MIL_SEC); // delay: 20 min
+//        timer.schedule(new CheckContentBuys(), 1200000, ONE_HOUR_MIL_SEC); // delay: 20 min
 
-        timer.schedule(new InactiveExpiredAdvice(), ONE_MIN_MSEC * 7, ONE_DAY_MIL_SEC);
-        timer.schedule(new RememberForExpiredSoonAdvice(), ONE_MIN_MSEC * 21, ONE_DAY_MIL_SEC);
-        timer.schedule(new BirthDayPoint(), ONE_MIN_MSEC * 3, ONE_HOUR_MIL_SEC * 12);
-        timer.schedule(new DailyPoint(), ONE_MIN_MSEC * 4, ONE_MIN_MSEC * 30);
-        timer.schedule(new SendMails(), 0, ONE_MIN_MSEC * 5);
-        timer.schedule(new SendSMS(), 0, ONE_MIN_MSEC * 5);
-        timer.schedule(new CalcSubjectQuestions(), 1800000, ONE_DAY_MIL_SEC); // delay: 30 min
+//        timer.schedule(new InactiveExpiredAdvice(), ONE_MIN_MSEC * 7, ONE_DAY_MIL_SEC);
+//        timer.schedule(new RememberForExpiredSoonAdvice(), ONE_MIN_MSEC * 21, ONE_DAY_MIL_SEC);
+//        timer.schedule(new BirthDayPoint(), ONE_MIN_MSEC * 3, ONE_HOUR_MIL_SEC * 12);
+//        timer.schedule(new DailyPoint(), ONE_MIN_MSEC * 4, ONE_MIN_MSEC * 30);
+//        timer.schedule(new SendMails(), 0, ONE_MIN_MSEC * 5);
+//        timer.schedule(new SendSMS(), 0, ONE_MIN_MSEC * 5);
+//        timer.schedule(new CalcSubjectQuestions(), 1800000, ONE_DAY_MIL_SEC); // delay: 30 min
     }
 
     //todo remove redundant transactions
