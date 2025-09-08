@@ -108,7 +108,7 @@ public class TeachController {
         if (users == null)
             return generateErr(JSON_NOT_UNKNOWN);
 
-        List<Document> schedules = teachScheduleRepository.findByIds(new ArrayList<>(scheduleIds), false, new BasicDBObject("start_at", 1));
+        List<Document> schedules = teachScheduleRepository.findByIdsWithNull(new ArrayList<>(scheduleIds), new BasicDBObject("start_at", 1));
         if (schedules == null)
             return generateErr(JSON_NOT_UNKNOWN);
 
@@ -146,7 +146,7 @@ public class TeachController {
                                     .stream()
                                     .filter(schedule -> schedule.getObjectId("_id").equals(report.getObjectId("schedule_id")))
                                     .map(schedule -> getSolarDate(schedule.getLong("start_at")))
-                                    .findFirst().get()
+                                    .findFirst().orElse("نامشخص")
                             )
                             .put("tags", reportTags)
                             .put("desc", report.getOrDefault("desc", ""))

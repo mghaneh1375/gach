@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto;
+package irysc.gachesefid.Dto.Dashboard;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;

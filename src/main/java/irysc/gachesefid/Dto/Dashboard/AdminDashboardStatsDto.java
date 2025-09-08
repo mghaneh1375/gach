@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto;
+package irysc.gachesefid.Dto.Dashboard;
 
 import lombok.Builder;
 import lombok.Data;
@@ -20,4 +20,7 @@ public class AdminDashboardStatsDto {
     public Integer lastMonthContentBuyCount;
     public Integer lastMonthTutorialCount;
     public Integer lastMonthTeachReportsCount;
+    public Integer pendingComments;
+    public Integer activeTeachers;
+    public Integer activeAdvisors;
 }

@@ -1,5 +1,8 @@
 package irysc.gachesefid.Main;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
@@ -7,8 +10,12 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
+import irysc.gachesefid.Dto.Deserializer.ObjectIdDeserializer;
+import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
 import irysc.gachesefid.Models.NewAlert;
 import irysc.gachesefid.Service.GeneralCacheService;
+import irysc.gachesefid.Service.ReportService;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -226,15 +233,30 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     }
 
+    public static ObjectMapper objectMapper;
+
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("Iran"));
         setupDB();
 //        Enc.init();
         setupNewThingsCache();
         new Thread(new Jobs()).start();
+
+        SimpleModule module = new SimpleModule();
+        module.addDeserializer(ObjectId.class, new ObjectIdDeserializer());
+        module.addSerializer(ObjectId.class, new ObjectIdSerializer());
+
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.registerModule(new SimpleModule().addSerializer(ObjectId.class, new ObjectIdSerializer()));
+        objectMapper.registerModule(new SimpleModule().addDeserializer(ObjectId.class, new ObjectIdDeserializer()));
+
         new SpringApplicationBuilder(GachesefidApplication.class)
                 .run(args);
     }
+
+    @Autowired
+    ReportService reportService;
 
     @PostConstruct
     public void initCache() {

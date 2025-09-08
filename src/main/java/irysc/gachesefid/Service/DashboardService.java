@@ -2,8 +2,9 @@ package irysc.gachesefid.Service;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.Repository;
-import irysc.gachesefid.Dto.AdminDashboardStatsDto;
-import irysc.gachesefid.Dto.DashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.AdvisorDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
@@ -27,7 +28,7 @@ import static irysc.gachesefid.Utility.Utility.getPast;
 @Service
 public class DashboardService {
     private static Long lastAdminDashboardFetchTime = null;
-    private static ResponseEntity<ResponseDto> lastAdminDashboardFetch = null;
+    private static ResponseEntity<ResponseDto<AdminDashboardStatsDto>> lastAdminDashboardFetch = null;
     private final static long FIVE_MIN_MSEC = StaticValues.ONE_MIN_MSEC * 5;
 
     private Set<String> detectUserBranches(Document user, List<Document> userIRYSCQuizzes, List<Document> userOpenQuizzes) {
@@ -63,7 +64,7 @@ public class DashboardService {
         return userBranches;
     }
 
-    public ResponseEntity<ResponseDto> dashboardInfo(Document user) {
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> dashboardInfo(Document user) {
 
         long curr = System.currentTimeMillis();
         Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
@@ -139,7 +140,7 @@ public class DashboardService {
 
         return new ResponseEntity<>(
                 ResponseDto
-                        .builder()
+                        .builder(DashboardStatsDto.class)
                         .data(dto)
                         .status("ok")
                         .build(),
@@ -147,12 +148,12 @@ public class DashboardService {
         );
     }
 
-    public ResponseEntity<ResponseDto> getSiteSummary() {
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> getSiteSummary() {
         Document generalCache = Repository.isInCache("general", "first");
 
         return new ResponseEntity<>(
                 ResponseDto
-                        .builder()
+                        .builder(DashboardStatsDto.class)
                         .status("ok")
                         .data(
                                 DashboardStatsDto
@@ -176,18 +177,18 @@ public class DashboardService {
         );
     }
 
-    public ResponseEntity<ResponseDto> adminDashboardInfo() {
+    public ResponseEntity<ResponseDto<AdminDashboardStatsDto>> adminDashboardInfo() {
         long curr = System.currentTimeMillis();
-        if(lastAdminDashboardFetchTime != null &&
+        if (lastAdminDashboardFetchTime != null &&
                 lastAdminDashboardFetch != null &&
                 lastAdminDashboardFetchTime >= curr - FIVE_MIN_MSEC
         )
             return lastAdminDashboardFetch;
 
         long tilLastMonth = curr - StaticValues.ONE_DAY_MIL_SEC * 30;
-        ResponseEntity<ResponseDto> response = new ResponseEntity<>(
+        ResponseEntity<ResponseDto<AdminDashboardStatsDto>> response = new ResponseEntity<>(
                 ResponseDto
-                        .builder()
+                        .builder(AdminDashboardStatsDto.class)
                         .data(
                                 AdminDashboardStatsDto
                                         .builder()
@@ -221,6 +222,11 @@ public class DashboardService {
                                                         gte("created_at", tilLastMonth)
                                                 )
                                         )
+                                        .pendingComments(commentRepository.count(and(
+                                                eq("status", "pending")
+                                        )))
+                                        .activeTeachers(0)
+                                        .activeAdvisors(0)
                                         .lastMonthOpenQuizRegistry(
                                                 openQuizRepository.countIndividualRegistrationsLastMonth()
                                         )
@@ -245,7 +251,7 @@ public class DashboardService {
                                         .pendingUpgradeLevelRequests(
                                                 ticketRepository.count(
                                                         and(
-                                                                ne("section", "upgradelevel"),
+                                                                eq("section", "upgradelevel"),
                                                                 eq("status", "pending")
                                                         )
                                                 )
@@ -253,10 +259,8 @@ public class DashboardService {
                                         .pendingTickets(
                                                 ticketRepository.count(
                                                         and(
-                                                                ne("section", "upgradelevel"),
                                                                 eq("is_for_teacher", false),
-                                                                eq("status", "pending"),
-                                                                gte("created_at", tilLastMonth)
+                                                                eq("status", "pending")
                                                         )
                                                 )
                                         )
@@ -276,5 +280,65 @@ public class DashboardService {
         lastAdminDashboardFetchTime = curr;
 
         return response;
+    }
+
+    public ResponseEntity<ResponseDto<AdvisorDashboardStatsDto>> advisorDashboardInfo(
+            Document user
+    ) {
+        long tilLastMonth = System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30;
+        return new ResponseEntity<>(
+                ResponseDto
+                        .builder(AdvisorDashboardStatsDto.class)
+                        .status("ok")
+                        .data(
+                                AdvisorDashboardStatsDto
+                                        .builder()
+                                        .lastMonthCreatedExams(
+                                                schoolQuizRepository.count(
+                                                        and(
+                                                                eq("created_by", user.getObjectId("_id")),
+                                                                or(
+                                                                        eq("status", "finish"),
+                                                                        eq("status", "semi_finish")
+                                                                ),
+                                                                gte("created_at", tilLastMonth)
+                                                        )
+                                                )
+                                        )
+                                        .lastMonthkarbargs(
+                                                scheduleRepository.count(
+                                                        and(
+                                                                eq("advisors", user.getObjectId("_id")),
+                                                                gte("week_start_at_int", Integer.parseInt(getPast("", 30)))
+                                                        )
+                                                )
+                                        )
+                                        .studentsCountForAdvice(
+                                                user.containsKey("students")
+                                                        ? user.getList("students", Document.class).size()
+                                                        : 0
+                                        )
+                                        .studentsCountForTeach(0)
+                                        .pendingExamsForPay(
+                                                schoolQuizRepository.count(
+                                                        and(
+                                                                eq("created_by", user.getObjectId("_id")),
+                                                                eq("status", "init")
+                                                        )
+                                                )
+                                        )
+                                        .lastMonthMeetings(
+                                                advisorMeetingRepository.count(
+                                                        and(
+                                                                eq("advisor_id", user.getObjectId("_id")),
+                                                                gte("created_at", tilLastMonth)
+                                                        )
+                                                )
+                                        )
+                                        .build()
+                        )
+                        .build()
+                , HttpStatus.OK
+        );
     }
 }

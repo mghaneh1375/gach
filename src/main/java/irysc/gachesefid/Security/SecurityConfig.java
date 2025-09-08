@@ -82,14 +82,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/api/admin/off/**", "/api/admin/config/gift/**",
                         "/api/admin/config/avatar/**", "/api/admin/config/config/**",
                         "/api/admin/config/school/**", "/api/package_content/faq/**",
-                        "/api/admin/content/**", "/api/admin/dashboard/**"
+                        "/api/admin/content/**", "/api/admin/dashboard/**",
+                        "/api/admin/report/**"
                 ).hasAnyAuthority(
                         Role.ROLE_ADMIN.getAuthority(),
                         Role.ROLE_SUPER_ADMIN.getAuthority()
                 )
                 // ADVISOR SERVICES
                 .antMatchers(
-                        "/api/teach/manage/**", "/api/advisor/manage/**"
+                        "/api/teach/manage/**", "/api/advisor/manage/**",
+                        "/api/advisor/dashboard/**"
                 ).hasAnyAuthority(
                         Role.ROLE_ADMIN.getAuthority(),
                         Role.ROLE_SUPER_ADMIN.getAuthority(),

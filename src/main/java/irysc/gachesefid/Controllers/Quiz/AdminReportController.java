@@ -14,7 +14,6 @@ import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
-import org.hibernate.validator.internal.engine.messageinterpolation.InterpolationTerm;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -99,7 +98,6 @@ public class AdminReportController {
         );
 
     }
-
 
     public static void buildContentQuizTaraz(Document doc, Document std
     ) throws InvalidFieldsException {

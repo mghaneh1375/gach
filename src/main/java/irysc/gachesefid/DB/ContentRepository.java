@@ -1,12 +1,16 @@
 package irysc.gachesefid.DB;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Content.Utility;
+import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
+import irysc.gachesefid.Dto.Report.BuyReport.ContentBuyerInfoDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.StaticValues;
@@ -15,15 +19,14 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Aggregates.match;
+import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Filters.or;
+import static com.mongodb.client.model.Projections.*;
+import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Utility.StaticValues.CONTENT_DIGEST;
 
 
@@ -111,7 +114,7 @@ public class ContentRepository extends Common {
     public int notChunkedCount() {
         return Optional.ofNullable(
                 documentMongoCollection.aggregate(List.of(
-                        Aggregates.unwind("$sessions"),
+                        unwind("$sessions"),
                         Aggregates.match(
                                 Filters.or(
                                         Filters.exists("sessions.chunk_at", false),
@@ -126,11 +129,62 @@ public class ContentRepository extends Common {
     public int countIndividualRegistrationsLastMonth() {
         return Optional.ofNullable(
                 documentMongoCollection.aggregate(List.of(
-                        Aggregates.unwind("$users"),
+                        unwind("$users"),
                         Aggregates.match(Filters.gte("users.register_at", System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30)),
                         Aggregates.count()
                 )).first()
         ).orElse(new Document("count", 0)).getInteger("count", 0);
+    }
+
+    public List<ContentBuyerInfoDto> individualRegistrationsLastMonth() {
+        List<ContentBuyerInfoDto> registrations = new ArrayList<>();
+        try {
+            long last30DaysAgo = System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 90;
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(List.of(
+                    match(gte("users.register_at", last30DaysAgo)),
+                    project(
+                            new BasicDBObject("title", 1)
+                                    .append("users",
+                                            new BasicDBObject("$filter",
+                                                    new Document("input", "$users")
+                                                            .append("as", "user")
+                                                            .append("cond",
+                                                                    new Document("$gte", List.of(
+                                                                            "$$user.register_at", last30DaysAgo
+                                                                    ))
+                                                            )
+                                            )
+                                    )
+                    ),
+                    unwind("$users"),
+                    lookup("user", "users._id", "_id", "userInfo"),
+                    unwind("$userInfo"),
+                    project(fields(
+                            include("title"),
+                            computed("refId", "$_id"),
+                            computed("registeredAt", "$users.register_at"),
+                            computed("userId", "$users._id"),
+                            computed("firstname", "$userInfo.first_name"),
+                            computed("lastname", "$userInfo.last_name"),
+                            computed("nid", "$userInfo.NID"),
+                            computed("phone", "$userInfo.phone")
+                    ))
+            )).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    registrations.add(
+                            objectMapper.readValue(document.toJson(), ContentBuyerInfoDto.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        } catch (Exception ignore) {}
+
+        return registrations.stream().sorted(
+                Comparator.comparing(
+                        BuyerInfoDto::getRegisteredAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
     }
 
     @Override
