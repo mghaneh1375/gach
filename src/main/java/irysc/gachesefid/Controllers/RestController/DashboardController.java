@@ -1,5 +1,6 @@
 package irysc.gachesefid.Controllers.RestController;
 
+import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -25,7 +26,7 @@ public class DashboardController extends Router {
 
     @GetMapping(value = "getMySummary")
     @ResponseBody
-    public ResponseEntity<ResponseDto> stats(
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> stats(
             HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException {
         return dashboardService.dashboardInfo(
