@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 @Validated
 @RestController
@@ -22,7 +23,7 @@ public class AdminReportController {
     @PostMapping(value = "buyersReport")
     @ResponseBody
     public ResponseEntity<ResponseDto<LastBuyersDto>> buyersReport(
-            @RequestBody @Valid BuyersReportFilterDto filterDto
+            @RequestBody @Valid @NotNull BuyersReportFilterDto filterDto
     ) {
         return reportService.buyersReport(filterDto);
     }

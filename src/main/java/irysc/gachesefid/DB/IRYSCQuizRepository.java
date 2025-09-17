@@ -22,13 +22,11 @@ public class IRYSCQuizRepository extends Common {
 
     @Override
     public void cleanRemove(Document doc) {
-
         if(!doc.containsKey("attaches"))
             return;
 
         List<String> attaches = doc.getList("attaches", String.class);
         for(String attach : attaches)
             FileUtils.removeFile(attach, FOLDER);
-
     }
 }

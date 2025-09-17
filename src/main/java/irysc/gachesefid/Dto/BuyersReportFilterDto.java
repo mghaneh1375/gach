@@ -15,6 +15,8 @@ import javax.validation.constraints.NotNull;
 public class BuyersReportFilterDto {
     @NotNull
     private BuySection section;
-//    private Long from;
-//    private Long to;
+    @NotNull
+    private Long from;
+    @NotNull
+    private Long to;
 }

@@ -1,27 +1,29 @@
 package irysc.gachesefid.DB;
 
 
-import com.mongodb.client.AggregateIterable;
-import com.mongodb.client.DistinctIterable;
-import com.mongodb.client.FindIterable;
-import com.mongodb.client.MongoCollection;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.BasicDBObject;
+import com.mongodb.client.*;
 import com.mongodb.client.model.UnwindOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Variable;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
+import irysc.gachesefid.Dto.Report.BuyReport.RegularQuizBuyerInfoDto;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.Projections.computed;
+import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public abstract class Common extends Repository {
@@ -545,5 +547,66 @@ public abstract class Common extends Repository {
             jsonArray.put(itr);
 
         return jsonArray;
+    }
+
+
+    public <T extends BuyerInfoDto> List<T> individualRegistrations(Long from, Long to, String studentsKey, Class<T> tClass) {
+        List<T> registrations = new ArrayList<>();
+        try {
+            List<Bson> filters = new ArrayList<>();
+            Document cond = new Document();
+
+            if(from != null) {
+                filters.add(gte(String.format("%s.register_at", studentsKey), from));
+                cond.append("$gte", List.of("$$user", from));
+            }
+            if(to != null) {
+                filters.add(lte(String.format("%s.register_at", studentsKey), to));
+                cond.append("$lte", List.of("$$user", to));
+            }
+            if(filters.isEmpty())
+                filters.add(exists("_id"));
+
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(List.of(
+                    match(and(filters)),
+                    project(
+                            new BasicDBObject("title", 1)
+                                    .append(studentsKey,
+                                            new BasicDBObject("$filter",
+                                                    new Document("input", String.format("$%s", studentsKey))
+                                                            .append("as", "user")
+                                                            .append("cond", cond)
+                                            )
+                                    )
+                    ),
+                    unwind(String.format("$%s", studentsKey)),
+                    lookup("user", "users._id", "_id", "userInfo"),
+                    unwind("$userInfo"),
+                    project(fields(
+                            include("title"),
+                            computed("refId", "$_id"),
+                            computed("registeredAt", String.format("$%s.register_at", studentsKey)),
+                            computed("userId", String.format("$%s._id", studentsKey)),
+                            computed("firstname", "$userInfo.first_name"),
+                            computed("lastname", "$userInfo.last_name"),
+                            computed("nid", "$userInfo.NID"),
+                            computed("phone", "$userInfo.phone")
+                    ))
+            )).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    registrations.add(
+                            objectMapper.readValue(document.toJson(), tClass)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        } catch (Exception ignore) {}
+
+        return registrations.stream().sorted(
+                Comparator.comparing(
+                        BuyerInfoDto::getRegisteredAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
     }
 }

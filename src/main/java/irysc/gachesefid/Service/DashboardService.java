@@ -38,7 +38,7 @@ public class DashboardService {
                     user.getList("branches", Document.class).stream().map(document -> document.getString("name").replace("المپیاد", "").strip()).collect(Collectors.toList())
             );
         }
-        if (userIRYSCQuizzes.size() > 0) {
+        if (!userIRYSCQuizzes.isEmpty()) {
             userBranches.addAll(
                     userIRYSCQuizzes
                             .stream()
@@ -49,7 +49,7 @@ public class DashboardService {
                             .collect(Collectors.toList())
             );
         }
-        if (userOpenQuizzes.size() > 0) {
+        if (!userOpenQuizzes.isEmpty()) {
             userBranches.addAll(
                     userOpenQuizzes
                             .stream()
@@ -116,7 +116,7 @@ public class DashboardService {
                 .build();
 
         Set<String> branches = detectUserBranches(user, userIRYSCQuizzes, userOpenQuizzes);
-        if (branches.size() > 0) {
+        if (!branches.isEmpty()) {
             List<Bson> tags = branches.stream().map(s -> regex("tags", Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))).collect(Collectors.toList());
 //            dto.setRegistrableQuizzesSuggestion(
 //                    List.of(
