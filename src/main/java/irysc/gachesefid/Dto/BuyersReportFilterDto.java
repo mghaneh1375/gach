@@ -17,6 +17,5 @@ public class BuyersReportFilterDto {
     private BuySection section;
     @NotNull
     private Long from;
-    @NotNull
     private Long to;
 }

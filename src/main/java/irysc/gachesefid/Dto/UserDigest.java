@@ -19,4 +19,5 @@ public class UserDigest {
     private String lastname;
     private String nid;
     private String phone;
+    private String mail;
 }

@@ -18,10 +18,11 @@ import org.bson.types.ObjectId;
 @NoArgsConstructor
 public class BuyerInfoDto {
     @JsonSerialize(using = ObjectIdSerializer.class)
-    ObjectId refId;
-    String title;
+    private ObjectId refId;
+    private String title;
+    private Integer paid;
     @JsonSerialize(using = LongDateSerialization.class)
     @JsonDeserialize(using = MongoNumberLongDeserializer.class)
-    Long registeredAt;
-    UserDigest user;
+    private Long registeredAt;
+    private UserDigest user;
 }

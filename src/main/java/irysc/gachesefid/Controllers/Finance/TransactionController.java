@@ -12,6 +12,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.mongodb.client.model.Aggregates.match;
@@ -21,11 +22,12 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class TransactionController {
-
-    public static String get(ObjectId userId,
-                             Long start, Long end,
-                             Boolean useOffCode, String section) {
-
+    public static String get(
+            ObjectId userId,
+            Long start, Long end,
+            Boolean useOffCode, String section,
+            Integer pageIndex
+    ) {
         ArrayList<Bson> filters = new ArrayList<>();
         filters.add(eq("status", "success"));
 
@@ -45,29 +47,37 @@ public class TransactionController {
             filters.add(lte("created_at", end));
 
         AggregateIterable<Document> docs = transactionRepository.all(
-                match(and(filters))
+                match(and(filters)), pageIndex
         );
 
         JSONArray data = new JSONArray();
         double sum = 0;
         double accountMoneySum = 0;
+        HashMap<ObjectId, String> advisors = new HashMap<>();
 
         for (Document doc : docs) {
-
             if (!doc.containsKey("user") || doc.get("user") == null)
                 continue;
 
             Document user = doc.get("user", Document.class);
-            double accountMoney = Math.max(0, ((Number)doc.getOrDefault("account_money", 0)).doubleValue());
+            double accountMoney = Math.max(0, ((Number) doc.getOrDefault("account_money", 0)).doubleValue());
 
             JSONObject jsonObject = new JSONObject()
                     .put("createdAt", Utility.getSolarDate(doc.getLong("created_at")))
                     .put("createdAtTs", doc.getLong("created_at"))
                     .put("refId", doc.get("ref_id"))
+                    .put("refTitle", doc.getList("openQuizRef", Document.class).size() > 0
+                            ? doc.get("openQuizRef")
+                            : doc.getList("iryscQuizRef", Document.class).size() > 0
+                            ? doc.get("iryscQuizRef")
+                            : doc.getList("contentRef", Document.class).size() > 0
+                            ? doc.get("contentRef")
+                            : null
+                    )
                     .put("useOff", doc.containsKey("off_code"))
                     .put("section", GiftController.translateUseFor(doc.getString("section")))
                     .put("amount", doc.get("amount"))
-                    .put("accountMoney", formatPrice((int)accountMoney))
+                    .put("accountMoney", formatPrice((int) accountMoney))
                     .put("user", user.getString("first_name") + " " + user.getString("last_name"))
                     .put("userNID", user.getString("NID"))
                     .put("userPhone", user.getString("phone"));
@@ -75,12 +85,27 @@ public class TransactionController {
             sum += jsonObject.getNumber("amount").doubleValue();
             accountMoneySum += accountMoney;
 
+            if(doc.containsKey("advisorReqRef") &&
+                    doc.get("advisorReqRef") != null &&
+                    doc.getList("advisorReqRef", Document.class).size() > 0
+            ) {
+                ObjectId advisorId = doc.getList("advisorReqRef", Document.class)
+                        .get(0).getObjectId("advisor_id");
+
+                if(!advisors.containsKey(advisorId)) {
+                    Document advisor = userRepository.findById(advisorId);
+                    if(advisor != null)
+                        advisors.put(advisorId, advisor.getString("first_name") + " " + advisor.getString("last_name"));
+                }
+                jsonObject.put("refTitle", new Document("title", advisors.get(advisorId)));
+            }
+
             data.put(jsonObject);
         }
 
         return generateSuccessMsg("data", data,
-                new PairValue("sum", formatPrice((int)sum)),
-                new PairValue("accountMoneySum", formatPrice((int)accountMoneySum))
+                new PairValue("sum", formatPrice((int) sum)),
+                new PairValue("accountMoneySum", formatPrice((int) accountMoneySum))
         );
     }
 

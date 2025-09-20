@@ -9,7 +9,6 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Variable;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
-import irysc.gachesefid.Dto.Report.BuyReport.RegularQuizBuyerInfoDto;
 import irysc.gachesefid.Utility.Utility;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -22,7 +21,6 @@ import java.util.stream.Collectors;
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
-import static com.mongodb.client.model.Projections.computed;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
@@ -550,19 +548,21 @@ public abstract class Common extends Repository {
     }
 
 
-    public <T extends BuyerInfoDto> List<T> individualRegistrations(Long from, Long to, String studentsKey, Class<T> tClass) {
+    public <T extends BuyerInfoDto> List<T> individualRegistrations(
+            Long from, Long to, String studentsKey, Class<T> tClass
+    ) {
         List<T> registrations = new ArrayList<>();
         try {
             List<Bson> filters = new ArrayList<>();
-            Document cond = new Document();
+            List<Document> cond = new ArrayList<>();
 
             if(from != null) {
                 filters.add(gte(String.format("%s.register_at", studentsKey), from));
-                cond.append("$gte", List.of("$$user", from));
+                cond.add(new Document("$gte", List.of("$$user.register_at", from)));
             }
             if(to != null) {
                 filters.add(lte(String.format("%s.register_at", studentsKey), to));
-                cond.append("$lte", List.of("$$user", to));
+                cond.add(new Document("$lte", List.of("$$user.register_at", to)));
             }
             if(filters.isEmpty())
                 filters.add(exists("_id"));
@@ -575,22 +575,24 @@ public abstract class Common extends Repository {
                                             new BasicDBObject("$filter",
                                                     new Document("input", String.format("$%s", studentsKey))
                                                             .append("as", "user")
-                                                            .append("cond", cond)
+                                                            .append("cond", new Document("$and", List.of(cond)))
                                             )
                                     )
                     ),
                     unwind(String.format("$%s", studentsKey)),
-                    lookup("user", "users._id", "_id", "userInfo"),
+                    lookup("user", String.format("%s._id", studentsKey), "_id", "userInfo"),
                     unwind("$userInfo"),
                     project(fields(
                             include("title"),
                             computed("refId", "$_id"),
                             computed("registeredAt", String.format("$%s.register_at", studentsKey)),
-                            computed("userId", String.format("$%s._id", studentsKey)),
-                            computed("firstname", "$userInfo.first_name"),
-                            computed("lastname", "$userInfo.last_name"),
-                            computed("nid", "$userInfo.NID"),
-                            computed("phone", "$userInfo.phone")
+                            computed("paid", String.format("$%s.paid", studentsKey)),
+                            computed("user.id", String.format("$%s._id", studentsKey)),
+                            computed("user.firstname", "$userInfo.first_name"),
+                            computed("user.lastname", "$userInfo.last_name"),
+                            computed("user.nid", "$userInfo.NID"),
+                            computed("user.phone", "$userInfo.phone"),
+                            computed("user.mail", "$userInfo.mail")
                     ))
             )).iterator();
             iterator.forEachRemaining(document -> {

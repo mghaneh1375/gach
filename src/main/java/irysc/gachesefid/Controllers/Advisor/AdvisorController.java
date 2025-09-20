@@ -629,7 +629,6 @@ public class AdvisorController {
         return generateSuccessMsg("data", jsonArray);
     }
 
-
     public static String myStudentRequests(ObjectId advisorId) {
 
         List<Document> requests = advisorRequestsRepository.find(
