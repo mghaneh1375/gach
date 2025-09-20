@@ -1,9 +1,11 @@
 package irysc.gachesefid.Service;
 
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
-import irysc.gachesefid.Dto.Dashboard.AdvisorDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
@@ -20,8 +22,12 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.mongodb.client.model.Aggregates.match;
+import static com.mongodb.client.model.Aggregates.project;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.TICKET_PROJECTION;
+import static irysc.gachesefid.Utility.StaticValues.USER_DIGEST;
 import static irysc.gachesefid.Utility.Utility.getConfig;
 import static irysc.gachesefid.Utility.Utility.getPast;
 
@@ -286,57 +292,76 @@ public class DashboardService {
             Document user
     ) {
         long tilLastMonth = System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30;
+        int studentsCountForAdvice = user.containsKey("students")
+                ? user.getList("students", Document.class).size()
+                : 0;
+
+        // todo: fill studentsCountForTeach from db query
+        int studentsCountForTeach = 0;
+
+        AdvisorDashboardStatsDto dashboardStatsDto = AdvisorDashboardStatsDto
+                .builder()
+                .lastMonthCreatedExams(
+                        schoolQuizRepository.count(
+                                and(
+                                        eq("created_by", user.getObjectId("_id")),
+                                        or(
+                                                eq("status", "finish"),
+                                                eq("status", "semi_finish")
+                                        ),
+                                        gte("created_at", tilLastMonth)
+                                )
+                        )
+                )
+                .lastMonthKarbargs(
+                        scheduleRepository.count(
+                                and(
+                                        eq("advisors", user.getObjectId("_id")),
+                                        gte("week_start_at_int", Integer.parseInt(getPast("", 30)))
+                                )
+                        )
+                )
+                .studentsCountForAdvice(studentsCountForAdvice)
+                .studentsCountForTeach(studentsCountForTeach)
+                .pendingExamsForPay(
+                        schoolQuizRepository.count(
+                                and(
+                                        eq("created_by", user.getObjectId("_id")),
+                                        eq("status", "init")
+                                )
+                        )
+                )
+                .lastMonthMeetings(
+                        advisorMeetingRepository.count(
+                                and(
+                                        eq("advisor_id", user.getObjectId("_id")),
+                                        gte("created_at", tilLastMonth)
+                                )
+                        )
+                )
+                .futureMeetings(
+                        advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
+                )
+                .build();
+
+        if(studentsCountForAdvice > 0) {
+            ArrayList<Bson> constraints = new ArrayList<>();
+            constraints.add(eq("advisor_id", user.getObjectId("_id")));
+            constraints.add(eq("section", "advisor"));
+            AggregateIterable<Document> docs =
+                    ticketRepository.findWithJoinUser("user_id", "student",
+                            match(and(constraints)),
+                            project(TICKET_PROJECTION),
+                            Sorts.descending("send_date"), 0, 5,
+                            project(USER_DIGEST.append("accesses", 1))
+                    );
+        }
+
         return new ResponseEntity<>(
                 ResponseDto
                         .builder(AdvisorDashboardStatsDto.class)
                         .status("ok")
-                        .data(
-                                AdvisorDashboardStatsDto
-                                        .builder()
-                                        .lastMonthCreatedExams(
-                                                schoolQuizRepository.count(
-                                                        and(
-                                                                eq("created_by", user.getObjectId("_id")),
-                                                                or(
-                                                                        eq("status", "finish"),
-                                                                        eq("status", "semi_finish")
-                                                                ),
-                                                                gte("created_at", tilLastMonth)
-                                                        )
-                                                )
-                                        )
-                                        .lastMonthkarbargs(
-                                                scheduleRepository.count(
-                                                        and(
-                                                                eq("advisors", user.getObjectId("_id")),
-                                                                gte("week_start_at_int", Integer.parseInt(getPast("", 30)))
-                                                        )
-                                                )
-                                        )
-                                        .studentsCountForAdvice(
-                                                user.containsKey("students")
-                                                        ? user.getList("students", Document.class).size()
-                                                        : 0
-                                        )
-                                        .studentsCountForTeach(0)
-                                        .pendingExamsForPay(
-                                                schoolQuizRepository.count(
-                                                        and(
-                                                                eq("created_by", user.getObjectId("_id")),
-                                                                eq("status", "init")
-                                                        )
-                                                )
-                                        )
-                                        .lastMonthMeetings(
-                                                advisorMeetingRepository.count(
-                                                        and(
-                                                                eq("advisor_id", user.getObjectId("_id")),
-                                                                gte("created_at", tilLastMonth)
-                                                        )
-                                                )
-                                        )
-                                        .build()
-                        )
+                        .data(dashboardStatsDto)
                         .build()
                 , HttpStatus.OK
         );
