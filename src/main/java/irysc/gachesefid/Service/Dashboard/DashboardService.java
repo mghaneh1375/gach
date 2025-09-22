@@ -5,20 +5,19 @@ import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -36,6 +35,9 @@ public class DashboardService {
     private static Long lastAdminDashboardFetchTime = null;
     private static ResponseEntity<ResponseDto<AdminDashboardStatsDto>> lastAdminDashboardFetch = null;
     private final static long FIVE_MIN_MSEC = StaticValues.ONE_MIN_MSEC * 5;
+
+    @Autowired
+    private ConfigDashboardService configDashboardService;
 
     private Set<String> detectUserBranches(Document user, List<Document> userIRYSCQuizzes, List<Document> userOpenQuizzes) {
         Set<String> userBranches = new HashSet<>();
@@ -291,6 +293,9 @@ public class DashboardService {
     public ResponseEntity<ResponseDto<AdvisorDashboardStatsDto>> advisorDashboardInfo(
             Document user
     ) {
+        ResponseEntity<ResponseDto<AdvisorDashboardConfig>> response = configDashboardService.getConfig(user.getObjectId("_id"));
+        AdvisorDashboardConfig advisorDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
+
         long tilLastMonth = System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30;
         int studentsCountForAdvice = user.containsKey("students")
                 ? user.getList("students", Document.class).size()
@@ -342,16 +347,18 @@ public class DashboardService {
                 .build();
 
         if(studentsCountForAdvice > 0) {
-            ArrayList<Bson> constraints = new ArrayList<>();
-            constraints.add(eq("advisor_id", user.getObjectId("_id")));
-            constraints.add(eq("section", "advisor"));
-            AggregateIterable<Document> docs =
-                    ticketRepository.findWithJoinUser("user_id", "student",
-                            match(and(constraints)),
-                            project(TICKET_PROJECTION),
-                            Sorts.descending("send_date"), 0, 5,
-                            project(USER_DIGEST.append("accesses", 1))
-                    );
+            if(advisorDashboardConfig.getShowLastTickets()) {
+                ArrayList<Bson> constraints = new ArrayList<>();
+                constraints.add(eq("advisor_id", user.getObjectId("_id")));
+                constraints.add(eq("section", "advisor"));
+                AggregateIterable<Document> docs =
+                        ticketRepository.findWithJoinUser("user_id", "student",
+                                match(and(constraints)),
+                                project(TICKET_PROJECTION),
+                                Sorts.descending("send_date"), 0, 5,
+                                project(USER_DIGEST.append("accesses", 1))
+                        );
+            }
             dashboardStatsDto.setFutureMeetings(
                     advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
             );

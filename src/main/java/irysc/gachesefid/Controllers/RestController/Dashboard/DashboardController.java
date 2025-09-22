@@ -1,7 +1,9 @@
-package irysc.gachesefid.Controllers.RestController;
+package irysc.gachesefid.Controllers.RestController.Dashboard;
 
-import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Exception.NotActivateAccountException;
+import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.Dashboard.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,17 +18,20 @@ import javax.servlet.http.HttpServletRequest;
 
 @Validated
 @RestController
-@RequestMapping(path = "/api/admin/dashboard")
-public class AdminDashboardController extends Router {
+@RequestMapping(path = "/api/dashboard")
+public class DashboardController extends Router {
 
     @Autowired
     private DashboardService dashboardService;
 
-    @GetMapping(value = "getInfo")
+    @GetMapping(value = "getMySummary")
     @ResponseBody
-    public ResponseEntity<ResponseDto<AdminDashboardStatsDto>> getInfo(
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> stats(
             HttpServletRequest request
-    ) {
-        return dashboardService.adminDashboardInfo();
+    ) throws UnAuthException, NotActivateAccountException {
+        return dashboardService.dashboardInfo(
+                getUser(request)
+        );
     }
+
 }

@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
+import irysc.gachesefid.Dto.ResponseDto;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -15,6 +18,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.configDashboardReposit
 @Service
 public class ConfigDashboardService {
     private final static ObjectMapper mapper = new ObjectMapper();
+    private final static ObjectMapper simpleMapper = new ObjectMapper();
 
     static {
         mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
@@ -46,6 +50,18 @@ public class ConfigDashboardService {
                 eq("user_id", userId),
                 new BasicDBObject("$set", doc),
                 new UpdateOptions().upsert(true)
+        );
+    }
+
+    public ResponseEntity<ResponseDto<AdvisorDashboardConfig>> getConfig(ObjectId userId) {
+        Document config = configDashboardRepository.findBySecKey(userId);
+        return new ResponseEntity<>(
+                ResponseDto.builder(AdvisorDashboardConfig.class)
+                        .data(config == null
+                                ? new AdvisorDashboardConfig()
+                                : simpleMapper.convertValue(config, AdvisorDashboardConfig.class))
+                        .build(),
+                HttpStatus.OK
         );
     }
 
