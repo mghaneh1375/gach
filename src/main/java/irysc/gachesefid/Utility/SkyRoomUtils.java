@@ -9,6 +9,8 @@ import org.json.JSONObject;
 
 import java.util.List;
 
+import static irysc.gachesefid.Utility.StaticValues.SKY_ROOT_SESSION_DURATION;
+
 public class SkyRoomUtils {
 
     private final static String SKY_ROOM_URL = "https://www.skyroom.online/skyroom/api/apikey-571737-51-0239041a552162f3ab913bf12a507863";
@@ -157,14 +159,11 @@ public class SkyRoomUtils {
         }
 
         if (response.getStatus() == 200) {
-
             JSONObject jsonObject = response.getBody().getObject();
 
             if (jsonObject.getBoolean("ok")) {
-
                 int rooms = jsonObject.getInt("result");
                 if (rooms < MAX_ROOMS_COUNT) {
-
                     long curr = System.currentTimeMillis();
 
                     try {
@@ -178,7 +177,7 @@ public class SkyRoomUtils {
                                                 .put("guest_login", false)
                                                 .put("op_login_first", opLoginFirst)
                                                 .put("max_users", maxUsers)
-                                                .put("session_duration", 120)
+                                                .put("session_duration", SKY_ROOT_SESSION_DURATION)
                                         )
                         ).asJson();
                     } catch (UnirestException e) {
@@ -186,7 +185,6 @@ public class SkyRoomUtils {
                     }
 
                     if (response.getStatus() == 200) {
-
                         jsonObject = response.getBody().getObject();
 
                         if (jsonObject.getBoolean("ok")) {

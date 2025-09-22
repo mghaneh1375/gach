@@ -1,4 +1,4 @@
-package irysc.gachesefid.Service;
+package irysc.gachesefid.Service.Dashboard;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.AggregateIterable;
@@ -339,9 +339,6 @@ public class DashboardService {
                                 )
                         )
                 )
-                .futureMeetings(
-                        advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
-                )
                 .build();
 
         if(studentsCountForAdvice > 0) {
@@ -355,6 +352,9 @@ public class DashboardService {
                             Sorts.descending("send_date"), 0, 5,
                             project(USER_DIGEST.append("accesses", 1))
                     );
+            dashboardStatsDto.setFutureMeetings(
+                    advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
+            );
         }
 
         return new ResponseEntity<>(

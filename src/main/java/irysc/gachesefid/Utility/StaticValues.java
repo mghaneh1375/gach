@@ -59,6 +59,7 @@ public class StaticValues {
     public final static int MAX_FILE_SIZE = ONE_MB * 6;
     public final static int MAX_ADV_FILE_SIZE = ONE_MB * 15;
     public final static int MAX_DAILY_ADV_FILE_SIZE = ONE_MB * 25;
+    public final static int SKY_ROOT_SESSION_DURATION = 120;
 
     public final static long SERVER_TOKEN_EXPIRATION_MSEC = 20 * 1000; // 20 s
 
@@ -229,6 +230,15 @@ public class StaticValues {
             .append("grade", 1)
             .append("teach_priority", 1)
             .append("advisor_priority", 1);
+
+    public final static BasicDBObject TICKET_PROJECTION = new BasicDBObject("finisher", 1)
+            .append("student", 1)
+            .append("answer_date", 1).append("send_date", 1)
+            .append("status", 1).append("_id", 1)
+            .append("priority", 1).append("section", 1)
+            .append("title", 1).append("start_by_admin", 1)
+            .append("chats", 1).append("ref_id", 1).append("additional", 1)
+            .append("advisor_id", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
     public static final BasicDBObject JUST_USER_ID = new BasicDBObject("user_id", 1);

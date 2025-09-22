@@ -1,2 +1,14 @@
-package irysc.gachesefid.Dto.DBMeta.Ticket;public class Chat {
+package irysc.gachesefid.Dto.DBMeta.Ticket;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Chat {
+    private String msg;
 }

@@ -547,7 +547,6 @@ public abstract class Common extends Repository {
         return jsonArray;
     }
 
-
     public <T extends BuyerInfoDto> List<T> individualRegistrations(
             Long from, Long to, String studentsKey, Class<T> tClass
     ) {

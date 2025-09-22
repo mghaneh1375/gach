@@ -462,7 +462,7 @@ public class PDFUtils {
                     );
             }
 
-            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://e.irysc.com/checkCert/" + certId + "/" + NID);
+//            drawQR(document, contentStream, (int) (mediaBox.getWidth() - qrX), qrY, Math.max(qrSize, 100), qrSize, "https://e.irysc.com/checkCert/" + certId + "/" + NID);
             contentStream.close();
 
             String filename = baseDir + "exam.pdf";
@@ -479,52 +479,52 @@ public class PDFUtils {
         }
 
     }
-
-    public static File getCertificate2(String course, int hours, String date) {
-
-        PDDocument document = new PDDocument();
-        try {
-            farsiFont = PDType0Font.load(document, new File(baseDir + "IRANSansWeb.ttf"));
-            farsiFontBold = PDType0Font.load(document, new File(baseDir + "IRANSansWeb_Bold.ttf"));
-        } catch (IOException e) {
-            return null;
-        }
-
-        PDPage page = new PDPage(new PDRectangle(PDRectangle.A5.getHeight(), PDRectangle.A5.getWidth()));
-        document.addPage(page);
-
-        try {
-
-            PDPageContentStream contentStream = new PDPageContentStream(document, page, false, true, true);
-            PDRectangle mediaBox = page.getMediaBox();
-
-            PDImageXObject image
-                    = PDImageXObject.createFromFile(baseDir + "cert2.jpg", document);
-
-            contentStream.drawImage(image, 0, 0, mediaBox.getWidth(), mediaBox.getHeight());
-
-            myShowText(bidiReorder(course), contentStream, mediaBox, 9, 220, 360, false);
-            myShowText(bidiReorder(hours + ""), contentStream, mediaBox, 11, 225, 470, false);
-
-            myShowText(bidiReorder(date), contentStream, mediaBox, 9, 330, 200, false);
-
-            drawQR(document, contentStream, 24, 20, 100, 33, "https://google.com");
-
-            contentStream.close();
-
-            String filename = baseDir + "exam.pdf";
-
-            document.save(filename);
-            document.close();
-
-            return new File(filename);
-
-        }
-        catch (Exception x) {
-            printException(x);
-            return null;
-        }
-
-    }
+//
+//    public static File getCertificate2(String course, int hours, String date) {
+//
+//        PDDocument document = new PDDocument();
+//        try {
+//            farsiFont = PDType0Font.load(document, new File(baseDir + "IRANSansWeb.ttf"));
+//            farsiFontBold = PDType0Font.load(document, new File(baseDir + "IRANSansWeb_Bold.ttf"));
+//        } catch (IOException e) {
+//            return null;
+//        }
+//
+//        PDPage page = new PDPage(new PDRectangle(PDRectangle.A5.getHeight(), PDRectangle.A5.getWidth()));
+//        document.addPage(page);
+//
+//        try {
+//
+//            PDPageContentStream contentStream = new PDPageContentStream(document, page, false, true, true);
+//            PDRectangle mediaBox = page.getMediaBox();
+//
+//            PDImageXObject image
+//                    = PDImageXObject.createFromFile(baseDir + "cert2.jpg", document);
+//
+//            contentStream.drawImage(image, 0, 0, mediaBox.getWidth(), mediaBox.getHeight());
+//
+//            myShowText(bidiReorder(course), contentStream, mediaBox, 9, 220, 360, false);
+//            myShowText(bidiReorder(hours + ""), contentStream, mediaBox, 11, 225, 470, false);
+//
+//            myShowText(bidiReorder(date), contentStream, mediaBox, 9, 330, 200, false);
+//
+//            drawQR(document, contentStream, 24, 20, 100, 33, "https://google.com");
+//
+//            contentStream.close();
+//
+//            String filename = baseDir + "exam.pdf";
+//
+//            document.save(filename);
+//            document.close();
+//
+//            return new File(filename);
+//
+//        }
+//        catch (Exception x) {
+//            printException(x);
+//            return null;
+//        }
+//
+//    }
 
 }

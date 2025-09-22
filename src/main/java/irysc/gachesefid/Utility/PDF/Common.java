@@ -2,16 +2,14 @@ package irysc.gachesefid.Utility.PDF;
 
 import com.ibm.icu.text.Bidi;
 import irysc.gachesefid.Utility.FileUtils;
-import net.glxn.qrgen.javase.QRCode;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.io.*;
+import java.io.IOException;
 
 import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
 import static irysc.gachesefid.Utility.Utility.printException;
@@ -43,34 +41,34 @@ public class Common {
 
         } catch (Exception ignore) {}
     }
-
-    static void drawQR(PDDocument document,
-                       PDPageContentStream contentStream,
-                       int sx, int sy, int w, int w2,
-                       String validateUrl) {
-
-        try {
-
-            ByteArrayOutputStream stream = QRCode
-                    .from(validateUrl)
-                    .withSize(w, w)
-                    .stream();
-
-            ByteArrayInputStream bis = new ByteArrayInputStream(stream.toByteArray());
-
-            File outputFile = new File(baseDir + "image.jpg");
-            ImageIO.write(ImageIO.read(bis), "jpg", outputFile);
-
-            PDImageXObject image3
-                    = PDImageXObject.createFromFile(outputFile.getAbsolutePath(), document);
-
-            contentStream.drawImage(image3, sx, sy, w2, w2);
-            outputFile.delete();
-
-        } catch (IOException e) {
-            printException(e);
-        }
-    }
+//
+//    static void drawQR(PDDocument document,
+//                       PDPageContentStream contentStream,
+//                       int sx, int sy, int w, int w2,
+//                       String validateUrl) {
+//
+//        try {
+//
+//            ByteArrayOutputStream stream = QRCode
+//                    .from(validateUrl)
+//                    .withSize(w, w)
+//                    .stream();
+//
+//            ByteArrayInputStream bis = new ByteArrayInputStream(stream.toByteArray());
+//
+//            File outputFile = new File(baseDir + "image.jpg");
+//            ImageIO.write(ImageIO.read(bis), "jpg", outputFile);
+//
+//            PDImageXObject image3
+//                    = PDImageXObject.createFromFile(outputFile.getAbsolutePath(), document);
+//
+//            contentStream.drawImage(image3, sx, sy, w2, w2);
+//            outputFile.delete();
+//
+//        } catch (IOException e) {
+//            printException(e);
+//        }
+//    }
 
     static String convertEnToPrNum(String num) {
 

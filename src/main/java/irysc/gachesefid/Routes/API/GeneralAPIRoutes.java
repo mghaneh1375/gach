@@ -23,7 +23,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.DashboardService;
+import irysc.gachesefid.Service.Dashboard.DashboardService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;

@@ -121,14 +121,7 @@ public class TicketController {
         AggregateIterable<Document> docs =
                 ticketRepository.findWithJoinUser("user_id", "student",
                         match(and(constraints)),
-                        project(new BasicDBObject("finisher", 1).append("student", 1)
-                                .append("answer_date", 1).append("send_date", 1)
-                                .append("status", 1).append("_id", 1)
-                                .append("priority", 1).append("section", 1)
-                                .append("title", 1).append("start_by_admin", 1)
-                                .append("chats", 1).append("ref_id", 1).append("additional", 1)
-                                .append("advisor_id", 1)
-                        ),
+                        project(TICKET_PROJECTION),
                         Sorts.descending("send_date"), null, null, project(USER_DIGEST.append("accesses", 1))
                 );
 
@@ -208,7 +201,7 @@ public class TicketController {
 
         }
 
-        if(allQuizzes.length() > 0)
+        if(!allQuizzes.isEmpty())
             jsonArray1.put(new JSONObject()
                     .put("key", TicketSection.QUIZ.getName())
                     .put("list", allQuizzes)
@@ -370,7 +363,6 @@ public class TicketController {
         if(jsonObject.has("section") &&
                 jsonObject.getString("section").equalsIgnoreCase(TicketSection.ADVISOR.getName())
         ) {
-
             if (!isAdvisor && !jsonObject.has("advisorId"))
                 return JSON_NOT_VALID_PARAMS;
 
@@ -398,7 +390,6 @@ public class TicketController {
         ObjectId ticketId;
 
         if(jsonObject.has("advisorId")) {
-
             ObjectId advisorId = new ObjectId(jsonObject.getString("advisorId"));
             Document advisor = userRepository.findById(advisorId);
 
@@ -410,7 +401,6 @@ public class TicketController {
         }
 
         if (jsonObject.has("userId")) {
-
             ObjectId studentId = new ObjectId(jsonObject.getString("userId"));
             Document user = userRepository.findById(studentId);
             if (user == null)

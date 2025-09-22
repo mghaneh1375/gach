@@ -3,7 +3,7 @@ package irysc.gachesefid.Controllers.RestController;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.DashboardService;
+import irysc.gachesefid.Service.Dashboard.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

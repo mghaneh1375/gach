@@ -10,7 +10,7 @@ import org.bson.types.ObjectId;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class City {
+public class State {
     private ObjectId id; // _id
     private String name;
 }

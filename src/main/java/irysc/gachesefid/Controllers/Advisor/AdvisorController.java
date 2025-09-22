@@ -372,18 +372,6 @@ public class AdvisorController {
         if (std == null)
             return JSON_NOT_VALID_ID;
 
-        int advisorSkyRoomId = createUser(NID, name);
-
-        if (advisorSkyRoomId == -1)
-            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
-
-        String studentName = std.getString("first_name") + " " + std.getString("last_name");
-
-        int studentSkyRoomId = createUser(std.getString("NID"), studentName);
-
-        if (studentSkyRoomId == -1)
-            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
-
         Document config = getConfig();
         int maxMeetingPerAdvisorInMonth = (int) config.getOrDefault("max_meeting_per_advisor", 2);
 
@@ -400,8 +388,17 @@ public class AdvisorController {
         if (advisorMeetingsCount >= maxMeetingPerAdvisorInMonth)
             return generateErr("شما در هر ماه می توانید حداکثر " + maxMeetingPerAdvisorInMonth + " جلسه ملاقات بسازید");
 
-        String roomUrl = "consulting-" + curr;
 
+        int advisorSkyRoomId = createUser(NID, name);
+        if (advisorSkyRoomId == -1)
+            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
+
+        String studentName = std.getString("first_name") + " " + std.getString("last_name");
+        int studentSkyRoomId = createUser(std.getString("NID"), studentName);
+        if (studentSkyRoomId == -1)
+            return generateErr("امکان ایجاد کاربر در سایت اسکای روم در حال حاضر وجود ندارد");
+
+        String roomUrl = "consulting-" + curr;
         int roomId = createMeeting("جلسه مشاوره " + name + " - " + studentName, roomUrl, 2, false);
         if (roomId == -1)
             return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");

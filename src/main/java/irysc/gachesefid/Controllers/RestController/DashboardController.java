@@ -5,7 +5,7 @@ import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.DashboardService;
+import irysc.gachesefid.Service.Dashboard.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

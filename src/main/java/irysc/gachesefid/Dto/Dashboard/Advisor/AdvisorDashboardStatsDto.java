@@ -1,5 +1,6 @@
-package irysc.gachesefid.Dto.Dashboard;
+package irysc.gachesefid.Dto.Dashboard.Advisor;
 
+import irysc.gachesefid.Dto.Dashboard.TicketDigestDto;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,7 +14,8 @@ public class AdvisorDashboardStatsDto {
     private Integer pendingExamsForPay;
     private Integer lastMonthCreatedExams;
     private Integer lastMonthMeetings;
-    private Integer lastMonthkarbargs;
-    private List<String> futureMeetings;
+    private Integer lastMonthKarbargs;
+    private List<MeetingDto> futureMeetings;
     private List<TicketDigestDto> unSeenTickets;
+    private SettledRequests lastSettledRequest;
 }
