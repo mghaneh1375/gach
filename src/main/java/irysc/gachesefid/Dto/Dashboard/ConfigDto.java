@@ -31,5 +31,8 @@ public class ConfigDto {
     private Boolean showLastTickets = true;
     @Builder.Default
     @NotNull
+    private Boolean showLastNotifs = true;
+    @Builder.Default
+    @NotNull
     private Boolean showDashboard = true;
 }

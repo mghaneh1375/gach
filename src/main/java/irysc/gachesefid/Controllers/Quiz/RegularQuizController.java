@@ -602,7 +602,6 @@ public class RegularQuizController extends QuizAbstract {
 
     boolean schoolQuizRegistry(ObjectId studentId, Document quiz) {
         try {
-
             List<Document> students = quiz.getList("students", Document.class);
 
             if (irysc.gachesefid.Utility.Utility.searchInDocumentsKeyValIdx(
@@ -622,6 +621,10 @@ public class RegularQuizController extends QuizAbstract {
             if (student != null) {
                 createNotifAndSendSMS(student, null,
                         quiz.containsKey("pay_by_student") ? "advisorQuiz" : "schoolQuiz"
+                );
+                userRepository.updateOne(
+                        studentId,
+                        set("events", student.get("events"))
                 );
             }
 
@@ -647,8 +650,13 @@ public class RegularQuizController extends QuizAbstract {
             hw.put("registered", (int) hw.getOrDefault("registered", 0) + 1);
 
             Document student = userRepository.findById(studentId);
-            if (student != null)
+            if (student != null) {
                 createNotifAndSendSMS(student, null, "hw");
+                userRepository.updateOne(
+                        studentId,
+                        set("events", student.get("events"))
+                );
+            }
 
         } catch (Exception ignore) {
         }

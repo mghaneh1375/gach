@@ -215,6 +215,10 @@ public class PayPing {
                                 user.getString("first_name") + " " + user.getString("last_name"),
                                 "finalizeTeach"
                         );
+                        userRepository.updateOne(
+                                advisor.getObjectId("_id"),
+                                set("events", advisor.get("events"))
+                        );
                     }).start();
 
                     teachScheduleRepository.updateOne(
@@ -271,11 +275,8 @@ public class PayPing {
             if (transaction.get("products") instanceof ObjectId &&
                     transaction.getString("section").equals(OffCodeSections.COUNSELING_QUIZ.getName())
             ) {
-
                 Document quiz = schoolQuizRepository.findById(transaction.getObjectId("products"));
-
                 if (quiz != null) {
-
                     Document studentDoc = searchInDocumentsKeyVal(
                             quiz.getList("students", Document.class),
                             "_id", studentId
@@ -286,7 +287,6 @@ public class PayPing {
                         studentDoc.put("paid", transaction.getInteger("amount"));
                         schoolQuizRepository.replaceOne(quiz.getObjectId("_id"), quiz);
                     }
-
                 }
             }
 

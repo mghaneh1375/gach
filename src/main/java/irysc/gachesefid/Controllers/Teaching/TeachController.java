@@ -40,7 +40,7 @@ public class TeachController {
                         .append("irysc_advice_percent", advicePercent)
         );
 
-        userRepository.updateOne(user, update);
+        userRepository.updateOne(advisorId, update);
         return JSON_OK;
     }
 

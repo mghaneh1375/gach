@@ -352,14 +352,12 @@ public class Utility {
         receptor = convertPersianDigits(receptor);
 
         try {
-
             JSONObject jsonObject = new JSONObject()
                     .put("destination", receptor)
                     .put("send_to_blacklist", 1)
                     .put("template_id", templateId);
 
             JSONObject params = new JSONObject();
-
             for (PairValue p : paramsPair)
                 params.put(p.getKey().toString(), p.getValue());
 

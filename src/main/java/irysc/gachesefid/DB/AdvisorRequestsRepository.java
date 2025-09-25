@@ -3,12 +3,13 @@ package irysc.gachesefid.DB;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
-import com.mongodb.client.model.UnwindOptions;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.Report.BuyReport.AdviceBuyerInfoDto;
 import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,7 +35,6 @@ public class AdvisorRequestsRepository extends Common {
     // active_at: منظور از این فیلد اعتبار تا - فعال تا هستش
 
     public List<AdviceBuyerInfoDto> registrations(Long from, Long to) {
-
         List<AdviceBuyerInfoDto> registrations = new ArrayList<>();
         List<Bson> filters = new ArrayList<>();
         filters.add(eq("answer", "accept"));
@@ -97,4 +97,52 @@ public class AdvisorRequestsRepository extends Common {
         ).collect(Collectors.toList());
     }
 
+    public List<AdviceRequestDto> adviceRequests(ObjectId advisorId) {
+        List<AdviceRequestDto> requests = new ArrayList<>();
+
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(and(new ArrayList<>() {{
+                                add(eq("advisor_id", advisorId));
+                                add(eq("answer", "pending"));
+                            }})),
+                            project(
+                                    new BasicDBObject("title", 1)
+                                            .append("created_at", 1)
+                                            .append("user_id", 1)
+                                            .append("price", 1)
+                            ),
+                            lookup("user", "user_id", "_id", "userInfo"),
+                            unwind("$userInfo"),
+                            project(fields(
+                                    computed("planDigest.price", "$price"),
+                                    computed("planDigest.title", "$title"),
+                                    computed("requestAt", "$created_at"),
+                                    computed("student.id", "$user_id"),
+                                    computed("student.firstname", "$userInfo.first_name"),
+                                    computed("student.lastname", "$userInfo.last_name"),
+                                    computed("student.nid", "$userInfo.NID"),
+                                    computed("student.phone", "$userInfo.phone"),
+                                    computed("student.mail", "$userInfo.mail")
+                                    ))
+                            )
+            ).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    requests.add(
+                            objectMapper.readValue(document.toJson(), AdviceRequestDto.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        }
+        catch (Exception ignore) {}
+
+        return requests.stream().sorted(
+                Comparator.comparing(
+                        AdviceRequestDto::getRequestAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
+    }
 }

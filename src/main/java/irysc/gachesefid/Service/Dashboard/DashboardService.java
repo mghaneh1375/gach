@@ -8,6 +8,7 @@ import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.TicketDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -233,8 +235,20 @@ public class DashboardService {
                                         .pendingComments(commentRepository.count(and(
                                                 eq("status", "pending")
                                         )))
-                                        .activeTeachers(0)
-                                        .activeAdvisors(0)
+                                        .activeTeachers(
+                                                userRepository.count(and(
+                                                        eq("accesses", "advisor"),
+                                                        exists("teach"),
+                                                        eq("teach", true)
+                                                ))
+                                        )
+                                        .activeAdvisors(
+                                                userRepository.count(and(
+                                                        eq("accesses", "advisor"),
+                                                        exists("advice"),
+                                                        eq("advice", true)
+                                                ))
+                                        )
                                         .lastMonthOpenQuizRegistry(
                                                 openQuizRepository.countIndividualRegistrationsLastMonth()
                                         )
@@ -348,9 +362,13 @@ public class DashboardService {
 
         if(studentsCountForAdvice > 0) {
             if(advisorDashboardConfig.getShowLastTickets()) {
-                ArrayList<Bson> constraints = new ArrayList<>();
-                constraints.add(eq("advisor_id", user.getObjectId("_id")));
-                constraints.add(eq("section", "advisor"));
+                ArrayList<Bson> constraints = new ArrayList<>() {
+                    {
+                        add(eq("advisor_id", user.getObjectId("_id")));
+                        add(eq("section", "advisor"));
+                        add(eq("status", "pending"));
+                    }
+                };
                 AggregateIterable<Document> docs =
                         ticketRepository.findWithJoinUser("user_id", "student",
                                 match(and(constraints)),
@@ -358,9 +376,36 @@ public class DashboardService {
                                 Sorts.descending("send_date"), 0, 5,
                                 project(USER_DIGEST.append("accesses", 1))
                         );
+                List<TicketDigestDto> tickets = new ArrayList<>();
+                docs.forEach((Consumer<? super Document>) document -> {
+                    tickets.add(
+                            TicketDigestDto.convertDocToDto(document)
+                    );
+                });
+                dashboardStatsDto.setUnSeenTickets(tickets);
             }
             dashboardStatsDto.setFutureMeetings(
                     advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
+            );
+        }
+
+        if(advisorDashboardConfig.getShowIncomingRequestsForAdvice()) {
+            dashboardStatsDto.setAdviceRequests(
+                    advisorRequestsRepository.adviceRequests(user.getObjectId("_id"))
+            );
+        }
+
+        if(advisorDashboardConfig.getShowLastNotifs()) {
+            dashboardStatsDto.setLastNotifs(
+                    notifRepository.notifs(
+                            user.getList("events", Document.class)
+                                    .stream()
+                                    .filter(event -> !event.getBoolean("seen"))
+                                    .sorted(Collections.reverseOrder(Comparator.comparing(o -> o.getLong("created_at"))))
+                                    .limit(3)
+                                    .map(event -> event.getObjectId("notif_id"))
+                                    .collect(Collectors.toList())
+                    )
             );
         }
 

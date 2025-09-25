@@ -65,6 +65,7 @@ public class WhiteList {
             "/api/package_content/public/getAll",
             "/api/package_content/public/get/**",
             "/api/package_content/public/getSessions/**",
-            "/api/package_content/public/getListOfPackageLevels"
+            "/api/package_content/public/getListOfPackageLevels",
+            "/api/advisor/public/getAllAdvisors"
     };
 }

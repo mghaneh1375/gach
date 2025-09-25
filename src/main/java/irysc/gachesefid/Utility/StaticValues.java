@@ -76,6 +76,10 @@ public class StaticValues {
     public final static int MAX_OBJECT_ID_SIZE = 100;
     public final static int MIN_OBJECT_ID_SIZE = 20;
 
+    public final static BasicDBObject NOTIF_DIGEST =
+            new BasicDBObject("title", 1).append("_id", 1)
+                    .append("created_at", 1);
+
     public final static BasicDBObject TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS =
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("correctors", 1).append("students", 1)
@@ -229,7 +233,10 @@ public class StaticValues {
             .append("created_at", 1)
             .append("grade", 1)
             .append("teach_priority", 1)
-            .append("advisor_priority", 1);
+            .append("advisor_priority", 1)
+            .append("students", 1)
+            .append("irysc_teach_percent", 1)
+            .append("irysc_advice_percent", 1);
 
     public final static BasicDBObject TICKET_PROJECTION = new BasicDBObject("finisher", 1)
             .append("student", 1)

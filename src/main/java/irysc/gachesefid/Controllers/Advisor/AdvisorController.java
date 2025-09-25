@@ -374,10 +374,8 @@ public class AdvisorController {
 
         Document config = getConfig();
         int maxMeetingPerAdvisorInMonth = (int) config.getOrDefault("max_meeting_per_advisor", 2);
-
         long curr = System.currentTimeMillis();
         long monthAgo = curr - 30 * ONE_DAY_MIL_SEC;
-
         int advisorMeetingsCount = advisorMeetingRepository.count(
                 and(
                         eq("advisor_id", advisorId),
@@ -387,7 +385,6 @@ public class AdvisorController {
 
         if (advisorMeetingsCount >= maxMeetingPerAdvisorInMonth)
             return generateErr("شما در هر ماه می توانید حداکثر " + maxMeetingPerAdvisorInMonth + " جلسه ملاقات بسازید");
-
 
         int advisorSkyRoomId = createUser(NID, name);
         if (advisorSkyRoomId == -1)
@@ -404,7 +401,6 @@ public class AdvisorController {
             return generateErr("امکان ساخت اتاق جلسه در حال حاضر وجود ندارد");
 
         String url = SKY_ROOM_PUBLIC_URL + roomUrl;
-
         Document document = new Document("advisor_id", advisorId)
                 .append("student_id", studentId)
                 .append("created_at", curr)
@@ -417,6 +413,8 @@ public class AdvisorController {
         addUserToClass(Collections.singletonList(studentSkyRoomId), advisorSkyRoomId, roomId);
 
         createNotifAndSendSMS(std, url, "createRoom");
+        userRepository.updateOne(studentId, set("events", std.get("events")));
+
         return generateSuccessMsg("url", url);
     }
 
@@ -641,7 +639,6 @@ public class AdvisorController {
             return JSON_NOT_VALID_PARAMS;
 
         ObjectId planOId = planId.equals("-1") ? null : new ObjectId(planId);
-
         Document advisor = userRepository.findById(advisorId);
         if (advisor == null)
             return JSON_NOT_VALID_ID;
@@ -711,6 +708,7 @@ public class AdvisorController {
                 user.getString("first_name") + " " + user.getString("last_name"),
                 "request"
         );
+        userRepository.updateOne(advisorId, set("events", advisor.get("events")));
 
         JSONObject jsonObject = new JSONObject()
                 .put("advisorId", advisorId.toString())
@@ -748,7 +746,6 @@ public class AdvisorController {
                                                   String advisorName,
                                                   ObjectId advisorId
     ) {
-
         Document schedule = scheduleRepository.findById(scheduleId);
         if (schedule == null)
             return JSON_NOT_VALID_ID;
@@ -763,6 +760,10 @@ public class AdvisorController {
             return JSON_NOT_UNKNOWN;
 
         createNotifAndSendSMS(student, advisorName, "karbarg");
+        userRepository.updateOne(
+                student.getObjectId("_id"),
+                set("events", student.get("events"))
+        );
         return JSON_OK;
     }
 
@@ -821,6 +822,10 @@ public class AdvisorController {
                     user,
                     advisor.getString("first_name") + " " + advisor.getString("last_name"),
                     answer.equalsIgnoreCase(YesOrNo.NO.getName()) ? "rejectRequest" : "acceptRequest"
+            );
+            userRepository.updateOne(
+                    user.getObjectId("_id"),
+                    set("events", user.get("events"))
             );
         }
 

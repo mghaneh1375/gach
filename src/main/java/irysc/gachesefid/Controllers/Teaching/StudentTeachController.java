@@ -456,6 +456,10 @@ public class StudentTeachController {
                             user.getString("first_name") + " " + user.getString("last_name"),
                             "finalizeTeach"
                     );
+                    userRepository.updateOne(
+                            advisor.getObjectId("_id"),
+                            set("events", advisor.get("events"))
+                    );
                     BadgeController.checkForUpgrade(userId, Action.GET_TEACH_CLASS);
                     PointController.addPointForAction(userId, Action.GET_TEACH_CLASS, finalScheduleId, null);
                 }).start();

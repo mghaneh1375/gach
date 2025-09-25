@@ -659,12 +659,14 @@ public class StudentAdviceController {
             return JSON_NOT_ACCESS;
 
         for (ObjectId advisorId : schedule.getList("advisors", ObjectId.class)) {
-
             Document advisor = userRepository.findById(advisorId);
             if (advisor != null) {
                 createNotifAndSendSMS(advisor, studentName, "karbargDone");
+                userRepository.updateOne(
+                        advisor.getObjectId("_id"),
+                        set("events", advisor.get("events"))
+                );
             }
-
         }
 
         return JSON_OK;

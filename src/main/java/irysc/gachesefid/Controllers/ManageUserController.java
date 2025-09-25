@@ -128,25 +128,27 @@ public class ManageUserController {
         if (to != null)
             filters.add(lte("created_at", to));
 
-        List<Document> docs = pageIndex == null ?
-                userRepository.find(
+        List<Document> docs = pageIndex == null
+                ? userRepository.find(
                         and(filters), USER_MANAGEMENT_INFO_DIGEST
-                ) : level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName()) ?
-                userRepository.findLimited(
+                )
+                : level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName())
+                ? userRepository.findLimited(
                         and(filters), USER_MANAGEMENT_INFO_DIGEST,
                         Sorts.ascending("created_at"),
                         (pageIndex - 1) * PAGE_SIZE, PAGE_SIZE
-                ) :
-                userRepository.findUsersWithSettlementStatus(
+                )
+                : userRepository.findUsersWithSettlementStatus(
                         and(filters),
                         Sorts.ascending("created_at"),
                         (pageIndex - 1) * PAGE_SIZE, PAGE_SIZE,
                         justSettled
                 );
+
         int count = level == null || !level.equalsIgnoreCase(Access.ADVISOR.getName()) ?
                 userRepository.count(and(filters)) : userRepository.countUsersWithSettlementStatus(and(filters), justSettled);
 
-
+        Document config = getConfig();
         JSONArray jsonArray = new JSONArray();
         for (Document user : docs) {
             try {
@@ -207,8 +209,21 @@ public class ManageUserController {
 //                                            )
 //                                    )
                             )
+                            .put("studentsCount", user.containsKey("students")
+                                    ? user.getList("students", Document.class).size()
+                                    : 0
+                            )
                             .put("teachPriority", user.getOrDefault("teach_priority", 1000))
                             .put("advisorPriority", user.getOrDefault("advisor_priority", 1000));
+
+                    if (user.containsKey("irysc_teach_percent"))
+                        jsonObject
+                                .put("iryscTeachPercent", user.get("irysc_teach_percent"))
+                                .put("iryscAdvicePercent", user.get("irysc_advice_percent"));
+                    else
+                        jsonObject
+                                .put("iryscTeachPercent", config.get("irysc_teach_percent"))
+                                .put("iryscAdvicePercent", config.get("irysc_advice_percent"));
                 }
 
                 jsonArray.put(jsonObject);
