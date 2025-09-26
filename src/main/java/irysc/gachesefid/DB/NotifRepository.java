@@ -33,6 +33,7 @@ public class NotifRepository extends Common {
                 .map(document ->
                         NotifDigestDto
                                 .builder()
+                                .id(document.getObjectId("_id"))
                                 .createdAt(document.getLong("created_at"))
                                 .title(document.getString("title"))
                                 .build()

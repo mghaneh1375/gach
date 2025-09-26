@@ -80,6 +80,9 @@ public class StaticValues {
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("created_at", 1);
 
+    public final static BasicDBObject JUST_AMOUNT =
+            new BasicDBObject("amount", 1);
+
     public final static BasicDBObject TASHRIHI_QUIZ_DIGEST_FOR_TEACHERS =
             new BasicDBObject("title", 1).append("_id", 1)
                     .append("correctors", 1).append("students", 1)
@@ -246,6 +249,13 @@ public class StaticValues {
             .append("title", 1).append("start_by_admin", 1)
             .append("chats", 1).append("ref_id", 1).append("additional", 1)
             .append("advisor_id", 1);
+
+    public final static BasicDBObject TICKET_DIGEST_PROJECTION = new BasicDBObject("student", 1)
+            .append("send_date", 1)
+            .append("status", 1).append("_id", 1)
+            .append("priority", 1).append("section", 1)
+            .append("title", 1).append("ref_id", 1)
+            .append("additional", 1).append("advisor_id", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
     public static final BasicDBObject JUST_USER_ID = new BasicDBObject("user_id", 1);

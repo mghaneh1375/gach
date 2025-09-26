@@ -1,5 +1,6 @@
 package irysc.gachesefid.Service.Dashboard;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.mongodb.BasicDBObject;
@@ -22,6 +23,8 @@ public class ConfigDashboardService {
 
     static {
         mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        simpleMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public void setAdvisorConfig(ObjectId userId, AdvisorDashboardConfig configDto) {
@@ -32,25 +35,30 @@ public class ConfigDashboardService {
                     .builder()
                     .userId(userId)
                     .build();
-        else {
-            ObjectMapper mapper = new ObjectMapper();
+        else
             advisorDashboardConfig = mapper.convertValue(configDoc, AdvisorDashboardConfig.class);
-        }
 
         advisorDashboardConfig.setShowFilledKarbargs(configDto.getShowFilledKarbargs());
-        advisorDashboardConfig.setShowDashboard(configDto.getShowDashboard());
+        advisorDashboardConfig.setShowMyLastComments(configDto.getShowMyLastComments());
         advisorDashboardConfig.setShowLastSettleRequest(configDto.getShowLastSettleRequest());
         advisorDashboardConfig.setShowInProgressKarbargs(configDto.getShowInProgressKarbargs());
         advisorDashboardConfig.setShowIncomingRequestsForTeach(configDto.getShowIncomingRequestsForTeach());
         advisorDashboardConfig.setShowIncomingRequestsForAdvice(configDto.getShowIncomingRequestsForAdvice());
+
         advisorDashboardConfig.setShowLastTickets(configDto.getShowLastTickets());
+        advisorDashboardConfig.setShowLastNotifs(configDto.getShowLastNotifs());
+        advisorDashboardConfig.setShowDashboard(configDto.getShowDashboard());
 
         Document doc = new Document(mapper.convertValue(advisorDashboardConfig, Document.class));
+        doc.remove("id");
+        doc.put("_id", configDoc == null ? new ObjectId() : configDoc.getObjectId("_id"));
+        doc.put("user_id", userId);
         configDashboardRepository.updateOne(
                 eq("user_id", userId),
                 new BasicDBObject("$set", doc),
                 new UpdateOptions().upsert(true)
         );
+        configDashboardRepository.clearFromCache(userId);
     }
 
     public ResponseEntity<ResponseDto<AdvisorDashboardConfig>> getConfig(ObjectId userId) {

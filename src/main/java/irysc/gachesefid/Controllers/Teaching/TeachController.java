@@ -1222,7 +1222,6 @@ public class TeachController {
         );
 
         double total = 0;
-
         for (Document schedule : schedules) {
             int studentsCount = schedule.getList("students", Document.class).size();
 
@@ -1343,7 +1342,6 @@ public class TeachController {
     }
 
     public static String settlementRequest(ObjectId userId) {
-
         if (settlementRequestRepository.exist(
                 and(
                         eq("user_id", userId),

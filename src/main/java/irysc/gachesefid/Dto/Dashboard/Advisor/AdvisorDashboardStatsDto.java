@@ -16,9 +16,12 @@ public class AdvisorDashboardStatsDto {
     private Integer lastMonthCreatedExams;
     private Integer lastMonthMeetings;
     private Integer lastMonthKarbargs;
+    private Integer lastMonthSettled;
+    private Integer pendingSettled;
     private List<MeetingDto> futureMeetings;
     private List<TicketDigestDto> unSeenTickets;
     private SettledRequests lastSettledRequest;
     private List<AdviceRequestDto> adviceRequests;
     private List<NotifDigestDto> lastNotifs;
+    private List<CommentsAboutMeDigest> lastComments;
 }

@@ -23,6 +23,7 @@ import javax.validation.constraints.NotNull;
 @Validated
 public class ConfigDto {
     @JsonSerialize(using = ObjectIdSerializer.class)
+    @JsonIgnore
     private ObjectId _id;
     @JsonIgnore
     private ObjectId userId;

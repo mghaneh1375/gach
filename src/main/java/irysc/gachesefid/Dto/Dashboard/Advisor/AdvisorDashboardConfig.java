@@ -25,8 +25,14 @@ public class AdvisorDashboardConfig extends ConfigDto {
     private Boolean showFilledKarbargs = true;
     @Builder.Default
     @NotNull
+    private Boolean showMyLastComments = true;
+    @Builder.Default
+    @NotNull
     private Boolean showIncomingRequestsForAdvice = true;
     @Builder.Default
     @NotNull
     private Boolean showIncomingRequestsForTeach = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showMeeting = true;
 }

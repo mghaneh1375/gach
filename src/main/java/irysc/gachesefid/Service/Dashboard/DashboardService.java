@@ -27,8 +27,7 @@ import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Aggregates.project;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.TICKET_PROJECTION;
-import static irysc.gachesefid.Utility.StaticValues.USER_DIGEST;
+import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.getConfig;
 import static irysc.gachesefid.Utility.Utility.getPast;
 
@@ -318,7 +317,8 @@ public class DashboardService {
         // todo: fill studentsCountForTeach from db query
         int studentsCountForTeach = 0;
 
-        AdvisorDashboardStatsDto dashboardStatsDto = AdvisorDashboardStatsDto
+        AdvisorDashboardStatsDto dashboardStatsDto = advisorDashboardConfig.getShowDashboard()
+                ? AdvisorDashboardStatsDto
                 .builder()
                 .lastMonthCreatedExams(
                         schoolQuizRepository.count(
@@ -358,10 +358,30 @@ public class DashboardService {
                                 )
                         )
                 )
-                .build();
+                .lastMonthSettled(
+                        settlementRequestRepository.find(
+                                        and(
+                                                eq("user_id", user.getObjectId("_id")),
+                                                eq("status", "paid"),
+                                                exists("paid_at"),
+                                                gte("paid_at", tilLastMonth)
+                                        ), JUST_AMOUNT
+                                )
+                                .stream().mapToInt(doc -> doc.getInteger("amount")).sum()
+                )
+                .pendingSettled(
+                        settlementRequestRepository.count(
+                                and(
+                                        eq("user_id", user.getObjectId("_id")),
+                                        eq("status", "pending")
+                                )
+                        )
+                )
+                .build()
+                : AdvisorDashboardStatsDto.builder().build();
 
-        if(studentsCountForAdvice > 0) {
-            if(advisorDashboardConfig.getShowLastTickets()) {
+        if (studentsCountForAdvice > 0) {
+            if (advisorDashboardConfig.getShowLastTickets()) {
                 ArrayList<Bson> constraints = new ArrayList<>() {
                     {
                         add(eq("advisor_id", user.getObjectId("_id")));
@@ -384,18 +404,20 @@ public class DashboardService {
                 });
                 dashboardStatsDto.setUnSeenTickets(tickets);
             }
-            dashboardStatsDto.setFutureMeetings(
-                    advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
-            );
+            if(advisorDashboardConfig.getShowMeeting()) {
+                dashboardStatsDto.setFutureMeetings(
+                        advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
+                );
+            }
         }
 
-        if(advisorDashboardConfig.getShowIncomingRequestsForAdvice()) {
+        if (advisorDashboardConfig.getShowIncomingRequestsForAdvice()) {
             dashboardStatsDto.setAdviceRequests(
                     advisorRequestsRepository.adviceRequests(user.getObjectId("_id"))
             );
         }
 
-        if(advisorDashboardConfig.getShowLastNotifs()) {
+        if (advisorDashboardConfig.getShowLastNotifs()) {
             dashboardStatsDto.setLastNotifs(
                     notifRepository.notifs(
                             user.getList("events", Document.class)

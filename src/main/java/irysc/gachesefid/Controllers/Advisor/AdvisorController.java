@@ -2285,8 +2285,7 @@ public class AdvisorController {
         List<Document> teachTransactions = null;
         List<ObjectId> settlementsRefs = new ArrayList<>();
         List<Document> settlementRequests = null;
-
-        JSONArray jsonArray = new JSONArray();
+        List<JSONObject> jsonObjectList = new ArrayList<>();
 
         if (transactionMode == null || transactionMode.equals("advice")) {
             filters = new ArrayList<>() {{
@@ -2391,6 +2390,7 @@ public class AdvisorController {
                                 .put("title", transaction.getString("title"))
                                 .put("student", student.getString("first_name") + " " + student.getString("last_name"))
                                 .put("paidAt", Utility.getSolarDate(transaction.getLong("paid_at")))
+                                .put("createdAt", transaction.getLong("paid_at"))
                                 .put("settledAt", transaction.containsKey("settled_at") ? Utility.getSolarDate(transaction.getLong("settled_at")) : "تسویه نشده")
                                 .put("paid", transaction.get("paid"))
                                 .put("iryscPercent", transaction.getOrDefault("irysc_percent", iryscAdvicePercent))
@@ -2403,7 +2403,7 @@ public class AdvisorController {
                                     document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
                             ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));
 
-                        jsonArray.put(jsonObject);
+                        jsonObjectList.add(jsonObject);
                     } catch (Exception ignore) {
                     }
                 }
@@ -2423,6 +2423,7 @@ public class AdvisorController {
                         .put("length", transaction.get("length"))
                         .put("teachMode", transaction.get("teach_mode"))
                         .put("mode", "teach")
+                        .put("createdAt", transaction.getLong("start_at"))
                         .put("id", transaction.getObjectId("_id").toString());
 
                 if (transaction.containsKey("settled_at") && settlementRequests != null)
@@ -2430,10 +2431,12 @@ public class AdvisorController {
                             document -> document.getObjectId("ref_id").equals(transaction.getObjectId("_id"))
                     ).findFirst().ifPresent(document -> jsonObject.put("settledAmount", document.get("amount")));
 
-                jsonArray.put(jsonObject);
+                jsonObjectList.add(jsonObject);
             }
         }
-
-        return generateSuccessMsg("data", jsonArray);
+        jsonObjectList.sort(Collections.reverseOrder(
+                Comparator.comparing(jsonObject -> jsonObject.getLong("createdAt"))
+        ));
+        return generateSuccessMsg("data", jsonObjectList);
     }
 }
