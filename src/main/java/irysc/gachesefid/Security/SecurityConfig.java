@@ -153,7 +153,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority(), Role.ROLE_ADVISOR.getAuthority(),
                         Role.ROLE_SCHOOL.getAuthority(), Role.ROLE_CONTENT.getAuthority()
                 )
-                .antMatchers("/api/comment/public/**").hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority(), Role.ROLE_CONTENT.getAuthority(), Role.ROLE_EDITOR.getAuthority())
+//                .antMatchers("/api/comment/public/**")
+//                .hasAnyAuthority(Role.ROLE_ADMIN.getAuthority(), Role.ROLE_SUPER_ADMIN.getAuthority(), Role.ROLE_CONTENT.getAuthority(), Role.ROLE_EDITOR.getAuthority())
                 // EDITOR ACCESS
                 .antMatchers(
                         "/api/request/**",

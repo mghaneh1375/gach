@@ -20,4 +20,10 @@ public class CommentsAboutMeDigest {
     private ObjectId id;
     @JsonSerialize(using = LongDateSerialization.class)
     private Long createdAt;
+    private String title;
+    private String comment;
+    private String section;
+    private String refTitle;
+    @JsonSerialize(using = ObjectIdSerialization.class)
+    private ObjectId refId;
 }

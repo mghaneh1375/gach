@@ -14,12 +14,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
 @Controller
-@RequestMapping(path = "/api/comment/public")
+@RequestMapping(path = "/api/comment/manage")
 @Validated
 public class CommentAPIRoutes extends Router {
 
@@ -49,41 +47,6 @@ public class CommentAPIRoutes extends Router {
         return CommentController.removeComment(
                 getUserId(request),
                 commentId
-        );
-    }
-
-
-    @GetMapping(value = "getComments/{refId}/{section}/{pageIndex}")
-    @ResponseBody
-    public String getComments(
-            @PathVariable @ObjectIdConstraint ObjectId refId,
-            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section,
-            @PathVariable @Min(0) @Max(1000) Integer pageIndex
-    ) {
-        return CommentController.getComments(
-                refId, section, pageIndex,
-                null, false,
-                null, null, null
-        );
-    }
-
-    @GetMapping(value = "getTopComments/{section}")
-    @ResponseBody
-    public String getTopComments(
-            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section
-    ) {
-        return CommentController.getTopComments(section);
-    }
-
-    @GetMapping(value = "getCommentsCount/{refId}/{section}")
-    @ResponseBody
-    public String getCommentsCount(
-            @PathVariable @ObjectIdConstraint ObjectId refId,
-            @PathVariable @EnumValidator(enumClazz = CommentSection.class) String section
-    ) {
-        return CommentController.getCommentsCount(
-                refId, section, null,
-                false, null, null, null
         );
     }
 
@@ -124,16 +87,6 @@ public class CommentAPIRoutes extends Router {
     ) throws UnAuthException {
         return CommentController.toggleCommentMarkedStatus(
                 getUserId(request), id
-        );
-    }
-
-    @GetMapping(value = "getTeacherMarkedComments/{teacherId}")
-    @ResponseBody
-    public String getTeacherMarkedComments(
-            @PathVariable @ObjectIdConstraint ObjectId teacherId
-    ) {
-        return CommentController.getTeacherMarkedComments(
-                teacherId
         );
     }
 }
