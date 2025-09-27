@@ -69,7 +69,8 @@ public class ScheduleRepository extends Common {
                     lookup("user", "user_id", "_id", "userInfo"),
                     unwind("$userInfo"),
                     project(fields(
-                            include("week_start_at"),
+                            computed("weekStartAt", "$week_start_at"),
+                            computed("id", "$_id"),
                             computed("student.id", "$user_id"),
                             computed("student.firstname", "$userInfo.first_name"),
                             computed("student.lastname", "$userInfo.last_name")

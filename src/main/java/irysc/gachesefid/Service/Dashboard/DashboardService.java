@@ -416,19 +416,13 @@ public class DashboardService {
             );
         }
 
-        if(advisorDashboardConfig.getShowLastUserReportsAboutMe()) {
-            dashboardStatsDto.setLastReportsAboutMe(
-                    teachReportRepository.getLastReportsAboutMe(user.getObjectId("_id"))
-            );
-        }
-
         return new ResponseEntity<>(
                 ResponseDto
                         .builder(AdvisorDashboardStatsDto.class)
                         .status("ok")
                         .data(dashboardStatsDto)
-                        .build()
-                , HttpStatus.OK
+                        .build(),
+                HttpStatus.OK
         );
     }
 }

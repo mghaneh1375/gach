@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto.Dashboard.Advisor;
+package irysc.gachesefid.Dto.Dashboard.Admin;
 
 import irysc.gachesefid.Dto.Dashboard.ConfigDto;
 import lombok.*;
@@ -13,7 +13,7 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Validated
-public class AdvisorDashboardConfig extends ConfigDto {
+public class AdminDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showLastSettleRequest = true;
@@ -35,4 +35,7 @@ public class AdvisorDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showMeeting = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showLastUserReportsAboutMe = true;
 }

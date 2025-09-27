@@ -1,15 +1,14 @@
 package irysc.gachesefid.Dto.Dashboard.Advisor;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Serializer.JustDateSerialization;
 import irysc.gachesefid.Dto.Serializer.LongDateSerialization;
-import irysc.gachesefid.Dto.Serializer.ObjectIdSerialization;
 import irysc.gachesefid.Dto.UserDigest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 
 @Builder
 @Data
@@ -17,11 +16,8 @@ import org.bson.types.ObjectId;
 @AllArgsConstructor
 public class CommentsAboutMeDigest {
     private UserDigest author;
-    @JsonSerialize(using = ObjectIdSerialization.class)
-    private ObjectId id;
-    @JsonSerialize(using = LongDateSerialization.class)
+    @JsonSerialize(using = JustDateSerialization.class)
     private Long createdAt;
-    private String title;
     private String comment;
     private String section;
 
@@ -38,11 +34,9 @@ public class CommentsAboutMeDigest {
                                 .pic(author.getString("pic"))
                                 .build()
                 )
-                .id(doc.getObjectId("_id"))
                 .comment(doc.getString("comment"))
                 .createdAt(doc.getLong("created_at"))
                 .section(doc.getString("section"))
-                .title(doc.getString("title"))
                 .build();
     }
 

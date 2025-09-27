@@ -26,6 +26,5 @@ public class AdvisorDashboardStatsDto {
     private List<CommentsAboutMeDigest> lastComments;
     private List<ScheduleDigest> inProgressSchedules;
     private List<ScheduleDigest> filledSchedules;
-    private List<ReportAboutMeDigestDto> lastReportsAboutMe;
     private List<TeachRequestDigestDto> teachRequests;
 }

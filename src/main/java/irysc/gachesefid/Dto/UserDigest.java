@@ -20,8 +20,11 @@ public class UserDigest {
     private ObjectId id;
     private String firstname;
     private String lastname;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String nid;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String phone;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String mail;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonSerialize(using = PicSerializer.class)
