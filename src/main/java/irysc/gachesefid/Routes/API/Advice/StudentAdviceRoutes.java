@@ -4,6 +4,7 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.*;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Service.Advice.ScheduleService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -14,6 +15,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,6 +40,10 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 @RequestMapping(path = "/api/advisor/public/")
 @Validated
 public class StudentAdviceRoutes extends Router {
+
+    @Autowired
+    private ScheduleService scheduleService;
+
 
     @GetMapping(value = "/getMyAdvisors")
     @ResponseBody
@@ -66,9 +72,9 @@ public class StudentAdviceRoutes extends Router {
                 user.getObjectId("_id"),
                 ((Number) user.get("money")).doubleValue(),
                 advisorId,
-                jsonStr == null || jsonStr.length() == 0 ?
-                        new JSONObject() :
-                        new JSONObject(jsonStr)
+                jsonStr == null || jsonStr.isEmpty()
+                        ? new JSONObject()
+                        : new JSONObject(jsonStr)
         );
     }
 
@@ -261,7 +267,7 @@ public class StudentAdviceRoutes extends Router {
             HttpServletRequest request,
             @RequestParam(value = "notReturnPassed", required = false) Boolean notReturnPassed
     ) throws UnAuthException {
-        return AdvisorController.getStudentSchedules(
+        return scheduleService.getStudentSchedules(
                 null, getUserId(request), notReturnPassed
         );
     }
@@ -270,7 +276,7 @@ public class StudentAdviceRoutes extends Router {
     @ResponseBody
     public String getMySchedulesDigest(HttpServletRequest request
     ) throws UnAuthException {
-        return AdvisorController.getStudentSchedulesDigest(
+        return scheduleService.getStudentSchedulesDigest(
                 getUserId(request)
         );
     }
@@ -280,7 +286,7 @@ public class StudentAdviceRoutes extends Router {
     public String getMyLessonsInSchedule(HttpServletRequest request,
                                          @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException {
-        return AdvisorController.lessonsInSchedule(
+        return scheduleService.lessonsInSchedule(
                 getUserId(request), id, false
         );
     }
@@ -315,7 +321,7 @@ public class StudentAdviceRoutes extends Router {
         boolean isAdvisor = Authorization.isAdvisor(userTokenInfo.getAccesses());
         ObjectId userId = userTokenInfo.getId();
 
-        File f = AdvisorController.exportPDF(id, isAdvisor ? userId : null, isAdvisor ? null : userId);
+        File f = scheduleService.exportPDF(id, isAdvisor ? userId : null, isAdvisor ? null : userId);
         if (f == null)
             return null;
 

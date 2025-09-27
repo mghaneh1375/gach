@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.bson.Document;
 import org.bson.types.ObjectId;
 
 @Builder
@@ -23,7 +24,26 @@ public class CommentsAboutMeDigest {
     private String title;
     private String comment;
     private String section;
-    private String refTitle;
-    @JsonSerialize(using = ObjectIdSerialization.class)
-    private ObjectId refId;
+
+    public static CommentsAboutMeDigest buildFromDoc(Document doc) {
+        Document author = doc.get("author", Document.class);
+        return CommentsAboutMeDigest
+                .builder()
+                .author(
+                        UserDigest
+                                .builder()
+                                .id(author.getObjectId("_id"))
+                                .firstname(author.getString("first_name"))
+                                .lastname(author.getString("last_name"))
+                                .pic(author.getString("pic"))
+                                .build()
+                )
+                .id(doc.getObjectId("_id"))
+                .comment(doc.getString("comment"))
+                .createdAt(doc.getLong("created_at"))
+                .section(doc.getString("section"))
+                .title(doc.getString("title"))
+                .build();
+    }
+
 }

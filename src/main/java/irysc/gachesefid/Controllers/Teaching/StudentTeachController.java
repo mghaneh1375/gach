@@ -747,10 +747,8 @@ public class StudentTeachController {
             final ObjectId userId, final ObjectId scheduleId,
             final JSONArray tagIds, final String desc
     ) {
-
         List<Object> tagOIdsList = null;
-
-        if (tagIds != null && tagIds.length() > 0) {
+        if (tagIds != null && !tagIds.isEmpty()) {
             Set<ObjectId> tagOIds = new HashSet<>();
             try {
                 for (int i = 0; i < tagIds.length(); i++) {

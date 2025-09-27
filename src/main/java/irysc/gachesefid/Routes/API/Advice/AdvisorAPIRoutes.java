@@ -4,10 +4,10 @@ import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
-
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Service.Advice.ScheduleService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;
@@ -17,6 +17,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -26,15 +27,18 @@ import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.List;
 
+import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
-import static irysc.gachesefid.Utility.Utility.*;
+import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 @Controller
 @RequestMapping(path = "/api/advisor/manage/")
 @Validated
 public class AdvisorAPIRoutes extends Router {
+
+    @Autowired
+    private ScheduleService scheduleService;
 
     @PostMapping(value = "requestMeeting/{studentId}")
     @ResponseBody
@@ -224,7 +228,7 @@ public class AdvisorAPIRoutes extends Router {
                        ) @NotBlank String jsonStr
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
-        return AdvisorController.copy(
+        return scheduleService.copy(
                 getUserId(request),
                 scheduleId, jsonObject.getJSONArray("users"),
                 jsonObject.getInt("scheduleFor")
@@ -242,7 +246,7 @@ public class AdvisorAPIRoutes extends Router {
                                           paramsType = {String.class}
                                   ) @NotBlank String jsonStr
     ) throws UnAuthException {
-        return AdvisorController.setScheduleDesc(
+        return scheduleService.setScheduleDesc(
                 getUserId(request), id,
                 new JSONObject(jsonStr).getString("description")
         );
@@ -268,7 +272,7 @@ public class AdvisorAPIRoutes extends Router {
                                                      Positive.class
                                              }
                                      ) @NotBlank String jsonStr) throws UnAuthException {
-        return AdvisorController.updateScheduleItem(
+        return scheduleService.updateScheduleItem(
                 getUserId(request),
                 id, convertPersian(new JSONObject(jsonStr))
         );
@@ -299,7 +303,7 @@ public class AdvisorAPIRoutes extends Router {
                                             }
                                     ) @NotBlank String jsonStr
     ) throws UnAuthException {
-        return AdvisorController.addItemToSchedule(
+        return scheduleService.addItemToSchedule(
                 getUserId(request), userId,
                 convertPersian(new JSONObject(jsonStr))
         );
@@ -311,7 +315,7 @@ public class AdvisorAPIRoutes extends Router {
                                          @PathVariable @ObjectIdConstraint ObjectId userId,
                                          @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException {
-        return AdvisorController.removeItemFromSchedule(
+        return scheduleService.removeItemFromSchedule(
                 getUserId(request), userId, id
         );
     }
@@ -321,7 +325,7 @@ public class AdvisorAPIRoutes extends Router {
     public String removeSchedule(HttpServletRequest request,
                                  @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException {
-        return AdvisorController.removeSchedule(
+        return scheduleService.removeSchedule(
                 getUserId(request), id
         );
     }
@@ -365,7 +369,7 @@ public class AdvisorAPIRoutes extends Router {
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
-        return AdvisorController.getStudentSchedules(
+        return scheduleService.getStudentSchedules(
                 advisorId, userId, notReturnPassed
         );
     }
@@ -381,7 +385,7 @@ public class AdvisorAPIRoutes extends Router {
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
-        return AdvisorController.getStudentSchedulesDigest(userId);
+        return scheduleService.getStudentSchedulesDigest(userId);
     }
 
     @GetMapping(value = "getAdvisorTags/{id}")
@@ -469,7 +473,7 @@ public class AdvisorAPIRoutes extends Router {
     public String lessonsInSchedule(HttpServletRequest request,
                                     @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException {
-        return AdvisorController.lessonsInSchedule(
+        return scheduleService.lessonsInSchedule(
                 getUserId(request), id, true
         );
     }
@@ -486,7 +490,7 @@ public class AdvisorAPIRoutes extends Router {
         if (!Authorization.hasAccessToThisStudent(userId, advisorId))
             return JSON_NOT_ACCESS;
 
-        return AdvisorController.progress(
+        return scheduleService.progress(
                 userId, null, start, end
         );
     }
@@ -539,7 +543,7 @@ public class AdvisorAPIRoutes extends Router {
                                            @PathVariable @ObjectIdConstraint ObjectId id
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
         Document user = getAdvisorUser(request);
-        return AdvisorController.notifyStudentForSchedule(
+        return scheduleService.notifyStudentForSchedule(
                 id,
                 user.getString("first_name") + " " + user.getString("last_name"),
                 user.getObjectId("_id")

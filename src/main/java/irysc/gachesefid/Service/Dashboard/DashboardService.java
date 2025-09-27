@@ -1,14 +1,11 @@
 package irysc.gachesefid.Service.Dashboard;
 
 import com.mongodb.BasicDBObject;
-import com.mongodb.client.AggregateIterable;
-import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
-import irysc.gachesefid.Dto.Dashboard.TicketDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
@@ -19,15 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Aggregates.match;
-import static com.mongodb.client.model.Aggregates.project;
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.getConfig;
 import static irysc.gachesefid.Utility.Utility.getPast;
 
@@ -39,6 +32,9 @@ public class DashboardService {
 
     @Autowired
     private ConfigDashboardService configDashboardService;
+
+    @Autowired
+    private AdvisorDashboardUtil advisorDashboardUtil;
 
     private Set<String> detectUserBranches(Document user, List<Document> userIRYSCQuizzes, List<Document> userOpenQuizzes) {
         Set<String> userBranches = new HashSet<>();
@@ -358,17 +354,7 @@ public class DashboardService {
                                 )
                         )
                 )
-                .lastMonthSettled(
-                        settlementRequestRepository.find(
-                                        and(
-                                                eq("user_id", user.getObjectId("_id")),
-                                                eq("status", "paid"),
-                                                exists("paid_at"),
-                                                gte("paid_at", tilLastMonth)
-                                        ), JUST_AMOUNT
-                                )
-                                .stream().mapToInt(doc -> doc.getInteger("amount")).sum()
-                )
+                .lastMonthSettled(advisorDashboardUtil.getLastMonthSettled(user.getObjectId("_id"), tilLastMonth))
                 .pendingSettled(
                         settlementRequestRepository.count(
                                 and(
@@ -380,35 +366,18 @@ public class DashboardService {
                 .build()
                 : AdvisorDashboardStatsDto.builder().build();
 
-        if (studentsCountForAdvice > 0) {
-            if (advisorDashboardConfig.getShowLastTickets()) {
-                ArrayList<Bson> constraints = new ArrayList<>() {
-                    {
-                        add(eq("advisor_id", user.getObjectId("_id")));
-                        add(eq("section", "advisor"));
-                        add(eq("status", "pending"));
-                    }
-                };
-                AggregateIterable<Document> docs =
-                        ticketRepository.findWithJoinUser("user_id", "student",
-                                match(and(constraints)),
-                                project(TICKET_PROJECTION),
-                                Sorts.descending("send_date"), 0, 5,
-                                project(USER_DIGEST.append("accesses", 1))
-                        );
-                List<TicketDigestDto> tickets = new ArrayList<>();
-                docs.forEach((Consumer<? super Document>) document -> {
-                    tickets.add(
-                            TicketDigestDto.convertDocToDto(document)
-                    );
-                });
-                dashboardStatsDto.setUnSeenTickets(tickets);
-            }
-            if(advisorDashboardConfig.getShowMeeting()) {
-                dashboardStatsDto.setFutureMeetings(
-                        advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
-                );
-            }
+        if (advisorDashboardConfig.getShowLastTickets()) {
+            dashboardStatsDto.setUnSeenTickets(
+                    advisorDashboardUtil.getMyLastTickets(user.getObjectId("_id"))
+            );
+        }
+
+        if (studentsCountForAdvice + studentsCountForTeach > 0 &&
+                advisorDashboardConfig.getShowMeeting()
+        ) {
+            dashboardStatsDto.setFutureMeetings(
+                    advisorMeetingRepository.fetchAdvisorCurrentMeetings(user.getObjectId("_id"))
+            );
         }
 
         if (advisorDashboardConfig.getShowIncomingRequestsForAdvice()) {
@@ -419,15 +388,37 @@ public class DashboardService {
 
         if (advisorDashboardConfig.getShowLastNotifs()) {
             dashboardStatsDto.setLastNotifs(
-                    notifRepository.notifs(
-                            user.getList("events", Document.class)
-                                    .stream()
-                                    .filter(event -> !event.getBoolean("seen"))
-                                    .sorted(Collections.reverseOrder(Comparator.comparing(o -> o.getLong("created_at"))))
-                                    .limit(3)
-                                    .map(event -> event.getObjectId("notif_id"))
-                                    .collect(Collectors.toList())
-                    )
+                    advisorDashboardUtil.getMyLastNotifs(user)
+            );
+        }
+
+        if (advisorDashboardConfig.getShowMyLastComments()) {
+            dashboardStatsDto.setLastComments(
+                    advisorDashboardUtil.getMyLastComments(user.getObjectId("_id"))
+            );
+        }
+
+        if (advisorDashboardConfig.getShowInProgressKarbargs()) {
+            dashboardStatsDto.setInProgressSchedules(
+                    scheduleRepository.getInProgressSchedulesDigest(user.getObjectId("_id"))
+            );
+        }
+
+        if (advisorDashboardConfig.getShowFilledKarbargs()) {
+            dashboardStatsDto.setFilledSchedules(
+                    scheduleRepository.getDoneSchedulesDigest(user.getObjectId("_id"))
+            );
+        }
+
+        if (advisorDashboardConfig.getShowIncomingRequestsForTeach()) {
+            dashboardStatsDto.setTeachRequests(
+                    teachScheduleRepository.getTeachPendingRequests(user.getObjectId("_id"))
+            );
+        }
+
+        if(advisorDashboardConfig.getShowLastUserReportsAboutMe()) {
+            dashboardStatsDto.setLastReportsAboutMe(
+                    teachReportRepository.getLastReportsAboutMe(user.getObjectId("_id"))
             );
         }
 

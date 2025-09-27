@@ -642,7 +642,6 @@ public class StudentAdviceController {
     }
 
     public static String notifyAdvisorForSchedule(ObjectId scheduleId, String studentName, ObjectId studentId) {
-
         Document schedule = scheduleRepository.findById(scheduleId);
         if (schedule == null)
             return JSON_NOT_VALID_ID;
@@ -657,6 +656,9 @@ public class StudentAdviceController {
 
         if (d > today)
             return JSON_NOT_ACCESS;
+
+        schedule.put("ready_for_evaluate", true);
+        scheduleRepository.updateOne(scheduleId, set("ready_for_evaluate", true));
 
         for (ObjectId advisorId : schedule.getList("advisors", ObjectId.class)) {
             Document advisor = userRepository.findById(advisorId);

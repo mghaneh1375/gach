@@ -1,15 +1,18 @@
 package irysc.gachesefid.Dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
+import irysc.gachesefid.Dto.Serializer.PicSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.bson.types.ObjectId;
 
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserDigest {
@@ -20,4 +23,7 @@ public class UserDigest {
     private String nid;
     private String phone;
     private String mail;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonSerialize(using = PicSerializer.class)
+    private String pic;
 }

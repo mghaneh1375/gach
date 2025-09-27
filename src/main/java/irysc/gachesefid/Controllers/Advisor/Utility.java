@@ -21,7 +21,6 @@ import static irysc.gachesefid.Utility.Utility.*;
 
 public class Utility {
 
-
     public static JSONObject convertToJSONDigest(ObjectId stdId, Document advisor) {
 
         List<Document> students = (List<Document>) advisor.getOrDefault("students", new ArrayList<>());
@@ -89,56 +88,6 @@ public class Utility {
                     .put("visibility", doc.getBoolean("visibility"))
                     .put("studentsCount", doc.getOrDefault("students", 0));
         }
-
-        return jsonObject;
-    }
-
-    static JSONObject convertSchedulesToJSONObject(Document doc, ObjectId advisorId) {
-
-        JSONObject jsonObject = new JSONObject();
-
-        List<Document> days = doc.getList("days", Document.class);
-        int schedulesSum = 0;
-        int doneSum = 0;
-        HashMap<ObjectId, String> advisors = new HashMap<>();
-
-        for (Document day : days) {
-
-            if(!day.containsKey("items"))
-                continue;
-
-            for(Document item : day.getList("items", Document.class)) {
-
-                schedulesSum += item.getInteger("duration");
-                doneSum += (int)item.getOrDefault("done_duration", 0);
-
-                if(advisors.containsKey(item.getObjectId("advisor_id")))
-                    continue;
-
-                Document advisor = userRepository.findById(item.getObjectId("advisor_id"));
-                if(advisor == null)
-                    continue;
-
-                advisors.put(item.getObjectId("advisor_id"),
-                        advisor.getString("first_name") + " " + advisor.getString("last_name")
-                );
-            }
-        }
-
-        JSONArray advisorsJSON = new JSONArray();
-        boolean canDeleteSchedule = false;
-
-        for(ObjectId oId : advisors.keySet()) {
-            advisorsJSON.put(advisors.get(oId));
-
-            if(advisorId != null && advisors.keySet().size() == 1 && oId.equals(advisorId))
-                canDeleteSchedule = true;
-        }
-
-        jsonObject.put("weekStartAt", doc.getString("week_start_at"))
-                .put("schedulesSum", schedulesSum).put("doneSum", doneSum)
-                .put("canDelete", canDeleteSchedule).put("advisors", advisorsJSON)
-                .put("id", doc.getObjectId("_id").toString());
 
         return jsonObject;
     }
@@ -280,7 +229,7 @@ public class Utility {
         return jsonArray;
     }
 
-    static int validateDay(String day) throws InvalidFieldsException {
+    public static int validateDay(String day) throws InvalidFieldsException {
 
         if (
                 !day.equals("شنبه") &&

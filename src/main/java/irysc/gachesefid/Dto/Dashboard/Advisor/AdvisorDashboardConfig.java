@@ -35,4 +35,7 @@ public class AdvisorDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showMeeting = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showLastUserReportsAboutMe = true;
 }
