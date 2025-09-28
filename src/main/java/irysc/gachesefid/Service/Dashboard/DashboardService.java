@@ -2,14 +2,17 @@ package irysc.gachesefid.Service.Dashboard;
 
 import com.mongodb.BasicDBObject;
 import irysc.gachesefid.DB.Repository;
+import irysc.gachesefid.Dto.Dashboard.Admin.AdminDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -71,58 +74,63 @@ public class DashboardService {
 
     public ResponseEntity<ResponseDto<DashboardStatsDto>> dashboardInfo(Document user) {
 
+        ResponseEntity<ResponseDto<StudentDashboardConfig>> response =
+                configDashboardService.getConfig(user.getObjectId("_id"), StudentDashboardConfig.class);
+        StudentDashboardConfig studentDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
+        DashboardStatsDto dashboardStatsDto;
         long curr = System.currentTimeMillis();
-        Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
-        Document config = getConfig();
-        double exchangeRate = ((Number) config.get("coin_rate_coef")).doubleValue();
-        Document generalCache = Repository.isInCache("general", "first");
-        ArrayList<Document> userIRYSCQuizzes = iryscQuizRepository.find(
-                and(
-                        exists("start"),
-                        in("students._id", user.getObjectId("_id"))
-                ),
-                new BasicDBObject("start", 1).append("tags", 1)
-                        .append("end", 1)
-        );
-        List<Document> userOpenQuizzes = openQuizRepository.find(
-                in("students._id", user.getObjectId("_id")),
-                new BasicDBObject("tags", 1)
-        );
 
-        DashboardStatsDto dto = DashboardStatsDto
-                .builder()
-                .money(user.get("money"))
-                .rank(rank == null ? "" : rank.getInteger("rank"))
-                .coinToMoneyExchange(exchangeRate)
-                .coin(user.get("coin"))
-                .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
-                .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
-                .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
-                .gradeRank(rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
-                .registrableQuizzes(
-                        generalCache == null
-                                ? 0
-                                : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
-                                openQuizRepository.count(
-                                        nin("students._id", user.getObjectId("_id"))
-                                )
-                )
-                .passedQuizzes(
-                        userIRYSCQuizzes.stream().filter(document -> !document.containsKey("end") || document.getLong("end") < curr).count()
-                )
-                .activeQuizzes(
-                        userIRYSCQuizzes.stream().filter(document -> {
-                            System.out.println(document);
-                            return document.getLong("start") > curr;
-                        }).count()
-                )
-                .userOpenQuizzes(userOpenQuizzes.size())
-                .totalQuizzes(userIRYSCQuizzes.size())
-                .build();
+        if(studentDashboardConfig.getShowDashboard()) {
+            Document rank = tarazRepository.findBySecKey(user.getObjectId("_id"));
+            Document config = getConfig();
+            double exchangeRate = ((Number) config.get("coin_rate_coef")).doubleValue();
+            Document generalCache = Repository.isInCache("general", "first");
 
-        Set<String> branches = detectUserBranches(user, userIRYSCQuizzes, userOpenQuizzes);
-        if (!branches.isEmpty()) {
-            List<Bson> tags = branches.stream().map(s -> regex("tags", Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))).collect(Collectors.toList());
+            ArrayList<Document> userIRYSCQuizzes = iryscQuizRepository.find(
+                    and(
+                            exists("start"),
+                            in("students._id", user.getObjectId("_id"))
+                    ),
+                    new BasicDBObject("start", 1).append("tags", 1)
+                            .append("end", 1)
+            );
+            List<Document> userOpenQuizzes = openQuizRepository.find(
+                    in("students._id", user.getObjectId("_id")),
+                    new BasicDBObject("tags", 1)
+            );
+            dashboardStatsDto = DashboardStatsDto
+                    .builder()
+                    .money(user.get("money"))
+                    .rank(rank == null ? "" : rank.getInteger("rank"))
+                    .coinToMoneyExchange(exchangeRate)
+                    .coin(user.get("coin"))
+                    .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
+                    .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
+                    .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
+                    .gradeRank(rank == null || !rank.containsKey("grade_rank") ? "" : rank.getInteger("grade_rank"))
+                    .registrableQuizzes(
+                            generalCache == null
+                                    ? 0
+                                    : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
+                                    openQuizRepository.count(
+                                            nin("students._id", user.getObjectId("_id"))
+                                    )
+                    )
+                    .passedQuizzes(
+                            userIRYSCQuizzes.stream().filter(document -> !document.containsKey("end") || document.getLong("end") < curr).count()
+                    )
+                    .activeQuizzes(
+                            userIRYSCQuizzes.stream().filter(document -> {
+                                System.out.println(document);
+                                return document.getLong("start") > curr;
+                            }).count()
+                    )
+                    .userOpenQuizzes(userOpenQuizzes.size())
+                    .totalQuizzes(userIRYSCQuizzes.size())
+                    .build();
+            Set<String> branches = detectUserBranches(user, userIRYSCQuizzes, userOpenQuizzes);
+            if (!branches.isEmpty()) {
+                List<Bson> tags = branches.stream().map(s -> regex("tags", Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))).collect(Collectors.toList());
 //            dto.setRegistrableQuizzesSuggestion(
 //                    List.of(
 //                            iryscQuizRepository.find(
@@ -140,43 +148,55 @@ public class DashboardService {
 //                            )
 //                    );
 
-            dto.setTutorialsSuggestion(contentRepository.getSuggestion(user.getObjectId("_id"), tags).toString());
+                dashboardStatsDto.setTutorialsSuggestion(contentRepository.getSuggestion(user.getObjectId("_id"), tags).toString());
+            }
         }
+        else
+            dashboardStatsDto = DashboardStatsDto.builder().build();
 
         return new ResponseEntity<>(
                 ResponseDto
                         .builder(DashboardStatsDto.class)
-                        .data(dto)
+                        .data(dashboardStatsDto)
                         .status("ok")
                         .build(),
                 HttpStatus.OK
         );
     }
 
-    public ResponseEntity<ResponseDto<DashboardStatsDto>> getSiteSummary() {
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> getStudentDashboard(Document user) {
         Document generalCache = Repository.isInCache("general", "first");
+
+        ResponseEntity<ResponseDto<AdminDashboardConfig>> response =
+                configDashboardService.getConfig(user.getObjectId("_id"), AdminDashboardConfig.class);
+        AdminDashboardConfig adminDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
+        DashboardStatsDto dashboardStatsDto;
+
+        if(adminDashboardConfig.getShowDashboard()) {
+            dashboardStatsDto = DashboardStatsDto
+                    .builder()
+                    .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
+                    .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
+                    .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
+                    .schools(generalCache == null ? 0 : generalCache.getInteger("schools"))
+                    .students(generalCache == null ? 0 : generalCache.getInteger("students"))
+                    .questions(generalCache == null ? 0 : generalCache.getInteger("questions"))
+                    .registrableQuizzes(
+                            generalCache == null
+                                    ? 0
+                                    : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
+                                    (Integer) generalCache.getOrDefault("openQuizzesCount", 0)
+                    )
+                    .build();
+        }
+        else
+            dashboardStatsDto = DashboardStatsDto.builder().build();
 
         return new ResponseEntity<>(
                 ResponseDto
                         .builder(DashboardStatsDto.class)
                         .status("ok")
-                        .data(
-                                DashboardStatsDto
-                                        .builder()
-                                        .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
-                                        .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
-                                        .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
-                                        .schools(generalCache == null ? 0 : generalCache.getInteger("schools"))
-                                        .students(generalCache == null ? 0 : generalCache.getInteger("students"))
-                                        .questions(generalCache == null ? 0 : generalCache.getInteger("questions"))
-                                        .registrableQuizzes(
-                                                generalCache == null
-                                                        ? 0
-                                                        : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
-                                                        (Integer) generalCache.getOrDefault("openQuizzesCount", 0)
-                                        )
-                                        .build()
-                        )
+                        .data(dashboardStatsDto)
                         .build(),
                 HttpStatus.OK
         );
@@ -302,7 +322,8 @@ public class DashboardService {
     public ResponseEntity<ResponseDto<AdvisorDashboardStatsDto>> advisorDashboardInfo(
             Document user
     ) {
-        ResponseEntity<ResponseDto<AdvisorDashboardConfig>> response = configDashboardService.getConfig(user.getObjectId("_id"));
+        ResponseEntity<ResponseDto<AdvisorDashboardConfig>> response =
+                configDashboardService.getConfig(user.getObjectId("_id"), AdvisorDashboardConfig.class);
         AdvisorDashboardConfig advisorDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
 
         long tilLastMonth = System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30;
