@@ -129,7 +129,6 @@ public class AdvisorController {
         JSONArray jsonArray = new JSONArray();
 
         for (Document student : students) {
-
             Document studentDoc = userRepository.findById(student.getObjectId("_id"));
 
             if (studentDoc == null)
@@ -139,7 +138,6 @@ public class AdvisorController {
                     .put("name", studentDoc.getString("first_name") + " " + studentDoc.getString("last_name"))
                     .put("id", studentDoc.getObjectId("_id").toString())
             );
-
         }
 
         return generateSuccessMsg("data", jsonArray);

@@ -19,23 +19,11 @@ public class AdminDashboardConfig extends ConfigDto {
     private Boolean showLastSettleRequest = true;
     @Builder.Default
     @NotNull
-    private Boolean showInProgressKarbargs = true;
-    @Builder.Default
-    @NotNull
-    private Boolean showFilledKarbargs = true;
-    @Builder.Default
-    @NotNull
-    private Boolean showMyLastComments = true;
-    @Builder.Default
-    @NotNull
     private Boolean showIncomingRequestsForAdvice = true;
     @Builder.Default
     @NotNull
     private Boolean showIncomingRequestsForTeach = true;
     @Builder.Default
     @NotNull
-    private Boolean showMeeting = true;
-    @Builder.Default
-    @NotNull
-    private Boolean showLastUserReportsAboutMe = true;
+    private Boolean showLastUserReports = true;
 }

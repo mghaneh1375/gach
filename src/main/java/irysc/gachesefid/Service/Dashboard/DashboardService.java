@@ -5,11 +5,14 @@ import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Advisor.MyCurrStudent;
 import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Dto.UserDigest;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,8 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.STUDENT_PUBLIC_INFO;
+import static irysc.gachesefid.Utility.StaticValues.USER_DIGEST;
 import static irysc.gachesefid.Utility.Utility.getConfig;
 import static irysc.gachesefid.Utility.Utility.getPast;
 
@@ -414,6 +419,25 @@ public class DashboardService {
             dashboardStatsDto.setTeachRequests(
                     teachScheduleRepository.getTeachPendingRequests(user.getObjectId("_id"))
             );
+        }
+
+        if (advisorDashboardConfig.getShowMyCurrStudents() && user.containsKey("students")) {
+            List<Document> students = user.getList("students", Document.class);
+            ArrayList<Document> studentsDoc = userRepository.findByIds(
+                    students.stream().map(student -> student.getObjectId("_id")).collect(Collectors.toList()),
+                    false, STUDENT_PUBLIC_INFO
+            );
+
+            List<MyCurrStudent> myCurrStudents = new ArrayList<>();
+
+            for (Document student : studentsDoc) {
+                MyCurrStudent
+                        .builder()
+                        .userDigest(
+                                UserDigest.buildFromDoc(student)
+                        )
+                        .build();
+            }
         }
 
         return new ResponseEntity<>(

@@ -27,4 +27,5 @@ public class AdvisorDashboardStatsDto {
     private List<ScheduleDigest> inProgressSchedules;
     private List<ScheduleDigest> filledSchedules;
     private List<TeachRequestDigestDto> teachRequests;
+    private List<MyCurrStudent> myCurrStudents;
 }
