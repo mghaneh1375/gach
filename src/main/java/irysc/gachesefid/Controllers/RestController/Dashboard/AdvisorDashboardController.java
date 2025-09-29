@@ -42,7 +42,7 @@ public class AdvisorDashboardController extends Router {
     public ResponseEntity<ResponseDto<AdvisorDashboardConfig>> getConfig(
             HttpServletRequest request
     ) throws UnAuthException {
-        return configDashboardService.getConfig(getUserId(request));
+        return configDashboardService.getConfig(getUserId(request), AdvisorDashboardConfig.class);
     }
 
     @PutMapping(value = "setConfig")

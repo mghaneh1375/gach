@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
+import irysc.gachesefid.Dto.Dashboard.Admin.AdminDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
+import irysc.gachesefid.Dto.Dashboard.ConfigDto;
+import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
 import irysc.gachesefid.Dto.ResponseDto;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -30,7 +33,7 @@ public class ConfigDashboardService {
     public void setAdvisorConfig(ObjectId userId, AdvisorDashboardConfig configDto) {
         Document configDoc = configDashboardRepository.findBySecKey(userId);
         AdvisorDashboardConfig advisorDashboardConfig;
-        if(configDoc == null)
+        if (configDoc == null)
             advisorDashboardConfig = AdvisorDashboardConfig
                     .builder()
                     .userId(userId)
@@ -51,7 +54,37 @@ public class ConfigDashboardService {
         advisorDashboardConfig.setShowLastNotifs(configDto.getShowLastNotifs());
         advisorDashboardConfig.setShowDashboard(configDto.getShowDashboard());
 
-        Document doc = new Document(mapper.convertValue(advisorDashboardConfig, Document.class));
+        save(configDoc, userId, advisorDashboardConfig);
+    }
+
+    public void setStudentConfig(ObjectId userId, StudentDashboardConfig configDto) {
+        Document configDoc = configDashboardRepository.findBySecKey(userId);
+        StudentDashboardConfig studentDashboardConfig;
+        if (configDoc == null)
+            studentDashboardConfig = StudentDashboardConfig
+                    .builder()
+                    .userId(userId)
+                    .build();
+        else
+            studentDashboardConfig = mapper.convertValue(configDoc, StudentDashboardConfig.class);
+
+        studentDashboardConfig.setShowCurrentKarbargs(configDto.getShowCurrentKarbargs());
+        studentDashboardConfig.setShowMeeting(configDto.getShowMeeting());
+        studentDashboardConfig.setShowRequestsStatusForAdvice(configDto.getShowRequestsStatusForAdvice());
+        studentDashboardConfig.setShowRequestsStatusForTeach(configDto.getShowRequestsStatusForTeach());
+        studentDashboardConfig.setShowFutureQuiz(configDto.getShowFutureQuiz());
+        studentDashboardConfig.setShowSuggestionForQuiz(configDto.getShowSuggestionForQuiz());
+        studentDashboardConfig.setShowSuggestionForContent(configDto.getShowSuggestionForContent());
+
+        studentDashboardConfig.setShowLastTickets(configDto.getShowLastTickets());
+        studentDashboardConfig.setShowLastNotifs(configDto.getShowLastNotifs());
+        studentDashboardConfig.setShowDashboard(configDto.getShowDashboard());
+
+        save(configDoc, userId, studentDashboardConfig);
+    }
+
+    private void save(Document configDoc, ObjectId userId, ConfigDto configDto) {
+        Document doc = new Document(mapper.convertValue(configDto, Document.class));
         doc.remove("id");
         doc.put("_id", configDoc == null ? new ObjectId() : configDoc.getObjectId("_id"));
         doc.put("user_id", userId);
@@ -63,16 +96,21 @@ public class ConfigDashboardService {
         configDashboardRepository.clearFromCache(userId);
     }
 
-    public ResponseEntity<ResponseDto<AdvisorDashboardConfig>> getConfig(ObjectId userId) {
+    public <T extends ConfigDto> ResponseEntity getConfig(
+            ObjectId userId, Class clazz
+    ) {
         Document config = configDashboardRepository.findBySecKey(userId);
         return new ResponseEntity<>(
-                ResponseDto.builder(AdvisorDashboardConfig.class)
+                ResponseDto.builder(clazz)
                         .data(config == null
+                                ? clazz.getName().equals(AdvisorDashboardConfig.class.getName())
                                 ? new AdvisorDashboardConfig()
-                                : simpleMapper.convertValue(config, AdvisorDashboardConfig.class))
+                                : clazz.getName().equals(AdminDashboardConfig.class.getName())
+                                ? new AdminDashboardConfig()
+                                : new StudentDashboardConfig()
+                                : simpleMapper.convertValue(config, clazz))
                         .build(),
                 HttpStatus.OK
         );
     }
-
 }
