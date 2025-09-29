@@ -336,11 +336,12 @@ public class AdvisorController {
         );
     }
 
-    public static String requestMeeting(ObjectId advisorId,
-                                        String NID,
-                                        String name,
-                                        ObjectId studentId) {
-
+    public static String requestMeeting(
+            ObjectId advisorId,
+            String NID,
+            String name,
+            ObjectId studentId
+    ) {
         Document std = userRepository.findById(studentId);
         if (std == null)
             return JSON_NOT_VALID_ID;

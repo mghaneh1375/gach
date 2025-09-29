@@ -1,5 +1,6 @@
 package irysc.gachesefid.Dto.Dashboard.Advisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
@@ -18,6 +19,10 @@ public class AdviceRequestDto {
     @JsonSerialize(using = LongDateSerialization.class)
     @JsonDeserialize(using = MongoNumberLongDeserializer.class)
     private Long requestAt;
-    private UserDigest student;
+    private UserDigest user;
     private AdvicePlanDigest planDigest;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String status;
+    @JsonSerialize(using = LongDateSerialization.class)
+    private Long answerAt;
 }

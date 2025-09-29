@@ -1,9 +1,10 @@
-package irysc.gachesefid.Dto.Dashboard;
+package irysc.gachesefid.Dto.Dashboard.Student;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import irysc.gachesefid.Dto.Dashboard.Advisor.MeetingDto;
+import irysc.gachesefid.Dto.Dashboard.Advisor.ScheduleDigest;
 import lombok.Builder;
 import lombok.Data;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.List;
@@ -28,7 +29,7 @@ public class DashboardStatsDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer tutorialsCount;
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String tutorialsSuggestion;
+    private List<SuggestedContentDto> tutorialsSuggestion;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer yourTutorialsCount;
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -49,4 +50,10 @@ public class DashboardStatsDto {
     private Integer students;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer questions;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<MyAdvisorDigestDto> myAdvisors;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<MeetingDto> currMeetings;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<ScheduleDigest> currentSchedules;
 }

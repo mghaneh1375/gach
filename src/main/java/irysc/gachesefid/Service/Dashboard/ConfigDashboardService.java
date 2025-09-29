@@ -73,6 +73,7 @@ public class ConfigDashboardService {
         studentDashboardConfig.setShowRequestsStatusForAdvice(configDto.getShowRequestsStatusForAdvice());
         studentDashboardConfig.setShowRequestsStatusForTeach(configDto.getShowRequestsStatusForTeach());
         studentDashboardConfig.setShowFutureQuiz(configDto.getShowFutureQuiz());
+        studentDashboardConfig.setShowMyAdvisor(configDto.getShowMyAdvisor());
         studentDashboardConfig.setShowSuggestionForQuiz(configDto.getShowSuggestionForQuiz());
         studentDashboardConfig.setShowSuggestionForContent(configDto.getShowSuggestionForContent());
 

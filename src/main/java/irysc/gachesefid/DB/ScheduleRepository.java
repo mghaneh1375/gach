@@ -16,10 +16,11 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Projections.*;
+import static com.mongodb.client.model.Projections.computed;
+import static com.mongodb.client.model.Projections.fields;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Service.Advice.ScheduleUtils.getFormattedDate;
-import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
+import static irysc.gachesefid.Utility.StaticValues.ONE_WEEK_MIL_SEC;
 
 public class ScheduleRepository extends Common {
 
@@ -36,7 +37,7 @@ public class ScheduleRepository extends Common {
     public List<ScheduleDigest> getInProgressSchedulesDigest(ObjectId advisorId) {
         ArrayList<Bson> filters = new ArrayList<>() {{
             add(eq("advisors", advisorId));
-            add(gte("week_start_at_int", getFormattedDate(System.currentTimeMillis() - ONE_DAY_MIL_SEC * 7)));
+            add(gte("week_start_at_int", getFormattedDate(System.currentTimeMillis() - ONE_WEEK_MIL_SEC)));
             add(or(
                     exists("ready_for_use", false),
                     eq("ready_for_use", false)
@@ -45,14 +46,22 @@ public class ScheduleRepository extends Common {
         return findSchedules(filters);
     }
 
+    public List<ScheduleDigest> getInProgressSchedulesDigestForStudent(ObjectId studentId) {
+        ArrayList<Bson> filters = new ArrayList<>() {{
+            add(eq("user_id", studentId));
+            add(gte("week_start_at_int", getFormattedDate(System.currentTimeMillis() - ONE_WEEK_MIL_SEC)));
+            add(exists("ready_for_use", true));
+            add(eq("ready_for_use", true));
+        }};
+        return findSchedules(filters);
+    }
+
     public List<ScheduleDigest> getDoneSchedulesDigest(ObjectId advisorId) {
         ArrayList<Bson> filters = new ArrayList<>() {{
             add(eq("advisors", advisorId));
-            add(gte("week_start_at_int", getFormattedDate(System.currentTimeMillis() - ONE_DAY_MIL_SEC * 7)));
-            add(and(
-                    exists("ready_for_evaluate"),
-                    eq("ready_for_evaluate", true)
-            ));
+            add(gte("week_start_at_int", getFormattedDate(System.currentTimeMillis() - ONE_WEEK_MIL_SEC)));
+            add(exists("ready_for_evaluate"));
+            add(eq("ready_for_evaluate", true));
         }};
         return findSchedules(filters);
     }
@@ -71,9 +80,9 @@ public class ScheduleRepository extends Common {
                     project(fields(
                             computed("weekStartAt", "$week_start_at"),
                             computed("id", "$_id"),
-                            computed("student.id", "$user_id"),
-                            computed("student.firstname", "$userInfo.first_name"),
-                            computed("student.lastname", "$userInfo.last_name")
+                            computed("user.id", "$user_id"),
+                            computed("user.firstname", "$userInfo.first_name"),
+                            computed("user.lastname", "$userInfo.last_name")
                     ))
             )).iterator();
             iterator.forEachRemaining(document -> {

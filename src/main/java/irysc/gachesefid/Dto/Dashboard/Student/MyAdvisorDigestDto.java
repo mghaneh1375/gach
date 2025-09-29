@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto.Dashboard.Advisor;
+package irysc.gachesefid.Dto.Dashboard.Student;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Serializer.JustDateSerialization;
@@ -9,13 +9,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class MyCurrStudent {
-    private UserDigest userDigest;
+public class MyAdvisorDigestDto {
+    private UserDigest advisor;
     @JsonSerialize(using = JustDateSerialization.class)
     private Long startAt;
     @JsonSerialize(using = JustDateSerialization.class)
     private Long endAt;
+    private Integer rate;
 }

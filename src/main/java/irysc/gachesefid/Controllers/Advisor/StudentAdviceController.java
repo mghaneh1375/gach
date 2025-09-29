@@ -131,7 +131,6 @@ public class StudentAdviceController {
             return JSON_NOT_UNKNOWN;
 
         List<Document> students = advisor.getList("students", Document.class);
-
         Document stdDoc = searchInDocumentsKeyVal(
                 students, "_id", userId
         );
@@ -269,10 +268,10 @@ public class StudentAdviceController {
                     eq("answer", "accept"),
                     exists("active_at"),
                     lte("active_at", curr - 24 * ONE_DAY_MIL_SEC),
-                    gt("active_at", curr - 31 * ONE_DAY_MIL_SEC)
+                    gt("active_at", curr - ONE_MONTH_MIL_SEC)
             ), new BasicDBObject("active_at", 1), Sorts.descending("created_at"));
             if (olderAdvisorRequest != null)
-                advisorRequest.put("active_at", 31 * ONE_DAY_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
+                advisorRequest.put("active_at", ONE_MONTH_MIL_SEC + olderAdvisorRequest.getLong("active_at"));
             else
                 advisorRequest.put("active_at", curr);
 
@@ -291,7 +290,6 @@ public class StudentAdviceController {
                     students.add(userId);
                     update = new BasicDBObject("students", students);
                 } else {
-
                     update = new BasicDBObject("used", true)
                             .append("used_at", curr)
                             .append("used_section", OffCodeSections.GACH_EXAM.getName())

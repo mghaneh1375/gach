@@ -30,6 +30,8 @@ public class StaticValues {
     public static final long ONE_MIN_MSEC = 60000;
     public static final long ONE_HOUR_MIL_SEC = 60 * ONE_MIN_MSEC;
     public static final long ONE_DAY_MIL_SEC = 24 * ONE_HOUR_MIL_SEC;
+    public static final long ONE_MONTH_MIL_SEC = 24 * ONE_HOUR_MIL_SEC * 31;
+    public static final long ONE_WEEK_MIL_SEC = 24 * ONE_HOUR_MIL_SEC;
     public static final long TWO_DAY_MIL_SEC = 86400000 * 2;
 
     public final static long TOKEN_EXPIRATION_MSEC = 60 * 60 * 24 * 7 * 1000;
@@ -207,8 +209,14 @@ public class StaticValues {
             .append("first_name", 1)
             .append("last_name", 1)
             .append("rate", 1)
-            .append("rate", 1)
             .append("pic", 1);
+
+    public final static BasicDBObject ADVISOR_PUBLIC_INFO_FOR_STD = new BasicDBObject("_id", 1)
+            .append("first_name", 1)
+            .append("last_name", 1)
+            .append("rate", 1)
+            .append("pic", 1)
+            .append("students", 1);
 
     public final static BasicDBObject USER_TEACH_INFO = new BasicDBObject("_id", 1)
             .append("first_name", 1)

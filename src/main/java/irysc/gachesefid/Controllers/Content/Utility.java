@@ -14,17 +14,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static irysc.gachesefid.Controllers.Certification.AdminCertification.*;
+import static irysc.gachesefid.Controllers.Certification.AdminCertification.addUserToContentCert;
 import static irysc.gachesefid.Controllers.Quiz.AdminReportController.buildContentQuizTaraz;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
-import static irysc.gachesefid.Utility.StaticValues.STATICS_SERVER;
-import static irysc.gachesefid.Utility.StaticValues.VIDEO_STATICS_SERVER;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class Utility {
 
@@ -34,7 +31,7 @@ public class Utility {
         if (doc == null)
             throw new InvalidFieldsException("id is not valid");
 
-        if (doc.getList("users", Document.class).size() > 0)
+        if (!doc.getList("users", Document.class).isEmpty())
             throw new InvalidFieldsException("بسته موردنظر خریده شده است و این امکان وجود ندارد.");
 
         return doc;
@@ -80,7 +77,6 @@ public class Utility {
             long curr = System.currentTimeMillis();
 
             if (doc.getLong("off_start") <= curr && doc.getLong("off_expiration") >= curr) {
-
                 int val = doc.getInteger("off");
                 String type = doc.getString("off_type");
 
@@ -90,7 +86,6 @@ public class Utility {
                 jsonObject.put("off", val)
                         .put("offType", type)
                         .put("afterOff", doc.getInteger("price") - offAmount);
-
             }
         }
 
@@ -166,7 +161,7 @@ public class Utility {
                         .filter(faq -> isAdmin || faq.getBoolean("visibility"))
                         .forEach(faq -> faqJSON.add(convertFAQDigest(faq, isAdmin)));
             }
-            if(doc.containsKey("faq") && doc.getList("faq", Document.class).size() > 0) {
+            if(doc.containsKey("faq") && !doc.getList("faq", Document.class).isEmpty()) {
                 doc.getList("faq", Document.class)
                         .stream()
                         .filter(faq -> isAdmin || faq.getBoolean("visibility"))

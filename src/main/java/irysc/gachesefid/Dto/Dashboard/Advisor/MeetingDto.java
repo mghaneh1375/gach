@@ -18,5 +18,5 @@ public class MeetingDto {
     @JsonSerialize(using = LongDateSerialization.class)
     private Long endAt;
     private String url;
-    private UserDigest student;
+    private UserDigest user;
 }

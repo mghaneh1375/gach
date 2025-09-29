@@ -14,7 +14,7 @@ import irysc.gachesefid.Controllers.Finance.TransactionController;
 import irysc.gachesefid.Controllers.Question.QuestionController;
 import irysc.gachesefid.Controllers.Quiz.QuizController;
 import irysc.gachesefid.Controllers.UserController;
-import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Student.DashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Exception.NotAccessException;
@@ -344,7 +344,7 @@ public class GeneralAPIRoutes extends Router {
     public ResponseEntity<ResponseDto<DashboardStatsDto>> getSiteStats(
             HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException {
-        return dashboardService.getStudentDashboard(
+        return dashboardService.siteStats(
                 getUser(request)
         );
     }

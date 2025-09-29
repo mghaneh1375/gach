@@ -1,14 +1,13 @@
 package irysc.gachesefid.Controllers.RestController.Dashboard;
 
-import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
-import irysc.gachesefid.Dto.Dashboard.DashboardStatsDto;
+import irysc.gachesefid.Dto.Dashboard.Student.DashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.Dashboard.ConfigDashboardService;
-import irysc.gachesefid.Service.Dashboard.DashboardService;
+import irysc.gachesefid.Service.Dashboard.StudentDashboardService;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,7 +24,7 @@ import javax.validation.Valid;
 public class DashboardController extends Router {
 
     @Autowired
-    private DashboardService dashboardService;
+    private StudentDashboardService studentDashboardService;
     @Autowired
     private ConfigDashboardService configDashboardService;
 
@@ -34,7 +33,7 @@ public class DashboardController extends Router {
     public ResponseEntity<ResponseDto<DashboardStatsDto>> stats(
             HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException {
-        return dashboardService.dashboardInfo(
+        return studentDashboardService.getStudentDashboard(
                 getUser(request)
         );
     }

@@ -35,4 +35,7 @@ public class StudentDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showFutureQuiz = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showMyAdvisor = true;
 }

@@ -14,7 +14,7 @@ import org.bson.types.ObjectId;
 @AllArgsConstructor
 @Builder
 public class ScheduleDigest {
-    private UserDigest student;
+    private UserDigest user;
     @JsonSerialize(using = ObjectIdSerializer.class)
     private ObjectId id;
     private String weekStartAt;
