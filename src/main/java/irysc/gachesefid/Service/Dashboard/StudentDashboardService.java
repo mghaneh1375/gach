@@ -5,6 +5,7 @@ import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Dto.Dashboard.Student.DashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Student.MyAdvisorDigestDto;
 import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
+import irysc.gachesefid.Dto.QuizDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Dto.UserDigest;
 import irysc.gachesefid.Utility.Utility;
@@ -30,6 +31,8 @@ public class StudentDashboardService {
 
     @Autowired
     private ConfigDashboardService configDashboardService;
+    @Autowired
+    private DashboardUtil dashboardUtil;
 
     private Set<String> detectUserBranches(Document user, List<Document> userIRYSCQuizzes, List<Document> userOpenQuizzes) {
         Set<String> userBranches = new HashSet<>();
@@ -80,8 +83,7 @@ public class StudentDashboardService {
                         exists("start"),
                         in("students._id", user.getObjectId("_id"))
                 ),
-                new BasicDBObject("start", 1).append("tags", 1)
-                        .append("end", 1)
+                QUIZ_DIGEST
         ) : null;
 
         List<Document> userOpenQuizzes = studentDashboardConfig.getShowDashboard() ||
@@ -119,10 +121,7 @@ public class StudentDashboardService {
                             userIRYSCQuizzes.stream().filter(document -> !document.containsKey("end") || document.getLong("end") < curr).count()
                     )
                     .activeQuizzes(
-                            userIRYSCQuizzes.stream().filter(document -> {
-                                System.out.println(document);
-                                return document.getLong("start") > curr;
-                            }).count()
+                            userIRYSCQuizzes.stream().filter(document -> document.getLong("start") > curr).count()
                     )
                     .userOpenQuizzes(userOpenQuizzes.size())
                     .totalQuizzes(userIRYSCQuizzes.size())
@@ -136,14 +135,46 @@ public class StudentDashboardService {
             );
         }
 
+        if (studentDashboardConfig.getShowFutureQuiz()) {
+            dashboardStatsDto.setFutureQuizzes(
+                    userIRYSCQuizzes == null
+                            ? null
+                            : userIRYSCQuizzes
+                            .stream()
+                            .filter(document -> document.getLong("start") > curr && document.getLong("start") <= curr + ONE_DAY_MIL_SEC * 3)
+                            .map(QuizDigestDto::buildFromDoc)
+                            .collect(Collectors.toList())
+            );
+        }
+
+        if (studentDashboardConfig.getShowRequestsStatusForTeach()) {
+
+        }
+
+        if (studentDashboardConfig.getShowLastTickets()) {
+            dashboardStatsDto.setUnSeenTickets(
+                    dashboardUtil.getMyLastTickets(user.getObjectId("user_id"))
+            );
+        }
+
         if (studentDashboardConfig.getShowRequestsStatusForAdvice()) {
             advisorRequestsRepository.myLastWeekRequests(user.getObjectId("_id"));
+        }
+
+        if (studentDashboardConfig.getShowLastNotifs()) {
+            dashboardStatsDto.setLastNotifs(
+                    dashboardUtil.getMyLastNotifs(user)
+            );
         }
 
         Set<String> branches = studentDashboardConfig.getShowSuggestionForContent() ||
                 studentDashboardConfig.getShowSuggestionForQuiz()
                 ? detectUserBranches(user, userIRYSCQuizzes, userOpenQuizzes)
                 : null;
+
+        if (studentDashboardConfig.getShowSuggestionForQuiz()) {
+
+        }
 
         if (studentDashboardConfig.getShowSuggestionForContent() && !branches.isEmpty()) {
             List<Bson> tags = branches.stream().map(s -> regex("tags", Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))).collect(Collectors.toList());

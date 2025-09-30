@@ -76,14 +76,11 @@ public class RegularQuizController extends QuizAbstract {
 
     public static String create(ObjectId userId, JSONObject jsonObject,
                                 String mode, boolean isAdvisor, boolean withPDF) {
-
         try {
-
             if (withPDF)
                 Utility.checkFields(pdfQuizMandatoryFields, forbiddenFieldsForPDFQuiz, jsonObject);
 
             if (mode.equalsIgnoreCase(AllKindQuiz.SCHOOL.getName())) {
-
                 Utility.checkFields(schoolMandatoryFields, schoolForbiddenFields, jsonObject);
 
                 if (!isAdvisor && jsonObject.has("payByStudent"))

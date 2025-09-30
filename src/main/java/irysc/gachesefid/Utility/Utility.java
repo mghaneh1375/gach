@@ -776,124 +776,8 @@ public class Utility {
         return true;
     }
 
-    public static boolean sendClassRegistryMail(String to, String msg, String term, String endRegistry,
-                                                String username, String mode, String price, String classId) {
-
-        if (DEV_MODE)
-            return true;
-
-        Properties prop = new Properties();
-        prop.put("mail.smtp.auth", true);
-        prop.put("mail.smtp.starttls.enable", "false");
-        prop.put("mail.smtp.host", "mail.okft.org");
-        prop.put("mail.smtp.port", "587");
-
-        try {
-
-            Session session = Session.getInstance(prop, new Authenticator() {
-                @Override
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(mailUserName, mailPassword);
-                }
-            });
-
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress("no-reply@okft.org", "Ökft"));
-
-            message.setRecipients(
-                    Message.RecipientType.TO, InternetAddress.parse(to));
-            message.setSubject("Enrollment information");
-
-            MimeBodyPart mimeBodyPart = new MimeBodyPart();
-
-            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
-            html += "<div style='height: 8px; margin-bottom: 5px; background-color: #BB0000; width: 100%'></div>";
-            html += "<img style='width: 200px; margin-bottom: 5px;' src='https://statics.okft.org/logo.png'>";
-            html += "<h3 style='font-size: 1.4em'>Österreichisches Kulturforums Teheran</h3>";
-            html += "<div style='height: 8px; margin-top: 10px; background-color: #BB0000; width: 100%'></div>";
-            html += "<div style='margin: 20px'>";
-            if (username == null)
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>Hello, </p>";
-            else
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>Hello, Dear " + username + "</p>";
-
-            switch (mode) {
-                case "classRegistry":
-                    html += "<p style='font-size: 1.6em; color: black; font-weight: bolder;'>You are accepted for class ";
-                    break;
-                case "successClassRegistry":
-                    html += "<p>You have been successfully registered in class:</p>";
-                    break;
-                case "classQueue":
-                    html += "<p>Unfortunately, Your enrollment request for " + term + " have been approved.</p>";
-                    break;
-            }
-
-            if (mode.equals("classRegistry"))
-                html += msg + "</p>";
-            else
-                html += "<p style='font-size: 1.5em; color: black; font-weight: bolder;'>" + msg + "</p>";
-
-            switch (mode) {
-                case "classRegistry":
-                    html += "<p style='margin-top: 10px; font-size: 1.5em; font-weight: bolder;'>Please deposit the amount of " + price + " Tomans till " + endRegistry + " through the following link.</p>";
-                    html += "<a href='https://okft.org/goToPayment/" + classId + "' target='_blank' style='margin-top: 20px; font-size: 1.4em; color: #0000ff; font-weight: bolder;'>https://okft.org/goToPayment/" + classId + "</a>";
-                    break;
-                case "classQueue":
-                    html += "<p style='margin-top: 10px; font-size: 1.1em'>You should wait for further notification.</p>";
-                    break;
-                case "successClassRegistry":
-                    html += "<p style='margin-top: 10px; font-color: red; font-size: 1.1em'>You will receive detailed information about your virtual class user name and password.</p>";
-                    break;
-            }
-
-            if (mode.equals("classRegistry")) {
-                html += "<p style='margin-top: 10px; font-size: 1.2em'>Naturally after " + endRegistry + " the pay-link will be deactivated for you and your turn will be given to the waiting list names.<br/>" +
-                        "Sincerely <br/>" +
-                        "Austrian Cultural Forum in Tehran (ÖKF)</p>";
-            }
-
-            html += "<p style='margin-top: 20px; font-size: 1.1em; font-weight: bolder;'>What is this email?</p>";
-
-            html += "<p style='font-size: 1.1em'>We sent this email to inform you about the latest notifications.</p>";
-            html += "<p style='font-size: 1.1em'>If you didn't ask for this mail, simply ignore or delete this email. Don't worry, your email address may have been entered by mistake.</p>";
-
-
-            html += "</div>";
-            html += "<div style='height: 200px; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: #2A2A2A; width: 100%'>";
-            html += "<p style='color: white'>Österreichisches Kulturforums Teheran</p>";
-            html += "<p style='color: white; margin-top: 60px; font-size: 0.9em'>Need any help? Please visit our website: </p>";
-            html += "<div style='color: white; font-size: 0.9em'>https://okft.org</div>";
-            html += "<p style='color: white; margin-top: 10px; font-size: 0.9em'>This message was sent to you by okft.org</p>";
-            html += "<p style='color: white; font-size: 0.9em'>North Sohrevardi St., Khorramshahr St., Arabali St., Alley 6th, Sibouyeh, No. 1 +982188765525</p>";
-            html += "</div>";
-            html += "</div>";
-            mimeBodyPart.setContent(html, "text/html");
-
-            Multipart multipart = new MimeMultipart();
-            multipart.addBodyPart(mimeBodyPart);
-
-            message.setContent(multipart);
-
-            Transport.send(message);
-        } catch (Exception x) {
-            printException(x);
-            return false;
-        }
-
-        return true;
-    }
-
     public static String formatPrice(int price) {
         return String.format("%,d", price);
-    }
-
-    public static int getCurrTime() {
-
-        SimpleDateFormat df = new SimpleDateFormat("HHmm");
-        df.setTimeZone(TimeZone.getTimeZone("GMT+4:30"));
-        Date date = new Date();
-        return Integer.parseInt(df.format(date));
     }
 
     public static long getTimestamp(String date) {
@@ -901,18 +785,6 @@ public class Utility {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
         try {
             return formatter.parse(date).getTime();
-        } catch (ParseException e) {
-            printException(e);
-        }
-
-        return -1;
-    }
-
-    public static long getTimestamp(String date, String time) {
-
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        try {
-            return formatter.parse(date + " " + time).getTime();
         } catch (ParseException e) {
             printException(e);
         }
@@ -1355,6 +1227,7 @@ public class Utility {
         simpleFillJSONWithUserCommonInfo(jsonObject1, user);
         jsonObject.put("student", jsonObject1);
     }
+
     public static JSONObject fillJSONWithUser(Document user) {
         //todo: customize with common user info
         JSONObject jsonObject1 = new JSONObject()
@@ -1616,7 +1489,7 @@ public class Utility {
         return offDoc;
     }
 
-    private static Document doCreateNotif(Document wantedUser, String studentName, String mode) {
+    private static Document doCreateNotif(Document wantedUser, String textMessage, String mode) {
         String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
         long curr = System.currentTimeMillis();
 
@@ -1625,71 +1498,71 @@ public class Utility {
 
         switch (mode) {
             case "agentJoin":
-                title = "درخواست دعوت از نمایندگی " + studentName;
-                msg += "نمایندگی " + studentName + " از شما دعوت کرده است تا زیرمجموعه ایشان باشید. تیکتی برای بررسی این موضوع برای شما ارسال شده است و می توانید از طریق لینک درون آن تیکت این درخواست را قبول کنید.";
+                title = "درخواست دعوت از نمایندگی " + textMessage;
+                msg += "نمایندگی " + textMessage + " از شما دعوت کرده است تا زیرمجموعه ایشان باشید. تیکتی برای بررسی این موضوع برای شما ارسال شده است و می توانید از طریق لینک درون آن تیکت این درخواست را قبول کنید.";
                 break;
             case "schoolAcceptAgentInvite":
                 title = "قبول شدن درخواست دعوت";
-                msg += studentName + " درخواست اضافه شدن به عنوان زیرمجموعه نمایندگی شما را قبول کرده است و از این پس زیرمجموعه شما می باشد";
+                msg += textMessage + " درخواست اضافه شدن به عنوان زیرمجموعه نمایندگی شما را قبول کرده است و از این پس زیرمجموعه شما می باشد";
                 break;
             case "schoolAcceptAgentInviteButPending":
                 title = "قبول شدن درخواست دعوت";
-                msg += studentName + " درخواست اضافه شدن به عنوان زیرمجموعه نمایندگی شما را قبول کرده است و پس از تایید ادمین، این مدرسه به عنوان زیرمجموعه شما خواهد بود";
+                msg += textMessage + " درخواست اضافه شدن به عنوان زیرمجموعه نمایندگی شما را قبول کرده است و پس از تایید ادمین، این مدرسه به عنوان زیرمجموعه شما خواهد بود";
                 break;
             case "finalize":
                 title = "پرداخت و نهایی سازی مشاور توسط دانش آموز";
-                msg += "هزینه یک ماه مشاوره توسط " + studentName + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
+                msg += "هزینه یک ماه مشاوره توسط " + textMessage + " پرداخت شد." + "<br/>" + "اکنون می\u200Cتوانید طبق برنامه\u200Cای که در بسته\u200Cهای مشاوره به ایشان اطلاع\u200Cرسانی شده، برنامه\u200Cی خود را آغاز کنید.";
                 break;
             case "finalizeTeach":
-                title = "پرداخت کلاس " + studentName + " انجام شد.";
-                msg += "پرداخت هزینۀ کلاس در زمان " + getSolarDate(System.currentTimeMillis()) + " توسط " + studentName + " انجام شده." + "<br/>" + "لطفاً در روز انتخاب شده، لینک کلاس را " + "<a href='" + SERVER + "" + "'>از اینجا</a>" + " بسازید.";
+                title = "پرداخت کلاس " + textMessage + " انجام شد.";
+                msg += "پرداخت هزینۀ کلاس در زمان " + getSolarDate(System.currentTimeMillis()) + " توسط " + textMessage + " انجام شده." + "<br/>" + "لطفاً در روز انتخاب شده، لینک کلاس را " + "<a href='" + SERVER + "" + "'>از اینجا</a>" + " بسازید.";
                 break;
             case "acceptTeach":
-                title = "درخواست کلاس با استاد " + studentName + " تایید شد";
-                msg += "درخواست کلاس شما توسط استاد " + studentName + " تایید شد." + "با دنبال کردن لینک زیر، هزینۀ کلاس را پرداخت کنید:" + "<br/><br/>" + "<a href='" + SERVER + "myScheduleRequests'>" + "لینک پرداخت" + "</a>";
+                title = "درخواست کلاس با استاد " + textMessage + " تایید شد";
+                msg += "درخواست کلاس شما توسط استاد " + textMessage + " تایید شد." + "با دنبال کردن لینک زیر، هزینۀ کلاس را پرداخت کنید:" + "<br/><br/>" + "<a href='" + SERVER + "myScheduleRequests'>" + "لینک پرداخت" + "</a>";
                 break;
             case "rejectTeach":
-                title = "درخواست کلاس با استاد " + studentName + " رد شد";
-                msg += "استاد " + studentName + " درخواست برگزاری کلاس شما را تأیید نکرد. برای این زمان می\u200Cتوانی کلاس\u200Cهای دیگر اساتید را بررسی کنی یا زمان دیگری را برای برگزاری کلاس انتخاب کنی." + "<br/>" + "همچنین از این لینک (ارسال پیغام به پشتیبانی) می\u200Cتوانی دلیل رد درخواست کلاس را پیگیری کنی." + "<br/><br/>" + "<a href='" + SERVER + "ticket'>" + "درخواست پشتیبانی" + "</a>";
+                title = "درخواست کلاس با استاد " + textMessage + " رد شد";
+                msg += "استاد " + textMessage + " درخواست برگزاری کلاس شما را تأیید نکرد. برای این زمان می\u200Cتوانی کلاس\u200Cهای دیگر اساتید را بررسی کنی یا زمان دیگری را برای برگزاری کلاس انتخاب کنی." + "<br/>" + "همچنین از این لینک (ارسال پیغام به پشتیبانی) می\u200Cتوانی دلیل رد درخواست کلاس را پیگیری کنی." + "<br/><br/>" + "<a href='" + SERVER + "ticket'>" + "درخواست پشتیبانی" + "</a>";
                 break;
             case "teachMinCap":
-                String[] tmp2 = studentName.split("__");
+                String[] tmp2 = textMessage.split("__");
                 title = "کلاس شما با استاد " + tmp2[0] + " به حد نصاب رسید.";
                 msg += "کلاس انتخابی شما با استاد " + tmp2[0] + " در زمان " + tmp2[1] + " به حد نصاب رسید." + "<br/>" + "برای پرداخت هزینۀ کامل از لینک زیر اقدام کنید:" + "<br/>" + "<a href='" + tmp2[2] + "'>لینک پرداخت</a>";
                 break;
             case "newTeachRequest":
-                title = "درخواست کلاس توسط " + studentName;
-                String[] tmp = studentName.split("__");
+                title = "درخواست کلاس توسط " + textMessage;
+                String[] tmp = textMessage.split("__");
                 msg += "دانش آموز " + tmp[1] + " برای کلاس " + tmp[0] + " درخواست داده است." + "<br/>" + "از " + "<a href='" + SERVER + "myTeachRequests" + "'>این لینک</a>" + " می\u200Cتوانید درخواست را تأیید کنید.";
                 break;
             case "cancelRequest":
-                String[] splited = studentName.split("__");
+                String[] splited = textMessage.split("__");
                 title = "کلاس " + splited[0] + " لغو شد!";
                 msg += "دانش آموز " + splited[1] + " از درخواست کلاس منصرف شد. زمان شما در گچ\u200Cسفید آزاد شده و دانش\u200Cآموزان دیگر می\u200Cتوانند آن را انتخاب کنند.";
                 break;
             case "request":
                 title = "درخواست مشاوره";
-                msg += "دانش آموز " + studentName + " از شما درخواست کرده تا یک ماه مشاور ایشان باشید." + "<br/>" + "از پیشخوان بخش مشاوره سوابق ایشان را بررسی کرده و در صورت موافقت، تایید کنید." + "<br/>" + "شاد باشید";
+                msg += "دانش آموز " + textMessage + " از شما درخواست کرده تا یک ماه مشاور ایشان باشید." + "<br/>" + "از پیشخوان بخش مشاوره سوابق ایشان را بررسی کرده و در صورت موافقت، تایید کنید." + "<br/>" + "شاد باشید";
                 break;
             case "acceptRequest":
                 title = "تایید دانش آموز توسط مشاور";
-                msg += "درخواست شما برای مشاوره، توسط " + studentName + " پذیرفته شد." + "<br/>" + "با نهایی کردن پرداخت، فرایند مشاوره آغاز می\u200Cشود.";
+                msg += "درخواست شما برای مشاوره، توسط " + textMessage + " پذیرفته شد." + "<br/>" + "با نهایی کردن پرداخت، فرایند مشاوره آغاز می\u200Cشود.";
                 break;
             case "rejectRequest":
                 title = "رد دانش آموز توسط مشاور";
-                msg += "درخواست شما برای مشاوره، توسط " + studentName + " رد شد.";
+                msg += "درخواست شما برای مشاوره، توسط " + textMessage + " رد شد.";
                 break;
             case "cancelAdvisorRequest":
                 title = "انصراف درخواست مشاوره توسط دانش آموز";
-                msg += "درخواست مشاوره، توسط " + studentName + " لغو شد.";
+                msg += "درخواست مشاوره، توسط " + textMessage + " لغو شد.";
                 break;
             case "createRoom":
                 title = "ایجاد اتاق جلسه";
-                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                msg += "یک جلسه\u200Cی مشاوره آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + textMessage + "'>" + textMessage + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
                 break;
             case "createTeachRoom":
                 title = "ایجاد اتاق جلسه";
-                msg += "یک جلسه\u200Cی تدریس آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + studentName + "'>" + studentName + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
+                msg += "یک جلسه\u200Cی تدریس آنلاین در اسکای\u200Cروم ساخته شد." + "<br/>" + "نام کاربری و رمزعبور شما در صورتی که از قبل اکانتی نداشته باشید، کد ملی شما خواهد بود." + "<br/>" + "لینک: " + "<a href='" + textMessage + "'>" + textMessage + "</a>" + "<br/><br/>" + "سؤالات خود را قبل از جلسه روی کاغذ بنویس تا بهترین استفاده را از این زمان داشته باشی." + "<br/>" + "خوش بگذره";
                 break;
             case "advisorQuiz":
                 title = "تعریف آزمون توسط مشاور";
@@ -1700,34 +1573,34 @@ public class Utility {
                 msg += "یک آزمون ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> آزمون ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
                 break;
             case "nextLevel":
-                title = "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به " + studentName + " رسید.";
+                title = "باریکلا، تلاش خوبی کردی و حالا سطح تو در گچ\u200Cسفید به " + textMessage + " رسید.";
                 msg += "جایزه\u200Cهای این سطح رو از " + "<a href='https://www.irysc.com/%d8%b1%d8%a7%d9%87%d9%86%d9%85%d8%a7%db%8c-%da%af%da%86-%d8%b3%d9%81%db%8c%d8%af-%d8%a2%db%8c%d8%b1%db%8c%d8%b3%da%a9/%d8%a7%d9%85%d8%aa%db%8c%d8%a7%d8%b2-%d9%85%d8%af%d8%a7%d9%84-%da%af%da%86-%d8%b3%d9%81%db%8c%d8%af/'>اینجا</a> ببین.";
                 break;
             case "badge":
-                String[] split = studentName.split("__");
+                String[] split = textMessage.split("__");
                 title = "خیلی کِیف کردیم که مدال " + split[0] + " رو تونستی بگیری.";
                 msg += "خوشحال\u200Cتر می\u200Cشیم که بقیۀ مدال\u200Cهای اینجا و زندگی رو هم درو کنی." + "<br/>" + "برای اینکه تو هم خوشحال بشی، " + split[1] + " ایکس\u200Cپول به حسابت اضافه شد :)";
                 break;
             case "birthday":
                 title = "تولدت مبارک!";
-                msg += "امیدواریم سال\u200Cها چرخت به خوبی و بدون لنگ زدن بچرخه و هر سال برات پر از خاطرات خوب باشه. برای شیرین\u200Cتر شدن شروع امسالت، " + studentName + "امتیاز از آیریسک هدیه گرفتی!" + "<br/><br/>" + "حالش رو ببر";
+                msg += "امیدواریم سال\u200Cها چرخت به خوبی و بدون لنگ زدن بچرخه و هر سال برات پر از خاطرات خوب باشه. برای شیرین\u200Cتر شدن شروع امسالت، " + textMessage + "امتیاز از آیریسک هدیه گرفتی!" + "<br/><br/>" + "حالش رو ببر";
                 break;
             case "hw":
                 title = "تعریف تمرین توسط مدرسه";
                 msg += "یک تمرین ویژه توسط مدرسه برای تو ساخته شده است." + "<br/>" + "این آزمون در بخش مدرسه من -> تمرین ها در دسترس است." + "<br/>" + "خودت را محک بزن!";
                 break;
             case "adviceWillExpireTomorrow":
-                String[] tmpSplited3 = studentName.split("__");
+                String[] tmpSplited3 = textMessage.split("__");
                 title = "یک روز از زمان مشاورهٔ یک ماهه شما با استاد " + tmpSplited3[0] + "، باقی\u200Cمانده است.";
                 msg += "از " + "<a href=" + tmpSplited3[1] + "> این لینک </a>" + "می\u200Cتونی بسته\u200Cهای مشاوره رو ببینی و برای ماه\u200Cهای بعد تمدید کنی. " + "<br/><br/>" + " راستی ارسال نظر و امتیاز برای مشاور فراموش نشه! بچه\u200Cهای دیگه با نظر تو می\u200Cتونن بهترین مشاورها رو انتخاب کنن.";
                 break;
             case "adviceWillExpireSoon":
-                String[] tmpSplited2 = studentName.split("__");
+                String[] tmpSplited2 = textMessage.split("__");
                 title = "سه روز از زمان مشاورهٔ یک ماهه شما با استاد " + tmpSplited2[0] + "، باقی\u200Cمانده است.";
                 msg += "از " + "<a href=" + tmpSplited2[1] + "> این لینک </a>" + "می\u200Cتونی بسته\u200Cهای مشاوره رو ببینی و برای ماه\u200Cهای بعد تمدید کنی. " + "<br/><br/>" + " راستی ارسال نظر و امتیاز برای مشاور فراموش نشه! بچه\u200Cهای دیگه با نظر تو می\u200Cتونن بهترین مشاورها رو انتخاب کنن.";
                 break;
             case "adviceWillExpireNextWeek":
-                String[] tmpSplited = studentName.split("__");
+                String[] tmpSplited = textMessage.split("__");
                 title = "۷ روز از زمان مشاورهٔ یک ماهه شما با استاد " + tmpSplited[0] + "، باقی\u200Cمانده است.";
                 msg += "از " + "<a href=" + tmpSplited[1] + "> این لینک </a>" + "می\u200Cتونی بسته\u200Cهای مشاوره رو ببینی و برای ماه\u200Cهای بعد تمدید کنی. " + "<br/><br/>" + " راستی ارسال نظر و امتیاز برای مشاور فراموش نشه! بچه\u200Cهای دیگه با نظر تو می\u200Cتونن بهترین مشاورها رو انتخاب کنن.";
                 break;
@@ -1737,7 +1610,15 @@ public class Utility {
                     title = "به روزرسانی برنامه توسط مشاور";
                 else
                     title = "به روزرسانی برنامه توسط دانش\u200Cآموز";
-                msg += "برنامه هفتگی توسط " + studentName + " به\u200Cروزرسانی شد." + "<br/>" + "شاد باشید :)";
+                msg += "برنامه هفتگی توسط " + textMessage + " به\u200Cروزرسانی شد." + "<br/>" + "شاد باشید :)";
+                break;
+            case "acceptComment":
+                title = "تایید نظر";
+                msg += textMessage + " مورد تایید قرار گرفت و امتیاز آن برای شما لحاظ گردید";
+                break;
+            case "rejectComment":
+                title = "رد نظر";
+                msg += textMessage + " رد شد";
                 break;
             default:
                 title = "";
@@ -1768,7 +1649,7 @@ public class Utility {
         return notif;
     }
 
-    public static void createNotifAndSendSMS(Document wantedUser, String studentName, String mode) {
+    public static void createNotifAndSendSMS(Document wantedUser, String textMessage, String mode) {
         String wantedUserName = wantedUser.getString("first_name") + " " + wantedUser.getString("last_name");
 
         if (wantedUser.containsKey("phone"))
@@ -1776,10 +1657,10 @@ public class Utility {
                     new PairValue("name", wantedUserName)
             );
 
-        notifRepository.insertOne(doCreateNotif(wantedUser, studentName, mode));
+        notifRepository.insertOne(doCreateNotif(wantedUser, textMessage, mode));
     }
 
-    public static void createJustNotif(Document wantedUser, String studentName, String mode) {
-        notifRepository.insertOne(doCreateNotif(wantedUser, studentName, mode));
+    public static void createJustNotif(Document wantedUser, String textMessage, String mode) {
+        notifRepository.insertOne(doCreateNotif(wantedUser, textMessage, mode));
     }
 }

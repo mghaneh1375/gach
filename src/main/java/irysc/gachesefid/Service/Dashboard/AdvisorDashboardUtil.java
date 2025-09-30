@@ -47,18 +47,6 @@ public class AdvisorDashboardUtil {
         return comments;
     }
 
-    public List<NotifDigestDto> getMyLastNotifs(Document user) {
-        return notifRepository.notifs(
-                user.getList("events", Document.class)
-                        .stream()
-                        .filter(event -> !event.getBoolean("seen"))
-                        .sorted(Collections.reverseOrder(Comparator.comparing(o -> o.getLong("created_at"))))
-                        .limit(3)
-                        .map(event -> event.getObjectId("notif_id"))
-                        .collect(Collectors.toList())
-        );
-    }
-
     public List<TicketDigestDto> getMyLastTickets(ObjectId userId) {
         ArrayList<Bson> constraints = new ArrayList<>() {
             {

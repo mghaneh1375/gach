@@ -27,7 +27,10 @@ public class TicketDigestDto {
     private String description;
 
     public static TicketDigestDto convertDocToDto(Document doc) {
-        Document student = doc.get("student", Document.class);
+        Document student = doc.containsKey("student")
+                ? doc.get("student", Document.class)
+                : null;
+
         return TicketDigestDto
                 .builder()
                 .id(doc.getObjectId("_id"))
@@ -41,7 +44,9 @@ public class TicketDigestDto {
                 )
                 .title(doc.getString("title"))
                 .sender(
-                        UserDigest
+                        student == null
+                                ? null
+                                : UserDigest
                                 .builder()
                                 .id(student.getObjectId("_id"))
                                 .firstname(student.getString("first_name"))

@@ -1,17 +1,18 @@
 package irysc.gachesefid.Dto.Dashboard.Student;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import irysc.gachesefid.Dto.Dashboard.Advisor.MeetingDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.ScheduleDigest;
-import lombok.Builder;
+import irysc.gachesefid.Dto.Dashboard.PublicDashboardStatsDto;
+import irysc.gachesefid.Dto.QuizDigestDto;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 import org.json.JSONObject;
 
 import java.util.List;
 
 @Data
-@Builder
-public class DashboardStatsDto {
+@SuperBuilder
+public class DashboardStatsDto extends PublicDashboardStatsDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Object coin;
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -53,7 +54,7 @@ public class DashboardStatsDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<MyAdvisorDigestDto> myAdvisors;
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<MeetingDto> currMeetings;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<ScheduleDigest> currentSchedules;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<QuizDigestDto> futureQuizzes;
 }

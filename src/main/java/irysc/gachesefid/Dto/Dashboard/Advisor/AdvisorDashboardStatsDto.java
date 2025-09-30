@@ -1,31 +1,39 @@
 package irysc.gachesefid.Dto.Dashboard.Advisor;
 
-import irysc.gachesefid.Dto.Dashboard.NotifDigestDto;
-import irysc.gachesefid.Dto.Dashboard.TicketDigestDto;
-import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import irysc.gachesefid.Dto.Dashboard.PublicDashboardStatsDto;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
 @Data
-@Builder
-public class AdvisorDashboardStatsDto {
+@SuperBuilder
+public class AdvisorDashboardStatsDto extends PublicDashboardStatsDto {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer studentsCountForAdvice;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer studentsCountForTeach;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer pendingExamsForPay;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer lastMonthCreatedExams;
-    private Integer lastMonthMeetings;
-    private Integer lastMonthKarbargs;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer lastMonthSettled;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer pendingSettled;
-    private List<MeetingDto> currMeetings;
-    private List<TicketDigestDto> unSeenTickets;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private SettledRequests lastSettledRequest;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<AdviceRequestDto> adviceRequests;
-    private List<NotifDigestDto> lastNotifs;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<CommentsAboutMeDigest> lastComments;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<ScheduleDigest> inProgressSchedules;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<ScheduleDigest> filledSchedules;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<TeachRequestDigestDto> teachRequests;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<MyCurrStudent> myCurrStudents;
 }

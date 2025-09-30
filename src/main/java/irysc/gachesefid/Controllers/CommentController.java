@@ -8,6 +8,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Utility.StaticValues;
+import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidatorImp;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -40,7 +41,6 @@ public class CommentController {
             ObjectId userId, ObjectId refId,
             String section, String comment
     ) {
-
         if (comment.length() > 1000)
             return generateErr("متن نظر باید حداکثر 1000 کاراکتر باشد");
 
@@ -128,6 +128,28 @@ public class CommentController {
         comment.put("consider_at", System.currentTimeMillis());
         commentRepository.replaceOneWithoutClearCache(commentId, comment);
 
+        String sectionFa;
+        switch (comment.getString("section")) {
+            case "ADVISOR":
+                sectionFa = "مشاوره";
+                break;
+            case "CONTENT":
+                sectionFa = "بسته های آموزشی";
+                break;
+            case "TEACH":
+                sectionFa = "تدریس";
+                break;
+            default:
+                sectionFa = "عمومی";
+                break;
+        }
+
+        Document user = userRepository.findById(comment.getObjectId("user_id"));
+        createJustNotif(user,
+                "نظر شما در بخش " + sectionFa + " در تاریخ " + Utility.getSolarDate(comment.getLong("created_at")).split("-")[0].trim(),
+                status ? "acceptComment" : "rejectComment"
+        );
+
         if (status) {
             new Thread(() -> {
                 BadgeController.checkForUpgrade(comment.getObjectId("user_id"), Action.COMMENT);
@@ -141,7 +163,6 @@ public class CommentController {
     }
 
     public static String toggleTopStatus(ObjectId commentId) {
-
         Document comment = commentRepository.findById(commentId);
         if (comment == null)
             return JSON_NOT_VALID_ID;
@@ -156,6 +177,8 @@ public class CommentController {
             comment.remove("is_top");
             commentRepository.updateOne(commentId, unset("is_top"));
         }
+
+        //todo: notif student about it
 
         return JSON_OK;
     }
@@ -605,7 +628,7 @@ public class CommentController {
                 );
 
         List<Document> comments = new ArrayList<>();
-        for(Document doc : docs)
+        for (Document doc : docs)
             comments.add(doc);
 
         List<Document> contents = findJustContentsRef(comments);

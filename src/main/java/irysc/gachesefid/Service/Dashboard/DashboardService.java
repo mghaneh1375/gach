@@ -38,6 +38,9 @@ public class DashboardService {
     @Autowired
     private AdvisorDashboardUtil advisorDashboardUtil;
 
+    @Autowired
+    private DashboardUtil dashboardUtil;
+
     public ResponseEntity<ResponseDto<DashboardStatsDto>> siteStats(Document user) {
         Document generalCache = Repository.isInCache("general", "first");
 
@@ -283,7 +286,7 @@ public class DashboardService {
 
         if (advisorDashboardConfig.getShowLastNotifs()) {
             dashboardStatsDto.setLastNotifs(
-                    advisorDashboardUtil.getMyLastNotifs(user)
+                    dashboardUtil.getMyLastNotifs(user)
             );
         }
 

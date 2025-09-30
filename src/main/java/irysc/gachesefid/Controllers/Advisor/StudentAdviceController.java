@@ -163,7 +163,6 @@ public class StudentAdviceController {
     }
 
     public static String cancelRequest(ObjectId userId, String username, ObjectId reqId) {
-
         Document doc = advisorRequestsRepository.findOneAndDelete(
                 and(
                         eq("_id", reqId),
