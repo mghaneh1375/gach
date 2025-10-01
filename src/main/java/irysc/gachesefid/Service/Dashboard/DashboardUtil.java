@@ -4,7 +4,6 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Dto.Dashboard.NotifDigestDto;
 import irysc.gachesefid.Dto.Dashboard.TicketDigestDto;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +14,10 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Aggregates.project;
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.notifRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.ticketRepository;
+import static irysc.gachesefid.Utility.StaticValues.ONE_WEEK_MIL_SEC;
 import static irysc.gachesefid.Utility.StaticValues.TICKET_PROJECTION;
 
 @Service
@@ -38,15 +36,13 @@ public class DashboardUtil {
     }
 
     public List<TicketDigestDto> getMyLastTickets(ObjectId userId) {
-        ArrayList<Bson> constraints = new ArrayList<>() {
-            {
-                add(eq("user_id", userId));
-            }
-        };
         List<Document> docs =
                 ticketRepository.findLimited(
-                        and(constraints),
-                        project(TICKET_PROJECTION),
+                        and(
+                                eq("user_id", userId),
+                                gt("created_at", System.currentTimeMillis() - ONE_WEEK_MIL_SEC)
+                        ),
+                        TICKET_PROJECTION,
                         Sorts.descending("send_date"), 0, 5
                 );
         List<TicketDigestDto> tickets = new ArrayList<>();

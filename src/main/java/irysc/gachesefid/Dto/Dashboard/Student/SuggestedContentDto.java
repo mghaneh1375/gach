@@ -35,16 +35,28 @@ public class SuggestedContentDto {
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = OffValueFilter.class)
     private Off off;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public class Off {
+    public static class Off {
         private String type;
         private Integer amount;
         @JsonIgnore
         private Long start;
         @JsonIgnore
         private Long expiration;
+
+        public Long getStart() {
+            return start;
+        }
+
+        public void setStart(Long start) {
+            this.start = start;
+        }
+
+        public Long getExpiration() {
+            return expiration;
+        }
+
+        public void setExpiration(Long expiration) {
+            this.expiration = expiration;
+        }
     }
 }

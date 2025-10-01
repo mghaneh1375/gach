@@ -23,6 +23,7 @@ public class AdviceRequestDto {
     private AdvicePlanDigest planDigest;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String status;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonSerialize(using = LongDateSerialization.class)
     private Long answerAt;
 }

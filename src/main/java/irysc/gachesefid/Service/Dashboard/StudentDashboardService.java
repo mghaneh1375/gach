@@ -158,7 +158,9 @@ public class StudentDashboardService {
         }
 
         if (studentDashboardConfig.getShowRequestsStatusForAdvice()) {
-            advisorRequestsRepository.myLastWeekRequests(user.getObjectId("_id"));
+            dashboardStatsDto.setAdviceRequests(
+                    advisorRequestsRepository.myLastWeekRequests(user.getObjectId("_id"))
+            );
         }
 
         if (studentDashboardConfig.getShowLastNotifs()) {

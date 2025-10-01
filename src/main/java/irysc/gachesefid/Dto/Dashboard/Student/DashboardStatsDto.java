@@ -1,6 +1,7 @@
 package irysc.gachesefid.Dto.Dashboard.Student;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.ScheduleDigest;
 import irysc.gachesefid.Dto.Dashboard.PublicDashboardStatsDto;
 import irysc.gachesefid.Dto.QuizDigestDto;
@@ -57,4 +58,6 @@ public class DashboardStatsDto extends PublicDashboardStatsDto {
     private List<ScheduleDigest> currentSchedules;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<QuizDigestDto> futureQuizzes;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<AdviceRequestDto> adviceRequests;
 }

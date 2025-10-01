@@ -163,10 +163,14 @@ public class AdvisorRequestsRepository extends Common {
                                             .append("created_at", 1)
                                             .append("user_id", 1)
                                             .append("price", 1)
+                                            .append("advisor_id", 1)
+                                            .append("answer_at", 1)
+                                            .append("status", 1)
                             ),
-                            lookup("user", "user_id", "_id", "userInfo"),
+                            lookup("user", "advisor_id", "_id", "userInfo"),
                             unwind("$userInfo"),
                             project(fields(
+                                    include("status"),
                                     computed("planDigest.price", "$price"),
                                     computed("planDigest.title", "$title"),
                                     computed("requestAt", "$created_at"),
