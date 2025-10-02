@@ -65,7 +65,7 @@ public class StaticValues {
     public final static int SKY_ROOT_SESSION_DURATION = 120;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = true;
+    public final static boolean DEV_MODE = false;
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";
