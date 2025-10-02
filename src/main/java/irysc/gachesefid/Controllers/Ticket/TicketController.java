@@ -88,9 +88,7 @@ public class TicketController {
                                      Boolean isForTeacher, Boolean startByAdmin,
                                      String section, String priority, boolean returnAdvisors,
                                      boolean isAdvisor) {
-
         ArrayList<Bson> constraints = new ArrayList<>();
-
         fillConstraintArr(false, studentIdFilter, idFilter,
                 searchInArchive, sendDate, false, answerDate,
                 sendDateEndLimit, answerDateEndLimit,

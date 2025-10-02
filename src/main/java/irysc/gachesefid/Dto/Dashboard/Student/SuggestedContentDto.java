@@ -1,8 +1,11 @@
 package irysc.gachesefid.Dto.Dashboard.Student;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
 import irysc.gachesefid.Dto.Serializer.ContentPicSerializer;
+import irysc.gachesefid.Dto.Serializer.LongDateSerialization;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,7 +34,7 @@ public class SuggestedContentDto {
     private Integer rate;
     private Integer buyersCount;
     @JsonSerialize(using = ContentPicSerializer.class)
-    private String pic;
+    private String img;
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = OffValueFilter.class)
     private Off off;
 
@@ -39,8 +42,10 @@ public class SuggestedContentDto {
         private String type;
         private Integer amount;
         @JsonIgnore
+        @JsonDeserialize(using = MongoNumberLongDeserializer.class)
         private Long start;
         @JsonIgnore
+        @JsonDeserialize(using = MongoNumberLongDeserializer.class)
         private Long expiration;
 
         public Long getStart() {
@@ -57,6 +62,22 @@ public class SuggestedContentDto {
 
         public void setExpiration(Long expiration) {
             this.expiration = expiration;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public Integer getAmount() {
+            return amount;
+        }
+
+        public void setAmount(Integer amount) {
+            this.amount = amount;
         }
     }
 }

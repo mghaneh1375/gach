@@ -49,6 +49,7 @@ public class ConfigDashboardService {
         advisorDashboardConfig.setShowIncomingRequestsForAdvice(configDto.getShowIncomingRequestsForAdvice());
         advisorDashboardConfig.setShowMeeting(configDto.getShowMeeting());
         advisorDashboardConfig.setShowMyCurrStudents(configDto.getShowMyCurrStudents());
+        advisorDashboardConfig.setShowMyFutureTeaches(configDto.getShowMyFutureTeaches());
 
         advisorDashboardConfig.setShowLastTickets(configDto.getShowLastTickets());
         advisorDashboardConfig.setShowLastNotifs(configDto.getShowLastNotifs());

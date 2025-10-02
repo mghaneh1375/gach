@@ -115,12 +115,12 @@ public class ContentRepository extends Common {
                                     computed("teachers", new Document("$split", Arrays.asList("$teacher", "__"))),
                                     include("price"),
                                     include("rate"),
-                                    computed("buyersCount", new Document("$size", "users")),
-                                    computed("pic", "$img"),
-                                    computed("off.type", "$off.off_type"),
-                                    computed("off.amount", "$off.off"),
-                                    computed("off.start", "$off.off_start"),
-                                    computed("off.expiration", "$off.off_expiration")
+                                    computed("buyersCount", "$buyersCount"),
+                                    computed("img", "$img"),
+                                    computed("off.type", "$off_type"),
+                                    computed("off.amount", "$off"),
+                                    computed("off.start", "$off_start"),
+                                    computed("off.expiration", "$off_expiration")
                             )
                     )
             );

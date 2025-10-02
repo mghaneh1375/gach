@@ -3,6 +3,7 @@ package irysc.gachesefid.DB;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
+import com.mongodb.client.model.Accumulators;
 import irysc.gachesefid.Dto.Dashboard.Advisor.ScheduleDigest;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
@@ -16,8 +17,7 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Projections.computed;
-import static com.mongodb.client.model.Projections.fields;
+import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Service.Advice.ScheduleUtils.getFormattedDate;
 import static irysc.gachesefid.Utility.StaticValues.ONE_WEEK_MIL_SEC;
@@ -53,7 +53,45 @@ public class ScheduleRepository extends Common {
             add(exists("ready_for_use", true));
             add(eq("ready_for_use", true));
         }};
-        return findSchedules(filters);
+        List<ScheduleDigest> schedules = new ArrayList<>();
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(List.of(
+                    match(and(filters)),
+                    project(
+                            new BasicDBObject("week_start_at", 1)
+                                    .append("advisors", 1)
+                    ),
+                    unwind("$advisors"),
+                    lookup("user", "advisors", "_id", "advisorInfo"),
+                    unwind("$advisorInfo"),
+                    group(
+                            "$_id",
+                            Accumulators.first("weekStartAt", "$week_start_at"),
+                            Accumulators.push("advisors", new Document("id", "$advisorInfo._id")
+                                    .append("firstname", "$advisorInfo.first_name")
+                                    .append("lastname", "$advisorInfo.last_name"))
+                    ),
+                    project(fields(
+                            include("weekStartAt", "advisors"),
+                            computed("id", "$_id")
+                    ))
+            )).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    schedules.add(
+                            objectMapper.readValue(document.toJson(), ScheduleDigest.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        }
+        catch (Exception ignore) {}
+
+        return schedules.stream().sorted(
+                Comparator.comparing(
+                        ScheduleDigest::getWeekStartAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
     }
 
     public List<ScheduleDigest> getDoneSchedulesDigest(ObjectId advisorId) {

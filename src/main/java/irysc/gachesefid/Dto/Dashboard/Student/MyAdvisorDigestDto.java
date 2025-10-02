@@ -1,6 +1,8 @@
 package irysc.gachesefid.Dto.Dashboard.Student;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Serializer.AgeSerializer;
 import irysc.gachesefid.Dto.Serializer.JustDateSerialization;
 import irysc.gachesefid.Dto.UserDigest;
 import lombok.AllArgsConstructor;
@@ -18,5 +20,9 @@ public class MyAdvisorDigestDto {
     private Long startAt;
     @JsonSerialize(using = JustDateSerialization.class)
     private Long endAt;
-    private Integer rate;
+    private Double rate;
+    private Integer stdCount;
+    @JsonSerialize(using = AgeSerializer.class)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Long age;
 }

@@ -75,6 +75,11 @@ public class UserDigest {
                         ? doc.getList("branches", Document.class).stream().map(document -> document.getString("name")).collect(Collectors.toList())
                         : null
                 )
+                .city(
+                        doc.containsKey("city")
+                                ? doc.get("city", Document.class).getString("name")
+                                : null
+                )
                 .build();
     }
 

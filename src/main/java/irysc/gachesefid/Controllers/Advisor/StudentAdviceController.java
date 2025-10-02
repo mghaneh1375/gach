@@ -550,7 +550,6 @@ public class StudentAdviceController {
                     eq("user_id", userId),
                     eq("week_start_at", weekStartAt)
             ), null, Sorts.descending("week_start_at_int"));
-
         }
 
         if (schedule == null) {
@@ -569,9 +568,7 @@ public class StudentAdviceController {
                 .put("days", convertScheduleToJSON(schedule, advisorId));
 
         if (schedule.containsKey("advisors_desc")) {
-
             if (advisorId != null) {
-
                 Document advisorDesc = searchInDocumentsKeyVal(
                         schedule.getList("advisors_desc", Document.class),
                         "advisor_id", advisorId
@@ -579,34 +576,34 @@ public class StudentAdviceController {
 
                 if (advisorDesc != null)
                     jsonObject.put("advisorDesc", advisorDesc.getString("description"));
-
             } else {
-
-                JSONArray descs = new JSONArray();
-
+                JSONArray descriptions = new JSONArray();
                 for (Document advisorDesc : schedule.getList("advisors_desc", Document.class)) {
-
                     Document advisor = userRepository.findById(advisorDesc.getObjectId("advisor_id"));
                     if (advisor == null)
                         continue;
 
-                    descs.put(
+                    descriptions.put(
                             new JSONObject()
                                     .put("desc", advisorDesc.getString("description"))
                                     .put("advisor", advisor.getString("first_name") + " " + advisor.getString("last_name"))
                     );
                 }
 
-                jsonObject.put("advisorsDesc", descs);
+                jsonObject.put("advisorsDesc", descriptions);
             }
         }
+        Document user = userRepository.findById(schedule.getObjectId("user_id"));
 
-
-        return generateSuccessMsg("data", jsonObject);
+        return generateSuccessMsg("data",
+                jsonObject
+                        .put("weekStartAt", schedule.get("week_start_at"))
+                        .put("studentName", user.getString("first_name") + " " + user.getString("last_name"))
+                        .put("studentId", schedule.getObjectId("user_id").toString())
+        );
     }
 
     public static String getMyCurrentRoom(ObjectId studentId) {
-
         long curr = System.currentTimeMillis();
         long limitTime = curr - ONE_HOUR_MIL_SEC * 5;
 

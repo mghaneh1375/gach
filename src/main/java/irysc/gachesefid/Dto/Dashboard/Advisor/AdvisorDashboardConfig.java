@@ -38,5 +38,7 @@ public class AdvisorDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showMyCurrStudents = true;
-
+    @Builder.Default
+    @NotNull
+    private Boolean showMyFutureTeaches = true;
 }

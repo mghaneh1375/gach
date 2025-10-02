@@ -1290,7 +1290,7 @@ public class UserController {
             return generateErr("کد ملی وارد شده معتبر نمی باشد.");
 
         if (jsonObject.has("birthDay")) {
-            long age = (System.currentTimeMillis() - jsonObject.getLong("birthDay")) / (ONE_DAY_MIL_SEC * 365);
+            long age = (System.currentTimeMillis() - jsonObject.getLong("birthDay")) / ONE_YEAR_MIL_SEC;
             if (age <= 5)
                 return generateErr("تاریخ تولد وارد شده معتبر نمی باشد");
         }
@@ -1980,7 +1980,7 @@ public class UserController {
         }
 
         if (user.containsKey("birth_day")) {
-            int age = (int) ((curr - user.getLong("birth_day")) / (ONE_DAY_MIL_SEC * 365));
+            int age = (int) ((curr - user.getLong("birth_day")) / ONE_YEAR_MIL_SEC);
             jsonObject.put("age", age);
         }
         Set<String> tags = new HashSet<>();

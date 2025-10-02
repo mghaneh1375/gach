@@ -503,7 +503,6 @@ public class AdvisorAPIRoutes extends Router {
                                       @PathVariable(required = false) Integer scheduleFor,
                                       @PathVariable(required = false) String id
     ) throws UnAuthException {
-
         if (
                 ((userId == null) != (scheduleFor == null)) ||
                         ((userId == null) == (id == null))

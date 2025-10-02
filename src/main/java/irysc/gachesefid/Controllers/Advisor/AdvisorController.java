@@ -828,12 +828,12 @@ public class AdvisorController {
             ));
 
         if (minAge != null) {
-            long age = System.currentTimeMillis() - minAge * ONE_DAY_MIL_SEC * 365;
+            long age = System.currentTimeMillis() - minAge * ONE_YEAR_MIL_SEC;
             filters.add(lte("birth_day", age));
         }
 
         if (maxAge != null) {
-            long age = System.currentTimeMillis() - maxAge * ONE_DAY_MIL_SEC * 365;
+            long age = System.currentTimeMillis() - maxAge * ONE_YEAR_MIL_SEC;
             filters.add(gte("birth_day", age));
         }
 
@@ -858,9 +858,7 @@ public class AdvisorController {
         boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
                 tag == null && maxPrice == null && minPrice == null && minRate == null && maxRate == null;
         int minAgeFilter = -1, maxAgeFilter = -1, minPriceFilter = defaultPrice, maxPriceFilter = defaultPrice;
-
         long curr = System.currentTimeMillis();
-        long one_year_ms = ONE_DAY_MIL_SEC * 365;
 
         for (Document advisor : advisors) {
             List<Document> plans = advisorFinanceOfferRepository.find(
@@ -899,7 +897,7 @@ public class AdvisorController {
             filteredAdvisors.add(advisor);
             if (isAllFiltersOff) {
                 if (advisor.containsKey("birth_day")) {
-                    int age = (int) ((curr - advisor.getLong("birth_day")) / one_year_ms);
+                    int age = (int) ((curr - advisor.getLong("birth_day")) / ONE_YEAR_MIL_SEC);
                     if (minAgeFilter == -1 || minAgeFilter > age)
                         minAgeFilter = age;
 
@@ -928,7 +926,7 @@ public class AdvisorController {
             jsonObject.put("advisorPriority", advisor.getOrDefault("advisor_priority", 1000));
 
             if (advisor.containsKey("birth_day"))
-                jsonObject.put("age", (int) ((curr - advisor.getLong("birth_day")) / one_year_ms));
+                jsonObject.put("age", (int) ((curr - advisor.getLong("birth_day")) / ONE_YEAR_MIL_SEC));
 
             docs.add(jsonObject);
         }

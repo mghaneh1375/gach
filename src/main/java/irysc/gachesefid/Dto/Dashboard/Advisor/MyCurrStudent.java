@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class MyCurrStudent {
-    private UserDigest userDigest;
+    private UserDigest student;
     @JsonSerialize(using = JustDateSerialization.class)
     private Long startAt;
     @JsonSerialize(using = JustDateSerialization.class)

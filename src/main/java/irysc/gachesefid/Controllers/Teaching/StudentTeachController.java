@@ -651,12 +651,12 @@ public class StudentTeachController {
             ));
 
         if (minAge != null) {
-            long age = System.currentTimeMillis() - minAge * ONE_DAY_MIL_SEC * 365;
+            long age = System.currentTimeMillis() - minAge * ONE_YEAR_MIL_SEC;
             filters.add(lte("birth_day", age));
         }
 
         if (maxAge != null) {
-            long age = System.currentTimeMillis() - maxAge * ONE_DAY_MIL_SEC * 365;
+            long age = System.currentTimeMillis() - maxAge * ONE_YEAR_MIL_SEC;
             filters.add(gte("birth_day", age));
         }
 
@@ -679,9 +679,7 @@ public class StudentTeachController {
                 and(filters),
                 TEACH_PUBLIC_DIGEST
         );
-
         List<JSONObject> docs = new ArrayList<>();
-        long oneYearMs = ONE_DAY_MIL_SEC * 365;
 
         boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
                 tag == null && minRate == null && maxRate == null;
@@ -691,14 +689,13 @@ public class StudentTeachController {
         HashMap<ObjectId, Document> grades = new HashMap<>();
 
         for (Document teacher : teachers) {
-
             JSONObject jsonObject = convertTeacherToJSONDigest(
                     null, teacher, branches, grades
             );
 
             int age = -1;
             if (teacher.containsKey("birth_day")) {
-                age = (int) ((curr - teacher.getLong("birth_day")) / oneYearMs);
+                age = (int) ((curr - teacher.getLong("birth_day")) / ONE_YEAR_MIL_SEC);
                 jsonObject.put("age", age);
             }
 

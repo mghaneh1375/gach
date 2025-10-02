@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.StaticValues.ONE_MONTH_MIL_SEC;
 import static irysc.gachesefid.Utility.StaticValues.STUDENT_PUBLIC_INFO;
 import static irysc.gachesefid.Utility.Utility.getPast;
 
@@ -49,7 +50,7 @@ public class DashboardService {
         AdminDashboardConfig adminDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
         DashboardStatsDto dashboardStatsDto;
 
-        if(adminDashboardConfig.getShowDashboard()) {
+        if (adminDashboardConfig.getShowDashboard()) {
             dashboardStatsDto = DashboardStatsDto
                     .builder()
                     .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
@@ -65,8 +66,7 @@ public class DashboardService {
                                     (Integer) generalCache.getOrDefault("openQuizzesCount", 0)
                     )
                     .build();
-        }
-        else
+        } else
             dashboardStatsDto = DashboardStatsDto.builder().build();
 
         return new ResponseEntity<>(
@@ -322,15 +322,24 @@ public class DashboardService {
             );
 
             List<MyCurrStudent> myCurrStudents = new ArrayList<>();
-
             for (Document student : studentsDoc) {
-                MyCurrStudent
-                        .builder()
-                        .userDigest(
-                                UserDigest.buildFromDoc(student)
-                        )
-                        .build();
+                Document doc = students
+                        .stream()
+                        .filter(document -> document.getObjectId("_id").equals(student.getObjectId("_id")))
+                        .findFirst()
+                        .get();
+                myCurrStudents.add(
+                        MyCurrStudent
+                                .builder()
+                                .student(
+                                        UserDigest.buildFromDoc(student)
+                                )
+                                .startAt(doc.getLong("created_at"))
+                                .endAt(doc.getLong("created_at") + ONE_MONTH_MIL_SEC)
+                                .build()
+                );
             }
+            dashboardStatsDto.setMyCurrStudents(myCurrStudents);
         }
 
         return new ResponseEntity<>(

@@ -33,6 +33,7 @@ public class StudentTicketAPIRouter extends Router {
                                 @RequestParam(value = "sendDateSolarEndLimit", required = false) Long sendDateSolarEndLimit,
                                 @RequestParam(value = "answerDateSolarEndLimit", required = false) Long answerDateSolarEndLimit,
                                 @RequestParam(value = "section", required = false) String section,
+                                @RequestParam(value = "ticketId", required = false) ObjectId ticketId,
                                 @RequestParam(value = "advisorId", required = false) ObjectId advisorId,
                                 @RequestParam(value = "studentId", required = false) ObjectId studentId,
                                 @RequestParam(value = "priority", required = false) String priority,
@@ -43,7 +44,7 @@ public class StudentTicketAPIRouter extends Router {
 
         return TicketController.getRequests(
                 null, status,
-                null, null,
+                null, ticketId,
                 isAdvisor && studentId != null ? studentId : userTokenInfo.getId(),
                 null, isAdvisor && studentId != null ? userTokenInfo.getId() : advisorId,
                 sendDateSolar, answerDateSolar, sendDateSolarEndLimit, answerDateSolarEndLimit,

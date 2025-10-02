@@ -153,7 +153,7 @@ public class StudentDashboardService {
 
         if (studentDashboardConfig.getShowLastTickets()) {
             dashboardStatsDto.setUnSeenTickets(
-                    dashboardUtil.getMyLastTickets(user.getObjectId("user_id"))
+                    dashboardUtil.getMyLastTickets(user.getObjectId("_id"))
             );
         }
 
@@ -178,7 +178,10 @@ public class StudentDashboardService {
 
         }
 
-        if (studentDashboardConfig.getShowSuggestionForContent() && !branches.isEmpty()) {
+        if (studentDashboardConfig.getShowSuggestionForContent() &&
+                branches != null &&
+                !branches.isEmpty()
+        ) {
             List<Bson> tags = branches.stream().map(s -> regex("tags", Pattern.compile(Pattern.quote(s), Pattern.CASE_INSENSITIVE))).collect(Collectors.toList());
             dashboardStatsDto.setTutorialsSuggestion(
                     contentRepository.getSuggestion(user.getObjectId("_id"), tags)
@@ -206,7 +209,12 @@ public class StudentDashboardService {
                                 .advisor(UserDigest.buildFromDoc(advisor))
                                 .startAt(std.getLong("created_at"))
                                 .endAt(std.getLong("created_at") + ONE_MONTH_MIL_SEC)
-                                .rate(Integer.parseInt(std.getOrDefault("rate", 0).toString()))
+                                .rate(advisor.containsKey("rate")
+                                        ? advisor.getDouble("rate")
+                                        : null
+                                )
+                                .stdCount(advisor.getList("students", Document.class).size())
+                                .age(advisor.get("birth_day", Number.class).longValue())
                                 .build();
                     }).collect(Collectors.toList())
             );

@@ -44,6 +44,7 @@ public class AdvisorMeetingRepository extends Common {
                                     gte("created_at", curr - SKY_ROOM_MEETING_LENGTH_MS)
                             )),
                             lookup("user", "student_id", "_id", "userInfo"),
+                            unwind("$userInfo"),
                             project(fields(
                                     include("url"),
                                     computed("createdAt", "$created_at"),
@@ -84,6 +85,7 @@ public class AdvisorMeetingRepository extends Common {
                                     gte("created_at", curr - SKY_ROOM_MEETING_LENGTH_MS)
                             )),
                             lookup("user", "advisor_id", "_id", "userInfo"),
+                            unwind("$userInfo"),
                             project(fields(
                                     include("url"),
                                     computed("createdAt", "$created_at"),
@@ -100,9 +102,11 @@ public class AdvisorMeetingRepository extends Common {
                             objectMapper.readValue(document.toJson(), MeetingDto.class)
                     );
                 } catch (JsonProcessingException ignore) {
+                    System.out.println(ignore.getMessage());
                 }
             });
         } catch (Exception ignore) {
+            System.out.println(ignore.getMessage());
         }
 
         meeting.forEach(meetingDto -> meetingDto.setEndAt(meetingDto.getCreatedAt() + SKY_ROOM_MEETING_LENGTH_MS));
