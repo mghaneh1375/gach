@@ -32,7 +32,6 @@ public class FileUtils {
     public final static String limboDir_dev = "./src/main/resources/assets/limbo" + File.separator;
 
     public static String uploadFile(MultipartFile file, String folder) {
-
         try {
             String[] splited = file.getOriginalFilename().split("\\.");
             String filename = System.currentTimeMillis() + "." + splited[splited.length - 1];

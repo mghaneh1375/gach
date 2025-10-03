@@ -263,7 +263,7 @@ public class Jobs implements Runnable {
             List<ObjectId> wantedUsers = new ArrayList<>();
 
             users.forEach(user -> {
-                Date d = new Date(user.getLong("birth_day"));
+                Date d = new Date(user.get("birth_day", Number.class).longValue());
                 if (d.getDate() == currDay && d.getMonth() == currMonth)
                     wantedUsers.add(user.getObjectId("_id"));
             });
@@ -701,55 +701,6 @@ public class Jobs implements Runnable {
 
             authorRepository.bulkWrite(writes);
         }
-    }
-
-    private static class RemoveRedundantAttaches extends TimerTask {
-
-        @Override
-        public void run() {
-
-            File ckFolder = new File(
-                    DEV_MODE ? FileUtils.uploadDir_dev + "ck" :
-                            FileUtils.uploadDir + "ck"
-            );
-
-            if (!ckFolder.exists() || !ckFolder.isDirectory())
-                return;
-
-            File[] allFiles = ckFolder.listFiles();
-            if (allFiles == null || allFiles.length == 0)
-                return;
-
-            ArrayList<Document> quizzes = iryscQuizRepository.find(
-                    or(
-                            exists("desc"),
-                            exists("desc_after")
-                    ), new BasicDBObject("desc", 1).append("desc_after", 1)
-            );
-
-            for (File f : allFiles) {
-
-                if (f.isDirectory() || f.getName().startsWith("."))
-                    continue;
-
-                boolean find = false;
-
-                for (Document quiz : quizzes) {
-                    if (
-                            (quiz.containsKey("desc") && quiz.getString("desc").contains(f.getName())) ||
-                                    (quiz.containsKey("desc_after") && quiz.getString("desc_after").contains(f.getName()))
-                    ) {
-                        find = true;
-                        break;
-                    }
-                }
-
-                if (!find)
-                    f.delete();
-            }
-
-        }
-
     }
 
     private static class SendMails extends TimerTask {

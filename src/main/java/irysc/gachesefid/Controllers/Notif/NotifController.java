@@ -442,7 +442,7 @@ public class NotifController {
         List<String> mailAddresses = new ArrayList<>();
 
         String attach = null;
-        if (users.size() > 0 && attachFile != null)
+        if ((users.size() > 0 || list != null) && attachFile != null)
             attach = FileUtils.uploadFile(attachFile, "notifs");
 
         String mailMsg = sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?

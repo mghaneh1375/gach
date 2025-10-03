@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Filters.gt;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Utility.EmailUtil.emailFooterSection;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public class Utility {
@@ -440,53 +441,6 @@ public class Utility {
         return jsonObject;
     }
 
-    public static int calcYearDiff(String birthDay) {
-
-        JalaliCalendar.YearMonthDate yearMonthDate = null;
-
-        if (birthDay.contains("/") || birthDay.contains("-")) {
-            String[] splited = (birthDay.contains("/")) ? birthDay.split("/") : birthDay.split("-");
-
-            if (splited.length == 3) {
-                String year = splited[0];
-                String month = splited[1];
-                String day = splited[2];
-                if (month.length() == 1)
-                    month = "0" + month;
-                if (day.length() == 1)
-                    day = "0" + day;
-
-                yearMonthDate = new JalaliCalendar.YearMonthDate(year, month, day);
-            }
-
-        }
-
-        if (yearMonthDate == null)
-            yearMonthDate = JalaliCalendar.jalaliToGregorian(new JalaliCalendar.YearMonthDate(birthDay.substring(0, 4),
-                    birthDay.substring(5, 7), birthDay.substring(8, 10)));
-        else
-            yearMonthDate = JalaliCalendar.jalaliToGregorian(yearMonthDate);
-
-        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
-        try {
-
-            String month = (yearMonthDate.getMonth() < 10) ? "0" + yearMonthDate.getMonth() : yearMonthDate.getMonth() + "";
-            String day = (yearMonthDate.getDate() < 10) ? "0" + yearMonthDate.getDate() : yearMonthDate.getDate() + "";
-
-            Date d1 = sdf.parse(day + "-" + month + "-" + yearMonthDate.getYear());
-
-            long difference_In_Time
-                    = System.currentTimeMillis() - d1.getTime();
-
-            return (int) Math.floor((difference_In_Time / (1000 * 60.0 * 60 * 24)) / 365.0);
-
-        } catch (Exception x) {
-            printException(x);
-        }
-
-        return -1;
-    }
-
     public static boolean sendMail(String to, String msg, String mode, String username) {
 
         if (DEV_MODE)
@@ -539,97 +493,102 @@ public class Utility {
             message.setSubject(subject);
 
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
-
-            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
-            html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
-                    "border-color: rgb(255, 102, 0);\n" +
-                    "max-width: 700px;\n" +
-                    "width: 100%;\n" +
-                    "align-self: center;\n" +
-                    "padding: 40px;'>";
-            html += "<div style='\n" +
-                    "clear: both;\n" +
-                    "height: 80px;'>";
+            StringBuilder html = new StringBuilder();
+            EmailUtil.headerSection(html);
 
             if (title == null)
-                html += "<h3 style='color: rgb(1, 50, 67);\n" +
-                        "font-family: IRANSans;\n" +
-                        "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + subject + "</h3>";
+                html.append("<h3 style='color: rgb(1, 50, 67);")
+                        .append("font-size: 20px;")
+                        .append("margin-top: 20px; float: right;'>")
+                        .append(subject)
+                        .append("</h3>");
             else
-                html += "<h3 style='color: rgb(1, 50, 67);\n" +
-                        "font-family: IRANSans;\n" +
-                        "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + title + "</h3>";
+                html.append("<h3 style='color: rgb(1, 50, 67);")
+                        .append("font-size: 20px;")
+                        .append("margin-top: 20px; float: right;'>")
+                        .append(title)
+                        .append("</h3>");
 
+            html.append("<img style='height: 60px;")
+                    .append("margin-bottom: 20px;")
+                    .append("width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>");
 
-            html += "<img style='height: 60px;\n" +
-                    "margin-bottom: 20px;\n" +
-                    "width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
-
-            html += "</div>";
-
-            html += "<div style='margin: 20px; font-family: IRANSans; direction: rtl; text-align: right'>";
+            html.append("</div>");
+            html.append("<div style='margin: 20px; direction: rtl; text-align: right'>");
             if (username == null)
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>";
+                html.append("<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>");
             else
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
+                html.append("<p style='font-size: 1.1em; margin-bottom: 25px'>")
+                        .append(username)
+                        .append(" عزیز </p>");
 
             if (mode.equalsIgnoreCase("notif"))
-                html += msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'");
+                html.append(msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'"));
             else if (mode.equalsIgnoreCase("signUp") ||
                     mode.equalsIgnoreCase("forget")) {
-                html += "<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>";
-                html += "<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>" + msg + "</p>";
+                html.append("<p>کد تایید ایمیل شما برای ثبت در سامانه آیریسک</p>");
+                html.append("<p style='text-align: center; font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>").append(msg).append("</p>");
             } else if (mode.equalsIgnoreCase("successSignUp"))
-                html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>";
+                html.append("<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>ثبت نام شما در سامانه آزمون و آموزش آیریسک با موفقیت انجام شد.</p>");
             else if (mode.equalsIgnoreCase("quizReminder")) {
-                html += "<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>فردا آزمون " + msg + " در سامانه آیریسک برگزار میشود.</p>";
-                html += "<p>فراموش نکنی!</p>";
+                html.append("<p style='text-align: center; font-size: 1.4em; color: rgb(1, 50, 67); font-weight: bolder;'>فردا آزمون ").append(msg).append(" در سامانه آیریسک برگزار میشود.</p>");
+                html.append("<p>فراموش نکنی!</p>");
             } else if (mode.equalsIgnoreCase("successTransaction")) {
                 String[] splited = msg.split("_");
-                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>حساب شما در آیریسک " + Utility.formatPrice(Integer.parseInt(splited[0])) + " تومان شارژ شد.</p>";
-                html += "<p>" +
-                        "<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>" +
-                        "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
-                        + "</p>";
+                html.append("<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>حساب شما در آیریسک ").append(Utility.formatPrice(Integer.parseInt(splited[0]))).append(" تومان شارژ شد.</p>");
+                html.append("<p>")
+                        .append("<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>")
+                        .append("<br /><a href='")
+                        .append(splited[1])
+                        .append("'>")
+                        .append(splited[1])
+                        .append("</a>")
+                        .append("</p>");
             } else if (mode.equalsIgnoreCase("offcode")) {
-                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شارژ تشویقی شما به صورت اختصاصی در پیشخوان کاربری تان قرار گرفت. از بخش تخفیف ها آن را ببینید</p>";
-                html += "<p>" +
-                        "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
-                        "<br /><a href='" + msg + "'>" + msg + "</a>"
-                        + "</p>";
+                html.append("<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شارژ تشویقی شما به صورت اختصاصی در پیشخوان کاربری تان قرار گرفت. از بخش تخفیف ها آن را ببینید</p>");
+                html.append("<p>")
+                        .append("<span>و یا بر روی لینک زیر کلیک کنید: </span>")
+                        .append("<br /><a href='")
+                        .append(msg)
+                        .append("'>")
+                        .append(msg)
+                        .append("</a>")
+                        .append("</p>");
+
             } else if (mode.equalsIgnoreCase("karname")) {
                 String[] splited = msg.split("_");
-                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون " + splited[0] + " در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ\u200Cهای تشریحی را هم بررسی کنی</p>";
-                html += "<p>" +
-                        "<span>و یا بر روی لینک زیر کلیک کنید: </span>" +
-                        "<br /><a href='" + splited[1] + "'>" + splited[1] + "</a>"
-                        + "</p>";
+                html.append("<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>کارنامه آزمون ").append(splited[0]).append(" در سایت آیریسک قرار گرفت. می توانی در بخش مرور آزمون پاسخ\u200Cهای تشریحی را هم بررسی کنی</p>");
+                html.append("<p>")
+                        .append("<span>و یا بر روی لینک زیر کلیک کنید: </span>")
+                        .append("<br /><a href='")
+                        .append(splited[1])
+                        .append("'>")
+                        .append(splited[1])
+                        .append("</a>")
+                        .append("</p>");
             } else if (mode.equals("changeMail"))
-                html += "<p>You have requested to change your email account in ÖKF LMS, tap the button below to change your email:</p>";
+                html.append("<p>You have requested to change your email account in ÖKF LMS, tap the button below to change your email:</p>");
             else if (mode.equalsIgnoreCase("successQuiz")) {
-                html += "<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شما موفق شدی در آزمون ثبت نام کنی.</p>";
-                html += "<p>" +
-                        "<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>" +
-                        "<br /><a href='" + msg + "'>" + msg + "</a>"
-                        + "</p>";
-
+                html.append("<p style='font-size: 1.6em; color: rgb(1, 50, 67); font-weight: bolder;'>شما موفق شدی در آزمون ثبت نام کنی.</p>");
+                html.append("<p>")
+                        .append("<span>برای مشاهده فاکتور پرداخت بر روی لینک زیر کلیک کنید: </span>")
+                        .append("<br /><a href='")
+                        .append(msg)
+                        .append("'>")
+                        .append(msg)
+                        .append("</a>")
+                        .append("</p>");
             }
 
             if (mode.equals("changeMail"))
-                html += "<a target='_blank' style='background-color: #BB0000; color: white; font-size: 1.4em; font-weight: bolder; padding-top: 10px; padding-bottom: 10px; padding-left: 20px; padding-right: 20px; text-decoration: none' href='" + msg + "'>Change Email</a>";
+                html.append("<a target='_blank' style='background-color: #BB0000; color: white; font-size: 1.4em; font-weight: bolder; padding-top: 10px; padding-bottom: 10px; padding-left: 20px; padding-right: 20px; text-decoration: none' href='").append(msg).append("'>Change Email</a>");
 
-            html += "</div>";
+            html.append("</div>");
+            emailFooterSection(html);
+            html.append("</div>");
+            html.append("</body></html>");
 
-            html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
-            html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
-            html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
-            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>نشانی: دانشگاه صنعتی شریف، ساختمان ابن سینا، طبقه چهارم - 021-91096320</p>";
-            html += "</div>";
-            html += "</div>";
-
-            mimeBodyPart.setContent(html, "text/html; charset=UTF-8");
+            mimeBodyPart.setContent(html.toString(), "text/html; charset=UTF-8");
 
             Multipart multipart = new MimeMultipart();
             multipart.addBodyPart(mimeBodyPart);
@@ -687,67 +646,55 @@ public class Utility {
             message.setSubject(subject);
 
             MimeBodyPart mimeBodyPart = new MimeBodyPart();
-
-            String html = "<div style='margin-right: 10%; margin-left: 10%; width: 80%;'>";
-            html += "<div style='direction: rtl; border-style: solid; border-width: 4px;\n" +
-                    "border-color: rgb(255, 102, 0);\n" +
-                    "max-width: 700px;\n" +
-                    "width: 100%;\n" +
-                    "align-self: center;\n" +
-                    "padding: 40px;'>";
-            html += "<div style='\n" +
-                    "clear: both;\n" +
-                    "height: 80px;'>";
+            StringBuilder html = new StringBuilder();
+            EmailUtil.headerSection(html);
 
             if (title == null)
-                html += "<h3 style='color: rgb(1, 50, 67);\n" +
-                        "font-family: IRANSans;\n" +
-                        "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + subject + "</h3>";
+                html.append("<h3 style='color: rgb(1, 50, 67);")
+                        .append("font-size: 20px;")
+                        .append("margin-top: 20px; float: right;'>")
+                        .append(subject)
+                        .append("</h3>");
             else
-                html += "<h3 style='color: rgb(1, 50, 67);\n" +
-                        "font-family: IRANSans;\n" +
-                        "font-size: 20px;\n" +
-                        "margin-top: 20px; float: right;'>" + title + "</h3>";
+                html.append("<h3 style='color: rgb(1, 50, 67); font-size: 20px; margin-top: 20px; float: right;'>")
+                        .append(title)
+                        .append("</h3>");
 
+            html.append("<img style='height: 60px;")
+                    .append("margin-bottom: 20px;")
+                    .append("width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>")
+            ;
 
-            html += "<img style='height: 60px;\n" +
-                    "margin-bottom: 20px;\n" +
-                    "width: 104px; float: left' src='https://e.irysc.com/static/media/irysc.69b93d83702c4996d2a3.png'>";
-
-            html += "</div>";
-
-            html += "<div style='margin: 20px; font-family: IRANSans; direction: rtl; text-align: right'>";
+            html.append("</div>");
+            html.append("<div style='margin: 20px; font-family: IRANSans; direction: rtl; text-align: right'>");
             if (username == null)
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>";
+                html.append("<p style='font-size: 1.1em; margin-bottom: 25px'>سلام, </p>");
             else
-                html += "<p style='font-size: 1.1em; margin-bottom: 25px'>" + username + " عزیز </p>";
+                html.append("<p style='font-size: 1.1em; margin-bottom: 25px'>").append(username).append(" عزیز </p>");
 
-            html += msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'");
-            html += "</div>";
+            html.append(msg.replaceAll("<img", "<img style='max-width: 100%; height: auto;'"));
+            html.append("</div>");
 
-            html += "<div style='height: 120px; text-align: right; direction: rtl; font-family: IRANSans; font-weight: bolder; padding: 5px; margin-top: 20px; background-color: rgb(1, 50, 67); width: 100%'>";
-            html += "<p style='color: white; margin-top: 20px; margin-right: 10px; font-size: 0.9em'>به ما سر بزنید. نشانی سایت : </p>";
-            html += "<div style='color: white; font-size: 0.9em; margin-right: 10px;'><a href='https://e.irysc.com'>https://e.irysc.com</a></div>";
-            html += "<p style='color: white; font-size: 0.9em; margin-right: 10px;'>نشانی: دانشگاه صنعتی شریف، ساختمان ابن سینا، طبقه چهارم - 021-91096320</p>";
-            html += "</div>";
-            html += "</div>";
+            emailFooterSection(html);
+            html.append("</div>");
+            html.append("</body></html>");
 
-            mimeBodyPart.setContent(html, "text/html; charset=UTF-8");
+            mimeBodyPart.setContent(html.toString(), "text/html; charset=UTF-8");
 
             Multipart multipart = new MimeMultipart();
             multipart.addBodyPart(mimeBodyPart);
 
             if (filename != null && !filename.isEmpty()) {
-
                 MimeBodyPart messageBodyPart = new MimeBodyPart();
-
                 DataSource source;
 
                 if (mailAttaches.containsKey(filename))
                     source = mailAttaches.get(filename);
                 else {
-                    String file = FileUtils.uploadDir + "notifs/" + filename;
+                    String file = (DEV_MODE
+                            ? FileUtils.uploadDir_dev
+                            : FileUtils.uploadDir
+                    ) + "notifs/" + filename;
                     source = new FileDataSource(file);
 
                     if (mailAttaches.keySet().size() >= 100)
@@ -1200,6 +1147,7 @@ public class Utility {
 
         jsonObject1.put("rank", -1);
     }
+
     public static void fillJSONWithUser(JSONObject jsonObject, Document user) {
 
         //todo: customize with common user info
