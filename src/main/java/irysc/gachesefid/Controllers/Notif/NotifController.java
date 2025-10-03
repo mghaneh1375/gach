@@ -20,7 +20,6 @@ import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -389,7 +388,7 @@ public class NotifController {
         return users;
     }
 
-    public static String store(JSONObject filtersJSON, MultipartFile f, MultipartFile list) {
+    public static String store(JSONObject filtersJSON, MultipartFile attachFile, MultipartFile list) {
 
         BasicDBObject neededFields = new BasicDBObject("_id", 1);
         String sendVia = filtersJSON.getString("via");
@@ -416,13 +415,12 @@ public class NotifController {
         ArrayList<Document> users = userRepository.find(and(fetchFilters(filtersJSON)),
                 neededFields
         );
-        boolean checkZero = !sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) || users.size() != 0 || list == null;
 
+        boolean checkZero = !sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) || users.size() != 0 || list == null;
         if (checkZero && users.size() == 0)
             return generateErr("کاربری با فیلترهای اعمال شده پیدا نشد");
 
         users = postFilter(filtersJSON, users);
-
         if (checkZero && users.size() == 0)
             return generateErr("کاربری با فیلترهای اعمال شده پیدا نشد");
 
@@ -437,7 +435,6 @@ public class NotifController {
                 .append("created_at", curr);
 
         ArrayList<ObjectId> userIds = new ArrayList<>();
-
         List<WriteModel<Document>> writes = new ArrayList<>();
         List<WriteModel<Document>> mailWrites = new ArrayList<>();
         List<WriteModel<Document>> smsWrites = new ArrayList<>();
@@ -445,9 +442,8 @@ public class NotifController {
         List<String> mailAddresses = new ArrayList<>();
 
         String attach = null;
-
-        if (users.size() > 0 && f != null)
-            attach = FileUtils.uploadFile(f, "notifs");
+        if (users.size() > 0 && attachFile != null)
+            attach = FileUtils.uploadFile(attachFile, "notifs");
 
         String mailMsg = sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ?
                 filtersJSON.getString("text")
@@ -484,11 +480,8 @@ public class NotifController {
             if ((sendVia.equalsIgnoreCase(NotifVia.MAIL.toString()) ||
                     filtersJSON.getBoolean("sendMail")) && user.containsKey("mail")
             ) {
-
                 String mailAddress = user.getString("mail");
-
                 if (!mailAddresses.contains(mailAddress)) {
-
                     Document d = new Document("mode", "notif")
                             .append("status", "pending")
                             .append("notif_id", notifId.toString())
@@ -529,24 +522,18 @@ public class NotifController {
         notifRepository.insertOne(notif);
 
         if (mailWrites.size() > 0 || list != null) {
-
             if (list != null && sendVia.equalsIgnoreCase(NotifVia.MAIL.toString())) {
-
                 String filename = FileUtils.uploadTempFile(list);
                 ArrayList<Row> rows = Excel.read(filename);
 
                 if (rows != null) {
-
                     for (Row row : rows) {
-
                         Cell cell = row.getCell(0);
                         if (cell == null)
                             continue;
 
                         String mailAddress = cell.getStringCellValue();
-
                         if (!mailAddresses.contains(mailAddress)) {
-
                             Document d = new Document("mode", "notif")
                                     .append("status", "pending")
                                     .append("notif_id", notifId.toString())
@@ -574,8 +561,6 @@ public class NotifController {
 
         if (smsWrites.size() > 0)
             smsQueueRepository.bulkWrite(smsWrites);
-
-        System.out.println(writes.size());
 
         if (writes.size() > 0) {
             new Thread(() -> {

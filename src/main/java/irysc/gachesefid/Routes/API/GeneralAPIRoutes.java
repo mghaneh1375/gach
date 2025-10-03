@@ -341,12 +341,8 @@ public class GeneralAPIRoutes extends Router {
 
     @GetMapping(value = "/getSiteStats")
     @ResponseBody
-    public ResponseEntity<ResponseDto<DashboardStatsDto>> getSiteStats(
-            HttpServletRequest request
-    ) throws UnAuthException, NotActivateAccountException {
-        return dashboardService.siteStats(
-                getUser(request)
-        );
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> getSiteStats() {
+        return dashboardService.siteStats();
     }
 
     @GetMapping(value = "/getQuestionTagsExcel")

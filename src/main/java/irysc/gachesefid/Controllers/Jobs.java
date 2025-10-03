@@ -756,7 +756,6 @@ public class Jobs implements Runnable {
 
         @Override
         public void run() {
-
             ArrayList<Document> mails =
                     mailQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
 
@@ -764,15 +763,12 @@ public class Jobs implements Runnable {
                 return;
 
             long yesterday = System.currentTimeMillis() - 86400000;
-
             int limit = Math.min(mails.size(), 30);
             ArrayList<ObjectId> ids = new ArrayList<>();
 
             for (int i = 0; i < limit; i++) {
-
                 try {
                     Document mail = mails.get(i);
-
                     if (!mail.containsKey("mail") ||
                             mail.getString("mail") == null) {
                         ids.add(mail.getObjectId("_id"));

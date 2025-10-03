@@ -1,7 +1,6 @@
 package irysc.gachesefid.Service.Dashboard;
 
 import irysc.gachesefid.DB.Repository;
-import irysc.gachesefid.Dto.Dashboard.Admin.AdminDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.AdminDashboardStatsDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
@@ -42,38 +41,29 @@ public class DashboardService {
     @Autowired
     private DashboardUtil dashboardUtil;
 
-    public ResponseEntity<ResponseDto<DashboardStatsDto>> siteStats(Document user) {
+    public ResponseEntity<ResponseDto<DashboardStatsDto>> siteStats() {
         Document generalCache = Repository.isInCache("general", "first");
-
-        ResponseEntity<ResponseDto<AdminDashboardConfig>> response =
-                configDashboardService.getConfig(user.getObjectId("_id"), AdminDashboardConfig.class);
-        AdminDashboardConfig adminDashboardConfig = Objects.requireNonNull(response.getBody()).getData();
-        DashboardStatsDto dashboardStatsDto;
-
-        if (adminDashboardConfig.getShowDashboard()) {
-            dashboardStatsDto = DashboardStatsDto
-                    .builder()
-                    .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
-                    .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
-                    .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
-                    .schools(generalCache == null ? 0 : generalCache.getInteger("schools"))
-                    .students(generalCache == null ? 0 : generalCache.getInteger("students"))
-                    .questions(generalCache == null ? 0 : generalCache.getInteger("questions"))
-                    .registrableQuizzes(
-                            generalCache == null
-                                    ? 0
-                                    : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
-                                    (Integer) generalCache.getOrDefault("openQuizzesCount", 0)
-                    )
-                    .build();
-        } else
-            dashboardStatsDto = DashboardStatsDto.builder().build();
 
         return new ResponseEntity<>(
                 ResponseDto
                         .builder(DashboardStatsDto.class)
                         .status("ok")
-                        .data(dashboardStatsDto)
+                        .data(DashboardStatsDto
+                                .builder()
+                                .activeTeachers(generalCache == null ? 0 : generalCache.getInteger("activeTeachersCount"))
+                                .activeAdvisors(generalCache == null ? 0 : generalCache.getInteger("activeAdvisorsCount"))
+                                .tutorialsCount(generalCache == null ? 0 : generalCache.getInteger("tutorialsCount"))
+                                .schools(generalCache == null ? 0 : generalCache.getInteger("schools"))
+                                .students(generalCache == null ? 0 : generalCache.getInteger("students"))
+                                .questions(generalCache == null ? 0 : generalCache.getInteger("questions"))
+                                .registrableQuizzes(
+                                        generalCache == null
+                                                ? 0
+                                                : (Integer) generalCache.getOrDefault("activeIRYSCQuizzes", 0) +
+                                                (Integer) generalCache.getOrDefault("openQuizzesCount", 0)
+                                )
+                                .build()
+                        )
                         .build(),
                 HttpStatus.OK
         );
