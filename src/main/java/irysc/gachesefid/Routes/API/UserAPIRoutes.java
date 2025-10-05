@@ -60,13 +60,6 @@ public class UserAPIRoutes extends Router {
     @Value("${shop.security.token}")
     private String token;
 
-    @GetMapping(value = "ttt")
-    @ResponseBody
-    public String v(HttpServletRequest request) throws UnAuthException {
-        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
-        return userTokenInfo.getAccesses().toString();
-    }
-
     @GetMapping(value = "testAsanak")
     @ResponseBody
     public void testAsanak(

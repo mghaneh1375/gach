@@ -622,7 +622,6 @@ public class Utility {
         prop.put("mail.smtp.port", "587");
 
         try {
-
             Session session = Session.getInstance(prop, new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
