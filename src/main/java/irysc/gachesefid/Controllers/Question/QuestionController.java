@@ -553,7 +553,6 @@ public class QuestionController extends Utilities {
                 }
 
                 JSONObject jsonObject = new JSONObject();
-
                 int code = (int) getCellValue(row.getCell(2));
                 Document subject = subjectRepository.findBySecKey(String.format("%03d", code));
 
@@ -564,7 +563,6 @@ public class QuestionController extends Utilities {
                 }
 
                 ObjectId subjectId = subject.getObjectId("_id");
-
                 int authorCode = (int) getCellValue(row.getCell(3));
                 Document author = authorRepository.findBySecKey(String.format("%03d", authorCode));
                 if (author == null) {

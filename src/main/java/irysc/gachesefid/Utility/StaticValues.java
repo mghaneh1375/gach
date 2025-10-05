@@ -269,6 +269,9 @@ public class StaticValues {
             .append("advisor_id", 1);
 
     public static final BasicDBObject JUST_ID = new BasicDBObject("_id", 1);
+    public static final BasicDBObject JUST_CODE = new BasicDBObject("_id", 1).append("code", 1);
+    public static final BasicDBObject JUST_CODE_NAME = new BasicDBObject("_id", 1).append("code", 1).append("name", 1);
+    public static final BasicDBObject JUST_ORGANIZATION_ID = new BasicDBObject("organization_id", 1);
     public static final BasicDBObject JUST_USER_ID = new BasicDBObject("user_id", 1);
     public static final BasicDBObject JUST_NAME = new BasicDBObject("first_name", true).append("last_name", true);
     public static final BasicDBObject JUST_TITLE = new BasicDBObject("title", true);

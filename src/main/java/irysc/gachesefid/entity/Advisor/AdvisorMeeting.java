@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto.DBMeta.Advisor;
+package irysc.gachesefid.entity.Advisor;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

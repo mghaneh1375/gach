@@ -42,19 +42,15 @@ public class Repository {
     }
 
     public static void removeFromCache(String section, Object id) {
-
         if (!generalCached.containsKey(section))
             return;
 
         ArrayList<Cache> cached = generalCached.get(section);
-
         for (int i = 0; i < cached.size(); i++) {
-
             if (cached.get(i).equals(id)) {
                 cached.remove(i);
                 return;
             }
-
         }
     }
 
