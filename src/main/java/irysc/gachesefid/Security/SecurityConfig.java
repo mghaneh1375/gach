@@ -88,6 +88,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         Role.ROLE_ADMIN.getAuthority(),
                         Role.ROLE_SUPER_ADMIN.getAuthority()
                 )
+                .antMatchers("/api/ckeditor/quiz").hasAnyAuthority(
+                        Role.ROLE_SUPER_ADMIN.getAuthority()
+                )
                 // ADVISOR SERVICES
                 .antMatchers(
                         "/api/teach/manage/**", "/api/advisor/manage/**",
