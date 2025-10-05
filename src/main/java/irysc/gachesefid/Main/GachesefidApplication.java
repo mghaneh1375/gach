@@ -42,7 +42,9 @@ import static irysc.gachesefid.Utility.Utility.printException;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
-        "irysc.gachesefid.Security", "irysc.gachesefid.Service", "irysc.gachesefid.Controllers"})
+        "irysc.gachesefid.Security", "irysc.gachesefid.Service",
+        "irysc.gachesefid.Controllers", "irysc.gachesefid.adaptor"
+})
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
 @EnableScheduling
@@ -276,19 +278,19 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public RestTemplate initializeCropRestTemplate() {
         RestTemplate restTemplate = new RestTemplate();
 
-        HttpClientConnectionManager connectionManager = (HttpClientConnectionManager) PoolingHttpClientConnectionManagerBuilder.create()
-                .setMaxConnTotal(200)
-                .setMaxConnPerRoute(20)
-                .build();
+//        HttpClientConnectionManager connectionManager = (HttpClientConnectionManager) PoolingHttpClientConnectionManagerBuilder.create()
+//                .setMaxConnTotal(200)
+//                .setMaxConnPerRoute(20)
+//                .build();
+//
+//        CloseableHttpClient httpClient = HttpClients.custom()
+//                .setConnectionManager(connectionManager)
+//                .build();
 
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(connectionManager)
-                .build();
-
-        HttpComponentsClientHttpRequestFactory requestFactory =
-                new HttpComponentsClientHttpRequestFactory(httpClient);
-        requestFactory.setConnectTimeout(100000);
-        restTemplate.setRequestFactory(requestFactory);
+//        HttpComponentsClientHttpRequestFactory requestFactory =
+//                new HttpComponentsClientHttpRequestFactory(httpClient);
+//        requestFactory.setConnectTimeout(100000);
+//        restTemplate.setRequestFactory(requestFactory);
         return restTemplate;
     }
 }
