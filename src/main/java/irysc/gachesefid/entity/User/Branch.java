@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto.DBMeta.User;
+package irysc.gachesefid.entity.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

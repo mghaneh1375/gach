@@ -1232,7 +1232,7 @@ public class Utility {
     }
 
     public static String batchRowErr(int rowIdx, String err) {
-        return "ردیف " + rowIdx + ":" + err + "\n";
+        return String.format("ردیف %d : %s\n", rowIdx, err);
     }
 
     public static String returnAddResponse(JSONArray excepts,

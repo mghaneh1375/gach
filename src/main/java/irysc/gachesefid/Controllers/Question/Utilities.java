@@ -104,12 +104,10 @@ public class Utilities {
                                         boolean isAnswerFileNeeded,
                                         boolean isDetailNeeded,
                                         boolean isFromDataset) {
-
         JSONArray jsonArray = new JSONArray();
         HashMap<ObjectId, String> subjects = new HashMap<>();
 
         for (Document doc : docs) {
-
             JSONObject jsonObject = new JSONObject()
                     .put("id", doc.getObjectId("_id").toString())
                     .put("no", doc.getInteger("no"))

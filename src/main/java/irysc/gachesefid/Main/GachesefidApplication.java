@@ -15,15 +15,22 @@ import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
 import irysc.gachesefid.Models.NewAlert;
 import irysc.gachesefid.Service.GeneralCacheService;
 import irysc.gachesefid.Service.ReportService;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.annotation.PostConstruct;
@@ -263,5 +270,25 @@ public class GachesefidApplication implements WebMvcConfigurer {
     @PostConstruct
     public void initCache() {
         generalCacheService.getInfo();
+    }
+
+    @Bean(name = "cropRT")
+    public RestTemplate initializeCropRestTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpClientConnectionManager connectionManager = (HttpClientConnectionManager) PoolingHttpClientConnectionManagerBuilder.create()
+                .setMaxConnTotal(200)
+                .setMaxConnPerRoute(20)
+                .build();
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .build();
+
+        HttpComponentsClientHttpRequestFactory requestFactory =
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        requestFactory.setConnectTimeout(100000);
+        restTemplate.setRequestFactory(requestFactory);
+        return restTemplate;
     }
 }

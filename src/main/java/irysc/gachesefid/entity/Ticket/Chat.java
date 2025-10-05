@@ -1,4 +1,4 @@
-package irysc.gachesefid.Dto.DBMeta.Ticket;
+package irysc.gachesefid.entity.Ticket;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

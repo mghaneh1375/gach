@@ -22,6 +22,7 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
+import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public abstract class Common extends Repository {
@@ -243,6 +244,13 @@ public abstract class Common extends Repository {
     }
 
     synchronized
+    public void updateOneWithClearCache(ObjectId objectId, Bson update) {
+        documentMongoCollection.updateOne(eq("_id", objectId), update);
+        clearFromCache(objectId);
+
+    }
+
+    synchronized
     public void updateOne(Bson filter, Bson update) {
         documentMongoCollection.updateOne(filter, update);
     }
@@ -272,7 +280,6 @@ public abstract class Common extends Repository {
 
     synchronized
     public void replaceOne(ObjectId id, Document newDoc) {
-
         documentMongoCollection.replaceOne(eq("_id", id), newDoc);
         removeFromCache(table, id);
 

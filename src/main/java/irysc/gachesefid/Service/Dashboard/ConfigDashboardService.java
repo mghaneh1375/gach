@@ -10,6 +10,7 @@ import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
 import irysc.gachesefid.Dto.Dashboard.ConfigDto;
 import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Service.MyService;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
@@ -20,15 +21,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static irysc.gachesefid.Main.GachesefidApplication.configDashboardRepository;
 
 @Service
-public class ConfigDashboardService {
-    private final static ObjectMapper mapper = new ObjectMapper();
-    private final static ObjectMapper simpleMapper = new ObjectMapper();
-
-    static {
-        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        simpleMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    }
+public class ConfigDashboardService extends MyService {
 
     public void setAdvisorConfig(ObjectId userId, AdvisorDashboardConfig configDto) {
         Document configDoc = configDashboardRepository.findBySecKey(userId);

@@ -2341,7 +2341,6 @@ public class QuizController {
         } else if (questionsList instanceof Document) {
 
             Document qTmp = (Document) questionsList;
-
             if (isTashrihi &&
                     !qTmp.getOrDefault("kind_question", "test").toString().equalsIgnoreCase(QuestionType.TASHRIHI.getName())
             ) {
@@ -2352,7 +2351,6 @@ public class QuizController {
             }
 
             ObjectId qIdTmp = qTmp.getObjectId("_id");
-
             if (ids.contains(qIdTmp)) {
                 throw new InvalidFieldsException("duplicate");
             }
@@ -2368,7 +2366,6 @@ public class QuizController {
         byte[] answersByte;
 
         if (!isTashrihi) {
-
             if (questions.containsKey("answers"))
                 answersByte = questions.get("answers", Binary.class).getData();
             else
@@ -2413,8 +2410,6 @@ public class QuizController {
                 "بجز موارد زیر سایرین به درستی اضافه گردیدند." + excepts,
                 p
         );
-
-
     }
 
     static String doAddQuestionsToEscapeQuiz(Document quiz,
