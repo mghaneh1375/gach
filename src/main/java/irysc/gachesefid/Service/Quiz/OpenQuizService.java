@@ -1,9 +1,12 @@
 package irysc.gachesefid.Service.Quiz;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.Utility;
+import irysc.gachesefid.Dto.Serializer.MongoByteArraySerializer;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.QuestionType;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -85,7 +89,20 @@ public class OpenQuizService extends MyService implements QuizService {
         questions.setMarks(marks);
         questions.setIds(ids);
         quizEntity.setQuestions(questions);
-        openQuizRepository.updateOneWithClearCache(quizEntity.getId(), set("questions", questions));
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new SimpleModule()
+                .addSerializer(byte[].class, new MongoByteArraySerializer()));
+
+        String json = null;
+        try {
+            json = mapper.writeValueAsString(questions);
+            Document bsonDoc = Document.parse(json);
+            bsonDoc.put("_ids", bsonDoc.getList("_ids", Object.class).stream().map(o -> new ObjectId(o.toString())).collect(Collectors.toList()));
+            openQuizRepository.updateOneWithClearCache(quizEntity.getId(), set("questions", bsonDoc));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
 
         return addQuestionToQuizResults;
     }

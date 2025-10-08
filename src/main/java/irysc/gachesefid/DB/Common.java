@@ -22,7 +22,6 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
-import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 public abstract class Common extends Repository {
@@ -247,7 +246,6 @@ public abstract class Common extends Repository {
     public void updateOneWithClearCache(ObjectId objectId, Bson update) {
         documentMongoCollection.updateOne(eq("_id", objectId), update);
         clearFromCache(objectId);
-
     }
 
     synchronized
@@ -353,10 +351,10 @@ public abstract class Common extends Repository {
         if (sortFilter != null)
             filters.add(sort(sortFilter));
 
-        if(skip != null)
+        if (skip != null)
             filters.add(skip(skip));
 
-        if(limit != null)
+        if (limit != null)
             filters.add(limit(limit));
 
         return documentMongoCollection.aggregate(filters);
@@ -525,7 +523,8 @@ public abstract class Common extends Repository {
     }
 
     public void bulkWrite(List<WriteModel<Document>> writes) {
-        documentMongoCollection.bulkWrite(writes);
+        if (writes.size() > 0)
+            documentMongoCollection.bulkWrite(writes);
     }
 
     public void cleanRemove(Document doc) {
@@ -562,15 +561,15 @@ public abstract class Common extends Repository {
             List<Bson> filters = new ArrayList<>();
             List<Document> cond = new ArrayList<>();
 
-            if(from != null) {
+            if (from != null) {
                 filters.add(gte(String.format("%s.register_at", studentsKey), from));
                 cond.add(new Document("$gte", List.of("$$user.register_at", from)));
             }
-            if(to != null) {
+            if (to != null) {
                 filters.add(lte(String.format("%s.register_at", studentsKey), to));
                 cond.add(new Document("$lte", List.of("$$user.register_at", to)));
             }
-            if(filters.isEmpty())
+            if (filters.isEmpty())
                 filters.add(exists("_id"));
 
             MongoCursor<Document> iterator = documentMongoCollection.aggregate(List.of(
@@ -606,9 +605,11 @@ public abstract class Common extends Repository {
                     registrations.add(
                             objectMapper.readValue(document.toJson(), tClass)
                     );
-                } catch (JsonProcessingException ignore) {}
+                } catch (JsonProcessingException ignore) {
+                }
             });
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) {
+        }
 
         return registrations.stream().sorted(
                 Comparator.comparing(

@@ -33,6 +33,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -78,7 +79,12 @@ public class QuestionService extends MyService {
         }
 
         QuizEntity quiz = quizService.find(quizId);
-        CropAdaptorResponse<CropResponse> cropQuestionsResponse = cropService.crop(questionPDF);
+        CropAdaptorResponse<CropResponse> cropQuestionsResponse;
+        try {
+            cropQuestionsResponse = cropService.crop(questionPDF);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         if (!cropQuestionsResponse.getResponse().getStatus().equals(HttpStatus.OK) ||
                 cropQuestionsResponse.getResponse().getError() != null
         )
@@ -86,7 +92,11 @@ public class QuestionService extends MyService {
 
         CropAdaptorResponse<CropResponse> cropAnswerResponse = null;
         if (answerPDF != null) {
-            cropAnswerResponse = cropService.crop(answerPDF);
+            try {
+                cropAnswerResponse = cropService.crop(answerPDF);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             if (!cropAnswerResponse.getResponse().getStatus().equals(HttpStatus.OK) ||
                     cropAnswerResponse.getResponse().getError() != null
             )
@@ -245,6 +255,8 @@ public class QuestionService extends MyService {
                     }
 
                     Document qDoc = mapper.convertValue(questionEntity, Document.class);
+                    qDoc.put("_id", new ObjectId(qDoc.get("_id").toString()));
+                    qDoc.put("subject_id", new ObjectId(qDoc.get("subject_id").toString()));
                     writes.add(new InsertOneModel<>(qDoc));
                 });
 
@@ -337,14 +349,7 @@ public class QuestionService extends MyService {
                     continue;
                 }
                 questionEntity.setKindQuestion(kindQuestion);
-
-                String level = row.getCell(8).getStringCellValue();
-                if (!EnumValidatorImp.isValid(level, QuestionLevel.class)) {
-                    errs.add(batchRowErr(row.getRowNum(), "سطح سختی نامعتیر است."));
-                    continue;
-                }
-                questionEntity.setLevel(level);
-                questionEntity.setNeededLine((int) row.getCell(5).getNumericCellValue());
+                questionEntity.setNeededTime((int) row.getCell(5).getNumericCellValue());
 
                 cell = row.getCell(6);
                 if (cell.getCellType() == Cell.CELL_TYPE_NUMERIC) {
@@ -356,6 +361,14 @@ public class QuestionService extends MyService {
                     questionEntity.setAnswer(row.getCell(6).getStringCellValue());
 
                 questionEntity.setOrganizationId(row.getCell(7).getStringCellValue());
+
+                String level = row.getCell(8).getStringCellValue();
+                if (!EnumValidatorImp.isValid(level, QuestionLevel.class)) {
+                    errs.add(batchRowErr(row.getRowNum(), "سطح سختی نامعتیر است."));
+                    continue;
+                }
+                questionEntity.setLevel(level);
+
                 cell = row.getCell(10);
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     questionEntity.setSentencesCount((int) cell.getNumericCellValue());
@@ -392,11 +405,11 @@ public class QuestionService extends MyService {
 
                 validateRow(questionEntity);
 
-                cell = row.getCell(21);
+                cell = row.getCell(20);
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     questionEntity.setIsPublic(cell.getBooleanCellValue());
 
-                cell = row.getCell(22);
+                cell = row.getCell(21);
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     questionEntity.setMark(cell.getNumericCellValue());
 

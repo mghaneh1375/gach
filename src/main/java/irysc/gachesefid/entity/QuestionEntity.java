@@ -1,7 +1,10 @@
 package irysc.gachesefid.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Serializer.ObjectIdSerialization;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.bson.types.ObjectId;
@@ -29,21 +32,27 @@ public class QuestionEntity extends MongoEntity {
     private Boolean isPublic = true;
     private Set<Object> tags;
     @JsonProperty(value = "needed_line")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer neededLine;
     @JsonProperty(value = "choices_count")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer choicesCount;
     @JsonProperty(value = "sentences_count")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer sentencesCount;
     @JsonProperty(value = "organization_id")
     private String organizationId;
     private String level;
     @JsonProperty(value = "needed_time")
+
     private Integer neededTime;
     @Builder.Default
     private Integer used = 0;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Double telorance;
     private Object year;
     @JsonProperty(value = "subject_id")
+    @JsonSerialize(using = ObjectIdSerialization.class)
     private ObjectId subjectId;
 
     public QuestionEntity() {

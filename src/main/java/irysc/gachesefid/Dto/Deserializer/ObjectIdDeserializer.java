@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class ObjectIdDeserializer extends JsonDeserializer<ObjectId> {
     @Override
-    public ObjectId deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+    public ObjectId deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         JsonNode node = p.getCodec().readTree(p);
 
         if (node.isTextual()) {
