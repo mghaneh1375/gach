@@ -116,7 +116,7 @@ public class AdvisorController {
                     .put("maxChats", request.getOrDefault("max_chat", "نامحدود"))
                     .put("maxExam", request.getOrDefault("max_exam", "نامحدود"))
                     .put("createdAt", getSolarDate(request.getLong("active_at")))
-                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_DAY_MIL_SEC * 30));
+                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_MONTH_MIL_SEC));
         }
 
 
