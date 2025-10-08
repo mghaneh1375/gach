@@ -14,5 +14,7 @@ import org.bson.types.ObjectId;
 public class MongoEntity {
     @JsonProperty("_id")
     private ObjectId id;
-    private Long created;
+
+    @JsonProperty("created_at")
+    private Long createdAt;
 }

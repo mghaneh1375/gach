@@ -1,4 +1,4 @@
-package irysc.gachesefid.Service.Advice;
+package irysc.gachesefid.Service.advice;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;

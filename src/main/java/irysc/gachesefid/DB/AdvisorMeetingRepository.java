@@ -112,4 +112,50 @@ public class AdvisorMeetingRepository extends Common {
         meeting.forEach(meetingDto -> meetingDto.setEndAt(meetingDto.getCreatedAt() + SKY_ROOM_MEETING_LENGTH_MS));
         return meeting;
     }
+
+    public List<MeetingDto> fetchCurrentMeetings() {
+        List<MeetingDto> meeting = new ArrayList<>();
+        long curr = System.currentTimeMillis();
+
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(and(
+                                    lte("created_at", curr),
+                                    gte("created_at", curr - SKY_ROOM_MEETING_LENGTH_MS)
+                            )),
+                            lookup("user", "student_id", "_id", "userInfo"),
+                            unwind("$userInfo"),
+                            lookup("user", "advisor_id", "_id", "advisorInfo"),
+                            unwind("$advisorInfo"),
+                            project(fields(
+                                    include("url"),
+                                    computed("createdAt", "$created_at"),
+                                    computed("user.id", "$user_id"),
+                                    computed("user.firstname", "$userInfo.first_name"),
+                                    computed("user.lastname", "$userInfo.last_name"),
+                                    computed("user.nid", "$userInfo.NID"),
+                                    computed("user.phone", "$userInfo.phone"),
+                                    computed("user.mail", "$userInfo.mail"),
+                                    computed("advisor.id", "$advisor_id"),
+                                    computed("advisor.firstname", "$advisorInfo.first_name"),
+                                    computed("advisor.lastname", "$advisorInfo.last_name"),
+                                    computed("advisor.pic", "$advisorInfo.pic")
+                            ))
+                    )
+            ).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    meeting.add(
+                            objectMapper.readValue(document.toJson(), MeetingDto.class)
+                    );
+                } catch (JsonProcessingException ignore) {
+                }
+            });
+        } catch (Exception ignore) {
+        }
+
+        meeting.forEach(meetingDto -> meetingDto.setEndAt(meetingDto.getCreatedAt() + SKY_ROOM_MEETING_LENGTH_MS));
+        return meeting;
+    }
 }

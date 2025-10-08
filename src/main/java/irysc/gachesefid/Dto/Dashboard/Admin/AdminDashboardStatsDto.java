@@ -1,11 +1,18 @@
-package irysc.gachesefid.Dto.Dashboard;
+package irysc.gachesefid.Dto.Dashboard.Admin;
 
-import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
+import irysc.gachesefid.Dto.Dashboard.Advisor.ReportProblemDigestDto;
+import irysc.gachesefid.Dto.Dashboard.PublicDashboardStatsDto;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
+
+import java.util.List;
 
 @Data
-@Builder
-public class AdminDashboardStatsDto {
+@SuperBuilder
+public class AdminDashboardStatsDto extends PublicDashboardStatsDto {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public Integer pendingChunks;
     public Integer pendingTickets;
     public Integer pendingUpgradeLevelRequests;
@@ -23,4 +30,8 @@ public class AdminDashboardStatsDto {
     public Integer pendingComments;
     public Integer activeTeachers;
     public Integer activeAdvisors;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<AdviceRequestDto> adviceRequests;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<ReportProblemDigestDto> problemReports;
 }

@@ -19,7 +19,10 @@ public class AdviceRequestDto {
     @JsonSerialize(using = LongDateSerialization.class)
     @JsonDeserialize(using = MongoNumberLongDeserializer.class)
     private Long requestAt;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UserDigest user;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private UserDigest advisor;
     private AdvicePlanDigest planDigest;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String status;

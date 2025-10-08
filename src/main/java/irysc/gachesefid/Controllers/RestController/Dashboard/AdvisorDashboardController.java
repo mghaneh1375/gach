@@ -7,8 +7,8 @@ import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Service.Dashboard.AdvisorDashboardService;
 import irysc.gachesefid.Service.Dashboard.ConfigDashboardService;
-import irysc.gachesefid.Service.Dashboard.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +24,7 @@ import javax.validation.Valid;
 public class AdvisorDashboardController extends Router {
 
     @Autowired
-    private DashboardService dashboardService;
+    private AdvisorDashboardService advisorDashboardService;
 
     @Autowired
     private ConfigDashboardService configDashboardService;
@@ -34,7 +34,7 @@ public class AdvisorDashboardController extends Router {
     public ResponseEntity<ResponseDto<AdvisorDashboardStatsDto>> getInfo(
             HttpServletRequest request
     ) throws UnAuthException, NotActivateAccountException {
-        return dashboardService.advisorDashboardInfo(getUser(request));
+        return advisorDashboardService.advisorDashboardInfo(getUser(request));
     }
 
     @GetMapping(value = "getConfig")

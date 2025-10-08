@@ -98,6 +98,61 @@ public class AdvisorRequestsRepository extends Common {
         ).collect(Collectors.toList());
     }
 
+    public List<AdviceRequestDto> pendingRequest() {
+        List<AdviceRequestDto> requests = new ArrayList<>();
+
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(and(new ArrayList<>() {{
+                                add(eq("answer", "pending"));
+                            }})),
+                            project(
+                                    new BasicDBObject("title", 1)
+                                            .append("created_at", 1)
+                                            .append("user_id", 1)
+                                            .append("advisor_id", 1)
+                                            .append("price", 1)
+                            ),
+                            lookup("user", "user_id", "_id", "userInfo"),
+                            unwind("$userInfo"),
+                            lookup("user", "advisor_id", "_id", "advisorInfo"),
+                            unwind("advisorInfo"),
+                            project(fields(
+                                    computed("planDigest.price", "$price"),
+                                    computed("planDigest.title", "$title"),
+                                    computed("requestAt", "$created_at"),
+                                    computed("user.id", "$user_id"),
+                                    computed("user.firstname", "$userInfo.first_name"),
+                                    computed("user.lastname", "$userInfo.last_name"),
+                                    computed("user.nid", "$userInfo.NID"),
+                                    computed("user.phone", "$userInfo.phone"),
+                                    computed("user.mail", "$userInfo.mail"),
+                                    computed("advisor.id", "$advisor_id"),
+                                    computed("advisor.firstname", "$advisorInfo.first_name"),
+                                    computed("advisor.lastname", "$advisorInfo.last_name"),
+                                    computed("advisor.pic", "$advisorInfo.pic")
+                            ))
+                    )
+            ).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    requests.add(
+                            objectMapper.readValue(document.toJson(), AdviceRequestDto.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        }
+        catch (Exception ignore) {}
+
+        return requests.stream().sorted(
+                Comparator.comparing(
+                        AdviceRequestDto::getRequestAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
+    }
+
     public List<AdviceRequestDto> myPendingRequest(ObjectId advisorId) {
         List<AdviceRequestDto> requests = new ArrayList<>();
 

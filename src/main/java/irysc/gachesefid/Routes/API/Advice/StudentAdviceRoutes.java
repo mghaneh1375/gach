@@ -2,9 +2,12 @@ package irysc.gachesefid.Routes.API.Advice;
 
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
+import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.Advice.ScheduleService;
+import irysc.gachesefid.Service.advice.AdviceTagReportService;
+import irysc.gachesefid.Service.advice.ScheduleService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
@@ -43,6 +46,9 @@ public class StudentAdviceRoutes extends Router {
 
     @Autowired
     private ScheduleService scheduleService;
+
+    @Autowired
+    private AdviceTagReportService adviceTagReportService;
 
 
     @GetMapping(value = "/getMyAdvisors")
@@ -382,4 +388,11 @@ public class StudentAdviceRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "getAllReportTags")
+    @ResponseBody
+    public ResponseEntity<ResponseDto> getAllReportTags() {
+        return adviceTagReportService.getAllReportTags(
+                TeachReportTagMode.USER.getName(), false
+        );
+    }
 }

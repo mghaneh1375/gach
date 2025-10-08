@@ -1,4 +1,4 @@
-package irysc.gachesefid.Service.Advice;
+package irysc.gachesefid.Service.advice;
 
 import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.DB.UserRepository;
@@ -22,7 +22,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Controllers.Advisor.Utility.validateDay;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
-import static irysc.gachesefid.Service.Advice.ScheduleUtils.*;
+import static irysc.gachesefid.Service.advice.ScheduleUtils.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 

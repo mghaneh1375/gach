@@ -19,7 +19,7 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
-import static irysc.gachesefid.Service.Advice.ScheduleUtils.getFormattedDate;
+import static irysc.gachesefid.Service.advice.ScheduleUtils.getFormattedDate;
 import static irysc.gachesefid.Utility.StaticValues.ONE_WEEK_MIL_SEC;
 
 public class ScheduleRepository extends Common {

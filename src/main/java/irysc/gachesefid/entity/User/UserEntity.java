@@ -1,5 +1,6 @@
 package irysc.gachesefid.entity.User;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class User {
+public class UserEntity {
     private ObjectId id; // _id
     private Double coin;
     private Double money;
@@ -38,4 +39,7 @@ public class User {
     private String adviceVideoLink; // optional - advice_video_link
     private Boolean acceptStd; // optional - accept_std
 
+    @JsonProperty("my_advisors")
+    private List<ObjectId> myAdvisors;
+    private List<ObjectId> students;
 }

@@ -10,6 +10,10 @@ public class NotAccessException extends Exception {
         this.message = message;
     }
 
+    public NotAccessException() {
+        this.message = "not access";
+    }
+
     @Override
     public String getMessage() {
         return message;
