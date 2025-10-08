@@ -22,10 +22,11 @@ public class ReportProblemDigestDto {
     private ObjectId id;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String sendForm; // student, teacher
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UserDigest reporter;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private UserDigest reportAbout;
-    private String section; // teach, advice
+    private String section; // teach, advice, question
     @JsonSerialize(using = LongDateSerialization.class)
     private Long createdAt;
     private String desc;

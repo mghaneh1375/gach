@@ -6,6 +6,7 @@ import com.mongodb.client.MongoCursor;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.Report.BuyReport.AdviceBuyerInfoDto;
 import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
+import irysc.gachesefid.Dto.UserDigest;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
+import static irysc.gachesefid.Main.GachesefidApplication.advisorRequestsRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 
 public class AdvisorRequestsRepository extends Common {
@@ -253,5 +255,17 @@ public class AdvisorRequestsRepository extends Common {
                         Comparator.nullsLast(Comparator.naturalOrder())
                 ).reversed()
         ).collect(Collectors.toList());
+    }
+
+    public List<UserDigest> topAdvisors() {
+
+        advisorRequestsRepository.find(
+                and(
+                        gte("request_at", System.currentTimeMillis() - StaticValues.ONE_MONTH_MIL_SEC),
+
+
+                )
+        );
+
     }
 }

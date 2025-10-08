@@ -6,6 +6,7 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Variable;
+import irysc.gachesefid.Dto.UserDigest;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
@@ -87,7 +88,6 @@ public class UserRepository extends Common {
 
         return token;
     }
-
     public static String sendNewSMS(
             String NID, String phoneOrMail,
             String via, boolean savePhoneOrMail

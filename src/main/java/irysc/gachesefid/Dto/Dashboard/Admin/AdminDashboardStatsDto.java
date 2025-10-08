@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.Dashboard.Advisor.ReportProblemDigestDto;
 import irysc.gachesefid.Dto.Dashboard.PublicDashboardStatsDto;
+import irysc.gachesefid.Dto.question.QuestionReportDto;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
@@ -34,4 +35,6 @@ public class AdminDashboardStatsDto extends PublicDashboardStatsDto {
     private List<AdviceRequestDto> adviceRequests;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<ReportProblemDigestDto> problemReports;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<QuestionReportDto> questionReports;
 }

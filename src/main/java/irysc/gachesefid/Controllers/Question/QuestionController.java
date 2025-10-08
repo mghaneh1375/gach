@@ -43,7 +43,6 @@ public class QuestionController extends Utilities {
                                      MultipartFile questionFile,
                                      MultipartFile answerFile,
                                      JSONObject jsonObject) {
-
         jsonObject.put("subjectId", subjectId.toString());
 
         try {
@@ -92,7 +91,6 @@ public class QuestionController extends Utilities {
             newDoc.append("answer_file", answerFileName);
 
         for (String str : jsonObject.keySet()) {
-
             if (str.equalsIgnoreCase("authorId") || str.equalsIgnoreCase("tags"))
                 continue;
 

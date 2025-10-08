@@ -189,7 +189,9 @@ public class DashboardService {
         if(adminDashboardStatsDto.getShowLastUserReports()) {
             List<ReportProblemDigestDto> reports = new ArrayList<>();
             reports.addAll(teachReportRepository.getLastReports());
+            reports.addAll(adviceReportRepository.getLastReports());
             statsDto.setProblemReports(reports);
+            statsDto.setQuestionReports(questionReportRepository.getList());
         }
 
         if(adminDashboardStatsDto.getShowTopTeachers()) {
