@@ -7,7 +7,7 @@ import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.YesOrNo;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.Advice.ScheduleService;
+import irysc.gachesefid.Service.advice.ScheduleService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Validator.EnumValidator;

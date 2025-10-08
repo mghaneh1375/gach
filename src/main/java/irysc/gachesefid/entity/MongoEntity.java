@@ -21,5 +21,7 @@ public class MongoEntity {
     @JsonDeserialize(using = ObjectIdDeserializer.class)
     @JsonSerialize(using = ObjectIdSerialization.class)
     private ObjectId id;
-    private Long created;
+
+    @JsonProperty("created_at")
+    private Long createdAt;
 }

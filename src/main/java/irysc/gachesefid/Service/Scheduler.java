@@ -113,11 +113,11 @@ public class Scheduler {
                 or(
                         and(
                                 exists("start_at"),
-                                lte("start_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30)
+                                lte("start_at", System.currentTimeMillis() - ONE_MONTH_MIL_SEC)
                         ),
                         and(
                                 exists("end_date"),
-                                lte("end_date", System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30)
+                                lte("end_date", System.currentTimeMillis() - ONE_MONTH_MIL_SEC)
                         )
                 )
         ));

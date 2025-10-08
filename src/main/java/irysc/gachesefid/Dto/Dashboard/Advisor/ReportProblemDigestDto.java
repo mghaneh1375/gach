@@ -1,5 +1,6 @@
 package irysc.gachesefid.Dto.Dashboard.Advisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Serializer.LongDateSerialization;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
@@ -10,15 +11,25 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReportAboutMeDigestDto {
+public class ReportProblemDigestDto {
     @JsonSerialize(using = ObjectIdSerializer.class)
     private ObjectId id;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String sendForm; // student, teacher
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private UserDigest reporter;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private UserDigest reportAbout;
+    private String section; // teach, advice, question
     @JsonSerialize(using = LongDateSerialization.class)
     private Long createdAt;
-    private String title;
+    private String desc;
+    private Boolean seen;
+    private List<String> tags;
 }

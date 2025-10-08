@@ -1,5 +1,6 @@
 package irysc.gachesefid.Dto.Dashboard.Advisor;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
@@ -23,4 +24,6 @@ public class MeetingDto {
     private Long endAt;
     private String url;
     private UserDigest user;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private UserDigest advisor;
 }

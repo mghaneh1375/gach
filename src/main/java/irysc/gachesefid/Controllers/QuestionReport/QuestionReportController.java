@@ -23,7 +23,7 @@ public class QuestionReportController {
     public static String getReports(ObjectId tagId) {
 
         Document tag = questionReportRepository.findById(tagId);
-        if(tag == null)
+        if (tag == null)
             return JSON_NOT_VALID_ID;
 
         List<Document> reports = tag.getList("reports", Document.class);
@@ -41,7 +41,7 @@ public class QuestionReportController {
                         .append("last_name", 1)
         );
 
-        if(users == null)
+        if (users == null)
             return JSON_NOT_UNKNOWN;
 
         for (int i = reports.size() - 1; i >= 0; i--) {
@@ -60,7 +60,7 @@ public class QuestionReportController {
         );
         JSONArray jsonArray = new JSONArray();
 
-        if(isAdmin) {
+        if (isAdmin) {
             for (Document tag : tags)
                 jsonArray.put(new JSONObject()
                         .put("id", tag.getObjectId("_id").toString())
@@ -71,8 +71,7 @@ public class QuestionReportController {
                         .put("visibility", tag.getBoolean("visibility"))
                         .put("priority", tag.getInteger("priority"))
                 );
-        }
-        else {
+        } else {
             for (Document tag : tags)
                 jsonArray.put(new JSONObject()
                         .put("id", tag.getObjectId("_id").toString())
@@ -84,8 +83,6 @@ public class QuestionReportController {
 
         return Utility.generateSuccessMsg("data", jsonArray);
     }
-
-
 
     public static String create(JSONObject jsonObject) {
 
@@ -142,7 +139,7 @@ public class QuestionReportController {
     public static String setSeen(ObjectId tagId, JSONArray jsonArray) {
 
         Document tag = questionReportRepository.findById(tagId);
-        if(tag == null)
+        if (tag == null)
             return JSON_NOT_VALID_ID;
 
         JSONArray doneIds = new JSONArray();
@@ -177,12 +174,12 @@ public class QuestionReportController {
 
         }
 
-        if(dec > 0) {
+        if (dec > 0) {
             tag.put("unseen_reports_count", tag.getInteger("unseen_reports_count") - dec);
             questionReportRepository.replaceOne(tagId, tag);
         }
 
-        if (excepts.length() == 0)
+        if (excepts.isEmpty())
             return generateSuccessMsg(
                     "excepts", "تمامی موارد به درستی تغییر وضعیت پیدا کردند",
                     new PairValue("doneIds", doneIds)
@@ -195,23 +192,25 @@ public class QuestionReportController {
         );
     }
 
-    public static String storeReport(ObjectId userId, ObjectId questionId,
-                                     ObjectId tagId, String desc) {
+    public static String storeReport(
+            ObjectId userId, ObjectId questionId,
+            ObjectId tagId, String desc
+    ) {
 
         Document tag = questionReportRepository.findById(tagId);
         if (tag == null || !tag.getBoolean("visibility"))
             return JSON_NOT_VALID_ID;
 
         Document question = questionRepository.findById(questionId);
-        if(question == null || !question.getBoolean("visibility"))
+        if (question == null || !question.getBoolean("visibility"))
             return JSON_NOT_VALID_ID;
 
-        if(!tag.getBoolean("can_has_desc") && desc != null)
+        if (!tag.getBoolean("can_has_desc") && desc != null)
             return JSON_NOT_VALID_PARAMS;
 
         List<Document> reports = tag.getList("reports", Document.class);
 
-        if(searchInDocumentsKeyValIdx(reports, "user_id", userId,
+        if (searchInDocumentsKeyValIdx(reports, "user_id", userId,
                 "question_code", question.getString("organization_id")) != -1)
             return generateErr("شما قبلا این سوال را با این تگ گزارش کرده اید");
 
@@ -221,7 +220,7 @@ public class QuestionReportController {
                 .append("seen", false)
                 .append("question_code", question.getString("organization_id"));
 
-        if(desc != null)
+        if (desc != null)
             newDoc.put("description", desc);
 
         reports.add(newDoc);

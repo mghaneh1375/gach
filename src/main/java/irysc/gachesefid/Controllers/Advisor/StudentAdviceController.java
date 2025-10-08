@@ -89,14 +89,12 @@ public class StudentAdviceController {
         ObjectId userId = user.getObjectId("_id");
 
         for (ObjectId advisorId : myAdvisors) {
-
             Document advisor = userRepository.findById(advisorId);
 
             if (advisor == null)
                 continue;
 
             JSONObject jsonObject = convertToJSONDigest(userId, advisor);
-
             Document request = advisorRequestsRepository.findOne(and(
                     eq("advisor_id", advisorId),
                     eq("user_id", userId),
@@ -109,7 +107,7 @@ public class StudentAdviceController {
             JSONObject tmp = new JSONObject()
                     .put("id", "-1")
                     .put("createdAt", getSolarDate(request.getLong("active_at")))
-                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_DAY_MIL_SEC * 30))
+                    .put("finishAt", getSolarDate(request.getLong("active_at") + ONE_MONTH_MIL_SEC))
                     .put("title", request.getString("title"))
                     .put("videoCalls", request.getInteger("video_calls"))
                     .put("maxKarbarg", request.getOrDefault("max_karbarg", -1))

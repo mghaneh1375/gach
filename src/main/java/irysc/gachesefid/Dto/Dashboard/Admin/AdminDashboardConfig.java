@@ -26,4 +26,16 @@ public class AdminDashboardConfig extends ConfigDto {
     @Builder.Default
     @NotNull
     private Boolean showLastUserReports = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showMeetings = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showTopAdvisors = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showTopTeachers = true;
+    @Builder.Default
+    @NotNull
+    private Boolean showTopLastWeekBestSellerContents = true;
 }

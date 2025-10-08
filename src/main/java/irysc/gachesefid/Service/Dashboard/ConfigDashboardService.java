@@ -1,8 +1,5 @@
 package irysc.gachesefid.Service.Dashboard;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOptions;
 import irysc.gachesefid.Dto.Dashboard.Admin.AdminDashboardConfig;
@@ -22,6 +19,32 @@ import static irysc.gachesefid.Main.GachesefidApplication.configDashboardReposit
 
 @Service
 public class ConfigDashboardService extends MyService {
+
+    public void setAdminConfig(ObjectId userId, AdminDashboardConfig configDto) {
+        Document configDoc = configDashboardRepository.findBySecKey(userId);
+        AdminDashboardConfig adminDashboardConfig;
+        if (configDoc == null)
+            adminDashboardConfig = AdminDashboardConfig
+                    .builder()
+                    .userId(userId)
+                    .build();
+        else
+            adminDashboardConfig = mapper.convertValue(configDoc, AdminDashboardConfig.class);
+
+        adminDashboardConfig.setShowLastSettleRequest(configDto.getShowLastSettleRequest());
+        adminDashboardConfig.setShowIncomingRequestsForTeach(configDto.getShowIncomingRequestsForTeach());
+        adminDashboardConfig.setShowIncomingRequestsForAdvice(configDto.getShowIncomingRequestsForAdvice());
+        adminDashboardConfig.setShowMeetings(configDto.getShowMeetings());
+        adminDashboardConfig.setShowTopAdvisors(configDto.getShowTopAdvisors());
+        adminDashboardConfig.setShowTopTeachers(configDto.getShowTopTeachers());
+        adminDashboardConfig.setShowTopLastWeekBestSellerContents(configDto.getShowTopLastWeekBestSellerContents());
+
+        adminDashboardConfig.setShowLastTickets(configDto.getShowLastTickets());
+        adminDashboardConfig.setShowLastNotifs(configDto.getShowLastNotifs());
+        adminDashboardConfig.setShowDashboard(configDto.getShowDashboard());
+
+        save(configDoc, userId, adminDashboardConfig);
+    }
 
     public void setAdvisorConfig(ObjectId userId, AdvisorDashboardConfig configDto) {
         Document configDoc = configDashboardRepository.findBySecKey(userId);

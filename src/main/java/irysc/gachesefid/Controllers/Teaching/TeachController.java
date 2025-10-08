@@ -93,7 +93,7 @@ public class TeachController {
             filters.add(lte("created_at", to));
 
         List<Document> reports =
-                teachReportRepository.find(filters.size() == 0 ? null : and(filters), null);
+                teachReportRepository.find(filters.isEmpty() ? null : and(filters), null);
 
         Set<ObjectId> userIds = new HashSet<>();
         Set<ObjectId> scheduleIds = new HashSet<>();
@@ -1133,7 +1133,7 @@ public class TeachController {
 
         List<Object> tagOIdsList = null;
 
-        if (tagIds != null && tagIds.length() > 0) {
+        if (tagIds != null && !tagIds.isEmpty()) {
             Set<ObjectId> tagOIds = new HashSet<>();
             try {
                 for (int i = 0; i < tagIds.length(); i++) {

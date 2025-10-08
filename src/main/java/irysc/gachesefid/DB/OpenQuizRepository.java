@@ -9,6 +9,8 @@ import org.bson.Document;
 import java.util.List;
 import java.util.Optional;
 
+import static irysc.gachesefid.Utility.StaticValues.ONE_MONTH_MIL_SEC;
+
 
 public class OpenQuizRepository extends Common {
 
@@ -26,7 +28,7 @@ public class OpenQuizRepository extends Common {
         return Optional.ofNullable(
                 documentMongoCollection.aggregate(List.of(
                         Aggregates.unwind("$students"),
-                        Aggregates.match(Filters.gte("students.register_at", System.currentTimeMillis() - StaticValues.ONE_DAY_MIL_SEC * 30)),
+                        Aggregates.match(Filters.gte("students.register_at", System.currentTimeMillis() - ONE_MONTH_MIL_SEC)),
                         Aggregates.count()
                 )).first()
         ).orElse(new Document("count", 0)).getInteger("count", 0);

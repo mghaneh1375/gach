@@ -326,8 +326,7 @@ public class Jobs implements Runnable {
     private static class RemoveExpiredNotifs extends TimerTask {
 
         public void run() {
-
-            long lastMonth = System.currentTimeMillis() - ONE_DAY_MIL_SEC * 30;
+            long lastMonth = System.currentTimeMillis() - ONE_MONTH_MIL_SEC;
             List<Document> users = userRepository.find(and(
                     exists("events.0"),
                     lt("events.0.created_at", lastMonth)

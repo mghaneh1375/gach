@@ -54,12 +54,12 @@ public class CommentController {
                     or(
                             and(
                                     exists("start_at"),
-                                    gt("start_at", curr - StaticValues.ONE_DAY_MIL_SEC * 30)
+                                    gt("start_at", curr - ONE_MONTH_MIL_SEC)
                             ),
                             and(
                                     exists("start_date"),
                                     lt("start_date", curr),
-                                    gt("end_date", curr - StaticValues.ONE_DAY_MIL_SEC * 30)
+                                    gt("end_date", curr - ONE_MONTH_MIL_SEC)
                             )
                     )
             )))

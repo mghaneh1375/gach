@@ -1,4 +1,4 @@
-package irysc.gachesefid.entity.Advisor;
+package irysc.gachesefid.entity.advisor;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
