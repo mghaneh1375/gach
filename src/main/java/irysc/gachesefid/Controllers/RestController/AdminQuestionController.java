@@ -8,6 +8,7 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,7 +25,7 @@ public class AdminQuestionController {
             value = "/cropAndAddQuestionsToQuiz/{quizId}/{quizMode}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    public ResponseDto<AddBatchQuestionServiceResponse> cropAndAddQuestionsToQuiz(
+    public ResponseEntity<ResponseDto<AddBatchQuestionServiceResponse>> cropAndAddQuestionsToQuiz(
             @PathVariable @ObjectIdConstraint ObjectId quizId,
             @PathVariable String quizMode,
             @RequestPart(name = "questionPdf") MultipartFile questionPdf,

@@ -30,11 +30,13 @@ import org.apache.poi.ss.usermodel.Row;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.eq;
@@ -61,7 +63,7 @@ public class QuestionService extends MyService {
         this.iryscQuizService = iryscQuizService;
     }
 
-    public ResponseDto<AddBatchQuestionServiceResponse> cropAndAddQuestionsToQuiz(
+    public ResponseEntity<ResponseDto<AddBatchQuestionServiceResponse>> cropAndAddQuestionsToQuiz(
             MultipartFile questionPDF,
             MultipartFile answerPDF,
             MultipartFile questionsInfo,
@@ -119,17 +121,22 @@ public class QuestionService extends MyService {
                         : cropAnswerResponse.getResult().getFilenames()
         );
 
-        if (result.getErrors().size() > 0) {
-            return ResponseDto.builder(AddBatchQuestionServiceResponse.class)
-                    .status("nok")
-                    .data(
-                            AddBatchQuestionServiceResponse
-                                    .builder()
-                                    .message("برای افزودن اتومات سوالات به آزمون نباید خطایی در فایل موجود باشد")
-                                    .errors(result.getErrors())
-                                    .build()
-                    )
-                    .build();
+        if (result.getErrors() != null &&
+                result.getErrors().size() > 0
+        ) {
+            return new ResponseEntity<>(
+                    ResponseDto.builder(AddBatchQuestionServiceResponse.class)
+                            .status("ok")
+                            .data(
+                                    AddBatchQuestionServiceResponse
+                                            .builder()
+                                            .message("برای افزودن اتومات سوالات به آزمون نباید خطایی در فایل موجود باشد")
+                                            .errors(result.getErrors())
+                                            .build()
+                            )
+                            .build(),
+                    HttpStatus.OK
+            );
         }
 
         AddQuestionToQuizResult addQuestionToQuizResult = quizService.addQuestionsToQuizAutomatically(
@@ -137,21 +144,33 @@ public class QuestionService extends MyService {
         );
 
         if (addQuestionToQuizResult.getErrors().size() > 0) {
-            return ResponseDto.builder(AddBatchQuestionServiceResponse.class)
-                    .status("nok")
-                    .data(
-                            AddBatchQuestionServiceResponse
-                                    .builder()
-                                    .message("برای افزودن اتومات سوالات به آزمون نباید خطایی در فایل موجود باشد")
-                                    .errors(result.getErrors())
-                                    .build()
-                    )
-                    .build();
+            return new ResponseEntity<>(
+                    ResponseDto.builder(AddBatchQuestionServiceResponse.class)
+                            .status("ok")
+                            .data(
+                                    AddBatchQuestionServiceResponse
+                                            .builder()
+                                            .message("سوالات با موفقیت به سامانه افزوده شدند ولی در افزودن سوالات زیر در آزمون مشکلی رخ داده است")
+                                            .errors(result.getErrors())
+                                            .build()
+                            )
+                            .build(),
+                    HttpStatus.OK
+            );
         }
 
-        return ResponseDto.builder(AddBatchQuestionServiceResponse.class)
-                .status("ok")
-                .build();
+        return new ResponseEntity<>(
+                ResponseDto.builder(AddBatchQuestionServiceResponse.class)
+                        .status("ok")
+                        .data(
+                                AddBatchQuestionServiceResponse
+                                        .builder()
+                                        .message("تمامی سوالات با موفقیت به سامانه و آزمون مدنظر افزوده شدند.")
+                                        .build()
+                        )
+                        .build(),
+                HttpStatus.OK
+        );
     }
 
 
@@ -187,6 +206,8 @@ public class QuestionService extends MyService {
                 questionEntities, subjectCodes,
                 authorCodes, tagCodes, tagKeys
         );
+        HashMap<String, String> renamed = new HashMap<>();
+        AtomicBoolean hasAnyErr = new AtomicBoolean(errs.size() > 0);
 
         questionEntities
                 .entrySet()
@@ -197,20 +218,20 @@ public class QuestionService extends MyService {
                     QuestionEntity questionEntity = questionEntities.get(rowIdx);
                     if (references.getDuplicateOrganizationIds().contains(questionEntity.getOrganizationId())) {
                         errs.add(batchRowErr(rowIdx, "کد سازمانی سوال در سامانه موجود است."));
-                        questionEntity.setHasError(true);
+                        hasAnyErr.set(true);
                         return;
                     }
 
                     if (!references.getSubjects().containsKey(questionEntity.getSubjectCode())) {
                         errs.add(batchRowErr(rowIdx, "کد مبحث نامعتیر است."));
-                        questionEntity.setHasError(true);
+                        hasAnyErr.set(true);
                         return;
                     } else
                         questionEntity.setSubjectId(references.getSubjects().get(questionEntity.getSubjectCode()));
 
                     if (!references.getAuthors().containsKey(questionEntity.getAuthorCode())) {
                         errs.add(batchRowErr(rowIdx, "کد مولف نامعتبر است."));
-                        questionEntity.setHasError(true);
+                        hasAnyErr.set(true);
                         return;
                     } else
                         questionEntity.setAuthor(references.getAuthors().get(questionEntity.getAuthorCode()));
@@ -237,28 +258,58 @@ public class QuestionService extends MyService {
                     }
                     questionEntity.setTags(tags);
 
-                    String questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionEntity.getQuestionFile(), null);
-                    if (questionFilename == null) {
-                        errs.add(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
-                        questionEntity.setHasError(true);
-                        return;
-                    }
-
-                    if (questionEntity.getAnswerFile() != null) {
-                        String answerFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionEntity.getAnswerFile(), null);
-                        if (answerFilename == null) {
-                            errs.add(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
-                            questionEntity.setHasError(true);
+                    if(!hasAnyErr.get()) {
+                        String questionFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionEntity.getQuestionFile(), null);
+                        if (questionFilename == null) {
+                            errs.add(batchRowErr(rowIdx, "بارگذاری فایل صورت سوال با خطا مواجه شده است"));
+                            hasAnyErr.set(true);
                             return;
                         }
-                        questionEntity.setAnswerFile(answerFilename);
-                    }
+                        renamed.put(questionEntity.getQuestionFile(), questionFilename);
+                        questionEntity.setQuestionFile(questionFilename);
 
-                    Document qDoc = mapper.convertValue(questionEntity, Document.class);
-                    qDoc.put("_id", new ObjectId(qDoc.get("_id").toString()));
-                    qDoc.put("subject_id", new ObjectId(qDoc.get("subject_id").toString()));
-                    writes.add(new InsertOneModel<>(qDoc));
+                        if (questionEntity.getAnswerFile() != null) {
+                            String answerFilename = FileUtils.renameFile(QuestionRepository.FOLDER, questionEntity.getAnswerFile(), null);
+                            if (answerFilename == null) {
+                                errs.add(batchRowErr(rowIdx, "بارگذاری فایل پاسخ سوال با خطا مواجه شده است"));
+                                hasAnyErr.set(true);
+                                return;
+                            }
+                            questionEntity.setAnswerFile(answerFilename);
+                            renamed.put(questionEntity.getAnswerFile(), answerFilename);
+                        }
+
+                        Document qDoc = mapper.convertValue(questionEntity, Document.class);
+                        qDoc.put("_id", new ObjectId(qDoc.get("_id").toString()));
+                        qDoc.put("subject_id", new ObjectId(qDoc.get("subject_id").toString()));
+                        writes.add(new InsertOneModel<>(qDoc));
+                    }
                 });
+
+        if(hasAnyErr.get()) {
+            questionFiles.forEach(q -> {
+                String finalQuestionName = q;
+                if(renamed.containsKey(finalQuestionName))
+                    finalQuestionName = renamed.get(finalQuestionName);
+
+                if (FileUtils.checkExist(finalQuestionName, QuestionRepository.FOLDER))
+                    FileUtils.removeFile(finalQuestionName, QuestionRepository.FOLDER);
+            });
+
+            answerFiles.forEach(a -> {
+                String finalAnswerName = a;
+                if(renamed.containsKey(finalAnswerName))
+                    finalAnswerName = renamed.get(finalAnswerName);
+
+                if (FileUtils.checkExist(finalAnswerName, QuestionRepository.FOLDER))
+                    FileUtils.removeFile(finalAnswerName, QuestionRepository.FOLDER);
+            });
+
+            return AddBatchQuestionResult
+                    .builder()
+                    .errors(errs)
+                    .build();
+        }
 
         if (writes.size() > 0) {
             questionRepository.bulkWrite(writes);
@@ -268,12 +319,8 @@ public class QuestionService extends MyService {
         return AddBatchQuestionResult
                 .builder()
                 .insertedItems(
-                        questionEntities
-                                .values().stream()
-                                .filter(questionEntity -> !questionEntity.isHasError())
-                                .collect(Collectors.toList())
+                        new ArrayList<>(questionEntities.values())
                 )
-                .errors(errs)
                 .build();
 
 //        if (errs.size() == 0)
@@ -413,7 +460,7 @@ public class QuestionService extends MyService {
                 if (cell != null && cell.getCellType() != Cell.CELL_TYPE_BLANK)
                     questionEntity.setMark(cell.getNumericCellValue());
 
-                questionEntity.setCreated(curr);
+                questionEntity.setCreatedAt(curr);
                 questionEntities.put(row.getRowNum(), questionEntity);
             } catch (Exception e) {
                 printException(e);

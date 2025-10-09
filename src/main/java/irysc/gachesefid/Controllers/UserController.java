@@ -7,7 +7,6 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Controllers.Badge.BadgeController;
 import irysc.gachesefid.Controllers.Point.PointController;
 import irysc.gachesefid.Controllers.Quiz.QuizAbstract;
-import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.DB.UserRepository;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -26,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Field;
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;

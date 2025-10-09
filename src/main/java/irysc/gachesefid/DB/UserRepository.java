@@ -1,12 +1,17 @@
 package irysc.gachesefid.DB;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Variable;
+import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.UserDigest;
+import irysc.gachesefid.Dto.advice.TopAdvisors;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
@@ -17,14 +22,14 @@ import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.activationRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.printException;
 
@@ -326,5 +331,43 @@ public class UserRepository extends Common {
 
     public void checkCache(ObjectId oId) {
         removeFromCache(table, oId);
+    }
+
+    public List<TopAdvisors> topAdvisors() {
+        List<TopAdvisors> topAdvisors = new ArrayList<>();
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(exists("students")),
+                            project(
+                                    fields(
+                                            include("pic"),
+                                            computed("firstname", "$first_name"),
+                                            computed("lastname", "$last_name"),
+                                            computed("id", "$_id"),
+                                            computed("studentsCount", new Document("$size", "students"))
+                                    )
+                            ),
+                            sort(Sorts.descending("studentsCount")),
+                            skip(0),
+                            limit(5)
+                    )
+            ).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    topAdvisors.add(
+                            objectMapper.readValue(document.toJson(), TopAdvisors.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        }
+        catch (Exception ignore) {}
+
+        return topAdvisors.stream().sorted(
+                Comparator.comparing(
+                        TopAdvisors::getStudentsCount,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).reversed()
+        ).collect(Collectors.toList());
     }
 }

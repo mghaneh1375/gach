@@ -59,7 +59,6 @@ public class QuestionEntity extends MongoEntity {
         setId(new ObjectId());
         isPublic = true;
         visibility = true;
-        hasError = false;
         addedToQuiz = false;
         used = 0;
         tags = new HashSet<>();
@@ -73,9 +72,6 @@ public class QuestionEntity extends MongoEntity {
     private String subjectCode;
     @JsonIgnore
     private String authorCode;
-    @JsonIgnore
-    @Builder.Default
-    private boolean hasError = false;
     @JsonIgnore
     private Double mark;
     @JsonIgnore

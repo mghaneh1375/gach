@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
 import irysc.gachesefid.Controllers.Quiz.Utility;
+import irysc.gachesefid.Dto.QuizDigestDto;
 import irysc.gachesefid.Dto.Serializer.MongoByteArraySerializer;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -28,6 +29,7 @@ import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.openQuizRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.questionRepository;
+import static irysc.gachesefid.Utility.StaticValues.JUST_TITLE;
 import static irysc.gachesefid.Utility.Utility.batchRowErr;
 
 @Service
@@ -118,5 +120,14 @@ public class OpenQuizService extends MyService implements QuizService {
             System.out.println(e.getMessage());
             throw new InvalidFieldsException("fail to convert doc to entity");
         }
+    }
+
+    @Override
+    public List<QuizDigestDto> digests() {
+        return openQuizRepository
+                .find(null, JUST_TITLE)
+                .stream()
+                .map(QuizDigestDto::buildFromDoc)
+                .collect(Collectors.toList());
     }
 }

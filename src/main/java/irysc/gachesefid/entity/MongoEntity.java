@@ -3,7 +3,7 @@ package irysc.gachesefid.entity;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.deser.std.ObjectArrayDeserializer;
+import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
 import irysc.gachesefid.Dto.Deserializer.ObjectIdDeserializer;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerialization;
 import lombok.AllArgsConstructor;
@@ -23,5 +23,6 @@ public class MongoEntity {
     private ObjectId id;
 
     @JsonProperty("created_at")
+    @JsonDeserialize(using = MongoNumberLongDeserializer.class)
     private Long createdAt;
 }

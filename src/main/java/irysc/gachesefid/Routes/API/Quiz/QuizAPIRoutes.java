@@ -1642,7 +1642,7 @@ public class QuizAPIRoutes extends Router {
                                        params = {"answers"},
                                        paramsType = {JSONArray.class}
                                ) @NotBlank String jsonStr
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
         UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());
 
@@ -1682,7 +1682,7 @@ public class QuizAPIRoutes extends Router {
                                             @PathVariable @EnumValidator(enumClazz = AllKindQuiz.class) String mode,
                                             @PathVariable @ObjectIdConstraint ObjectId quizId,
                                             @PathVariable @ObjectIdConstraint ObjectId userId
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+    ) throws UnAuthException {
 
         UserTokenInfo userTokenInfo = getUserTokenInfo(request);
         boolean isAdmin = Authorization.isContent(userTokenInfo.getAccesses());

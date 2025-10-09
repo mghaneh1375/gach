@@ -59,7 +59,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         Role.ROLE_AGENT.getAuthority(), Role.ROLE_CONTENT.getAuthority(), Role.ROLE_EDITOR.getAuthority()
                 )
                 // EDITOR OR CONTENT ROLES SERVICES
-                .antMatchers("/api/admin/config/author/getAuthorsKeyVals"
+                .antMatchers(
+                        "/api/admin/config/author/getAuthorsKeyVals",
+                        "/api/admin/quiz/**"
                 ).hasAnyAuthority(
                         Role.ROLE_ADMIN.getAuthority(),
                         Role.ROLE_SUPER_ADMIN.getAuthority(),

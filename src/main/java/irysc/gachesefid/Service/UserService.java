@@ -1,6 +1,7 @@
 package irysc.gachesefid.Service;
 
 import irysc.gachesefid.Controllers.UserController;
+import irysc.gachesefid.Dto.advice.TopAdvisors;
 import irysc.gachesefid.Exception.CustomException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -195,4 +196,7 @@ public class UserService {
         }
     }
 
+    public List<TopAdvisors> topAdvisors() {
+        return userRepository.topAdvisors();
+    }
 }
