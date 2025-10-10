@@ -1,4 +1,4 @@
-package irysc.gachesefid.Controllers.RestController.Advice;
+package irysc.gachesefid.Controllers.RestController.advice;
 
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotAccessException;

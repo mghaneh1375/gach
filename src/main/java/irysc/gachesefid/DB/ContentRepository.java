@@ -10,7 +10,6 @@ import com.mongodb.client.model.Sorts;
 import irysc.gachesefid.Dto.Dashboard.Student.SuggestedContentDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Utility.FileUtils;
-import irysc.gachesefid.Utility.StaticValues;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
@@ -27,6 +26,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
 import static irysc.gachesefid.Main.GachesefidApplication.objectMapper;
 import static irysc.gachesefid.Utility.StaticValues.ONE_MONTH_MIL_SEC;
+import static irysc.gachesefid.Utility.StaticValues.ONE_WEEK_MIL_SEC;
 
 
 public class ContentRepository extends Common {
@@ -122,6 +122,71 @@ public class ContentRepository extends Common {
                                     computed("off.amount", "$off"),
                                     computed("off.start", "$off_start"),
                                     computed("off.expiration", "$off_expiration")
+                            )
+                    )
+            );
+
+            documentMongoCollection.aggregate(pipeline)
+                    .forEach((Consumer<? super Document>) document -> {
+                        try {
+                            suggestions.add(
+                                    objectMapper.readValue(document.toJson(), SuggestedContentDto.class)
+                            );
+                        } catch (JsonProcessingException ignore) {}
+                    });
+        }
+        catch (Exception ignore) {}
+
+        return suggestions;
+    }
+
+    public List<SuggestedContentDto> topLastWeekBestSeller() {
+        List<SuggestedContentDto> suggestions = new ArrayList<>();
+        try {
+            List<Bson> pipeline = Arrays.asList(
+                    Aggregates.addFields(new Field<>("totalBuyersCount",
+                            new Document("$size",
+                                    new Document("$ifNull", Arrays.asList("$users", List.of()))
+                            )
+                    )),
+                    Aggregates.addFields(new Field<>("lastWeekBuyers",
+                            new Document("$filter", new Document()
+                                    .append("input", "$users")
+                                    .append("as", "buyer")
+                                    .append("cond",
+                                            new Document("$gte", Arrays.asList("$$buyer.register_at", System.currentTimeMillis() - ONE_WEEK_MIL_SEC))
+                                    )
+                            )
+                    )),
+                    Aggregates.addFields(new Field<>("lastWeekBuyersCount",
+                            new Document("$size",
+                                    new Document("$ifNull", Arrays.asList("$lastWeekBuyers", List.of()))
+                            )
+                    )),
+                    Aggregates.addFields(new Field<>("rate",
+                            new Document("$ifNull", Arrays.asList("$rate", 0)))
+                    ),
+                    Aggregates.addFields(new Field<>("rate_count",
+                            new Document("$ifNull", Arrays.asList("$rate_count", 0)))
+                    ),
+                    match(and(gt("lastWeekBuyersCount", 0))),
+                    Aggregates.sort(Sorts.descending("lastWeekBuyersCount")),
+                    Aggregates.limit(3),
+                    Aggregates.project(
+                            fields(
+                                    computed("id", "$_id"),
+                                    include("title"),
+                                    include("slug"),
+                                    include("tags"),
+                                    computed("level", "$level.title"),
+                                    computed("sessionsCount", "$sessions_count"),
+                                    include("duration"),
+                                    computed("teachers", new Document("$split", Arrays.asList("$teacher", "__"))),
+                                    include("price"),
+                                    include("rate"),
+                                    computed("buyersCount", "$totalBuyersCount"),
+                                    computed("lastWeekBuyersCount", "$lastWeekBuyersCount"),
+                                    computed("img", "$img")
                             )
                     )
             );

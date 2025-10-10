@@ -37,6 +37,8 @@ public class SuggestedContentDto {
     private String img;
     @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = OffValueFilter.class)
     private Off off;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Integer lastWeekBuyersCount;
 
     public static class Off {
         private String type;

@@ -9,12 +9,12 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Variable;
-import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
-import irysc.gachesefid.Dto.UserDigest;
+import irysc.gachesefid.Dto.advice.AdvisorGeneralInfoDto;
 import irysc.gachesefid.Dto.advice.TopAdvisors;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
+import irysc.gachesefid.Models.CommentSection;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
@@ -338,19 +338,42 @@ public class UserRepository extends Common {
         try {
             MongoCursor<Document> iterator = documentMongoCollection.aggregate(
                     List.of(
-                            match(exists("students")),
+                            match(
+                                    and(
+                                            exists("students.0"),
+                                            eq("accesses", "advisor")
+                                    )
+                            ),
+                            addFields(new Field<>("studentsCount",
+                                    new Document("$size", "$students")
+                            )),
+                            sort(Sorts.descending("studentsCount")),
+                            skip(0),
+                            limit(5),
+                            lookup("comments",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(and(
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$ref_id", "$$advisorId"))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$section", CommentSection.ADVISOR.getName()))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$status", "accept"))
+                                                    )
+                                            )),
+                                            project(JUST_ID)
+                                    ), "commentsList"),
                             project(
                                     fields(
-                                            include("pic"),
+                                            include("pic", "rate", "studentsCount"),
                                             computed("firstname", "$first_name"),
                                             computed("lastname", "$last_name"),
                                             computed("id", "$_id"),
-                                            computed("studentsCount", new Document("$size", "students"))
+                                            computed("commentsCount", new Document("$size", "$commentsList"))
                                     )
-                            ),
-                            sort(Sorts.descending("studentsCount")),
-                            skip(0),
-                            limit(5)
+                            )
                     )
             ).iterator();
             iterator.forEachRemaining(document -> {
@@ -369,5 +392,80 @@ public class UserRepository extends Common {
                         Comparator.nullsLast(Comparator.naturalOrder())
                 ).reversed()
         ).collect(Collectors.toList());
+    }
+
+    public AdvisorGeneralInfoDto advisorGeneralInfo(ObjectId advisorId) {
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(
+                                    and(
+                                            eq("_id", advisorId),
+                                            eq("accesses", "advisor")
+                                    )
+                            ),
+                            addFields(new Field<>("studentsCount",
+                                    new Document("$size",
+                                        new Document("$ifNull", Arrays.asList("$students", 0))
+                                    )
+                            )),
+                            lookup("comments",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(and(
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$ref_id", "$$advisorId"))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$section", CommentSection.ADVISOR.getName()))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$status", "accept"))
+                                                    )
+                                            )),
+                                            project(JUST_ID)
+                                    ), "commentsList"),
+                            lookup("advisor_requests",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(and(
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$advisor_id", "$$advisorId"))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$answer", "accept"))
+                                                    )
+                                            )),
+                                            project(JUST_ID)
+                                    ), "totalStudentsList"),
+                            addFields(new Field<>("totalStudentsCount",
+                                    new Document("$size",
+                                            new Document("$ifNull", Arrays.asList("$totalStudentsList", 0))
+                                    )
+                            )),
+                            project(
+                                    fields(
+                                            include("pic", "rate", "studentsCount", "tags", "totalStudentsCount"),
+                                            computed("rateCount", "$rate_count"),
+                                            computed("adviceBio", "$advice_bio"),
+                                            computed("adviceVideoLink", "$advice_video_link"),
+                                            computed("firstname", "$first_name"),
+                                            computed("lastname", "$last_name"),
+                                            computed("birthDay", "$birth_day"),
+                                            computed("id", "$_id"),
+                                            computed("commentsCount", new Document("$size", "$commentsList"))
+                                    )
+                            )
+                    )
+            ).iterator();
+            if(iterator.hasNext()) {
+                try {
+                    return objectMapper.readValue(iterator.next().toJson(), AdvisorGeneralInfoDto.class);
+                } catch (JsonProcessingException ignore) {
+                    return null;
+                }
+            }
+        }
+        catch (Exception ignore) {}
+
+        return null;
     }
 }

@@ -38,8 +38,10 @@ public class UserEntity {
     private String adviceBio; // optional - advice_bio
     private String adviceVideoLink; // optional - advice_video_link
     private Boolean acceptStd; // optional - accept_std
+    private Double rate;
+    private Double teachRate;
 
     @JsonProperty("my_advisors")
     private List<ObjectId> myAdvisors;
-    private List<ObjectId> students;
+    private List<Object> students; // اگر کاربر مدرسه باشد این میشه لیستی از objectId ولی اگه مشاور باشه میشه لیستی از داکیومنت ها چون زمان ایجاد هم توشه
 }

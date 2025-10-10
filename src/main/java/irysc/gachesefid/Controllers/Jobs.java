@@ -71,7 +71,7 @@ public class Jobs implements Runnable {
 
             long curr = System.currentTimeMillis();
             List<WriteModel<Document>> writes = new ArrayList<>();
-            HashMap<ObjectId, List<ObjectId>> expiredStudents = null;
+            HashMap<ObjectId, List<ObjectId>> expiredStudentsForEachAdvisor = null;
             Set<ObjectId> shouldClearFromCache = new HashSet<>();
 
             for (Document user : users) {
@@ -94,15 +94,15 @@ public class Jobs implements Runnable {
                         if (expiredAdvisors == null) expiredAdvisors = new ArrayList<>();
                         expiredAdvisors.add(advisorId);
 
-                        if (expiredStudents == null)
-                            expiredStudents = new HashMap<>();
+                        if (expiredStudentsForEachAdvisor == null)
+                            expiredStudentsForEachAdvisor = new HashMap<>();
 
-                        if (!expiredStudents.containsKey(advisorId))
-                            expiredStudents.put(advisorId, new ArrayList<>() {{
+                        if (!expiredStudentsForEachAdvisor.containsKey(advisorId))
+                            expiredStudentsForEachAdvisor.put(advisorId, new ArrayList<>() {{
                                 add(user.getObjectId("_id"));
                             }});
                         else
-                            expiredStudents.get(advisorId).add(user.getObjectId("_id"));
+                            expiredStudentsForEachAdvisor.get(advisorId).add(user.getObjectId("_id"));
                     } else
                         maxDistance = Math.max(maxDistance, r);
                 }
@@ -126,13 +126,13 @@ public class Jobs implements Runnable {
                 }
             }
 
-            if (expiredStudents != null) {
+            if (expiredStudentsForEachAdvisor != null) {
                 List<Document> advisors = userRepository.find(
-                        in("_id", expiredStudents.keySet().toArray()),
+                        in("_id", expiredStudentsForEachAdvisor.keySet().toArray()),
                         new BasicDBObject("students", 1)
                 );
-                for (ObjectId advisorId : expiredStudents.keySet()) {
-                    final List<ObjectId> excludeList = expiredStudents.get(advisorId);
+                for (ObjectId advisorId : expiredStudentsForEachAdvisor.keySet()) {
+                    final List<ObjectId> excludeList = expiredStudentsForEachAdvisor.get(advisorId);
                     advisors.stream().filter(advisor -> advisor.getObjectId("_id").equals(advisorId))
                             .findFirst().ifPresent(advisor -> {
                                 shouldClearFromCache.add(advisorId);

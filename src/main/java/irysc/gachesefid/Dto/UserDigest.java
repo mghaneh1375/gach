@@ -1,7 +1,10 @@
 package irysc.gachesefid.Dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
+import irysc.gachesefid.Dto.Serializer.AgeSerializer;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
 import irysc.gachesefid.Dto.Serializer.PicSerializer;
 import lombok.AllArgsConstructor;
@@ -40,6 +43,10 @@ public class UserDigest {
     private String grade;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String city;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonDeserialize(using = MongoNumberLongDeserializer.class)
+    @JsonSerialize(using = AgeSerializer.class)
+    private Long age;
 
     public static UserDigest buildFromDoc(Document doc) {
         return UserDigest

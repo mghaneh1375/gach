@@ -199,7 +199,7 @@ public class DashboardService {
         }
 
         if(adminDashboardStatsDto.getShowTopAdvisors()) {
-
+            statsDto.setTopAdvisors(userRepository.topAdvisors());
         }
 
         if(adminDashboardStatsDto.getShowLastSettleRequest()) {
@@ -208,6 +208,10 @@ public class DashboardService {
 
         if(adminDashboardStatsDto.getShowIncomingRequestsForTeach()) {
 
+        }
+
+        if(adminDashboardStatsDto.getShowTopLastWeekBestSellerContents()) {
+            statsDto.setTopLastWeekBestSeller(contentRepository.topLastWeekBestSeller());
         }
 
         ResponseEntity<ResponseDto<AdminDashboardStatsDto>> response = new ResponseEntity<>(

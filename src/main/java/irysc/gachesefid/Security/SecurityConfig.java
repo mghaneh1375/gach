@@ -86,7 +86,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/api/admin/config/school/**", "/api/package_content/faq/**",
                         "/api/admin/content/**", "/api/admin/dashboard/**",
                         "/api/admin/report/**", "/api/ckeditor/quiz",
-                        "/api/admin/advice_tag_report/**", "/api/admin/cv_question/**"
+                        "/api/admin/advice_tag_report/**", "/api/admin/cv_question/**",
+                        "/api/admin/command/**", "/api/admin/advisor/**"
                 ).hasAnyAuthority(
                         Role.ROLE_ADMIN.getAuthority(),
                         Role.ROLE_SUPER_ADMIN.getAuthority()
