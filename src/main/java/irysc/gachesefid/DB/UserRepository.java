@@ -9,6 +9,7 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Variable;
+import irysc.gachesefid.Dto.advice.AdvisorDigestInfoDto;
 import irysc.gachesefid.Dto.advice.AdvisorGeneralInfoDto;
 import irysc.gachesefid.Dto.advice.TopAdvisors;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
@@ -467,5 +468,39 @@ public class UserRepository extends Common {
         catch (Exception ignore) {}
 
         return null;
+    }
+
+    public List<AdvisorDigestInfoDto> advisorsDigestInfo() {
+        List<AdvisorDigestInfoDto> advisors = new ArrayList<>();
+        try {
+            MongoCursor<Document> iterator = documentMongoCollection.aggregate(
+                    List.of(
+                            match(
+                                    and(
+                                            eq("accesses", "advisor"),
+                                            exists("advice"),
+                                            eq("advice", true)
+                                    )
+                            ),
+                            project(
+                                    fields(
+                                            computed("firstname", "$first_name"),
+                                            computed("lastname", "$last_name"),
+                                            computed("id", "$_id")
+                                    )
+                            )
+                    )
+            ).iterator();
+            iterator.forEachRemaining(document -> {
+                try {
+                    advisors.add(
+                            objectMapper.readValue(iterator.next().toJson(), AdvisorDigestInfoDto.class)
+                    );
+                } catch (JsonProcessingException ignore) {}
+            });
+        }
+        catch (Exception ignore) {}
+
+        return advisors;
     }
 }

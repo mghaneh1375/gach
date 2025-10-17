@@ -2,6 +2,7 @@ package irysc.gachesefid.Service.advice;
 
 import irysc.gachesefid.Dto.Dashboard.Advisor.ReportProblemDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Dto.advice.AdviceTagReportDto;
 import irysc.gachesefid.Dto.advice.CreateAdviceTagReportDto;
 import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Models.TeachReportTagMode;
@@ -41,7 +42,7 @@ public class AdviceTagReportService {
 
         Document newDoc = new Document("label", dto.getLabel())
                 .append("priority", dto.getPriority())
-                .append("mode", dto.getMode())
+                .append("mode", dto.getMode().getName())
                 .append("visibility", dto.getVisibility())
                 .append("created_at", System.currentTimeMillis());
 
@@ -99,12 +100,12 @@ public class AdviceTagReportService {
 
         doc.put("label", dto.getLabel());
         doc.put("priority", dto.getPriority());
-        doc.put("mode", dto.getMode());
+        doc.put("mode", dto.getMode().getName());
 
         adviceTagReportRepository.replaceOneWithoutClearCache(id, doc);
     }
 
-    public ResponseEntity<ResponseDto> getAllReportTags(String mode, boolean isAdmin) {
+    public ResponseEntity<ResponseDto<List<AdviceTagReportDto>>> getAllReportTags(String mode, boolean isAdmin) {
         if (mode != null) {
             if (!EnumValidatorImp.isValid(mode, TeachReportTagMode.class))
                 throw new InvalidFieldsException("invalid mode");
@@ -112,7 +113,7 @@ public class AdviceTagReportService {
 
         return new ResponseEntity<>(
                 ResponseDto
-                        .builder(List.class)
+                        .builderList(AdviceTagReportDto.class)
                         .data(
                                 adviceTagReportRepository.getList(
                                         mode, isAdmin
@@ -124,16 +125,13 @@ public class AdviceTagReportService {
         );
     }
 
-    public List<ReportProblemDigestDto> getAdviceReports(
+    public ResponseEntity<ResponseDto<List<ReportProblemDigestDto>>> getAdviceReports(
             Long from, Long to, Boolean showJustUnSeen,
             ObjectId advisorId, ObjectId studentId,
             Boolean justSendFromStudent, Boolean justSendFromTeacher,
-            ObjectId adviceId, int pageIndex
+            int pageIndex, Boolean needTotalCount
     ) {
         List<Bson> filters = new ArrayList<>();
-
-        if (adviceId != null)
-            filters.add(eq("schedule_id", adviceId));
 
         if (showJustUnSeen != null && showJustUnSeen)
             filters.add(eq("seen", false));
@@ -156,12 +154,27 @@ public class AdviceTagReportService {
         if (to != null)
             filters.add(lte("created_at", to));
 
-        return adviceReportRepository.getReports(
-                filters.isEmpty()
-                        ? null
-                        : and(filters),
-                (pageIndex - 1) * PER_PAGE,
-                PER_PAGE
+        return new ResponseEntity<>(
+                ResponseDto
+                        .builderList(ReportProblemDigestDto.class)
+                        .status("ok")
+                        .data(
+                                adviceReportRepository.getReports(
+                                        filters.isEmpty()
+                                                ? null
+                                                : and(filters),
+                                        (pageIndex - 1) * PER_PAGE,
+                                        PER_PAGE
+                                )
+                        )
+                        .totalCount(
+                                needTotalCount == null || !needTotalCount
+                                        ? null
+                                        : adviceReportRepository.count(and(filters))
+                        )
+                        .perPage(PER_PAGE)
+                        .build(),
+                HttpStatus.OK
         );
     }
 
@@ -224,7 +237,7 @@ public class AdviceTagReportService {
             }
 
             tagOIdsList = new ArrayList<>(tagOIds);
-            if (teachTagReportRepository.findByIds(tagOIdsList, false, JUST_ID) == null)
+            if (adviceTagReportRepository.findByIds(tagOIdsList, false, JUST_ID) == null)
                 throw new InvalidFieldsException("no valid params");
         }
 

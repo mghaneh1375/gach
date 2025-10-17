@@ -98,6 +98,8 @@ public class DailyAdvController {
     public static String getRandAdv(ObjectId userId) {
         checkAccessForAdv(userId);
         ArrayList<Document> advs = dailyAdvRepository.find(gt("expire_at", System.currentTimeMillis()), new BasicDBObject("filename", 1));
+        if(advs.size() == 0)
+            throw new InvalidFieldsException("ویدیوای جهت نمایش وجود ندارد");
         Document adv = advs.get(Math.abs(new Random().nextInt()) % advs.size());
         return generateSuccessMsg("data", STATICS_SERVER + FOLDER + "/" + adv.getString("filename"));
     }

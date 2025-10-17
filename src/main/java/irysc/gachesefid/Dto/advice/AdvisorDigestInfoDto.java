@@ -1,6 +1,7 @@
 package irysc.gachesefid.Dto.advice;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import irysc.gachesefid.Dto.UserDigest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,7 +15,10 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class AdvisorDigestInfoDto extends UserDigest {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer studentsCount;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Double rate;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer commentsCount;
 }

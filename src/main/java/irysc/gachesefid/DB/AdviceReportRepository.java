@@ -82,11 +82,9 @@ public class AdviceReportRepository extends Common {
                     reports.add(
                             objectMapper.readValue(document.toJson(), ReportProblemDigestDto.class)
                     );
-                } catch (JsonProcessingException ignore) {
-                }
+                } catch (JsonProcessingException ignore) {}
             });
-        } catch (Exception ignore) {
-        }
+        } catch (Exception ignore) {}
 
         return reports;
     }
@@ -96,7 +94,7 @@ public class AdviceReportRepository extends Common {
                 computed("id", "$_id"),
                 computed("createdAt", "$created_at"),
                 computed("section", "advice"),
-                include("desc"),
+                include("desc", "seen"),
                 computed("sendFrom", "$send_from"),
                 computed("reporter.id",
                         new Document("$cond",
@@ -143,10 +141,7 @@ public class AdviceReportRepository extends Common {
                 computed("tags",
                         new Document("$cond",
                                 new Document("if",
-                                        new Document("$and", Arrays.asList(
-                                                new Document("$exists", Arrays.asList("$tag_ids", true)),
-                                                new Document("$ne", Arrays.asList("$tag_ids", null))
-                                        ))
+                                        new Document("$ne", Arrays.asList("$tag_ids", null))
                                 )
                                         .append("then",
                                                 new Document("$map",

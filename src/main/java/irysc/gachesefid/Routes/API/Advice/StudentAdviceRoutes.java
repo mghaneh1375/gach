@@ -3,7 +3,9 @@ package irysc.gachesefid.Routes.API.Advice;
 import irysc.gachesefid.Controllers.Advisor.AdvisorController;
 import irysc.gachesefid.Controllers.Advisor.StudentAdviceController;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Dto.advice.AdviceTagReportDto;
 import irysc.gachesefid.Exception.*;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Service.advice.AdviceTagReportService;
@@ -32,6 +34,7 @@ import javax.validation.constraints.NotBlank;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.util.List;
 
 import static com.mongodb.client.model.Filters.*;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
@@ -390,9 +393,14 @@ public class StudentAdviceRoutes extends Router {
 
     @GetMapping(value = "getAllReportTags")
     @ResponseBody
-    public ResponseEntity<ResponseDto> getAllReportTags() {
+    public ResponseEntity<ResponseDto<List<AdviceTagReportDto>>> getAllReportTags(
+            HttpServletRequest request
+    ) throws UnAuthException {
         return adviceTagReportService.getAllReportTags(
-                TeachReportTagMode.USER.getName(), false
+                getUserTokenInfo(request).getAccesses().contains(Access.ADVISOR.getName())
+                        ? TeachReportTagMode.TEACHER.getName()
+                        : TeachReportTagMode.USER.getName()
+                , false
         );
     }
 }

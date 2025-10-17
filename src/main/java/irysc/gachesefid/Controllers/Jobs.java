@@ -12,7 +12,6 @@ import irysc.gachesefid.DB.Repository;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.OffCodeSections;
-import irysc.gachesefid.Utility.FileUtils;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.PhoneValidator;
 import lombok.Builder;
@@ -21,7 +20,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,9 +30,13 @@ import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Security.JwtTokenFilter.blackListTokens;
 import static irysc.gachesefid.Utility.SkyRoomUtils.deleteMeeting;
 import static irysc.gachesefid.Utility.StaticValues.*;
-import static irysc.gachesefid.Utility.Utility.*;
+import static irysc.gachesefid.Utility.Utility.getPast;
+import static irysc.gachesefid.Utility.Utility.sendSMSWithTemplate;
 
 public class Jobs implements Runnable {
+
+    private static HashMap<Integer, Integer> mailsInDays = new HashMap<>();
+    private final static int MAX_MAILS_IN_DAY = 750;
 
     @Override
     public void run() {
@@ -706,6 +708,10 @@ public class Jobs implements Runnable {
 
         @Override
         public void run() {
+            int today = Utility.getToday();
+            if(mailsInDays.containsKey(today) && mailsInDays.get(today) >= MAX_MAILS_IN_DAY)
+                return;
+
             ArrayList<Document> mails =
                     mailQueueRepository.find(eq("status", "pending"), null, Sorts.descending("created_at"));
 
@@ -755,6 +761,11 @@ public class Jobs implements Runnable {
 
             if (ids.size() > 0)
                 mailQueueRepository.deleteMany(in("_id", ids));
+
+            mailsInDays.put(
+                    today,
+                    mailsInDays.getOrDefault(today, 0) + limit
+            );
         }
     }
 

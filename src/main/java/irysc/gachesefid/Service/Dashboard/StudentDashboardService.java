@@ -214,7 +214,10 @@ public class StudentDashboardService {
                                         : null
                                 )
                                 .stdCount(advisor.getList("students", Document.class).size())
-                                .age(advisor.get("birth_day", Number.class).longValue())
+                                .age(advisor.containsKey("birth_day")
+                                        ? advisor.get("birth_day", Number.class).longValue()
+                                        : null
+                                )
                                 .build();
                     }).collect(Collectors.toList())
             );

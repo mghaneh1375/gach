@@ -51,11 +51,9 @@ public class AdviceTagReportRepository extends Common {
                                     new Variable<>("tagId", "$_id")
                             ),
                             List.of(
-                                    match(expr(and(
-                                            exists("$tag_ids"),
-                                            ne("$tag_ids", null),
-                                            new Document("$in", Arrays.asList("$$tagId", "$tag_ids"))
-                                    ))),
+                                    match(
+                                            expr(new Document("$in", Arrays.asList("$$tagId", "$tag_ids")))
+                                    ),
                                     group(
                                             null,
                                             sum("unseenCount",
@@ -76,7 +74,7 @@ public class AdviceTagReportRepository extends Common {
                                     include("label", "visibility", "priority", "mode"),
                                     computed("id", "$_id"),
                                     computed("createdAt", "$created_at"),
-                                    computed("unseenReportsCount", "$reportStats.unseenCount")
+                                    computed("unseenReportsCount", new Document("$size", "$reportStats.unseenCount"))
                             ) : fields(
                                     include("label"),
                                     computed("id", "$_id"),

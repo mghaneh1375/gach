@@ -1,7 +1,9 @@
 package irysc.gachesefid.Dto.advice;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import irysc.gachesefid.Dto.Deserializer.TeachReportTagModeDeserializer;
 import irysc.gachesefid.Dto.Serializer.ObjectIdSerializer;
 import irysc.gachesefid.Models.TeachReportTagMode;
 import lombok.AllArgsConstructor;
@@ -23,6 +25,8 @@ public class AdviceTagReportDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Boolean visibility;
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonDeserialize(using = TeachReportTagModeDeserializer.class)
     private TeachReportTagMode mode;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer unseenReportsCount;
 }

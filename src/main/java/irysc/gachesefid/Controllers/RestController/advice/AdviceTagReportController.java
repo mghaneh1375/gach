@@ -47,7 +47,11 @@ public class AdviceTagReportController extends Router {
         else jsonObject = new JSONObject(jsonStr);
         Document user = getUser(request);
         if(!user.containsKey("students") ||
-                !user.getList("students", ObjectId.class).contains(studentId)
+                user.getList("students", Document.class)
+                        .stream()
+                        .filter(document -> document.getObjectId("_id").equals(studentId))
+                        .findFirst()
+                        .isEmpty()
         )
             throw new NotAccessException();
 
@@ -84,31 +88,31 @@ public class AdviceTagReportController extends Router {
         );
     }
 
-    @GetMapping("list")
-    @ResponseBody
-    public ResponseEntity<ResponseDto> list(
-            HttpServletRequest request,
-            @RequestParam(name = "pageIndex") @Min(1) @Max(1000000) int pageIndex
-    ) throws UnAuthException {
-        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
-        boolean isAdvisor = userTokenInfo.getAccesses().contains(Access.ADVISOR.getName());
-        return new ResponseEntity<>(
-                ResponseDto
-                        .builder(List.class)
-                        .data(
-                                adviceTagReportService.getAdviceReports(
-                                        null, null, false,
-                                        isAdvisor ? userTokenInfo.getId() : null,
-                                        isAdvisor ? null : userTokenInfo.getId(),
-                                        null, null,
-                                        null, pageIndex
-                                )
-                        )
-                        .status("ok")
-                        .build(),
-                HttpStatus.OK
-        );
-    }
+//    @GetMapping("list")
+//    @ResponseBody
+//    public ResponseEntity<ResponseDto> list(
+//            HttpServletRequest request,
+//            @RequestParam(name = "pageIndex") @Min(1) @Max(1000000) int pageIndex
+//    ) throws UnAuthException {
+//        UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+//        boolean isAdvisor = userTokenInfo.getAccesses().contains(Access.ADVISOR.getName());
+//        return new ResponseEntity<>(
+//                ResponseDto
+//                        .builder(List.class)
+//                        .data(
+//                                adviceTagReportService.getAdviceReports(
+//                                        null, null, false,
+//                                        isAdvisor ? userTokenInfo.getId() : null,
+//                                        isAdvisor ? null : userTokenInfo.getId(),
+//                                        null, null,
+//                                        null, pageIndex
+//                                )
+//                        )
+//                        .status("ok")
+//                        .build(),
+//                HttpStatus.OK
+//        );
+//    }
 
     @DeleteMapping("removeReport/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
