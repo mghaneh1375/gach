@@ -5,10 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCursor;
-import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Field;
-import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.Variable;
+import com.mongodb.client.model.*;
 import irysc.gachesefid.Dto.advice.AdvisorDigestInfoDto;
 import irysc.gachesefid.Dto.advice.AdvisorGeneralInfoDto;
 import irysc.gachesefid.Dto.advice.TopAdvisors;
@@ -16,6 +13,7 @@ import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.CommentSection;
+import irysc.gachesefid.Models.TeachReportTagMode;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.ObjectIdValidator;
 import org.bson.Document;
@@ -94,6 +92,7 @@ public class UserRepository extends Common {
 
         return token;
     }
+
     public static String sendNewSMS(
             String NID, String phoneOrMail,
             String via, boolean savePhoneOrMail
@@ -249,9 +248,9 @@ public class UserRepository extends Common {
                     "settlementsCount", new BasicDBObject("$add", Arrays.asList("$teachSettlementsCount", "$adviceSettlementsCount")))
             ));
         }};
-        if(justSettled != null && justSettled)
+        if (justSettled != null && justSettled)
             filters.add(match(eq("settlementsCount", 0)));
-        else if(justSettled != null)
+        else if (justSettled != null)
             filters.add(match(gt("settlementsCount", 0)));
 
         filters.addAll(List.of(
@@ -305,9 +304,9 @@ public class UserRepository extends Common {
                     "settlementsCount", new BasicDBObject("$add", Arrays.asList("$teachSettlementsCount", "$adviceSettlementsCount")))
             ));
         }};
-        if(justSettled != null && justSettled)
+        if (justSettled != null && justSettled)
             filters.add(match(eq("settlementsCount", 0)));
-        else if(justSettled != null)
+        else if (justSettled != null)
             filters.add(match(gt("settlementsCount", 0)));
 
         int counter = 0;
@@ -382,10 +381,11 @@ public class UserRepository extends Common {
                     topAdvisors.add(
                             objectMapper.readValue(document.toJson(), TopAdvisors.class)
                     );
-                } catch (JsonProcessingException ignore) {}
+                } catch (JsonProcessingException ignore) {
+                }
             });
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         return topAdvisors.stream().sorted(
                 Comparator.comparing(
@@ -405,11 +405,10 @@ public class UserRepository extends Common {
                                             eq("accesses", "advisor")
                                     )
                             ),
-                            addFields(new Field<>("studentsCount",
-                                    new Document("$size",
-                                        new Document("$ifNull", Arrays.asList("$students", 0))
-                                    )
+                            addFields(new Field<>("currentStudents",
+                                    new Document("$ifNull", Arrays.asList("$students", List.of()))
                             )),
+                            lookup("users", "currentStudents", "_id", "studentsInfo"),
                             lookup("comments",
                                     Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
                                             match(and(
@@ -423,8 +422,41 @@ public class UserRepository extends Common {
                                                             new Document("$eq", Arrays.asList("$status", "accept"))
                                                     )
                                             )),
-                                            project(JUST_ID)
-                                    ), "commentsList"),
+                                            sort(Sorts.descending("created_at"))
+                                    ), "allCommentsList"),
+                            addFields(new Field<>("recentComments",
+                                    new Document("$slice", Arrays.asList("$allCommentsList", 3))
+                            )),
+                            lookup("advice_report",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(and(
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$advisor_id", "$$advisorId"))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$send_form", TeachReportTagMode.TEACHER.getName()))
+                                                    )
+                                            )),
+                                            sort(Sorts.descending("created_at")),
+                                            limit(3),
+                                            lookup("advice_tag_report", "tag_ids", "_id", "tags"),
+                                            addFields(new Field<>("tags",
+                                                    new Document("$arrayElemAt", Arrays.asList("$tags", 0))
+                                            ))
+                                    ), "recentReports"
+                            ),
+                            lookup("advice_report",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), List.of(
+                                            match(and(
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$advisor_id", "$$advisorId"))
+                                                    ),
+                                                    expr(
+                                                            new Document("$eq", Arrays.asList("$send_form", TeachReportTagMode.TEACHER.getName()))
+                                                    )
+                                            ))
+                                    ), "allReports"
+                            ),
                             lookup("advisor_requests",
                                     Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
                                             match(and(
@@ -437,35 +469,101 @@ public class UserRepository extends Common {
                                             )),
                                             project(JUST_ID)
                                     ), "totalStudentsList"),
+                            lookup("advisor_meeting",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(expr(
+                                                    new Document("$eq", Arrays.asList("$advisor_id", "$$advisorId"))
+                                            )),
+                                            project(JUST_ID)
+                                    ), "advisorMeetingList"),
                             addFields(new Field<>("totalStudentsCount",
                                     new Document("$size",
                                             new Document("$ifNull", Arrays.asList("$totalStudentsList", 0))
                                     )
                             )),
+                            lookup("advisor_meeting",
+                                    Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
+                                            match(expr(
+                                                    new Document("$eq", Arrays.asList("$advisor_id", "$$advisorId"))
+                                            )),
+                                            project(JUST_ID)
+                                    ), "advisorMeetingList"),
+                            lookup("schedule",
+                                    Collections.singletonList(new Variable<>("currentUserId", "$_id")),
+                                    List.of(
+                                            match(
+                                                    expr(
+                                                            new Document("$in", Arrays.asList("$$currentUserId", "$advisors"))
+                                                    )
+                                            )
+                                    ),
+                                    "schedulesInfo"
+                            ),
+                            lookup("settlement_request",
+                                    Collections.singletonList(new Variable<>("currentUserId", "$_id")),
+                                    List.of(
+                                            match(
+                                                    and(
+                                                            expr(
+                                                                    new Document("$eq", Arrays.asList("$$currentUserId", "$user_id"))
+                                                            ),
+                                                            expr(
+                                                                    new Document("$eq", Arrays.asList("$section", "advice"))
+                                                            )
+                                                    )
+                                            ),
+                                            group(
+                                                    null,
+                                                    Accumulators.sum("totalAmount", "$amount"),
+                                                    Accumulators.sum("totalCount", 1)
+                                            )
+                                    ),
+                                    "settlementStats"
+                            ),
+                            addFields(new Field<>("settlementStats",
+                                    new Document("$arrayElemAt", Arrays.asList("$settlementStats", 0))
+                            )),
+                            addFields(new Field<>("totalSettlements",
+                                    new Document("$ifNull", Arrays.asList("$settlementStats.totalCount", 0))
+                            )),
+                            addFields(new Field<>("totalSettledAmount",
+                                    new Document("$ifNull", Arrays.asList("$settlementStats.totalAmount", 0))
+                            )),
                             project(
                                     fields(
-                                            include("pic", "rate", "studentsCount", "tags", "totalStudentsCount"),
+                                            include(
+                                                    "pic", "rate", "studentsCount", "tags",
+                                                    "recentComments", "recentReports",
+                                                    "totalSettlements", "totalSettledAmount"
+                                            ),
                                             computed("rateCount", "$rate_count"),
                                             computed("adviceBio", "$advice_bio"),
                                             computed("adviceVideoLink", "$advice_video_link"),
                                             computed("firstname", "$first_name"),
                                             computed("lastname", "$last_name"),
-                                            computed("birthDay", "$birth_day"),
+                                            computed("age", "$birth_day"),
+                                            computed("forms", "$form_list"),
                                             computed("id", "$_id"),
-                                            computed("commentsCount", new Document("$size", "$commentsList"))
+                                            computed("commentsCount", new Document("$size", "$allCommentsList")),
+                                            computed("reportsCount", new Document("$size", "$allReports")),
+                                            computed("totalStudentsCount", new Document("$size", "$currentStudents")),
+                                            computed("meetingCount", new Document("$size", "$advisorMeetingList")),
+                                            computed("schedulesCount", new Document("$size", "$schedulesInfo")),
+                                            computed("students", "$studentsInfo"),
+                                            exclude("settlementStats")
                                     )
                             )
                     )
             ).iterator();
-            if(iterator.hasNext()) {
+            if (iterator.hasNext()) {
                 try {
                     return objectMapper.readValue(iterator.next().toJson(), AdvisorGeneralInfoDto.class);
                 } catch (JsonProcessingException ignore) {
                     return null;
                 }
             }
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         return null;
     }
@@ -496,10 +594,11 @@ public class UserRepository extends Common {
                     advisors.add(
                             objectMapper.readValue(iterator.next().toJson(), AdvisorDigestInfoDto.class)
                     );
-                } catch (JsonProcessingException ignore) {}
+                } catch (JsonProcessingException ignore) {
+                }
             });
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         return advisors;
     }

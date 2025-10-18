@@ -136,6 +136,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static UserPointRepository userPointRepository;
     public static MailRepository mailRepository;
     public static MailQueueRepository mailQueueRepository;
+    public static MissedChunkRepository missedChunkRepository;
     public static NotifRepository notifRepository;
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
@@ -225,6 +226,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             userLevelRepository = new UserLevelRepository();
             userPointRepository = new UserPointRepository();
             notifRepository = new NotifRepository();
+            missedChunkRepository = new MissedChunkRepository();
         } catch (Exception x) {
             printException(x);
         }

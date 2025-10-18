@@ -1,14 +1,14 @@
 package irysc.gachesefid.Controllers.RestController.Dashboard;
 
 
-import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardConfig;
-import irysc.gachesefid.Dto.Dashboard.Advisor.AdvisorDashboardStatsDto;
+import irysc.gachesefid.Dto.dashboard.Advisor.AdvisorDashboardConfig;
+import irysc.gachesefid.Dto.dashboard.Advisor.AdvisorDashboardStatsDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.Dashboard.AdvisorDashboardService;
-import irysc.gachesefid.Service.Dashboard.ConfigDashboardService;
+import irysc.gachesefid.Service.dashboard.AdvisorDashboardService;
+import irysc.gachesefid.Service.dashboard.ConfigDashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

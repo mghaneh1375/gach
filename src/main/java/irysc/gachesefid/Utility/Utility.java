@@ -27,6 +27,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -1609,5 +1610,16 @@ public class Utility {
 
     public static void createJustNotif(Document wantedUser, String textMessage, String mode) {
         notifRepository.insertOne(doCreateNotif(wantedUser, textMessage, mode));
+    }
+
+    public static boolean hasMissed(String address) {
+        try {
+            URL url = new URL(address);
+            HttpURLConnection huc = (HttpURLConnection) url.openConnection();
+            int responseCode = huc.getResponseCode();
+            return responseCode == 404;
+        } catch (Exception ignore) {
+            return true;
+        }
     }
 }

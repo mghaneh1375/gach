@@ -7,7 +7,7 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
-import irysc.gachesefid.Dto.Dashboard.Student.SuggestedContentDto;
+import irysc.gachesefid.Dto.dashboard.Student.SuggestedContentDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import irysc.gachesefid.Utility.FileUtils;
 import org.bson.Document;

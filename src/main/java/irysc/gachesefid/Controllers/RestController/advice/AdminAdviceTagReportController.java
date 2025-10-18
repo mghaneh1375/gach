@@ -1,6 +1,6 @@
 package irysc.gachesefid.Controllers.RestController.advice;
 
-import irysc.gachesefid.Dto.Dashboard.Advisor.ReportProblemDigestDto;
+import irysc.gachesefid.Dto.dashboard.Advisor.ReportProblemDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Dto.advice.AdviceTagReportDto;
 import irysc.gachesefid.Dto.advice.CreateAdviceTagReportDto;

@@ -2,7 +2,7 @@ package irysc.gachesefid.DB;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.client.MongoCursor;
-import irysc.gachesefid.Dto.Dashboard.Advisor.MeetingDto;
+import irysc.gachesefid.Dto.dashboard.Advisor.MeetingDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
 import org.bson.types.ObjectId;

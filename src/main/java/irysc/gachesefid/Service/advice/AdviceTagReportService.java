@@ -1,6 +1,6 @@
 package irysc.gachesefid.Service.advice;
 
-import irysc.gachesefid.Dto.Dashboard.Advisor.ReportProblemDigestDto;
+import irysc.gachesefid.Dto.dashboard.Advisor.ReportProblemDigestDto;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Dto.advice.AdviceTagReportDto;
 import irysc.gachesefid.Dto.advice.CreateAdviceTagReportDto;
@@ -16,10 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
@@ -133,13 +130,13 @@ public class AdviceTagReportService {
     ) {
         List<Bson> filters = new ArrayList<>();
 
-        if (showJustUnSeen != null && showJustUnSeen)
+        if (Objects.equals(showJustUnSeen, true))
             filters.add(eq("seen", false));
 
-        if (justSendFromStudent != null && justSendFromStudent)
+        if (Objects.equals(justSendFromStudent, true))
             filters.add(eq("send_from", "student"));
 
-        if (justSendFromTeacher != null && justSendFromTeacher)
+        if (Objects.equals(justSendFromTeacher, true))
             filters.add(eq("send_from", "teacher"));
 
         if (advisorId != null)

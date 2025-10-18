@@ -3,7 +3,7 @@ package irysc.gachesefid.DB;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
-import irysc.gachesefid.Dto.Dashboard.Advisor.AdviceRequestDto;
+import irysc.gachesefid.Dto.dashboard.Advisor.AdviceRequestDto;
 import irysc.gachesefid.Dto.Report.BuyReport.AdviceBuyerInfoDto;
 import irysc.gachesefid.Dto.Report.BuyReport.BuyerInfoDto;
 import irysc.gachesefid.Main.GachesefidApplication;

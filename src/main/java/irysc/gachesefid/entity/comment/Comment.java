@@ -18,7 +18,6 @@ import org.bson.types.ObjectId;
 public class Comment extends MongoEntity {
     @JsonProperty(value = "user_id")
     private ObjectId userId;
-    @JsonProperty(value = "user_id")
     private String status; // pending, reject, accept
     @JsonProperty(value = "ref_id")
     private ObjectId refId;

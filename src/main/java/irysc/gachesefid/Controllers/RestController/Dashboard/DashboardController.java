@@ -1,13 +1,13 @@
 package irysc.gachesefid.Controllers.RestController.Dashboard;
 
-import irysc.gachesefid.Dto.Dashboard.Student.DashboardStatsDto;
-import irysc.gachesefid.Dto.Dashboard.Student.StudentDashboardConfig;
+import irysc.gachesefid.Dto.dashboard.Student.DashboardStatsDto;
+import irysc.gachesefid.Dto.dashboard.Student.StudentDashboardConfig;
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.Dashboard.ConfigDashboardService;
-import irysc.gachesefid.Service.Dashboard.StudentDashboardService;
+import irysc.gachesefid.Service.dashboard.ConfigDashboardService;
+import irysc.gachesefid.Service.dashboard.StudentDashboardService;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,6 @@
 package irysc.gachesefid.DB;
 
-import irysc.gachesefid.Dto.Dashboard.NotifDigestDto;
+import irysc.gachesefid.Dto.dashboard.NotifDigestDto;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
 import org.bson.types.ObjectId;

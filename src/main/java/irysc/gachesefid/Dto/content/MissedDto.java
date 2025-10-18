@@ -20,8 +20,6 @@ public class MissedDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Boolean isChunked;
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Boolean isVideoMissed;
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonSerialize(using = LongDateSerialization.class)
     private Long uploadedVideoAt;
     @JsonInclude(JsonInclude.Include.NON_NULL)

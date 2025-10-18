@@ -263,7 +263,7 @@ public class UserController {
         return JSON_OK;
     }
 
-    private static String translateRole(String role) {
+    public static String translateRole(String role) {
 
         if (role.equalsIgnoreCase(Access.ADVISOR.getName()))
             return "مشاور";
@@ -286,7 +286,7 @@ public class UserController {
         return "دانش آموز";
     }
 
-    private static FormField[] getWantedList(String role) {
+    public static FormField[] getWantedList(String role) {
 
         FormField[] wantedList;
 
@@ -642,14 +642,13 @@ public class UserController {
 
         jsonObject.put(
                 "hasAdvisor",
-                user.containsKey("my_advisors") && user.getList("my_advisors", ObjectId.class).size() > 0
+                user.containsKey("my_advisors") && !user.getList("my_advisors", ObjectId.class).isEmpty()
         );
 
         if (user.containsKey("block_notif"))
             jsonObject.put("blockNotif", true);
 
         if (user.containsKey("form_list")) {
-
             JSONArray formsJSON = new JSONArray();
             List<Document> forms = user.getList("form_list", Document.class);
 
@@ -665,9 +664,7 @@ public class UserController {
                         .put("roleFa", translateRole(role));
 
                 JSONArray data = new JSONArray();
-
                 for (FormField field : wantedList) {
-
                     JSONObject jsonObject2 = new JSONObject()
                             .put("key", field.key)
                             .put("value", form.getOrDefault(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, field.key), ""))

@@ -1209,7 +1209,7 @@ public class AdvisorController {
             }
         }
 
-        if (settlementsRefs.size() > 0) {
+        if (!settlementsRefs.isEmpty()) {
             settlementRequests = settlementRequestRepository.find(
                     and(
                             exists("ref_id"),

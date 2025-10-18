@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.Accumulators;
-import irysc.gachesefid.Dto.Dashboard.Advisor.ScheduleDigest;
+import irysc.gachesefid.Dto.dashboard.Advisor.ScheduleDigest;
 import irysc.gachesefid.Main.GachesefidApplication;
 import org.bson.Document;
 import org.bson.conversions.Bson;

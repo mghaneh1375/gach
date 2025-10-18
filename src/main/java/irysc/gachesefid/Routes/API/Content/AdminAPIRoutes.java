@@ -2,6 +2,7 @@ package irysc.gachesefid.Routes.API.Content;
 
 import irysc.gachesefid.Controllers.Content.AdminContentController;
 import irysc.gachesefid.Dto.ResponseDto;
+import irysc.gachesefid.Dto.content.MissedDto;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -81,7 +82,7 @@ public class AdminAPIRoutes extends Router {
 
     @GetMapping(value = "findMissed")
     @ResponseBody
-    public ResponseEntity<ResponseDto<List>> findMissed() {
+    public ResponseEntity<ResponseDto<List<MissedDto>>> findMissed() {
         return contentService.findMissed();
     }
 }
