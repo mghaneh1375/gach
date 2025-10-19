@@ -22,7 +22,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
 
 @Controller
 @RequestMapping(path = "/api/package_content/admin")
@@ -82,7 +81,7 @@ public class AdminAPIRoutes extends Router {
 
     @GetMapping(value = "findMissed")
     @ResponseBody
-    public ResponseEntity<ResponseDto<List<MissedDto>>> findMissed() {
+    public ResponseEntity<ResponseDto<MissedDto>> findMissed() {
         return contentService.findMissed();
     }
 }

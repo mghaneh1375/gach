@@ -14,8 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.mongodb.client.model.Filters.exists;
+import static com.mongodb.client.model.Filters.lte;
 import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.missedChunkRepository;
+import static irysc.gachesefid.Utility.StaticValues.ONE_DAY_MIL_SEC;
 import static irysc.gachesefid.Utility.Utility.hasMissed;
 
 @Component
@@ -110,5 +112,9 @@ public class MissedChunksScheduler {
                 }
             }
         }
+
+        missedChunkRepository.deleteMany(
+                lte("created_at", System.currentTimeMillis() - ONE_DAY_MIL_SEC)
+        );
     }
 }
