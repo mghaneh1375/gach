@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.Deserializer.MongoNumberLongDeserializer;
 import irysc.gachesefid.Dto.Deserializer.ObjectIdDeserializer;
 import irysc.gachesefid.Dto.Serializer.LongDateSerialization;
+import irysc.gachesefid.Dto.Serializer.ObjectIdSerialization;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.bson.types.ObjectId;
@@ -15,6 +16,7 @@ import org.bson.types.ObjectId;
 public class CommonDto {
     @JsonProperty(value = "_id")
     @JsonDeserialize(using = ObjectIdDeserializer.class)
+    @JsonSerialize(using = ObjectIdSerialization.class)
     private ObjectId id;
     @JsonProperty(value = "created_at")
     @JsonDeserialize(using = MongoNumberLongDeserializer.class)

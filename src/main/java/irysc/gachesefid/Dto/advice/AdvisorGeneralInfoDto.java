@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import irysc.gachesefid.Dto.CommentDigestDto;
 import irysc.gachesefid.Dto.Serializer.UserFormSerializer;
 import irysc.gachesefid.Dto.UserDigest;
+import irysc.gachesefid.Dto.UserDigestSnake;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -41,7 +42,7 @@ public class AdvisorGeneralInfoDto extends AdvisorDigestInfoDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer schedulesCount;
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private List<UserDigest> students;
+    private List<UserDigestSnake> students;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<CommentDigestDto> recentComments;
     @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -406,9 +406,21 @@ public class UserRepository extends Common {
                                     )
                             ),
                             addFields(new Field<>("currentStudents",
-                                    new Document("$ifNull", Arrays.asList("$students", List.of()))
+                                    new Document("$ifNull", Arrays.asList("$students", Collections.emptyList()))
                             )),
-                            lookup("users", "currentStudents", "_id", "studentsInfo"),
+                            lookup(
+                                    "user",
+                                    List.of(new Variable<>("student_ids", "$students._id")),
+                                    List.of(
+                                            match(
+                                                    expr(
+                                                            new Document("$in", Arrays.asList("$_id", "$$student_ids"))
+                                                    )
+                                            )
+                                    ),
+                                    "studentsInfo"
+                            ),
+//                            lookup("user", "currentStudents", "_id", "studentsInfo"),
                             lookup("comments",
                                     Collections.singletonList(new Variable<>("advisorId", "$_id")), Arrays.asList(
                                             match(and(
@@ -534,7 +546,8 @@ public class UserRepository extends Common {
                                             include(
                                                     "pic", "rate", "studentsCount", "tags",
                                                     "recentComments", "recentReports",
-                                                    "totalSettlements", "totalSettledAmount"
+                                                    "totalSettlements", "totalSettledAmount",
+                                                    "totalStudentsCount"
                                             ),
                                             computed("rateCount", "$rate_count"),
                                             computed("adviceBio", "$advice_bio"),
@@ -546,11 +559,9 @@ public class UserRepository extends Common {
                                             computed("id", "$_id"),
                                             computed("commentsCount", new Document("$size", "$allCommentsList")),
                                             computed("reportsCount", new Document("$size", "$allReports")),
-                                            computed("totalStudentsCount", new Document("$size", "$currentStudents")),
                                             computed("meetingCount", new Document("$size", "$advisorMeetingList")),
                                             computed("schedulesCount", new Document("$size", "$schedulesInfo")),
-                                            computed("students", "$studentsInfo"),
-                                            exclude("settlementStats")
+                                            computed("students", "$studentsInfo")
                                     )
                             )
                     )
@@ -563,6 +574,7 @@ public class UserRepository extends Common {
                 }
             }
         } catch (Exception ignore) {
+            System.out.println(ignore.getMessage());
         }
 
         return null;
