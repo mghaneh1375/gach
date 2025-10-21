@@ -43,7 +43,8 @@ import static irysc.gachesefid.Utility.Utility.printException;
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @ComponentScan({"irysc.gachesefid.Routes", "irysc.gachesefid.Validator",
         "irysc.gachesefid.Security", "irysc.gachesefid.Service",
-        "irysc.gachesefid.Controllers", "irysc.gachesefid.adaptor"
+        "irysc.gachesefid.Controllers", "irysc.gachesefid.adaptor",
+        "irysc.gachesefid.schedule"
 })
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
