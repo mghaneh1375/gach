@@ -93,7 +93,7 @@ public class MissedChunksScheduler {
                 continue;
 
             for (Document session : content.getList("sessions", Document.class)) {
-                if (session.containsKey("video")) {
+                if (session != null && session.containsKey("video")) {
                     String video;
                     if (!(Boolean) session.getOrDefault("external_link", false)) {
                         String folderName = session.getString("video").split("\\.mp4")[0];
