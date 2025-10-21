@@ -105,7 +105,7 @@ public class MissedChunksScheduler {
                             Session
                                     .builder()
                                     .contentTitle(content.getString("title"))
-                                    .sessionTitle(session.getString("title"))
+                                    .sessionTitle(session.get("title").toString())
                                     .video(video)
                                     .build()
                     );
