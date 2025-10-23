@@ -379,7 +379,8 @@ public class StudentContentController {
         JSONArray data = new JSONArray();
         ArrayList<Document> docs = contentRepository.find(
                 in("users._id", userId),
-                CONTENT_DIGEST
+                CONTENT_DIGEST,
+                Sorts.descending("created_at")
         );
 
         for (Document doc : docs)

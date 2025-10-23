@@ -369,7 +369,8 @@ public class Utility {
         if (doc == null)
             return new JSONObject();
 
-        List<String> attaches = doc.containsKey("attaches") ? doc.getList("attaches", String.class)
+        List<Document> attaches = doc.containsKey("attaches")
+                ? doc.getList("attaches", Document.class)
                 : new ArrayList<>();
 
         JSONObject jsonObject = new JSONObject()
@@ -412,8 +413,11 @@ public class Utility {
             }
 
             JSONArray attachesJSONArr = new JSONArray();
-            for (String itr : attaches)
-                attachesJSONArr.put(STATICS_SERVER + ContentRepository.FOLDER + "/" + itr);
+            for (Document itr : attaches)
+                attachesJSONArr.put(new JSONObject()
+                        .put("filename", STATICS_SERVER + ContentRepository.FOLDER + "/" + itr.getString("filename"))
+                        .put("title", itr.getString("title"))
+                );
 
             jsonObject.put("attaches", attachesJSONArr);
             String video = null;

@@ -43,11 +43,12 @@ public class ContentService {
             for(Document session : content.getList("sessions", Document.class)) {
                 List<String> missedAttachFiles = new ArrayList<>();
                 if(session.containsKey("attaches") &&
-                        !session.getList("attaches", String.class).isEmpty()) {
+                        !session.getList("attaches", Document.class).isEmpty()
+                ) {
                     int counter = 0;
-                    for(String attach : session.getList("attaches", String.class)) {
-                        if(hasMissed(String.format("%s%s/%s", STATIC_SERVER_URL, ContentRepository.FOLDER, attach)))
-                            missedAttachFiles.add(String.format("پیوست %s", faNumbers[counter]));
+                    for(Document attach : session.getList("attaches", Document.class)) {
+                        if(hasMissed(String.format("%s%s/%s", STATIC_SERVER_URL, ContentRepository.FOLDER, attach.getString("filename"))))
+                            missedAttachFiles.add(attach.getString("title"));
                         counter++;
                     }
                 }
