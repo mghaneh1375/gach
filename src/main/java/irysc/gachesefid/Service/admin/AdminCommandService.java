@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 
 @Service
@@ -60,6 +61,50 @@ public class AdminCommandService {
 
         if(writes.size() > 0)
             userRepository.bulkWrite(writes);
+    }
+
+    public void convertAttachesToDoc() {
+        List<Document> contents = contentRepository.find(null, null);
+        String[] faNums = new String[] {
+            "اول", "دوم", "سوم", "چهارم", "پنجم",
+            "ششم", "هفتم", "هشتم", "نهم", "دهم"
+        };
+        for(Document content : contents) {
+            if(!content.containsKey("sessions"))
+                continue;
+
+            List<Document> sessions = content.getList("sessions", Document.class);
+            boolean needUpdate = false;
+            for(Document session : sessions) {
+                if(!session.containsKey("attaches") ||
+                        session.getList("attaches", Object.class).size() == 0
+                )
+                    continue;
+
+                List<Object> attaches = session.getList("attaches", Object.class);
+                boolean needChange = false;
+                for(int i = 0; i < attaches.size(); i++) {
+                    if(attaches.get(i) instanceof String) {
+                        needChange = true;
+                        attaches.set(i,
+                                new Document("filename", attaches.get(i))
+                                        .append("title", "فایل ضمیمه " + faNums[i])
+                        );
+                    }
+                }
+                if(needChange) {
+                    session.put("attaches", attaches);
+                    needUpdate = true;
+                }
+            }
+            if(needUpdate) {
+                content.put("sessions", sessions);
+                contentRepository.replaceOne(
+                        content.getObjectId("_id"),
+                        content
+                );
+            }
+        }
     }
 
 }

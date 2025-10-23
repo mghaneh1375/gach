@@ -250,9 +250,9 @@ public class ContentRepository extends Common {
     public void removeSession(Document session) {
 
         if (session.containsKey("attaches")) {
-            List<String> attaches = session.getList("attaches", String.class);
-            for (String attach : attaches)
-                FileUtils.removeFile(attach, FOLDER);
+            List<Document> attaches = session.getList("attaches", Document.class);
+            for (Document attach : attaches)
+                FileUtils.removeFile(attach.getString("filename"), FOLDER);
         }
 
         if (session.containsKey("video") && !(Boolean) session.getOrDefault("external_link", false))

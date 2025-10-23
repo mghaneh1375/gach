@@ -23,4 +23,9 @@ public class AdminCommandController {
         adminCommandService.syncStudentsInAdvisors();
     }
 
+    @GetMapping(value = "convertAttachesToDoc")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void convertAttachesToDoc() {
+        adminCommandService.convertAttachesToDoc();
+    }
 }
