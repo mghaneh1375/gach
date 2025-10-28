@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
@@ -216,16 +217,16 @@ public class SchoolQuizAPIRoutes extends Router {
                                    paramsType = {},
                                    optionals = {"off"},
                                    optionalsType = {String.class}
-                           ) String jsonStr
+                           ) String jsonStr,
+                           HttpServletResponse response
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getQuizUser(request);
-
         return QuizController.finalizeQuiz(quizId,
                 user.getObjectId("_id"),
                 jsonStr != null && !jsonStr.isEmpty() ?
                         new JSONObject(jsonStr).getString("off") :
-                        null, ((Number) user.get("money")).doubleValue()
+                        null, ((Number) user.get("money")).doubleValue(),
+                response
         );
     }
 
@@ -239,16 +240,16 @@ public class SchoolQuizAPIRoutes extends Router {
                                      paramsType = {},
                                      optionals = {"off"},
                                      optionalsType = {String.class}
-                             ) String jsonStr
+                             ) String jsonStr,
+                             HttpServletResponse response
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         Document user = getSchoolUser(request);
-
         return SchoolQuizController.finalizeHW(
                 hwId, user.getObjectId("_id"),
                 jsonStr != null && !jsonStr.isEmpty() ?
                         new JSONObject(jsonStr).getString("off") :
-                        null, ((Number) user.get("money")).doubleValue()
+                        null, ((Number) user.get("money")).doubleValue(),
+                response
         );
     }
 

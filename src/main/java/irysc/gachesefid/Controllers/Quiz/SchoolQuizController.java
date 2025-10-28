@@ -20,6 +20,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -270,10 +271,10 @@ public class SchoolQuizController {
         if (jsonObject.has("delayPenalty") && jsonObject.getInt("delayPenalty") > 100)
             return generateErr("حداکثر جریمه روزانه می تواند کسر 100% نمره باشد");
 
-        if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
+        if (jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
             return generateErr("زمان اتمام آپلود حداکثر می تواند تا ۱۵ روز بعد از زمان شروع تمرین باشد");
 
-        if(jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
+        if (jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
             return generateErr("زمان آپلود با تاخیر حداکثر می تواند تا ۱۰ روز بعد از زمان پایان تمرین باشد");
 
         jsonObject.put("isForAdvisor", isAdvisor);
@@ -325,13 +326,13 @@ public class SchoolQuizController {
                     jsonObject.getLong("end") < jsonObject.getLong("start"))
                 return generateErr("زمان پایان تمرین باید بزرگ تر از زمان آغاز آن باشد");
 
-            if(jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
+            if (jsonObject.getLong("end") - jsonObject.getLong("start") > ONE_DAY_MIL_SEC * 15)
                 return generateErr("زمان اتمام آپلود حداکثر می تواند تا ۱۵ روز بعد از زمان شروع تمرین باشد");
 
             if (jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") < jsonObject.getLong("end"))
                 return generateErr("زمان پایان ثبت تمرین با تاخیر باید بزرگ تر از زمان اتمام آن باشد");
 
-            if(jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
+            if (jsonObject.has("delayEnd") && jsonObject.getLong("delayEnd") - jsonObject.getLong("end") > ONE_DAY_MIL_SEC * 10)
                 return generateErr("زمان آپلود با تاخیر حداکثر می تواند تا ۱۰ روز بعد از زمان پایان تمرین باشد");
 
             if (!jsonObject.has("delayEnd")) {
@@ -447,13 +448,13 @@ public class SchoolQuizController {
     }
 
 
-    public static String finalizeHW(ObjectId hwId, ObjectId userId,
-                                    String off, double money) {
-
+    public static String finalizeHW(
+            ObjectId hwId, ObjectId userId,
+            String off, double money,
+            HttpServletResponse response
+    ) {
         try {
-
             Document hw = hasAccess(hwRepository, userId, hwId);
-
             PairValue p = isHWReadyForPay(hw);
             int studentsCount = (int) p.getKey();
 
@@ -468,7 +469,6 @@ public class SchoolQuizController {
                         userId, curr, OffCodeSections.SCHOOL_HW.getName()
                 );
             else {
-
                 offDoc = validateOffCode(
                         off, userId, curr,
                         OffCodeSections.SCHOOL_HW.getName()
@@ -489,11 +489,9 @@ public class SchoolQuizController {
                 ;
                 shouldPayDouble = total - offAmount;
             }
-
             int shouldPay = (int) shouldPayDouble;
 
             if (shouldPay - money <= 100) {
-
                 if (shouldPay > 100)
                     money = payFromWallet(shouldPay, money, userId);
 
@@ -515,7 +513,6 @@ public class SchoolQuizController {
                 hwRepository.replaceOne(hwId, hw);
 
                 if (offDoc != null) {
-
                     BasicDBObject update;
 
                     if (offDoc.containsKey("is_public") &&
@@ -567,8 +564,7 @@ public class SchoolQuizController {
                 doc.append("off_amount", (int) offAmount);
             }
 
-            return goToPayment((int) (shouldPay - money), doc);
-
+            return goToPayment((int) (shouldPay - money), doc, response);
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
         }

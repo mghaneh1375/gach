@@ -14,6 +14,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,9 +144,8 @@ public class StudentTeachController {
 
     public static String prePayForSemiPrivateSchedule(
             ObjectId scheduleId, Document user,
-            String offCode
+            String offCode, HttpServletResponse response
     ) {
-
         Document schedule = teachScheduleRepository.findById(scheduleId);
         if (schedule == null ||
                 !schedule.getString("teach_mode").equalsIgnoreCase(TeachMode.SEMI_PRIVATE.getName()))
@@ -163,7 +163,7 @@ public class StudentTeachController {
             )
                 return generateErr("شما قبلا در این جلسه ثبت نام شده اید");
 
-            return payForSchedule(user, schedule, null, offCode);
+            return payForSchedule(user, schedule, null, offCode, response);
         }
 
         if (schedule.containsKey("requests") &&
@@ -179,7 +179,6 @@ public class StudentTeachController {
                 Math.min(getConfig().getInteger("pre_pay_amount"), schedule.getInteger("price"));
 
         if (prePayAmount - money <= 100) {
-
             completePrePayForSemiPrivateSchedule(
                     null, schedule, user, prePayAmount
             );
@@ -218,7 +217,7 @@ public class StudentTeachController {
                         .append("products", scheduleId)
                         .append("section", "prePay");
 
-        return goToPayment((int) (prePayAmount - money), doc);
+        return goToPayment((int) (prePayAmount - money), doc, response);
     }
 
     public static String myScheduleRequests(
@@ -394,7 +393,8 @@ public class StudentTeachController {
 
     public static String payForSchedule(
             Document user, Document schedule,
-            ObjectId scheduleId, String offCode
+            ObjectId scheduleId, String offCode,
+            HttpServletResponse response
     ) {
         ObjectId userId = user.getObjectId("_id");
 
@@ -506,7 +506,7 @@ public class StudentTeachController {
             }
             // todo: set can request false for auto requests and create a request
 
-            return goToPayment((int) (shouldPay - money), doc);
+            return goToPayment((int) (shouldPay - money), doc, response);
         } catch (Exception x) {
             return generateErr(x.getMessage());
         }

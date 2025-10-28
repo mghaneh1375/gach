@@ -15,6 +15,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -187,7 +188,8 @@ public class StudentAdviceController {
 
     public static String payAdvisorPrice(
             ObjectId userId, double userMoney,
-            ObjectId advisorId, JSONObject jsonObject
+            ObjectId advisorId, JSONObject jsonObject,
+            HttpServletResponse response
     ) {
         Document doc = advisorRequestsRepository.findOne(and(
                 eq("answer", "accept"),
@@ -327,7 +329,7 @@ public class StudentAdviceController {
             transaction.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - userMoney), transaction);
+        return goToPayment((int) (shouldPay - userMoney), transaction, response);
     }
 
     public static String addItemToMyLifeStyle(ObjectId userId, JSONObject data) {

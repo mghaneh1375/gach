@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -69,8 +70,8 @@ public class StudentQuizAPIRoutes extends Router {
         boolean isAdmin = false;
         try {
             isAdmin = Authorization.isAdmin(getUserTokenInfo(request).getAccesses());
+        } catch (Exception ignore) {
         }
-        catch (Exception ignore) {}
 
         if (mode.equalsIgnoreCase(AllKindQuiz.IRYSC.getName()) ||
                 mode.equalsIgnoreCase(AllKindQuiz.ESCAPE.getName()) ||
@@ -83,7 +84,7 @@ public class StudentQuizAPIRoutes extends Router {
                     isAdmin, tag, finishedIsNeeded
             );
 
-        if(isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())) {
+        if (isAdmin && mode.equalsIgnoreCase(AllKindQuiz.OPEN.getName())) {
 //            if(pageIndex == null || pageSize == null)
 //                return JSON_NOT_VALID_PARAMS;
             return OpenQuizController.getAllForAdmin(tag, pageIndex, pageSize);
@@ -426,12 +427,15 @@ public class StudentQuizAPIRoutes extends Router {
 
     @PostMapping(value = "buyAdvisorQuiz/{quizId}")
     @ResponseBody
-    public String buyAdvisorQuiz(HttpServletRequest request,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+    public String buyAdvisorQuiz(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId quizId,
+            HttpServletResponse response
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUserWithOutCheckCompleteness(request);
         return StudentQuizController.buyAdvisorQuiz(
-                user.getObjectId("_id"), quizId, ((Number) user.get("money")).doubleValue()
+                user.getObjectId("_id"), quizId, ((Number) user.get("money")).doubleValue(),
+                response
         );
     }
 
@@ -469,9 +473,9 @@ public class StudentQuizAPIRoutes extends Router {
                               optionals = {"packageId", "code"},
                               optionalsType = {ObjectId.class, String.class}
                       )
-                      @NotBlank String jsonStr
+                      @NotBlank String jsonStr,
+                      HttpServletResponse response
     ) throws UnAuthException, NotActivateAccountException {
-
         Document user = getUser(request);
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
@@ -485,7 +489,8 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getString("mail"),
                 user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
-                        jsonObject.getString("code") : null
+                        jsonObject.getString("code") : null,
+                response
         );
     }
 
@@ -532,9 +537,9 @@ public class StudentQuizAPIRoutes extends Router {
                                         optionals = {"code", "members"},
                                         optionalsType = {String.class, JSONArray.class}
                                 )
-                                @NotBlank String jsonStr
+                                @NotBlank String jsonStr,
+                                HttpServletResponse response
     ) throws UnAuthException, NotActivateAccountException {
-
         Document user = getUser(request);
         JSONObject jsonObject = convertPersian(new JSONObject(jsonStr));
 
@@ -548,7 +553,8 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getString("mail"),
                 user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
-                        jsonObject.getString("code") : null
+                        jsonObject.getString("code") : null,
+                response
         );
     }
 
@@ -562,9 +568,9 @@ public class StudentQuizAPIRoutes extends Router {
                                    optionals = {"packageId", "code"},
                                    optionalsType = {ObjectId.class, String.class}
                            )
-                           @NotBlank String jsonStr
+                           @NotBlank String jsonStr,
+                           HttpServletResponse response
     ) throws UnAuthException, NotActivateAccountException, NotAccessException {
-
         Document user = getSchoolUser(request);
         JSONObject jsonObject = convertPersian(
                 new JSONObject(jsonStr)
@@ -581,7 +587,8 @@ public class StudentQuizAPIRoutes extends Router {
                 user.getString("mail"),
                 user.getString("first_name") + " " + user.getString("last_name"),
                 jsonObject.has("code") ?
-                        jsonObject.getString("code") : null
+                        jsonObject.getString("code") : null,
+                response
         );
     }
 
@@ -616,7 +623,7 @@ public class StudentQuizAPIRoutes extends Router {
         JSONObject jsonObject = jsonStr == null || jsonStr.isEmpty() ?
                 new JSONObject() : new JSONObject(jsonStr);
 
-        if(!jsonObject.has("answers") || jsonObject.getJSONArray("answers").length() == 0)
+        if (!jsonObject.has("answers") || jsonObject.getJSONArray("answers").length() == 0)
             return JSON_OK;
 
         if (mode.equalsIgnoreCase(AllKindQuiz.CUSTOM.getName()))
@@ -703,20 +710,23 @@ public class StudentQuizAPIRoutes extends Router {
 
     @PostMapping(path = "payCustomQuiz/{id}")
     @ResponseBody
-    public String payCustomQuiz(HttpServletRequest request,
-                                @PathVariable @ObjectIdConstraint ObjectId id,
-                                @RequestBody(required = false) @StrongJSONConstraint(
-                                        params = {}, paramsType = {},
-                                        optionals = {"offcode"},
-                                        optionalsType = {String.class}
-                                ) String jsonStr
+    public String payCustomQuiz(
+            HttpServletRequest request,
+            @PathVariable @ObjectIdConstraint ObjectId id,
+            @RequestBody(required = false) @StrongJSONConstraint(
+                    params = {}, paramsType = {},
+                    optionals = {"offcode"},
+                    optionalsType = {String.class}
+            ) String jsonStr,
+            HttpServletResponse response
     ) throws UnAuthException, NotActivateAccountException {
         return StudentQuizController.payCustomQuiz(
                 getUser(request),
                 id,
                 (jsonStr == null || jsonStr.isEmpty()) ?
                         new JSONObject() :
-                        new JSONObject(jsonStr)
+                        new JSONObject(jsonStr),
+                response
         );
     }
 
