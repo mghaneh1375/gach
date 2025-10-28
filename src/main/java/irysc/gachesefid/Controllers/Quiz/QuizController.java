@@ -27,7 +27,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -1081,12 +1080,11 @@ public class QuizController {
         return newUserMoney;
     }
 
-    public static String finalizeQuiz(
-            ObjectId quizId, ObjectId userId,
-            String off, double money,
-            HttpServletResponse response
-    ) {
+    public static String finalizeQuiz(ObjectId quizId, ObjectId userId,
+                                      String off, double money) {
+
         try {
+
             Document quiz = hasAccess(schoolQuizRepository, userId, quizId);
 
             PairValue p = isSchoolQuizReadyForPay(quiz);
@@ -1110,6 +1108,7 @@ public class QuizController {
                         userId, curr, OffCodeSections.SCHOOL_QUIZ.getName()
                 );
             else {
+
                 offDoc = validateOffCode(
                         off, userId, curr,
                         OffCodeSections.SCHOOL_QUIZ.getName()
@@ -1117,6 +1116,7 @@ public class QuizController {
 
                 if (offDoc == null)
                     return generateErr("کد تخفیف وارد شده معتبر نمی باشد.");
+
             }
 
             double offAmount = 0;
@@ -1208,7 +1208,7 @@ public class QuizController {
                 doc.append("off_amount", (int) offAmount);
             }
 
-            return goToPayment((int) (shouldPay - money), doc, response);
+            return goToPayment((int) (shouldPay - money), doc);
 
         } catch (InvalidFieldsException e) {
             return generateErr(e.getMessage());
@@ -3170,7 +3170,7 @@ public class QuizController {
 
     public static void calcQuestionsAgain(ObjectId quizId) {
         Document quiz = iryscQuizRepository.findById(quizId);
-        if (quiz == null)
+        if(quiz == null)
             return;
 
         Document questions = quiz.get("questions", Document.class);

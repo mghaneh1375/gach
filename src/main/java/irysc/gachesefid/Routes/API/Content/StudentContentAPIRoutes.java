@@ -18,7 +18,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.Utility.convertPersian;
@@ -77,14 +76,11 @@ public class StudentContentAPIRoutes extends Router {
                               optionalsType = {
                                       String.class
                               }
-                      ) String jsonStr,
-                      HttpServletResponse response
+                      ) String jsonStr
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
-        return StudentContentController.buy(
-                id, new JSONObject(jsonStr), user.getObjectId("_id"),
-                ((Number) user.get("money")).doubleValue(), user.getString("phone"), user.getString("mail"),
-                response
+        return StudentContentController.buy(id, new JSONObject(jsonStr), user.getObjectId("_id"),
+                ((Number) user.get("money")).doubleValue(), user.getString("phone"), user.getString("mail")
         );
     }
 

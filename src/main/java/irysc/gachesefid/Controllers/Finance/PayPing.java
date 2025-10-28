@@ -15,9 +15,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -578,10 +576,7 @@ public class PayPing {
         return null;
     }
 
-    public static String chargeAccount(
-            ObjectId userId, int amount,
-            HttpServletResponse response
-    ) {
+    public static String chargeAccount(ObjectId userId, int amount) {
         long orderId = Math.abs(new Random().nextLong());
         while (transactionRepository.exist(
                 eq("order_id", orderId)
@@ -597,32 +592,20 @@ public class PayPing {
                         .append("section", "charge")
                         .append("off_code", null);
 
-        return goToPayment(amount, doc, response);
+        return goToPayment(amount, doc);
     }
 
-    public static String goToPayment(
-            int price, Document transaction,
-            HttpServletResponse response
-    ) {
+    public static String goToPayment(int price, Document transaction) {
+
         String output = execPHP("pay.php", (price * 10) + " " + transaction.getLong("order_id"));
 
         if (output.startsWith("0,")) {
             transaction.append("ref_id", output.substring(2));
             transactionRepository.insertOne(transaction);
-
-            String refId = output.substring(2);
-            String redirectUrl = "https://bpm.shaparak.ir/pgwchannel/startpay.mellat?RefId=" + refId;
-            try {
-                response.sendRedirect(redirectUrl);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-//            return generateSuccessMsg("refId", output.substring(2),
-//                    new PairValue("action", "pay"),
-//                    new PairValue("transactionId", "")
-//            );
-            return JSON_OK;
+            return generateSuccessMsg("refId", output.substring(2),
+                    new PairValue("action", "pay"),
+                    new PairValue("transactionId", "")
+            );
         }
 
         return JSON_NOT_UNKNOWN;

@@ -23,8 +23,6 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -565,9 +563,9 @@ public class StudentContentController {
 
     public static String buy(
             ObjectId contentId, JSONObject data, ObjectId userId,
-            double money, String phone, String mail,
-            HttpServletResponse response
+            double money, String phone, String mail
     ) {
+
         Document content = contentRepository.findById(contentId);
         if (content == null)
             return JSON_NOT_VALID_ID;
@@ -702,7 +700,8 @@ public class StudentContentController {
             doc.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - money), doc, response);
+        return goToPayment((int) (shouldPay - money), doc);
+
     }
 
     public static String startSessionQuiz(ObjectId contentId, ObjectId sessionId, ObjectId userId) {

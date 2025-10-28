@@ -30,7 +30,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
 
 import java.io.ByteArrayInputStream;
@@ -64,20 +63,18 @@ public class StudentAdviceRoutes extends Router {
 
     @PostMapping(value = "payAdvisorPrice/{advisorId}")
     @ResponseBody
-    public String payAdvisorPrice(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            @PathVariable @ObjectIdConstraint ObjectId advisorId,
-            @RequestBody(required = false) @StrongJSONConstraint(
-                    params = {},
-                    paramsType = {},
-                    optionals = {
-                            "off"
-                    },
-                    optionalsType = {
-                            String.class
-                    }
-            ) String jsonStr
+    public String payAdvisorPrice(HttpServletRequest request,
+                                  @PathVariable @ObjectIdConstraint ObjectId advisorId,
+                                  @RequestBody(required = false) @StrongJSONConstraint(
+                                          params = {},
+                                          paramsType = {},
+                                          optionals = {
+                                                  "off"
+                                          },
+                                          optionalsType = {
+                                                  String.class
+                                          }
+                                  ) String jsonStr
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
         return StudentAdviceController.payAdvisorPrice(
@@ -86,8 +83,7 @@ public class StudentAdviceRoutes extends Router {
                 advisorId,
                 jsonStr == null || jsonStr.isEmpty()
                         ? new JSONObject()
-                        : new JSONObject(jsonStr),
-                response
+                        : new JSONObject(jsonStr)
         );
     }
 

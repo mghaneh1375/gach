@@ -17,7 +17,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
@@ -86,33 +85,28 @@ public class StudentTeachAPIRoutes extends Router {
                                  @RequestBody @StrongJSONConstraint(
                                          params = {}, paramsType = {},
                                          optionals = {"code"}, optionalsType = {String.class}
-                                 ) String json,
-                                 HttpServletResponse response
+                                 ) String json
     ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = json != null && !json.isEmpty() ? convertPersian(new JSONObject(json)) : new JSONObject();
         return StudentTeachController.payForSchedule(
                 getUser(request), null, scheduleId,
-                jsonObject.has("code") ? jsonObject.getString("code") : null,
-                response
+                jsonObject.has("code") ? jsonObject.getString("code") : null
         );
     }
 
     @PostMapping(value = "prePayForSchedule/{scheduleId}")
     @ResponseBody
-    public String prePayForSchedule(
-            HttpServletRequest request,
-            @PathVariable @ObjectIdConstraint ObjectId scheduleId,
-            @RequestBody @StrongJSONConstraint(
-                    params = {}, paramsType = {},
-                    optionals = {"code"}, optionalsType = {String.class}
-            ) String json,
-            HttpServletResponse response
+    public String prePayForSchedule(HttpServletRequest request,
+                                    @PathVariable @ObjectIdConstraint ObjectId scheduleId,
+                                    @RequestBody @StrongJSONConstraint(
+                                            params = {}, paramsType = {},
+                                            optionals = {"code"}, optionalsType = {String.class}
+                                    ) String json
     ) throws UnAuthException, NotActivateAccountException {
         JSONObject jsonObject = json != null && !json.isEmpty() ? convertPersian(new JSONObject(json)) : new JSONObject();
         return StudentTeachController.prePayForSemiPrivateSchedule(
                 scheduleId, getUser(request),
-                jsonObject.has("code") ? jsonObject.getString("code") : null,
-                response
+                jsonObject.has("code") ? jsonObject.getString("code") : null
         );
     }
 

@@ -78,12 +78,12 @@ public class GeneralAPIRoutes extends Router {
     @PostMapping(value = "clearQuizCache/{mode}/{quizId}")
     @ResponseBody
     public String clearQuizCache(HttpServletRequest request,
-                                 @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
-                                 @PathVariable @ObjectIdConstraint ObjectId quizId
+                                  @PathVariable @EnumValidator(enumClazz = GeneralKindQuiz.class) String mode,
+                                  @PathVariable @ObjectIdConstraint ObjectId quizId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
         getAdminPrivilegeUserVoid(request);
 
-        if (mode.equals(GeneralKindQuiz.IRYSC.getName()))
+        if(mode.equals(GeneralKindQuiz.IRYSC.getName()))
             iryscQuizRepository.clearFromCache(quizId);
         else
             schoolQuizRepository.clearFromCache(quizId);
@@ -94,16 +94,14 @@ public class GeneralAPIRoutes extends Router {
 
     @PostMapping(value = {"/chargeAccount", "/chargeAccount/{userId}"})
     @ResponseBody
-    public String chargeAccount(
-            HttpServletRequest request,
-            @PathVariable(required = false) String userId,
-            @RequestBody @StrongJSONConstraint(
-                    params = {"amount"},
-                    paramsType = {Positive.class},
-                    optionals = {"coin"},
-                    optionalsType = {Number.class}
-            ) @NotBlank String jsonStr,
-            HttpServletResponse response
+    public String chargeAccount(HttpServletRequest request,
+                                @PathVariable(required = false) String userId,
+                                @RequestBody @StrongJSONConstraint(
+                                        params = {"amount"},
+                                        paramsType = {Positive.class},
+                                        optionals = {"coin"},
+                                        optionalsType = {Number.class}
+                                ) @NotBlank String jsonStr
     ) throws UnAuthException, NotActivateAccountException, InvalidFieldsException {
         Document user = getUserWithAdminAccess(request, false, false, userId);
         JSONObject jsonObject = Utility.convertPersian(new JSONObject(jsonStr));
@@ -111,12 +109,13 @@ public class GeneralAPIRoutes extends Router {
         if (userId != null) {
             Document doc = user.get("user", Document.class);
 
-            if (Authorization.isPureStudent(doc.getList("accesses", String.class))) {
+            if(Authorization.isPureStudent(doc.getList("accesses", String.class))) {
                 doc.put("money", (double) jsonObject.getInt("amount"));
 
                 if (jsonObject.has("coin"))
                     doc.put("coin", Math.round((jsonObject.getNumber("coin").doubleValue() * 100.0)) / 100.0);
-            } else {
+            }
+            else {
                 doc.put("money", (double) jsonObject.getInt("amount"));
                 if (jsonObject.has("coin"))
                     doc.put("coin", Math.round((jsonObject.getNumber("coin").doubleValue() * 100.0)) / 100.0);
@@ -129,8 +128,7 @@ public class GeneralAPIRoutes extends Router {
 
         return PayPing.chargeAccount(
                 getUserId(request),
-                jsonObject.getInt("amount"),
-                response
+                jsonObject.getInt("amount")
         );
     }
 
@@ -245,7 +243,9 @@ public class GeneralAPIRoutes extends Router {
                                                 frontEndUrl + "myCustomQuizzes" : frontEndUrl
                         );
 
-                    } else if (
+                    }
+
+                    else if (
                             section.equalsIgnoreCase(OffCodeSections.SCHOOL_QUIZ.getName()) ||
                                     section.equalsIgnoreCase(OffCodeSections.COUNSELING_QUIZ.getName())
                     ) {
@@ -256,14 +256,18 @@ public class GeneralAPIRoutes extends Router {
                                 section.equalsIgnoreCase(OffCodeSections.COUNSELING_QUIZ.getName()) ?
                                         frontEndUrl + "myAdvisor/quiz" : frontEndUrl + "mySchoolQuizzes"
                         );
-                    } else if (
+                    }
+
+                    else if (
                             section.equalsIgnoreCase(OffCodeSections.SCHOOL_HW.getName())
                     ) {
 
                         modelAndView.addObject("section", "hw");
                         modelAndView.addObject("forWhat", "تمرین");
                         modelAndView.addObject("myHwsUrl", frontEndUrl + "mySchoolHWs");
-                    } else if (section.equalsIgnoreCase("charge"))
+                    }
+
+                    else if (section.equalsIgnoreCase("charge"))
                         modelAndView.addObject("section", section);
                     else if (section.equalsIgnoreCase(OffCodeSections.CONTENT.toString())) {
                         modelAndView.addObject("section", section);
@@ -425,7 +429,7 @@ public class GeneralAPIRoutes extends Router {
                                @RequestParam(value = "mode") String mode
     ) throws UnAuthException, NotActivateAccountException {
         Document user = getUser(request);
-        return GiftController.buildSpinner(mode, user.getObjectId("_id"), ((Number) user.get("coin")).doubleValue(), id);
+        return GiftController.buildSpinner(mode, user.getObjectId("_id"), ((Number)user.get("coin")).doubleValue(), id);
     }
 
 
@@ -439,7 +443,7 @@ public class GeneralAPIRoutes extends Router {
         Document user = getUser(request);
         return GiftController.buildSpinnerAgain(
                 mode, user.getObjectId("_id"),
-                ((Number) user.get("coin")).doubleValue(),
+                ((Number)user.get("coin")).doubleValue(),
                 id, repeat
         );
     }
@@ -519,14 +523,14 @@ public class GeneralAPIRoutes extends Router {
         JSONArray jsonArray = new JSONArray();
 
         Document rss = rssRepository.findBySecKey(getToday());
-        if (rss == null) {
+        if(rss == null) {
             rss = rssRepository.findOne(exists("news.0"), null, Sorts.descending("today"));
         }
 
-        if (rss == null)
+        if(rss == null)
             return generateSuccessMsg("data", jsonArray);
 
-        for (Document news : rss.getList("news", Document.class)) {
+        for(Document news : rss.getList("news", Document.class)) {
             jsonArray.put(new JSONObject()
                     .put("link", news.getString("link"))
                     .put("description", news.getString("description"))

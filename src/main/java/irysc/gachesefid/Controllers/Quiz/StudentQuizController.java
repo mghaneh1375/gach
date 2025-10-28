@@ -21,7 +21,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.util.*;
 
@@ -358,7 +357,8 @@ public class StudentQuizController {
         ArrayList<Bson> filters = new ArrayList<>();
         if (isSchool) {
             filters.add(in("students._id", user.getList("students", ObjectId.class)));
-        } else
+        }
+        else
             filters.add(in("students._id", userId));
 
         long curr = System.currentTimeMillis();
@@ -1190,13 +1190,10 @@ public class StudentQuizController {
         }
     }
 
-    public static String buy(
-            ObjectId userId, ObjectId packageId,
-            JSONArray ids, JSONArray studentIds,
-            double money, String phone, String mail,
-            String name, String offcode,
-            HttpServletResponse response
-    ) {
+    public static String buy(ObjectId userId, ObjectId packageId,
+                             JSONArray ids, JSONArray studentIds,
+                             double money, String phone, String mail,
+                             String name, String offcode) {
         Document quizPackage = null;
         Document off = null;
         long curr = System.currentTimeMillis();
@@ -1291,18 +1288,18 @@ public class StudentQuizController {
         }
 
         int totalNeededCap = studentOIds != null ? studentOIds.size() : 1;
-        if (quizzes.size() > 0) {
-            for (Document quiz : quizzes) {
-                if (Math.max(
-                        (int) quiz.getOrDefault("capacity", 10000) - (int) quiz.getOrDefault("registered", 0), 0
+        if(quizzes.size() > 0) {
+            for(Document quiz : quizzes) {
+                if(Math.max(
+                        (int)quiz.getOrDefault("capacity", 10000) - (int)quiz.getOrDefault("registered", 0), 0
                 ) < totalNeededCap)
                     return generateErr("ظرفیت باقی مانده در آزمون " + quiz.getString("title") + " کمتر از ظرفیت مدنظر شما می باشد");
             }
         }
-        if (escapeQuizzes.size() > 0) {
-            for (Document quiz : escapeQuizzes) {
-                if (Math.max(
-                        (int) quiz.getOrDefault("capacity", 10000) - (int) quiz.getOrDefault("registered", 0), 0
+        if(escapeQuizzes.size() > 0) {
+            for(Document quiz : escapeQuizzes) {
+                if(Math.max(
+                        (int)quiz.getOrDefault("capacity", 10000) - (int)quiz.getOrDefault("registered", 0), 0
                 ) < totalNeededCap)
                     return generateErr("ظرفیت باقی مانده در آزمون " + quiz.getString("title") + " کمتر از ظرفیت مدنظر شما می باشد");
             }
@@ -1312,16 +1309,14 @@ public class StudentQuizController {
                 quizPackage, off, quizzes,
                 studentOIds != null ? null : openQuizzes,
                 studentOIds != null ? null : escapeQuizzes,
-                studentOIds, response
+                studentOIds
         );
     }
 
-    public static String buyOnlineQuiz(
-            ObjectId userId, ObjectId id, String teamName,
-            JSONArray members, double money, String phone,
-            String mail, String name, String offcode,
-            HttpServletResponse response
-    ) {
+    public static String buyOnlineQuiz(ObjectId userId, ObjectId id, String teamName,
+                                       JSONArray members, double money, String phone,
+                                       String mail, String name, String offcode) {
+
         Document off = null;
         long curr = System.currentTimeMillis();
 
@@ -1401,9 +1396,11 @@ public class StudentQuizController {
 
                 }
             }
+
         }
 
         int totalPrice = quiz.getInteger("price");
+
         if (off == null)
             off = findAccountOff(
                     userId, curr, OffCodeSections.GACH_EXAM.getName()
@@ -1420,9 +1417,11 @@ public class StudentQuizController {
             ;
             shouldPayDouble = totalPrice - offAmount;
         }
+
         int shouldPay = (int) shouldPayDouble;
 
         if (shouldPay - money <= 100) {
+
             double newUserMoney = money;
 
             if (shouldPay > 100)
@@ -1513,7 +1512,7 @@ public class StudentQuizController {
             doc.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - money), doc, response);
+        return goToPayment((int) (shouldPay - money), doc);
     }
 
     public static String updateOnlineQuizProfile(ObjectId userId, ObjectId id,
@@ -1598,10 +1597,9 @@ public class StudentQuizController {
         return JSON_OK;
     }
 
-    public static String buyAdvisorQuiz(
-            ObjectId userId, ObjectId quizId,
-            double money, HttpServletResponse response
-    ) {
+    public static String buyAdvisorQuiz(ObjectId userId, ObjectId quizId,
+                                        double money) {
+
         Document quiz = schoolQuizRepository.findById(quizId);
         if (quiz == null)
             return JSON_NOT_VALID_ID;
@@ -1629,6 +1627,7 @@ public class StudentQuizController {
         int shouldPay = quiz.getInteger("price");
 
         if (shouldPay - money <= 100) {
+
             double newUserMoney = money;
 
             if (shouldPay > 100)
@@ -1674,22 +1673,21 @@ public class StudentQuizController {
                         .append("products", quizId)
                         .append("section", OffCodeSections.COUNSELING_QUIZ.getName());
 
-        return goToPayment((int) (shouldPay - money), doc, response);
+        return goToPayment((int) (shouldPay - money), doc);
+
     }
 
-    private static String doBuy(
-            ObjectId studentId,
-            String phone,
-            String mail,
-            String stdName,
-            double money,
-            Document quizPackage,
-            Document off,
-            ArrayList<Document> quizzes,
-            ArrayList<Document> openQuizzes,
-            ArrayList<Document> escapeQuizzes,
-            ArrayList<ObjectId> studentIds,
-            HttpServletResponse response
+    private static String doBuy(ObjectId studentId,
+                                String phone,
+                                String mail,
+                                String stdName,
+                                double money,
+                                Document quizPackage,
+                                Document off,
+                                ArrayList<Document> quizzes,
+                                ArrayList<Document> openQuizzes,
+                                ArrayList<Document> escapeQuizzes,
+                                ArrayList<ObjectId> studentIds
     ) {
 
         long curr = System.currentTimeMillis();
@@ -1877,7 +1875,7 @@ public class StudentQuizController {
             doc.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - money), doc, response);
+        return goToPayment((int) (shouldPay - money), doc);
     }
 
     public static String returnTashrihiQuiz(Document quiz, List<Document> stdAnswers,
@@ -2191,12 +2189,10 @@ public class StudentQuizController {
         return generateSuccessMsg("data", jsonObject);
     }
 
-    public static String payCustomQuiz(
-            Document user,
-            ObjectId id,
-            JSONObject data,
-            HttpServletResponse response
-    ) {
+    public static String payCustomQuiz(Document user,
+                                       ObjectId id,
+                                       JSONObject data) {
+
         ObjectId userId = user.getObjectId("_id");
         double money = ((Number) user.get("money")).doubleValue();
 
@@ -2216,10 +2212,12 @@ public class StudentQuizController {
         if (curr - doc.getLong("created_at") > 1200000)
             return JSON_NOT_VALID_PARAMS;
 
+
         String offcode = (String) irysc.gachesefid.Utility.Utility.getOrDefault(data, "offcode", null);
         Document off = null;
 
         if (offcode != null) {
+
             off = validateOffCode(
                     offcode, userId, curr,
                     OffCodeSections.BANK_EXAM.getName()
@@ -2240,6 +2238,7 @@ public class StudentQuizController {
         double offAmount = 0;
 
         if (off != null) {
+
             offAmount =
                     off.getString("type").equals(OffCodeTypes.PERCENT.getName()) ?
                             totalPrice * off.getInteger("amount") / 100.0 :
@@ -2251,6 +2250,7 @@ public class StudentQuizController {
         int shouldPay = (int) shouldPayDouble;
 
         if (shouldPay - money <= 100) {
+
             double newUserMoney = money;
 
             if (shouldPay > 100) {
@@ -2346,7 +2346,7 @@ public class StudentQuizController {
             transaction.append("off_amount", (int) offAmount);
         }
 
-        return goToPayment((int) (shouldPay - money), transaction, response);
+        return goToPayment((int) (shouldPay - money), transaction);
     }
 
     public static String prepareCustomQuiz(ObjectId userId,
