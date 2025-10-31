@@ -67,6 +67,7 @@ public class WhiteList {
             "/api/package_content/public/getSessions/**",
             "/api/package_content/public/getListOfPackageLevels",
             "/api/advisor/public/getAllAdvisors",
-            "/api/comment/public/**"
+            "/api/comment/public/**",
+            "/api/quiz/manage/getDistinctTags",
     };
 }

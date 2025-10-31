@@ -124,7 +124,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                         "/api/quiz/manage/removeCorrectors/**",
                         "/api/quiz/manage/addCorrector/**",
                         "/api/quiz/manage/getCorrector/**",
-                        "/api/quiz/manage/getDistinctTags",
                         "/api/quiz/manage/getCorrectors/**",
                         "/api/quiz/manage/generateQuestionPDF/**",
                         "/api/quiz/manage/addBatchQuestionsToQuiz/**",
