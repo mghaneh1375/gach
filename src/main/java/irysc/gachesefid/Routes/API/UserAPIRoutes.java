@@ -60,15 +60,16 @@ public class UserAPIRoutes extends Router {
     @Value("${shop.security.token}")
     private String token;
 
-    @GetMapping(value = "testAsanak")
-    @ResponseBody
-    public void testAsanak(
-            HttpServletRequest request,
-            @RequestParam(value = "to") String to
-    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-        getAdminPrivilegeUserVoid(request);
-        Utility.sendSMSWithoutTemplate(to, "تست");
-    }
+//    @GetMapping(value = "testAsanak")
+//    @ResponseBody
+//    public void testAsanak(
+//            HttpServletRequest request,
+//            @RequestParam(value = "to") String to
+//    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+//        getAdminPrivilegeUserVoid(request);
+//        sendSMSWithTemplate(to, 815, new PairValue("name", "محمد قانع"));
+//        Utility.sendSMSWithoutTemplate(to, "تست");
+//    }
 
     @GetMapping(value = "testMail")
     @ResponseBody

@@ -65,7 +65,13 @@ public class StaticValues {
     public final static int SKY_ROOT_SESSION_DURATION = 120;
 
     public final static boolean LOCAL = true;
-    public final static boolean DEV_MODE = false;
+    public static boolean DEV_MODE = false;
+    public static String ASANAK_USERNAME = null;
+    public static String ASANAK_PASSWORD;
+    public static String ASANAK_SENDER;
+    public static String ASANAK_TOKEN;
+    public static String ASANAK_TEMPLATE_URL;
+    public static String ASANAK_SMS_URL;
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";

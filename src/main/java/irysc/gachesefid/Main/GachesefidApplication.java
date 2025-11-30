@@ -21,6 +21,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -54,10 +55,9 @@ public class GachesefidApplication implements WebMvcConfigurer {
     @Autowired
     private GeneralCacheService generalCacheService;
 
-    final static private ConnectionString connString = new ConnectionString(
-            "mongodb://localhost:27017/gachesefid"
+    @Value("${custom.mongodb.url}")
+    private String mongodbUrl;
 
-    );
     public static MongoDatabase mongoDatabase;
 
     public static AccessRequestRepository accessRequestRepository;
@@ -142,11 +142,10 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static HashMap<String, Integer> newThingsCache = new HashMap<>();
 
-    private static void setupDB() {
+    private static void setupDB(ConnectionString connectionString) {
         try {
-
             MongoClientSettings settings = MongoClientSettings.builder()
-                    .applyConnectionString(connString)
+                    .applyConnectionString(connectionString)
                     .retryWrites(true)
                     .build();
             MongoClient mongoClient = MongoClients.create(settings);
@@ -255,11 +254,6 @@ public class GachesefidApplication implements WebMvcConfigurer {
 
     public static void main(String[] args) {
         TimeZone.setDefault(TimeZone.getTimeZone("Iran"));
-        setupDB();
-//        Enc.init();
-        setupNewThingsCache();
-        new Thread(new Jobs()).start();
-
         SimpleModule module = new SimpleModule();
         module.addDeserializer(ObjectId.class, new ObjectIdDeserializer());
         module.addSerializer(ObjectId.class, new ObjectIdSerializer());
@@ -273,13 +267,16 @@ public class GachesefidApplication implements WebMvcConfigurer {
                 .run(args);
     }
 
-    @Autowired
-    ReportService reportService;
-
     @PostConstruct
-    public void initCache() {
+    private void setupDb() {
+        setupDB(new ConnectionString(mongodbUrl));
+        setupNewThingsCache();
+        new Thread(new Jobs()).start();
         generalCacheService.getInfo();
     }
+
+    @Autowired
+    ReportService reportService;
 
     @Bean(name = "cropRT")
     public RestTemplate initializeCropRestTemplate() {

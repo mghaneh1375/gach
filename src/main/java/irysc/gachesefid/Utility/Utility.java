@@ -302,7 +302,7 @@ public class Utility {
 
     public static boolean sendSMSWithoutTemplate(String receptor, String msg) {
 
-        if (DEV_MODE)
+        if (DEV_MODE || ASANAK_USERNAME == null)
             return true;
 
         receptor = convertPersianDigits(receptor);
@@ -318,10 +318,10 @@ public class Utility {
 //                    .header("cache-control", "no-cache")
 //                    .asString();
 
-            HttpResponse<String> response = Unirest.post("https://panel.asanak.com/webservice/v1rest/sendsms")
-                    .queryString("username", "bogenGach") // bogenGach
-                    .queryString("password", "9DGr7JwEUXLtyVee")
-                    .queryString("source", "9821700013860625")
+            HttpResponse<String> response = Unirest.post(ASANAK_SMS_URL)
+                    .queryString("username", ASANAK_USERNAME)
+                    .queryString("password", ASANAK_PASSWORD)
+                    .queryString("source", ASANAK_SENDER)
                     .queryString("destination", receptor)
                     .queryString("send_to_blacklist", 1)
                     .queryString("message", msg)
@@ -348,7 +348,7 @@ public class Utility {
 
     public static boolean sendSMSWithTemplate(String receptor, int templateId, PairValue... paramsPair) {
 
-        if (DEV_MODE)
+        if (DEV_MODE || ASANAK_USERNAME == null)
             return true;
 
         receptor = convertPersianDigits(receptor);
@@ -365,9 +365,9 @@ public class Utility {
 
             jsonObject.put("parameters", params);
 
-            HttpResponse<String> response = Unirest.post("https://api.asanak.com/v1/sms/template")
-                    .header("api_key", "bogenGach")
-                    .header("api_secret", "bd23cb13fa2c49c20673504ed2a19729e61feb22f951819fbe5042a18efab840")
+            HttpResponse<String> response = Unirest.post(ASANAK_TEMPLATE_URL)
+                    .header("api_key", ASANAK_USERNAME)
+                    .header("api_secret", ASANAK_TOKEN)
                     .header("accept", "application/json")
                     .header("Content-Type", "application/json")
                     .body(jsonObject)
