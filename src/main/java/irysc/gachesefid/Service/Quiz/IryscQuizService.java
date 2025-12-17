@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
-import static irysc.gachesefid.Utility.StaticValues.JUST_NAME;
+import static irysc.gachesefid.Utility.StaticValues.JUST_TITLE;
 
 @Service
 public class IryscQuizService extends MyService implements QuizService {
@@ -41,7 +41,7 @@ public class IryscQuizService extends MyService implements QuizService {
     @Override
     public List<QuizDigestDto> digests() {
         return iryscQuizRepository
-                .find(null, JUST_NAME)
+                .find(null, JUST_TITLE)
                 .stream()
                 .map(QuizDigestDto::buildFromDoc)
                 .collect(Collectors.toList());
