@@ -61,17 +61,17 @@ public class OpenQuizService extends MyService implements QuizService {
             allUsed.put(questionEntity.getId(), questionEntity.getUsed());
             marks.add(questionEntity.getMark());
             ids.add(questionEntity.getId());
-
-            List<WriteModel<Document>> writes = new ArrayList<>();
-            for (ObjectId oId : allUsed.keySet()) {
-                writes.add(new UpdateOneModel<>(
-                        eq("_id", oId),
-                        set("used", allUsed.get(oId))
-                ));
-            }
-            if (writes.size() > 0)
-                questionRepository.bulkWrite(writes);
         }
+
+        List<WriteModel<Document>> writes = new ArrayList<>();
+        for (ObjectId oId : allUsed.keySet()) {
+            writes.add(new UpdateOneModel<>(
+                    eq("_id", oId),
+                    set("used", allUsed.get(oId))
+            ));
+        }
+        if (writes.size() > 0)
+            questionRepository.bulkWrite(writes);
 
         byte[] answersByte;
         if (questions.getAnswers() != null)

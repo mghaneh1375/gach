@@ -1,20 +1,34 @@
 package irysc.gachesefid.Service.Quiz;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.mongodb.client.model.UpdateOneModel;
+import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.Controllers.Quiz.Utility;
 import irysc.gachesefid.Dto.QuizDigestDto;
+import irysc.gachesefid.Dto.Serializer.MongoByteArraySerializer;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.QuestionType;
 import irysc.gachesefid.Service.MyService;
 import irysc.gachesefid.Service.Quiz.model.AddQuestionToQuizResult;
 import irysc.gachesefid.entity.QuestionEntity;
+import irysc.gachesefid.entity.quiz.QuestionInQuizEntity;
 import irysc.gachesefid.entity.quiz.QuizEntity;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JUST_TITLE;
+import static irysc.gachesefid.Utility.Utility.batchRowErr;
 
 @Service
 public class IryscQuizService extends MyService implements QuizService {
@@ -24,8 +38,73 @@ public class IryscQuizService extends MyService implements QuizService {
             QuizEntity quizEntity,
             List<QuestionEntity> questionEntities
     ) {
+        QuestionInQuizEntity questions = quizEntity.getQuestions();
 
-        return null;
+        List<Double> marks = questions.getMarks() != null ? questions.getMarks() : new ArrayList<>();
+        List<ObjectId> ids = questions.getIds() != null ? questions.getIds() : new ArrayList<>();
+
+        HashMap<ObjectId, Integer> allUsed = new HashMap<>();
+        AddQuestionToQuizResult addQuestionToQuizResults = new AddQuestionToQuizResult();
+        int counter = 0;
+
+        for(QuestionEntity questionEntity : questionEntities) {
+            counter++;
+
+            if (questionEntity.getKindQuestion().equalsIgnoreCase(QuestionType.TASHRIHI.getName())) {
+                addQuestionToQuizResults.getErrors().add(batchRowErr(counter, "نوع سوال نباید تشریحی باشد"));
+                continue;
+            }
+
+            questionEntity.incUsed();
+            allUsed.put(questionEntity.getId(), questionEntity.getUsed());
+            marks.add(questionEntity.getMark());
+            ids.add(questionEntity.getId());
+        }
+
+        List<WriteModel<Document>> writes = new ArrayList<>();
+        for (ObjectId oId : allUsed.keySet()) {
+            writes.add(new UpdateOneModel<>(
+                    eq("_id", oId),
+                    set("used", allUsed.get(oId))
+            ));
+        }
+        if (writes.size() > 0)
+            questionRepository.bulkWrite(writes);
+
+        byte[] answersByte;
+        if (questions.getAnswers() != null)
+            answersByte = questions.getAnswers();
+        else
+            answersByte = new byte[0];
+
+        for(QuestionEntity questionEntity : questionEntities) {
+            answersByte = Utility.addAnswerToByteArr(answersByte, questionEntity.getKindQuestion(),
+                    questionEntity.getKindQuestion().equalsIgnoreCase(QuestionType.TEST.getName())
+                            ? new PairValue(questionEntity.getChoicesCount(), questionEntity.getAnswer())
+                            : questionEntity.getAnswer()
+            );
+        }
+
+        questions.setAnswers(answersByte);
+        questions.setMarks(marks);
+        questions.setIds(ids);
+        quizEntity.setQuestions(questions);
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new SimpleModule()
+                .addSerializer(byte[].class, new MongoByteArraySerializer()));
+
+        String json = null;
+        try {
+            json = mapper.writeValueAsString(questions);
+            Document bsonDoc = Document.parse(json);
+            bsonDoc.put("_ids", bsonDoc.getList("_ids", Object.class).stream().map(o -> new ObjectId(o.toString())).collect(Collectors.toList()));
+            iryscQuizRepository.updateOneWithClearCache(quizEntity.getId(), set("questions", bsonDoc));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return addQuestionToQuizResults;
     }
 
     @Override
