@@ -32,8 +32,16 @@ public class Excel {
             XSSFWorkbook workbook = new XSSFWorkbook(file);
             XSSFSheet sheet = workbook.getSheetAt(0);
             ArrayList<Row> rows = new ArrayList<>();
-
-            for (Row aSheet : sheet) rows.add(aSheet);
+            int counter = 0;
+            while (true) {
+                Row aSheet = sheet.getRow(counter++);
+                if(
+                        aSheet.getCell(0) == null ||
+                        aSheet.getCell(0).getCellType() == CellType.BLANK.getCode()
+                )
+                    break;
+                rows.add(aSheet);
+            }
 
             file.close();
             return rows;

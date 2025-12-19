@@ -29,7 +29,7 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 public class AdvisorController {
-    private final static Integer PAGE_SIZE = 5;
+    private final static Integer PAGE_SIZE = 6;
 
     public static String getStudentDigest(ObjectId advisorId, ObjectId studentId) {
 

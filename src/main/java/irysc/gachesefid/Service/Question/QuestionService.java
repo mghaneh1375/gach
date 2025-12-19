@@ -349,7 +349,7 @@ public class QuestionService extends MyService {
         long curr = System.currentTimeMillis();
         for (Row row : rows) {
             try {
-                if (row.getCell(1) == null)
+                if (row.getCell(0) == null)
                     break;
 
                 if (row.getLastCellNum() < 9) {
