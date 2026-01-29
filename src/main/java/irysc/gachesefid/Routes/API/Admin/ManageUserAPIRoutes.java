@@ -16,6 +16,7 @@ import irysc.gachesefid.Utility.Digit;
 import irysc.gachesefid.Utility.Positive;
 import irysc.gachesefid.Utility.Utility;
 import irysc.gachesefid.Validator.EnumValidator;
+import irysc.gachesefid.Validator.JSONConstraint;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import irysc.gachesefid.Validator.StrongJSONConstraint;
 import org.apache.commons.io.IOUtils;
@@ -218,18 +219,16 @@ public class ManageUserAPIRoutes extends Router {
     public String signIn(HttpServletRequest request,
                          @PathVariable @ObjectIdConstraint ObjectId userId
     ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-
         getAdminPrivilegeUserVoid(request);
-
         try {
-
             Document user = userRepository.findById(userId);
 
             if (user == null || Authorization.isAdmin(user.getList("accesses", String.class)))
                 return JSON_NOT_VALID_ID;
 
-            return userService.signIn(user.getString("NID"), "1", false);
-
+            return userService.signIn(
+                    user.getString("NID"), "1", false, false
+            );
         } catch (NotActivateAccountException x) {
             return generateErr("not active account");
         } catch (Exception x) {
@@ -584,6 +583,35 @@ public class ManageUserAPIRoutes extends Router {
             }
         } catch (Exception x) {
             System.out.println(x.getMessage());
+        }
+    }
+
+    @PostMapping(value = "generateTempCode/{userId}")
+    @ResponseBody
+    public String generateTempCode(@PathVariable @ObjectIdConstraint ObjectId userId) {
+        return userService.generateTempCode(userId);
+    }
+
+
+    @PostMapping(value = "/adminSignIn")
+    @ResponseBody
+    public String signIn(@RequestBody @JSONConstraint(
+            params = {"username", "password"}
+    ) @NotBlank String jsonStr) {
+        try {
+            JSONObject jsonObject =
+                    Utility.convertPersian(new JSONObject(jsonStr));
+
+            return userService.signIn(
+                    jsonObject.get("username").toString().toLowerCase(),
+                    jsonObject.get("password").toString(), !DEV_MODE,
+                    true
+            );
+
+        } catch (NotActivateAccountException x) {
+            return Utility.generateErr("حساب کاربری شما هنوز فعال نشده است.");
+        } catch (Exception x) {
+            return Utility.generateErr("نام کاربری و یا رمزعبور اشتباه است.");
         }
     }
 }

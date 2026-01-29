@@ -75,5 +75,6 @@ public class WhiteList {
             "/api/advisor/public/getAllAdvisors",
             "/api/comment/public/**",
             "/api/quiz/manage/getDistinctTags",
+            "/api/admin/user/adminSignIn"
     };
 }

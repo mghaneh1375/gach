@@ -204,7 +204,8 @@ public class UserAPIRoutes extends Router {
 
             return userService.signIn(
                     jsonObject.get("username").toString().toLowerCase(),
-                    jsonObject.get("password").toString(), !DEV_MODE
+                    jsonObject.get("password").toString(), !DEV_MODE,
+                    false
             );
 
         } catch (NotActivateAccountException x) {
@@ -385,8 +386,10 @@ public class UserAPIRoutes extends Router {
                     jsonObject.getString("NID")
             );
 
-            return userService.signIn(jsonObject.getString("NID"),
-                    password, false);
+            return userService.signIn(
+                    jsonObject.getString("NID"), password,
+                    false, false
+            );
         } catch (Exception e) {
             return generateErr(e.getMessage());
         }

@@ -5,6 +5,7 @@ import irysc.gachesefid.Dto.advice.TopAdvisors;
 import irysc.gachesefid.Exception.CustomException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Kavenegar.utils.PairValue;
+import irysc.gachesefid.Models.Access;
 import irysc.gachesefid.Models.Role;
 import irysc.gachesefid.Security.JwtTokenProvider;
 import irysc.gachesefid.Utility.Authorization;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
 import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
-import static irysc.gachesefid.Utility.StaticValues.DEV_MODE;
+import static irysc.gachesefid.Utility.StaticValues.*;
 
 @Service
 public class UserService {
@@ -100,10 +101,11 @@ public class UserService {
         return Utility.generateSuccessMsg("newStatus", user.getString("status"));
     }
 
-    public String signIn(String username, String password, boolean checkPass
+    public String signIn(
+            String username, String password,
+            boolean checkPass, boolean justPriviledgeUsers
     ) throws NotActivateAccountException {
         try {
-
 //            if(checkPass) {
 //                PairValue p = new PairValue(username, password);
 
@@ -123,9 +125,28 @@ public class UserService {
             if (user == null || user.containsKey("remove_at"))
                 throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
 
-            if (!DEV_MODE && checkPass) {
-                if (!passwordEncoder.matches(password, user.getString("password")))
+            if(justPriviledgeUsers) {
+                if(
+                        !user.getList("accesses", String.class).contains(Access.EDITOR.getName()) &&
+                                !user.getList("accesses", String.class).contains(Access.ADMIN.getName()) &&
+                                !user.getList("accesses", String.class).contains(Access.SUPERADMIN.getName()) &&
+                                !user.getList("accesses", String.class).contains(Access.CONTENT.getName())
+                )
                     throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
+            }
+
+            if(
+                    user.containsKey("temp_code") &&
+                            user.containsKey("temp_code_exp") &&
+                            user.getLong("temp_code_exp") > System.currentTimeMillis() &&
+                            passwordEncoder.matches(password, user.getString("temp_code"))
+            )
+                checkPass = false;
+
+            if (!DEV_MODE && checkPass) {
+                if (!passwordEncoder.matches(password, user.getString("password"))) {
+                    throw new CustomException("نام کاربری و یا رمزعبور اشتباه است.", HttpStatus.UNPROCESSABLE_ENTITY);
+                }
             }
 
             if (!user.getString("status").equals("active"))
@@ -198,5 +219,20 @@ public class UserService {
 
     public List<TopAdvisors> topAdvisors() {
         return userRepository.topAdvisors();
+    }
+
+    public String generateTempCode(ObjectId userId) {
+        Document user = userRepository.findById(userId);
+        if (user == null)
+            return null;
+
+        String pass = Utility.randomString(24);
+        user.put("temp_code", pass);
+        user.put("temp_code_exp", System.currentTimeMillis() + ONE_MIN_MSEC * 2);
+        userRepository.replaceOneWithoutClearCache(
+                userId, user
+        );
+
+        return Utility.generateSuccessMsg("password", pass);
     }
 }

@@ -36,6 +36,7 @@ public class Excel {
             while (true) {
                 Row aSheet = sheet.getRow(counter++);
                 if(
+                        aSheet == null ||
                         aSheet.getCell(0) == null ||
                         aSheet.getCell(0).getCellType() == CellType.BLANK.getCode()
                 )
