@@ -268,7 +268,7 @@ public class Utility {
                                   String template
     ) {
 
-        if (DEV_MODE)
+        if (DEV_MODE || KAVENEGAR_TOKEN == null)
             return true;
 
         receptor = convertPersianDigits(receptor);
@@ -279,7 +279,7 @@ public class Utility {
         }
 
         try {
-            KavenegarApi api = new KavenegarApi("79535344745641433164454E622F6F2B436F7741744B637442576673554B636A");
+            KavenegarApi api = new KavenegarApi(KAVENEGAR_TOKEN);
             SendResult Result = api.verifyLookup(receptor, token, token2, token3, template);
 
             if (Result.getStatus() == 6 ||

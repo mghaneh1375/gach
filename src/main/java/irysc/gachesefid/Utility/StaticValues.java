@@ -73,6 +73,8 @@ public class StaticValues {
     public static String ASANAK_TEMPLATE_URL;
     public static String ASANAK_SMS_URL;
 
+    public static String KAVENEGAR_TOKEN = null;
+
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_GREEN = "\u001B[32m";
 

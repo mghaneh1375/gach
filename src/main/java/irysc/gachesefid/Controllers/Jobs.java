@@ -56,8 +56,8 @@ public class Jobs implements Runnable {
         timer.schedule(new RememberForExpiredSoonAdvice(), ONE_MIN_MSEC * 21, ONE_DAY_MIL_SEC);
         timer.schedule(new BirthDayPoint(), ONE_MIN_MSEC * 3, ONE_HOUR_MIL_SEC * 12);
         timer.schedule(new DailyPoint(), ONE_MIN_MSEC * 4, ONE_MIN_MSEC * 30);
-        timer.schedule(new SendMails(), 0, ONE_MIN_MSEC * 5);
-        timer.schedule(new SendSMS(), 0, ONE_MIN_MSEC * 5);
+        timer.schedule(new SendMails(), ONE_MIN_MSEC, ONE_MIN_MSEC * 5);
+        timer.schedule(new SendSMS(), ONE_MIN_MSEC, ONE_MIN_MSEC * 5);
         timer.schedule(new CalcSubjectQuestions(), 1800000, ONE_DAY_MIL_SEC); // delay: 30 min
         timer.schedule(new RejectExpiredRSS(), 0, ONE_DAY_MIL_SEC);
     }

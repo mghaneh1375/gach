@@ -23,6 +23,8 @@ public class ConfigService {
     private String asanakTemplateUrl;
     @Value("${custom.asanak_sms_url}")
     private String asanakSmsUrl;
+    @Value("${custom.kavenegar.token}")
+    private String kavenegarToken;
 
     @PostConstruct
     public void init() {
@@ -33,6 +35,7 @@ public class ConfigService {
         ASANAK_TOKEN = asanakToken;
         ASANAK_TEMPLATE_URL = asanakTemplateUrl;
         ASANAK_SMS_URL = asanakSmsUrl;
+        KAVENEGAR_TOKEN = kavenegarToken;
     }
 
 

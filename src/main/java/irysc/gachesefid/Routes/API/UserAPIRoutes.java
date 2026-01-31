@@ -14,6 +14,7 @@ import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
+import irysc.gachesefid.Kavenegar.utils.PairValue;
 import irysc.gachesefid.Models.Action;
 import irysc.gachesefid.Models.AuthVia;
 import irysc.gachesefid.Models.Sex;
@@ -60,16 +61,17 @@ public class UserAPIRoutes extends Router {
     @Value("${shop.security.token}")
     private String token;
 
-//    @GetMapping(value = "testAsanak")
-//    @ResponseBody
-//    public void testAsanak(
-//            HttpServletRequest request,
-//            @RequestParam(value = "to") String to
-//    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
-//        getAdminPrivilegeUserVoid(request);
-//        sendSMSWithTemplate(to, 815, new PairValue("name", "محمد قانع"));
-//        Utility.sendSMSWithoutTemplate(to, "تست");
-//    }
+    @GetMapping(value = "testSMS")
+    @ResponseBody
+    public void testSMS(
+            HttpServletRequest request,
+            @RequestParam(value = "to") String to
+    ) throws NotAccessException, UnAuthException, NotActivateAccountException {
+        getAdminPrivilegeUserVoid(request);
+        sendSMSWithTemplate(to, 815, new PairValue("name", "محمد قانع"));
+        Utility.sendSMSWithoutTemplate(to, "تست");
+        Utility.sendSMS(to, "13123", "", "", "activationCode");
+    }
 
     @GetMapping(value = "testMail")
     @ResponseBody

@@ -167,7 +167,6 @@ public class UserRepository extends Common {
         }
 
         if (searchInAll) {
-
             try {
                 if (ObjectIdValidator.isValid(unique))
                     constraints.add(eq("_id", new ObjectId(unique)));

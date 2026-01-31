@@ -227,7 +227,7 @@ public class UserService {
             return null;
 
         String pass = Utility.randomString(24);
-        user.put("temp_code", pass);
+        user.put("temp_code", passwordEncoder.encode(pass));
         user.put("temp_code_exp", System.currentTimeMillis() + ONE_MIN_MSEC * 2);
         userRepository.replaceOneWithoutClearCache(
                 userId, user
