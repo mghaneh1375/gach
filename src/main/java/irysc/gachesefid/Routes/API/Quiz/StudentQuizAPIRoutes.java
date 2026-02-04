@@ -40,8 +40,8 @@ import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/quiz/public/")
+@RestController
+@RequestMapping(path = "/quiz/public/")
 @Validated
 public class StudentQuizAPIRoutes extends Router {
 

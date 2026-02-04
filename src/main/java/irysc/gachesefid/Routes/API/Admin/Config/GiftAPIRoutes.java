@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/gift")
+@RestController
+@RequestMapping(path = "/admin/config/gift")
 @Validated
 public class GiftAPIRoutes extends Router {
 

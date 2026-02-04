@@ -12,7 +12,6 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,8 +24,8 @@ import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
-@Controller
-@RequestMapping(path = "/api/teach/student/")
+@RestController
+@RequestMapping(path = "/teach/student/")
 @Validated
 public class StudentTeachAPIRoutes extends Router {
 

@@ -19,8 +19,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 
-@Controller
-@RequestMapping(path = "/api/advisor/tag")
+@RestController
+@RequestMapping(path = "/advisor/tag")
 @Validated
 public class AdminAdvisorAPIRoutes extends Router {
 

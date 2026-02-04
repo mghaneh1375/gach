@@ -18,8 +18,8 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/teach/admin/")
+@RestController
+@RequestMapping(path = "/teach/admin/")
 @Validated
 public class AdminTeachAPIRoutes extends Router {
 

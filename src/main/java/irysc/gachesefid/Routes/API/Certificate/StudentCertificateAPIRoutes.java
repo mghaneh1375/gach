@@ -17,8 +17,8 @@ import javax.validation.constraints.NotBlank;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 
-@Controller
-@RequestMapping(path = "/api/certificate")
+@RestController
+@RequestMapping(path = "/certificate")
 @Validated
 public class StudentCertificateAPIRoutes extends Router {
 

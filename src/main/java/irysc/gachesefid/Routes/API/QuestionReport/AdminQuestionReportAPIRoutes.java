@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.constraints.NotBlank;
 
 
-@Controller
-@RequestMapping(path = "/api/questionReport/manage")
+@RestController
+@RequestMapping(path = "/questionReport/manage")
 @Validated
 public class AdminQuestionReportAPIRoutes extends Router {
 

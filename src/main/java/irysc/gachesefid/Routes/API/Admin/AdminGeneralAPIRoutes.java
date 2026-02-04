@@ -18,8 +18,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
-@Controller
-@RequestMapping(path = "/api/admin/general")
+@RestController
+@RequestMapping(path = "/admin/general")
 @Validated
 public class AdminGeneralAPIRoutes extends Router {
 

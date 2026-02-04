@@ -21,7 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
 @RestController
-@RequestMapping(path = "/api/ticket/")
+@RequestMapping(path = "/ticket/")
 @Validated
 public class StudentTicketAPIRouter extends Router {
 

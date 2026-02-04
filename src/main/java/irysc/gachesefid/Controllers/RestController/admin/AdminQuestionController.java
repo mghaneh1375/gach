@@ -1,4 +1,4 @@
-package irysc.gachesefid.Controllers.RestController;
+package irysc.gachesefid.Controllers.RestController.admin;
 
 import irysc.gachesefid.Dto.ResponseDto;
 import irysc.gachesefid.Models.AllKindQuiz;
@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @Validated
-@RequestMapping("/api/admin/cv_question/")
+@RequestMapping("/admin/cv_question/")
 public class AdminQuestionController {
 
     @Autowired

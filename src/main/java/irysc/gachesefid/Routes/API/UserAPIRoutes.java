@@ -50,8 +50,8 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
 
-@Controller
-@RequestMapping(path = "/api/user")
+@RestController
+@RequestMapping(path = "/user")
 @Validated
 public class UserAPIRoutes extends Router {
 

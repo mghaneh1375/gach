@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/profile/public")
+@RestController
+@RequestMapping(path = "/profile/public")
 @Validated
 public class ProfileAPIRoutes extends Router {
 

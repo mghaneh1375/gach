@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/exchange/admin")
+@RestController
+@RequestMapping(path = "/exchange/admin")
 @Validated
 public class AdminExchangeAPIRoutes extends Router {
 

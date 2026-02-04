@@ -22,8 +22,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/package_content/public")
+@RestController
+@RequestMapping(path = "/package_content/public")
 @Validated
 public class StudentContentAPIRoutes extends Router {
 
@@ -31,6 +31,7 @@ public class StudentContentAPIRoutes extends Router {
     @ResponseBody
     public String getAll(HttpServletRequest request,
                          @RequestParam(required = false, value = "tag") String tag,
+                         @RequestParam(required = false, value = "all-mode") Boolean allMode,
                          @RequestParam(required = false, value = "title") String title,
                          @RequestParam(required = false, value = "level") String level,
                          @RequestParam(required = false, value = "teacher") String teacher,
@@ -49,7 +50,7 @@ public class StudentContentAPIRoutes extends Router {
             userId = userTokenInfo.getId();
         } catch (Exception ignore) {
         }
-        return StudentContentController.getAll(userId, isAdmin,
+        return StudentContentController.getAll(userId, isAdmin, allMode,
                 tag, title, teacher, visibility,
                 hasCert, minPrice, maxPrice,
                 minDuration, maxDuration, level

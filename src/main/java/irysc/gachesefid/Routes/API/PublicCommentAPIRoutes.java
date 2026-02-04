@@ -6,18 +6,14 @@ import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Validator.EnumValidator;
 import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.bson.types.ObjectId;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
-@Controller
-@RequestMapping(path = "/api/comment/public")
+@RestController
+@RequestMapping(path = "/comment/public")
 @Validated
 public class PublicCommentAPIRoutes extends Router {
 

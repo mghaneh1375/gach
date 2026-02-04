@@ -19,8 +19,8 @@ import javax.validation.constraints.NotBlank;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/package_content/adv")
+@RestController
+@RequestMapping(path = "/package_content/adv")
 @Validated
 public class AdvAPIRoutes extends Router {
 

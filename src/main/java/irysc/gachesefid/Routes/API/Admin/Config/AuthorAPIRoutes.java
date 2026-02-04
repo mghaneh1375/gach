@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import static irysc.gachesefid.Main.GachesefidApplication.authorRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_ID;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/author")
+@RestController
+@RequestMapping(path = "/admin/config/author")
 @Validated
 public class AuthorAPIRoutes extends Router {
 

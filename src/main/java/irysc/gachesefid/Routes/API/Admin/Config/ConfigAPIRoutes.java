@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/config")
+@RestController
+@RequestMapping(path = "/admin/config/config")
 @Validated
 public class ConfigAPIRoutes extends Router {
 

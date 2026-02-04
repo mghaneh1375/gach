@@ -10,7 +10,7 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 @RestController
-@RequestMapping(path = "/api/admin/transaction")
+@RequestMapping(path = "/admin/transaction")
 @Validated
 public class TransactionAPIRoutes extends Router {
 

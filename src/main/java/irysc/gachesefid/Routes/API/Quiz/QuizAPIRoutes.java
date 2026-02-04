@@ -44,8 +44,8 @@ import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
 
-@Controller
-@RequestMapping(path = "/api/quiz/manage")
+@RestController
+@RequestMapping(path = "/quiz/manage")
 @Validated
 public class QuizAPIRoutes extends Router {
 

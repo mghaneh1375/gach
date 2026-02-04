@@ -18,8 +18,8 @@ import java.util.ArrayList;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
-@Controller
-@RequestMapping(path = "/api/request")
+@RestController
+@RequestMapping(path = "/request")
 @Validated
 public class RequestAPIRoutes extends Router {
 

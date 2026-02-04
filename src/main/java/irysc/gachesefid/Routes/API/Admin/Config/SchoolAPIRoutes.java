@@ -22,8 +22,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Main.GachesefidApplication.schoolRepository;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/school")
+@RestController
+@RequestMapping(path = "/admin/config/school")
 @Validated
 public class SchoolAPIRoutes extends Router {
 

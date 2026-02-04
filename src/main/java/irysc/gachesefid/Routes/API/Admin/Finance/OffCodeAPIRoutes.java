@@ -28,7 +28,7 @@ import static irysc.gachesefid.Main.GachesefidApplication.offcodeRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 
 @RestController
-@RequestMapping(path = "/api/admin/off")
+@RequestMapping(path = "/admin/off")
 @Validated
 public class OffCodeAPIRoutes extends Router {
 

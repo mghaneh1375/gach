@@ -1,4 +1,4 @@
-package irysc.gachesefid.Controllers.RestController;
+package irysc.gachesefid.Controllers.RestController.admin;
 
 import irysc.gachesefid.Dto.BuyersReportFilterDto;
 import irysc.gachesefid.Dto.Report.BuyReport.LastBuyersDto;
@@ -14,7 +14,7 @@ import javax.validation.constraints.NotNull;
 
 @Validated
 @RestController
-@RequestMapping(path = "/api/admin/report")
+@RequestMapping(path = "/admin/report")
 public class AdminReportController {
 
     @Autowired

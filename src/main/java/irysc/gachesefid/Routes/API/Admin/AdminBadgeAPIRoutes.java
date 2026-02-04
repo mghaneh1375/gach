@@ -19,8 +19,8 @@ import javax.validation.constraints.NotBlank;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/badge/admin")
+@RestController
+@RequestMapping(path = "/badge/admin")
 @Validated
 public class AdminBadgeAPIRoutes extends Router {
 

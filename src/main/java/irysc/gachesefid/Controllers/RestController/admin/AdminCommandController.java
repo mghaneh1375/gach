@@ -1,4 +1,4 @@
-package irysc.gachesefid.Controllers.RestController;
+package irysc.gachesefid.Controllers.RestController.admin;
 
 import irysc.gachesefid.Service.admin.AdminCommandService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
-@RequestMapping("/api/admin/command")
+@RequestMapping("/admin/command")
 public class AdminCommandController {
 
     @Autowired

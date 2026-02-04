@@ -18,8 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/notifs/manage")
+@RestController
+@RequestMapping(path = "/notifs/manage")
 @Validated
 public class NotifAPIRoutes extends Router {
 

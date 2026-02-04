@@ -34,8 +34,8 @@ import static irysc.gachesefid.Main.GachesefidApplication.schoolQuizRepository;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateErr;
 
-@Controller
-@RequestMapping(path = "/api/quiz/school")
+@RestController
+@RequestMapping(path = "/quiz/school")
 @Validated
 public class SchoolQuizAPIRoutes extends Router {
 

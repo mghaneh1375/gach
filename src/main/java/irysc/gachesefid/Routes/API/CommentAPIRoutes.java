@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 
-@Controller
-@RequestMapping(path = "/api/comment/manage")
+@RestController
+@RequestMapping(path = "/comment/manage")
 @Validated
 public class CommentAPIRoutes extends Router {
 

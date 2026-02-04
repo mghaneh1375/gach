@@ -23,10 +23,7 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -256,6 +253,7 @@ public class StudentContentController {
     public static String getAll(
             ObjectId userId,
             boolean isAdmin,
+            Boolean allMode,
             String tag,
             String title,
             String teacher,
@@ -314,8 +312,7 @@ public class StudentContentController {
                 Sorts.orderBy(new BasicDBObject("priority", 1), new BasicDBObject("created_at", -1))
         );
 
-        if (!isAdmin && filters.size() <= 2) {
-
+        if (!isAdmin && (filters.size() <= 2 || Objects.equals(allMode, Boolean.TRUE))) {
             int min = 1000000000;
             int max = -1;
 
@@ -323,7 +320,6 @@ public class StudentContentController {
             int minDuration = 10000000;
 
             for (Document doc : docs) {
-
                 int price = doc.getInteger("price");
                 int duration = doc.getInteger("duration");
 
@@ -347,8 +343,15 @@ public class StudentContentController {
                     new PairValue("max", max),
                     new PairValue("minDuration", minDuration),
                     new PairValue("maxDuration", maxDuration),
-                    new PairValue("tags", contentRepository.distinctTags("tags")),
-                    new PairValue("teachers", findDistinctTeachers())
+                    new PairValue("tags", tag == null ? contentRepository.distinctTags("tags") : new ArrayList<>()),
+                    new PairValue("teachers", tag != null
+                            ? docs
+                            .stream()
+                            .map(doc -> Arrays.stream(doc.getString("teacher").split("__")).collect(Collectors.toList()))
+                            .flatMap(Collection::stream)
+                            .distinct().collect(Collectors.toList())
+                            : findDistinctTeachers()
+                    )
             );
         }
 
@@ -359,7 +362,6 @@ public class StudentContentController {
     }
 
     private static List<String> findDistinctTeachers() {
-
         JSONArray jsonArray = contentRepository.distinctTags("teacher");
         List<String> distincts = new ArrayList<>();
 

@@ -16,8 +16,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/point/admin")
+@RestController
+@RequestMapping(path = "/point/admin")
 @Validated
 public class AdminPointAPIRoutes extends Router {
 

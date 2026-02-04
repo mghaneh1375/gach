@@ -1,12 +1,12 @@
 package irysc.gachesefid.Routes;
 
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Random;
 
 
-@Controller
+@RestController
 @RequestMapping(path="/test")
 public class TestRoutes {
 

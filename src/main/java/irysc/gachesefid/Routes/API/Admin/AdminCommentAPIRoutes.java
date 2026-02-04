@@ -15,8 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
-@Controller
-@RequestMapping(path = "/api/comment/admin")
+@RestController
+@RequestMapping(path = "/comment/admin")
 @Validated
 public class AdminCommentAPIRoutes extends Router {
 

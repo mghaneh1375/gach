@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/avatar")
+@RestController
+@RequestMapping(path = "/admin/config/avatar")
 @Validated
 public class AvatarAPIRoutes extends Router {
 

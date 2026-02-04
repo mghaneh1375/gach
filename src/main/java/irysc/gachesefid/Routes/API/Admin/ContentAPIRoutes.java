@@ -21,8 +21,8 @@ import static irysc.gachesefid.Main.GachesefidApplication.gradeRepository;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/admin/content")
+@RestController
+@RequestMapping(path = "/admin/content")
 @Validated
 public class ContentAPIRoutes extends Router {
 

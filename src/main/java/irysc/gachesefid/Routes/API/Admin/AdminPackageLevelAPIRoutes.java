@@ -20,7 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-@Controller
+@RestController
 @Validated
 @RequestMapping(value = "api/admin/package_level")
 public class AdminPackageLevelAPIRoutes extends Router {

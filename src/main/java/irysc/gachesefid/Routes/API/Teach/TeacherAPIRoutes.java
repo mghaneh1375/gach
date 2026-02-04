@@ -26,8 +26,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 
-@Controller
-@RequestMapping(path = "/api/teach/manage/")
+@RestController
+@RequestMapping(path = "/teach/manage/")
 @Validated
 public class TeacherAPIRoutes extends Router {
 

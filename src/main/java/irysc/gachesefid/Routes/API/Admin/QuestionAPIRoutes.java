@@ -36,8 +36,8 @@ import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_VALID_PARAMS;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.printException;
 
-@Controller
-@RequestMapping(path = "/api/admin/question")
+@RestController
+@RequestMapping(path = "/admin/question")
 @Validated
 public class QuestionAPIRoutes extends Router {
 

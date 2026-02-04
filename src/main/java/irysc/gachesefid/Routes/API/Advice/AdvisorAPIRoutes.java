@@ -32,8 +32,8 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.convertPersian;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
-@Controller
-@RequestMapping(path = "/api/advisor/manage/")
+@RestController
+@RequestMapping(path = "/advisor/manage/")
 @Validated
 public class AdvisorAPIRoutes extends Router {
 

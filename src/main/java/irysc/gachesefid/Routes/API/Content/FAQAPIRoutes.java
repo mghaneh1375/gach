@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-@Controller
-@RequestMapping(path = "/api/package_content/faq")
+@RestController
+@RequestMapping(path = "/package_content/faq")
 @Validated
 public class FAQAPIRoutes extends Router {
 

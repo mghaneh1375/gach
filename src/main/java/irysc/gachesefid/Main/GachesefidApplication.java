@@ -8,6 +8,11 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import irysc.gachesefid.Controllers.Jobs;
 import irysc.gachesefid.DB.*;
 import irysc.gachesefid.Dto.Deserializer.ObjectIdDeserializer;
@@ -20,6 +25,7 @@ import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.bson.types.ObjectId;
+import org.springdoc.core.SpringDocUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -79,6 +85,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
     public static CustomQuizRepository customQuizRepository;
     public static CoinHistoryRepository coinHistoryRepository;
     public static ConfigDashboardRepository configDashboardRepository;
+    public static CourseIntroductionRepository courseIntroductionRepository;
     public static ConfigRepository configRepository;
     public static ContentConfigRepository contentConfigRepository;
     public static ContentRepository contentRepository;
@@ -170,6 +177,7 @@ public class GachesefidApplication implements WebMvcConfigurer {
             customQuizRepository = new CustomQuizRepository();
             coinHistoryRepository = new CoinHistoryRepository();
             configDashboardRepository = new ConfigDashboardRepository();
+            courseIntroductionRepository = new CourseIntroductionRepository();
             configRepository = new ConfigRepository();
             contentConfigRepository = new ContentConfigRepository();
             commentRepository = new CommentRepository();
@@ -296,5 +304,24 @@ public class GachesefidApplication implements WebMvcConfigurer {
 //        requestFactory.setConnectTimeout(100000);
 //        restTemplate.setRequestFactory(requestFactory);
         return restTemplate;
+    }
+
+    private SecurityScheme createAPIKeyScheme() {
+        return new SecurityScheme().type(SecurityScheme.Type.HTTP)
+                .bearerFormat("JWT")
+                .scheme("bearer");
+    }
+
+    static {
+        SpringDocUtils.getConfig().replaceWithSchema(ObjectId.class, new StringSchema());
+    }
+
+    @Bean
+    public OpenAPI openAPI() {
+
+        return new OpenAPI().addSecurityItem(new SecurityRequirement().
+                        addList("Bearer Authentication"))
+                .components(new Components().addSecuritySchemes
+                        ("Bearer Authentication", createAPIKeyScheme()));
     }
 }

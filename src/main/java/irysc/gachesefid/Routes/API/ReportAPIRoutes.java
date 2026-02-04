@@ -16,12 +16,8 @@ import irysc.gachesefid.Validator.ObjectIdConstraint;
 import org.apache.commons.io.IOUtils;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -30,8 +26,8 @@ import java.io.ByteArrayInputStream;
 import static irysc.gachesefid.Main.GachesefidApplication.*;
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 
-@Controller
-@RequestMapping(path = "/api/quiz/report")
+@RestController
+@RequestMapping(path = "/quiz/report")
 @Validated
 public class ReportAPIRoutes extends Router {
 

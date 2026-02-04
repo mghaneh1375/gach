@@ -23,6 +23,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
+import irysc.gachesefid.Service.admin.AdminCourseService;
 import irysc.gachesefid.Service.dashboard.DashboardService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
@@ -46,6 +47,7 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
@@ -57,13 +59,16 @@ import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 import static irysc.gachesefid.Utility.Utility.getToday;
 
 
-@Controller
-@RequestMapping(path = "/api/general")
+@RestController
+@RequestMapping(path = "/general")
 @Validated
 public class GeneralAPIRoutes extends Router {
 
     @Autowired
     private DashboardService dashboardService;
+
+    @Autowired
+    private AdminCourseService adminCourseService;
 
     @PostMapping(value = "clearVideoCache/{contentId}")
     @ResponseBody
@@ -558,5 +563,13 @@ public class GeneralAPIRoutes extends Router {
                 null, null, null, null,
                 null, null
         );
+    }
+
+    @GetMapping("/getCourseIntroduction/{title}")
+    @ResponseBody
+    public String getCourseIntroduction(
+            @PathVariable @NotBlank @Size(min = 2) String title
+    ) {
+        return adminCourseService.get(title);
     }
 }

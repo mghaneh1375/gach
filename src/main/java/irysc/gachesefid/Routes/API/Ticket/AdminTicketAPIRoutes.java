@@ -23,7 +23,7 @@ import static com.mongodb.client.model.Filters.or;
 import static irysc.gachesefid.Main.GachesefidApplication.ticketRepository;
 
 @RestController
-@RequestMapping(path = "/api/admin/ticket/")
+@RequestMapping(path = "/admin/ticket/")
 @Validated
 public class AdminTicketAPIRoutes extends Router {
 

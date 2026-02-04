@@ -42,8 +42,8 @@ import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.generateSuccessMsg;
 
 
-@Controller
-@RequestMapping(path = "/api/advisor/public/")
+@RestController
+@RequestMapping(path = "/advisor/public/")
 @Validated
 public class StudentAdviceRoutes extends Router {
 

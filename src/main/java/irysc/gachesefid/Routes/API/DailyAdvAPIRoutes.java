@@ -5,19 +5,15 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Routes.Router;
 import irysc.gachesefid.Utility.HttpReqRespUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
 import static irysc.gachesefid.Utility.StaticValues.JSON_NOT_ACCESS;
 
-@Controller
-@RequestMapping(path = "/api/daily_adv/public")
+@RestController
+@RequestMapping(path = "/daily_adv/public")
 @Validated
 public class DailyAdvAPIRoutes extends Router {
 

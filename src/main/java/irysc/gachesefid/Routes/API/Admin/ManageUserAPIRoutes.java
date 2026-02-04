@@ -43,8 +43,8 @@ import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
 import static irysc.gachesefid.Utility.StaticValues.*;
 import static irysc.gachesefid.Utility.Utility.*;
 
-@Controller
-@RequestMapping(path = "/api/admin/user")
+@RestController
+@RequestMapping(path = "/admin/user")
 @Validated
 public class ManageUserAPIRoutes extends Router {
 

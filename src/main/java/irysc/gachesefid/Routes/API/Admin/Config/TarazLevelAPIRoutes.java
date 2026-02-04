@@ -22,8 +22,8 @@ import javax.validation.constraints.NotBlank;
 
 import static irysc.gachesefid.Main.GachesefidApplication.configRepository;
 
-@Controller
-@RequestMapping(path = "/api/admin/config/tarazLevel")
+@RestController
+@RequestMapping(path = "/admin/config/tarazLevel")
 @Validated
 public class TarazLevelAPIRoutes extends Router {
 

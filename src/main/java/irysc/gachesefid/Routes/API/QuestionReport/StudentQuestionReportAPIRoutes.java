@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-@Controller
-@RequestMapping(path = "/api/questionReport/public")
+@RestController
+@RequestMapping(path = "/questionReport/public")
 @Validated
 public class StudentQuestionReportAPIRoutes extends Router {
 

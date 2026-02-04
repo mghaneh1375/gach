@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-@Controller
-@RequestMapping(path = "/api/package_content/admin")
+@RestController
+@RequestMapping(path = "/package_content/admin")
 @Validated
 public class AdminAPIRoutes extends Router {
 

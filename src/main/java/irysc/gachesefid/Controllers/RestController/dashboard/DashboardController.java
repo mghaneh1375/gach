@@ -1,4 +1,4 @@
-package irysc.gachesefid.Controllers.RestController.Dashboard;
+package irysc.gachesefid.Controllers.RestController.dashboard;
 
 import irysc.gachesefid.Dto.dashboard.Student.DashboardStatsDto;
 import irysc.gachesefid.Dto.dashboard.Student.StudentDashboardConfig;
@@ -20,7 +20,7 @@ import javax.validation.Valid;
 
 @Validated
 @RestController
-@RequestMapping(path = "/api/dashboard")
+@RequestMapping(path = "/dashboard")
 public class DashboardController extends Router {
 
     @Autowired

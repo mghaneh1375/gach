@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-@Controller
-@RequestMapping(path = "/api/exchange/public")
+@RestController
+@RequestMapping(path = "/exchange/public")
 @Validated
 public class ExchangeAPIRoutes extends Router {
 

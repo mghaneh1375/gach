@@ -12,8 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
-@Controller
-@RequestMapping(path = "/api/daily_adv/admin")
+@RestController
+@RequestMapping(path = "/daily_adv/admin")
 @Validated
 public class AdminDailyAdvAPIRoutes extends Router {
 
