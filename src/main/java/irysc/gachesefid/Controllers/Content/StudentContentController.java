@@ -277,7 +277,7 @@ public class StudentContentController {
             filters.add(regex("title", Pattern.compile(Pattern.quote(title), Pattern.CASE_INSENSITIVE)));
 
         if (tag != null)
-            filters.add(in("tags", tag));
+            filters.add(in("tags", tag.replace("-", " ")));
 
         if (hasCert != null)
             filters.add(exists("cert_id", hasCert));

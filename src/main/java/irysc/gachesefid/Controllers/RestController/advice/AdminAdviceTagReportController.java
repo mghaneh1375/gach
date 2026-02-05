@@ -23,7 +23,7 @@ import java.util.List;
 
 @RestController
 @Validated
-@RequestMapping(value = "/api/admin/advice_tag_report")
+@RequestMapping(value = "/admin/advice_tag_report")
 public class AdminAdviceTagReportController {
 
     @Autowired

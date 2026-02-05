@@ -11,7 +11,6 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,7 +21,7 @@ import javax.validation.constraints.NotNull;
 
 @RestController
 @Validated
-@RequestMapping(value = "api/admin/package_level")
+@RequestMapping(value = "/admin/package_level")
 public class AdminPackageLevelAPIRoutes extends Router {
 
     @PostMapping(

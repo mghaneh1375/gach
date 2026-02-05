@@ -18,7 +18,7 @@ import java.util.List;
 
 @RestController
 @Validated
-@RequestMapping(value = "/api/admin/quiz")
+@RequestMapping(value = "/admin/quiz")
 public class AdminQuizController extends Router {
 
     @Autowired

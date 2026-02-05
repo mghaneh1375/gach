@@ -26,7 +26,7 @@ import java.util.List;
 
 @RestController
 @Validated
-@RequestMapping(value = "/api/general/advice_tag_report")
+@RequestMapping(value = "/general/advice_tag_report")
 public class AdviceTagReportController extends Router {
 
     @Autowired

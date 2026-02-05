@@ -23,7 +23,7 @@ import irysc.gachesefid.Exception.UnAuthException;
 import irysc.gachesefid.Models.GeneralKindQuiz;
 import irysc.gachesefid.Models.OffCodeSections;
 import irysc.gachesefid.Routes.Router;
-import irysc.gachesefid.Service.admin.AdminCourseService;
+import irysc.gachesefid.Service.admin.AdminCourseIntroductionService;
 import irysc.gachesefid.Service.dashboard.DashboardService;
 import irysc.gachesefid.Utility.Authorization;
 import irysc.gachesefid.Utility.Positive;
@@ -39,7 +39,6 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -68,7 +67,7 @@ public class GeneralAPIRoutes extends Router {
     private DashboardService dashboardService;
 
     @Autowired
-    private AdminCourseService adminCourseService;
+    private AdminCourseIntroductionService adminCourseIntroductionService;
 
     @PostMapping(value = "clearVideoCache/{contentId}")
     @ResponseBody
@@ -570,6 +569,6 @@ public class GeneralAPIRoutes extends Router {
     public String getCourseIntroduction(
             @PathVariable @NotBlank @Size(min = 2) String title
     ) {
-        return adminCourseService.get(title);
+        return adminCourseIntroductionService.get(title);
     }
 }

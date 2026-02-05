@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @Validated
-@RequestMapping(value = "/api/admin/advisor")
+@RequestMapping(value = "/admin/advisor")
 public class AdminAdvisorController {
 
     @Autowired

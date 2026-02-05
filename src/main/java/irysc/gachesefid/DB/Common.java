@@ -302,7 +302,6 @@ public abstract class Common extends Repository {
 
     synchronized
     public void deleteOne(ObjectId id) {
-
         Document deleted = documentMongoCollection.findOneAndDelete(
                 eq("_id", id)
         );
