@@ -3,6 +3,7 @@ package irysc.gachesefid.Routes.API.Quiz;
 import irysc.gachesefid.Controllers.CommonController;
 import irysc.gachesefid.Controllers.Quiz.*;
 import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.Exception.InvalidFieldsException;
 import irysc.gachesefid.Exception.NotAccessException;
 import irysc.gachesefid.Exception.NotActivateAccountException;
 import irysc.gachesefid.Exception.UnAuthException;
@@ -24,7 +25,6 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -1476,6 +1476,32 @@ public class QuizAPIRoutes extends Router {
         );
     }
 
+    @GetMapping(value = "/getPackagesByTag/{mode}")
+    @ResponseBody
+    public String getPackagesByTag(
+            HttpServletRequest request,
+            @PathVariable @NotBlank String mode,
+            @RequestParam(required = false, value = "tag") String tag
+    ) {
+
+        if (!mode.equals("OPEN") && !mode.equals("IRYSC"))
+            throw new InvalidFieldsException("mode is not valid");
+
+        ObjectId userId = null;
+        try {
+            UserTokenInfo userTokenInfo = getUserTokenInfo(request);
+            userId = userTokenInfo.getId();
+        } catch (Exception ignore) {
+        }
+
+        return mode.equals("OPEN") ?
+                PackageController.getPackagesForOpenQuizByTag(
+                        userId, tag
+                ) :
+                PackageController.getPackagesForIryscQuizByTag(
+                        userId, tag
+                );
+    }
 
     @GetMapping(value = "/getPackage/{id}")
     @ResponseBody

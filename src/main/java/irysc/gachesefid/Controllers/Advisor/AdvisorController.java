@@ -856,7 +856,7 @@ public class AdvisorController {
         Document config = getConfig();
         int defaultPrice = config.getInteger("min_advice_price");
         boolean isAllFiltersOff = (returnFilters == null || returnFilters) && maxAge == null && minAge == null &&
-                tag == null && maxPrice == null && minPrice == null && minRate == null && maxRate == null;
+                maxPrice == null && minPrice == null && minRate == null && maxRate == null;
         int minAgeFilter = -1, maxAgeFilter = -1, minPriceFilter = defaultPrice, maxPriceFilter = defaultPrice;
         long curr = System.currentTimeMillis();
 

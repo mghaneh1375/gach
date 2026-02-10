@@ -74,6 +74,8 @@ public class WhiteList {
             "/quiz/manage/get/**",
             "/quiz/manage/getPackages",
             "/quiz/manage/getPackage/**",
+            "/quiz/manage/getPackages2",
+            "/quiz/manage/getPackagesByTag/**",
             "/quiz/manage/getPackageQuizzes/**",
             "/package_content/public/getAll",
             "/package_content/public/get/**",
