@@ -12,6 +12,7 @@ public class GradeRepository extends Common {
     @Override
     void init() {
         table = "grade";
+        secKey = "name";
         documentMongoCollection = GachesefidApplication.mongoDatabase.getCollection(table);
     }
 }

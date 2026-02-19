@@ -20,4 +20,8 @@ public class CreateCourseIntroductionDto {
     @NotBlank
     @Size(max = 5000)
     private String description;
+
+    @NotBlank
+    @Size(max = 5000)
+    private String digest;
 }

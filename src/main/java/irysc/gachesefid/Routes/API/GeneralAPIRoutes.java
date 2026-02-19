@@ -571,4 +571,10 @@ public class GeneralAPIRoutes extends Router {
     ) {
         return adminCourseIntroductionService.get(title);
     }
+
+    @GetMapping("/getCourses")
+    @ResponseBody
+    public String getCourses() {
+        return adminCourseIntroductionService.getAllCourses();
+    }
 }

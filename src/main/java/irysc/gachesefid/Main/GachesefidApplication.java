@@ -28,6 +28,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -51,6 +52,7 @@ import static irysc.gachesefid.Utility.Utility.printException;
 @EntityScan("irysc.gachesefid.Service")
 @Configuration
 @EnableScheduling
+@EnableCaching
 public class GachesefidApplication implements WebMvcConfigurer {
 
     @Autowired

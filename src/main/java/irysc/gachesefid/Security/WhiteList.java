@@ -23,6 +23,7 @@ public class WhiteList {
             "/general/checkCert/**",
             "/general/getSiteStats",
             "/general/getCourseIntroduction/**",
+            "/general/getCourses",
             "/general/getQuestionTagsExcel",
             "/general/getSubjectCodesExcel",
             "/general/getAuthorCodesExcel",
