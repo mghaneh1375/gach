@@ -3,8 +3,12 @@ package irysc.gachesefid.Service.admin;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.WriteModel;
+import irysc.gachesefid.DB.Common;
+import irysc.gachesefid.DB.Repository;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -12,8 +16,8 @@ import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.set;
-import static irysc.gachesefid.Main.GachesefidApplication.contentRepository;
-import static irysc.gachesefid.Main.GachesefidApplication.userRepository;
+import static irysc.gachesefid.Main.GachesefidApplication.*;
+import static irysc.gachesefid.Main.GachesefidApplication.iryscQuizRepository;
 
 @Service
 public class AdminCommandService {
@@ -105,6 +109,59 @@ public class AdminCommandService {
                 );
             }
         }
+    }
+
+    private void doNormalizeTags(List<Document> docs, Common repository) {
+
+        for (Document doc : docs) {
+            List<String> tags = doc.getList("tags", String.class).stream().map(s -> {
+                if (s.equals("المپیاد زیست"))
+                    return "المپیاد زیست\u200Cشناسی";
+                if (s.equals("المپیاد نجوم"))
+                    return "المپیاد نجوم و اخترفیزیک";
+                if (s.equals("المپیاد اقتصاد"))
+                    return "المپیاد مدیریت، اقتصاد و حکمرانی";
+                return s;
+            }).collect(Collectors.toList());
+
+            repository.updateOne(doc.getObjectId("_id"), set("tags", tags));
+        }
+    }
+    public ResponseEntity<Set<String>> normalizeTags() {
+
+        Bson filter = or(
+                eq("tags", "المپیاد زیست"),
+                eq("tags", "المپیاد نجوم"),
+                eq("tags", "المپیاد اقتصاد")
+        );
+
+        ArrayList<Document> documents = contentRepository.find(
+                filter, null
+        );
+        doNormalizeTags(documents, contentRepository);
+
+        documents = openQuizRepository.find(
+                filter, null
+        );
+        doNormalizeTags(documents, openQuizRepository);
+
+        documents = iryscQuizRepository.find(
+                filter, null
+        );
+        doNormalizeTags(documents, iryscQuizRepository);
+
+        Set<String> tags = new HashSet<>();
+        contentRepository.find(null, new BasicDBObject("tags", 1)).forEach(document -> {
+            document.getList("tags", String.class).stream().filter(s -> s.startsWith("المپیاد")).forEach(tags::add);
+        });
+        openQuizRepository.find(null, new BasicDBObject("tags", 1)).forEach(document -> {
+            document.getList("tags", String.class).stream().filter(s -> s.startsWith("المپیاد")).forEach(tags::add);
+        });
+        iryscQuizRepository.find(null, new BasicDBObject("tags", 1)).forEach(document -> {
+            document.getList("tags", String.class).stream().filter(s -> s.startsWith("المپیاد")).forEach(tags::add);
+        });
+
+        return ResponseEntity.ok().body(tags);
     }
 
 }
